@@ -64,7 +64,7 @@ const Campaigns = () => {
             )}
             
             {isAuthenticated && hasAdAccount() && (
-              <Alert variant="outline" className="bg-blue-50 border-blue-200">
+              <Alert className="bg-blue-50 border-blue-200">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-700">
                   Viewing campaigns from your Meta ad account. Campaign creation through the API requires extra permissions.
