@@ -23,6 +23,18 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     setError(null);
     
     try {
+      // Check if user has the necessary permissions
+      const permissions = metaAuthService.getPermissions();
+      const hasAdsPermission = permissions.some(p => 
+        p === 'ads_management' || p === 'ads_read'
+      );
+      
+      if (!hasAdsPermission) {
+        setError('Missing required ads permissions. Please update your token permissions to include ads_read or ads_management.');
+        setIsLoading(false);
+        return;
+      }
+      
       // Get authentication token
       const token = metaAuthService.getAccessToken();
       if (!token) {
@@ -70,12 +82,25 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       setCampaigns(filteredCampaigns);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
-      setError('Failed to fetch campaigns');
-      toast({
-        title: 'Error',
-        description: 'Failed to load campaign data. Please check your permissions.',
-        variant: 'destructive'
-      });
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch campaigns';
+      setError(errorMessage);
+      
+      // Provide more specific error message based on common issues
+      if (typeof errorMessage === 'string') {
+        if (errorMessage.includes('permission')) {
+          toast({
+            title: "Permission Error",
+            description: "You don't have the required permissions to view campaign data. Please update your token permissions.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to load campaign data. Please check your Meta connection and ad account selection.",
+            variant: "destructive"
+          });
+        }
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Shield, ShieldCheck, Facebook, Users, Newspaper, BarChart3, Building } from 'lucide-react';
@@ -13,6 +12,7 @@ interface FacebookPermissionOption {
   icon: React.ReactNode;
   scope: string;
   required?: boolean;
+  hidden?: boolean;  // Added hidden property to the interface
 }
 
 interface FacebookPermissionsSelectorProps {

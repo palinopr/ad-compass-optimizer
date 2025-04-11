@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   PlusCircle, 
   AlertCircle,
-  Info
+  Info,
+  ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,12 +21,26 @@ const Campaigns = () => {
   const [activeTab, setActiveTab] = useState('campaigns');
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const isAuthenticated = metaAuthService.isAuthenticated();
+  const [hasAdsPermission, setHasAdsPermission] = useState(false);
+  
+  useEffect(() => {
+    // Check if user has ads permissions
+    if (isAuthenticated) {
+      const permissions = metaAuthService.getPermissions();
+      const hasPermission = permissions.some(p => 
+        p === 'ads_management' || p === 'ads_read'
+      );
+      setHasAdsPermission(hasPermission);
+    }
+  }, [isAuthenticated]);
   
   // Check if ad account is selected
   const hasAdAccount = () => {
     const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
     return selectedAdAccounts && JSON.parse(selectedAdAccounts).length > 0;
   };
+  
+  const selectedAdAccount = localStorage.getItem('selected_ad_account');
 
   return (
     <AppLayout>
@@ -38,7 +53,7 @@ const Campaigns = () => {
           <Button 
             onClick={() => setShowCreateWizard(true)}
             className="bg-meta-blue hover:bg-meta-dark"
-            disabled={showCreateWizard || !isAuthenticated || !hasAdAccount()}
+            disabled={showCreateWizard || !isAuthenticated || !hasAdAccount() || !hasAdsPermission}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Campaign
@@ -54,7 +69,16 @@ const Campaigns = () => {
               {isAuthenticated && <AdAccountSelector />}
             </div>
             
-            {isAuthenticated && !hasAdAccount() && (
+            {isAuthenticated && !hasAdsPermission && (
+              <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertDescription>
+                  You don't have the necessary permissions to access ad campaigns. Please update your token permissions to include ads_read or ads_management.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {isAuthenticated && hasAdsPermission && !hasAdAccount() && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
@@ -63,7 +87,7 @@ const Campaigns = () => {
               </Alert>
             )}
             
-            {isAuthenticated && hasAdAccount() && (
+            {isAuthenticated && hasAdsPermission && hasAdAccount() && (
               <Alert className="bg-blue-50 border-blue-200">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-700">
