@@ -4,6 +4,7 @@ import { FACEBOOK_APP_CONFIG } from '@/config/socialAuth';
 
 export function useFacebookScript() {
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [loginStatus, setLoginStatus] = useState<'connected' | 'not_authorized' | 'unknown' | null>(null);
 
   useEffect(() => {
     console.log("Initializing Facebook SDK");
@@ -12,6 +13,7 @@ export function useFacebookScript() {
     if (window.FB) {
       console.log("Facebook SDK already loaded");
       setIsScriptLoaded(true);
+      checkLoginStatus();
       return;
     }
 
@@ -27,6 +29,9 @@ export function useFacebookScript() {
       
       // Log page view as recommended
       window.FB?.AppEvents?.logPageView();
+      
+      // Check login status immediately after SDK is loaded
+      checkLoginStatus();
       
       // Signal that the script is loaded
       setIsScriptLoaded(true);
@@ -44,5 +49,23 @@ export function useFacebookScript() {
     // No cleanup needed as we want the SDK to persist across the app
   }, []);
 
-  return { isScriptLoaded };
+  // Function to check login status
+  const checkLoginStatus = () => {
+    if (!window.FB) return;
+    
+    console.log("Checking Facebook login status");
+    window.FB.getLoginStatus((response) => {
+      console.log("Facebook login status response:", response);
+      
+      setLoginStatus(response.status as 'connected' | 'not_authorized' | 'unknown');
+      
+      // If user is already connected, we can store the auth data
+      if (response.status === 'connected' && response.authResponse) {
+        // You could handle automatic login here if needed
+        console.log("User is already connected with Facebook", response.authResponse);
+      }
+    });
+  };
+
+  return { isScriptLoaded, loginStatus, checkLoginStatus };
 }

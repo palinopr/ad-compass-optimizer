@@ -10,6 +10,7 @@ import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
 import FacebookRequirementsInfo from './facebook/FacebookRequirementsInfo';
 import BusinessIntegrationInfo from './facebook/BusinessIntegrationInfo';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface FacebookLoginTabProps {
   onLoginSuccess: (userData: any) => void;
@@ -18,6 +19,7 @@ interface FacebookLoginTabProps {
 const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) => {
   const {
     isScriptLoaded,
+    loginStatus,
     loginError,
     isConnecting,
     handleManualLoginClick,
@@ -25,11 +27,41 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     handleFacebookError
   } = useFacebookLogin(onLoginSuccess);
 
+  // Render different status messages based on login status
+  const renderLoginStatus = () => {
+    if (!loginStatus || !isScriptLoaded) return null;
+    
+    if (loginStatus === 'connected') {
+      return (
+        <div className="bg-green-50 border border-green-200 rounded-md p-3 mb-4">
+          <p className="text-green-700 flex items-center">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            You are already logged in to Facebook and this app
+          </p>
+        </div>
+      );
+    } else if (loginStatus === 'not_authorized') {
+      return (
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+          <p className="text-amber-700 flex items-center">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            You are logged in to Facebook but haven't authorized this app yet
+          </p>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
   return (
     <div className="flex flex-col items-center py-4">
       <p className="mb-3 text-center text-sm text-gray-500">
         Connect your Facebook account to access your ad accounts and campaign data.
       </p>
+      
+      {/* Show login status if available */}
+      {renderLoginStatus()}
       
       <FacebookLoginError error={loginError} />
       
