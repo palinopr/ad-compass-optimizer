@@ -59,8 +59,8 @@ export function useLoginMethods(onSuccess: (userData: any) => void) {
         // Use custom permissions if provided
         permissions = customPermissions;
       } else if (useAdvancedPermissions) {
-        // Use all advanced permissions defined in the config
-        permissions = FACEBOOK_AD_PERMISSIONS.scopes;
+        // Fix: Use a hard-coded array of advanced permissions instead of accessing nonexistent property
+        permissions = ['ads_management', 'ads_read', 'business_management', 'pages_read_engagement', 'pages_manage_ads'];
       } else {
         // Basic permissions only
         permissions = ['public_profile', 'email'];

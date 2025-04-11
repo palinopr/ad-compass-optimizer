@@ -1,3 +1,4 @@
+
 /**
  * Social Authentication Configuration
  * 
@@ -58,7 +59,18 @@ export const FACEBOOK_AD_PERMISSIONS = {
     ads_management: "Create and manage ads",
     ads_read: "Read campaign and ad insights",
     business_management: "Manage business assets and permissions"
-  }
+  },
+  // Adding the missing scopes property
+  scopes: [
+    "ads_management",
+    "ads_read", 
+    "business_management",
+    "pages_read_engagement",
+    "pages_manage_ads",
+    "instagram_basic",
+    "instagram_manage_insights",
+    "read_insights"
+  ]
 };
 
 // Development mode status - set to false since app has completed app review
