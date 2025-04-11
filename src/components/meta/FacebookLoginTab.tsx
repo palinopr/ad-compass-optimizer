@@ -9,6 +9,7 @@ import FacebookLoginButton from './facebook/FacebookLoginButton';
 import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
 import FacebookRequirementsInfo from './facebook/FacebookRequirementsInfo';
+import { Button } from '@/components/ui/button';
 
 interface FacebookLoginTabProps {
   onLoginSuccess: (userData: any) => void;
@@ -20,6 +21,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     loginError,
     isConnecting,
     handleManualLoginClick,
+    handleAdvancedPermissionsLogin,
     responseFacebook,
     handleFacebookError
   } = useFacebookLogin(onLoginSuccess);
@@ -44,6 +46,15 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
             onClick={handleManualLoginClick}
             isConnecting={isConnecting}
           />
+          
+          <Button
+            variant="outline"
+            onClick={handleAdvancedPermissionsLogin}
+            disabled={isConnecting}
+            className="w-full"
+          >
+            Connect with Advanced Ad Permissions
+          </Button>
 
           <Separator className="my-2" />
           

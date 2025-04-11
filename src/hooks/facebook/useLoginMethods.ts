@@ -1,6 +1,7 @@
 
-import { FACEBOOK_APP_CONFIG } from '@/config/socialAuth';
+import { FACEBOOK_APP_CONFIG, FACEBOOK_AD_PERMISSIONS } from '@/config/socialAuth';
 import { useResponseHandler, FacebookAuthResponse } from './useResponseHandler';
+import { useState } from 'react';
 
 export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
   const { 
@@ -59,7 +60,7 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
             setIsConnecting(false);
           }
         },
-        { scope: FACEBOOK_APP_CONFIG.scope }
+        { scope: `${FACEBOOK_APP_CONFIG.scope},${FACEBOOK_AD_PERMISSIONS.advanced}` }
       );
     } else {
       console.error("Facebook SDK not loaded");
@@ -74,6 +75,8 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
     handleManualLoginClick,
     handleAdvancedPermissionsLogin,
     responseFacebook,
-    handleFacebookError
+    handleFacebookError,
+    setIsConnecting,
+    setLoginError
   };
 }
