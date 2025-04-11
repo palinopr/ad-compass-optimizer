@@ -6,7 +6,7 @@ export interface UseFacebookLoginResult {
   isScriptLoaded: boolean;
   loginError: string | null;
   isConnecting: boolean;
-  handleManualLoginClick: () => void;
+  handleManualLoginClick: (useAdvancedPermissions?: boolean) => void;
   responseFacebook: (response: any) => void;
   handleFacebookError: (error: any) => void;
 }

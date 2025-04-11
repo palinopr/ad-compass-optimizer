@@ -9,6 +9,7 @@ import FacebookLoginButton from './facebook/FacebookLoginButton';
 import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
 import FacebookRequirementsInfo from './facebook/FacebookRequirementsInfo';
+import BusinessIntegrationInfo from './facebook/BusinessIntegrationInfo';
 
 interface FacebookLoginTabProps {
   onLoginSuccess: (userData: any) => void;
@@ -33,18 +34,31 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       <FacebookLoginError error={loginError} />
       
       <FacebookNotice>
-        We'll request basic information (profile and email) to identify your account.
-        Additional permissions for ad management are configured in your Meta App settings.
+        We'll request basic profile information to identify your account.
+        For ad management features, please use the advanced permissions option.
       </FacebookNotice>
       
       {isScriptLoaded ? (
         <div className="w-full space-y-4">
           <FacebookLoginButton 
-            onClick={handleManualLoginClick}
+            onClick={() => handleManualLoginClick()}
             isConnecting={isConnecting}
+            advancedPermissions={false}
+            text="Continue with Facebook"
           />
           
-          <Separator className="my-2" />
+          <Separator className="my-2">
+            <div className="px-2 text-xs text-gray-500">OR</div>
+          </Separator>
+          
+          <FacebookLoginButton 
+            onClick={() => handleManualLoginClick(true)}
+            isConnecting={isConnecting}
+            advancedPermissions={true}
+            text="Connect with Advanced Ad Permissions"
+          />
+          
+          <BusinessIntegrationInfo />
           
           <FacebookPermissionsInfo />
           

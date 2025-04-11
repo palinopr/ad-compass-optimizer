@@ -13,9 +13,12 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
     setLoginError 
   } = useResponseHandler(onLoginSuccess);
 
-  const handleManualLoginClick = () => {
-    console.log("Facebook login clicked");
+  const handleManualLoginClick = (useAdvancedPermissions = false) => {
+    console.log("Facebook login clicked", useAdvancedPermissions ? "with advanced permissions" : "with basic permissions");
     setIsConnecting(true);
+    
+    // Choose scope based on whether advanced permissions are requested
+    const scope = useAdvancedPermissions ? FACEBOOK_APP_CONFIG.scope : FACEBOOK_APP_CONFIG.basicScope;
     
     if (window.FB) {
       window.FB.login(
@@ -24,7 +27,8 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
           if (response.authResponse) {
             responseFacebook({
               accessToken: response.authResponse.accessToken,
-              userID: response.authResponse.userID
+              userID: response.authResponse.userID,
+              hasBusinessAccess: useAdvancedPermissions
             });
           } else {
             console.log('User cancelled login or did not fully authorize.');
@@ -32,7 +36,7 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
             setIsConnecting(false);
           }
         },
-        { scope: FACEBOOK_APP_CONFIG.scope }
+        { scope }
       );
     } else {
       console.error("Facebook SDK not loaded");

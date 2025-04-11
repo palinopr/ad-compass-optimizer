@@ -10,9 +10,11 @@ export const FACEBOOK_APP_CONFIG = {
   // App ID for the Facebook application
   appId: "1356517842213704",
   
-  // Permissions needed for the application
-  // Based on the app configuration shown in screenshot
-  scope: "public_profile,email",
+  // Permissions needed for the application including ad management permissions
+  scope: "public_profile,email,ads_management,ads_read,business_management",
+  
+  // Basic permissions that work without app review
+  basicScope: "public_profile,email",
   
   // Valid redirect URIs must be configured in the Facebook Developer Console
   // For development, localhost is typically allowed
@@ -49,4 +51,13 @@ export const FACEBOOK_LOGIN_REQUIREMENTS = {
 export const FACEBOOK_USE_CASES = {
   adsManager: "Create & manage app ads with Meta Ads Manager",
   facebookLogin: "Authenticate and request data from users with Facebook Login"
+};
+
+// Advanced permissions that require app review
+export const FACEBOOK_AD_PERMISSIONS = {
+  descriptions: {
+    ads_management: "Create and manage ads",
+    ads_read: "Read campaign and ad insights",
+    business_management: "Manage business assets and permissions"
+  }
 };
