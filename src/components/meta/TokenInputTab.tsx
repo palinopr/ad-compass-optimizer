@@ -8,9 +8,10 @@ import { AlertCircle, ExternalLink, Key, Loader2 } from 'lucide-react';
 
 interface TokenInputTabProps {
   onTokenSuccess: (userData: any) => void;
+  onTokenError: (errorMessage: string) => void;
 }
 
-const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess }) => {
+const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenError }) => {
   const [manualToken, setManualToken] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -34,16 +35,21 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess }) => {
       };
     } catch (error) {
       console.error('Error fetching user data:', error);
-      setErrorMessage(`Authentication error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMsg = `Authentication error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      setErrorMessage(errorMsg);
+      onTokenError(errorMsg);
       throw error;
     }
   };
 
   const handleManualTokenConnect = async () => {
     if (!manualToken.trim()) {
+      const errorMsg = "Please enter a valid access token";
+      setErrorMessage(errorMsg);
+      onTokenError(errorMsg);
       toast({
         title: "Error",
-        description: "Please enter a valid access token",
+        description: errorMsg,
         variant: "destructive"
       });
       return;
@@ -67,9 +73,11 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess }) => {
     } catch (error) {
       console.error('Error with manual token:', error);
       metaAuthService.logout();
+      const errorMsg = "The provided access token is invalid or has expired.";
+      onTokenError(errorMsg);
       toast({
         title: "Connection Failed",
-        description: "The provided access token is invalid or has expired.",
+        description: errorMsg,
         variant: "destructive"
       });
     } finally {
