@@ -2,7 +2,7 @@
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Settings as SettingsIcon, Shield, Trash2, ExternalLink } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Trash2, ExternalLink, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Settings = () => {
@@ -24,7 +24,7 @@ const Settings = () => {
           </CardContent>
         </Card>
         
-        <div className="grid gap-4 md:grid-cols-2 mt-6">
+        <div className="grid gap-4 md:grid-cols-3 mt-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -45,6 +45,31 @@ const Settings = () => {
                 className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
               >
                 View Privacy Policy
+                <ExternalLink className="ml-1 h-4 w-4" />
+              </Link>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                Terms of Service
+              </CardTitle>
+              <CardDescription>
+                Review our terms of service agreement
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm mb-4">
+                Our terms of service outline the rules and guidelines for using our application
+                and your rights and responsibilities as a user.
+              </p>
+              <Link 
+                to="/terms-of-service" 
+                className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                View Terms of Service
                 <ExternalLink className="ml-1 h-4 w-4" />
               </Link>
             </CardContent>
