@@ -61,3 +61,6 @@ export const FACEBOOK_AD_PERMISSIONS = {
     business_management: "Manage business assets and permissions"
   }
 };
+
+// Development mode status - set to true if app hasn't completed app review
+export const IS_DEV_MODE = true;
