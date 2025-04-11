@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import Index from "./pages/Index";
 import Settings from "./pages/Settings";
@@ -31,6 +31,16 @@ import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
+// Helper function to create case-insensitive redirect routes
+const createCaseInsensitiveRoute = (path, Component) => [
+  <Route key={path.toLowerCase()} path={path.toLowerCase()} element={<Component />} />,
+  <Route 
+    key={path} 
+    path={path} 
+    element={<Navigate to={path.toLowerCase()} replace />} 
+  />
+];
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -40,25 +50,28 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/campaigns" element={<Campaigns />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/audience" element={<Audience />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/import" element={<Import />} />
             
-            {/* Admin routes */}
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/performance" element={<Performance />} />
-            <Route path="/pipeline" element={<Pipeline />} />
+            {/* Regular routes with case-insensitive variants */}
+            {createCaseInsensitiveRoute("/settings", Settings)}
+            {createCaseInsensitiveRoute("/profile", Profile)}
+            {createCaseInsensitiveRoute("/campaigns", Campaigns)}
+            {createCaseInsensitiveRoute("/events", Events)}
+            {createCaseInsensitiveRoute("/analytics", Analytics)}
+            {createCaseInsensitiveRoute("/audience", Audience)}
+            {createCaseInsensitiveRoute("/reports", Reports)}
+            {createCaseInsensitiveRoute("/messages", Messages)}
+            {createCaseInsensitiveRoute("/import", Import)}
             
-            {/* Meta approval required pages */}
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/data-deletion" element={<DataDeletion />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
+            {/* Admin routes with case-insensitive variants */}
+            {createCaseInsensitiveRoute("/clients", Clients)}
+            {createCaseInsensitiveRoute("/performance", Performance)}
+            {createCaseInsensitiveRoute("/pipeline", Pipeline)}
+            
+            {/* Meta approval required pages with case-insensitive variants */}
+            {createCaseInsensitiveRoute("/privacy-policy", PrivacyPolicy)}
+            {createCaseInsensitiveRoute("/data-deletion", DataDeletion)}
+            {createCaseInsensitiveRoute("/terms-of-service", TermsOfService)}
+            {createCaseInsensitiveRoute("/Terms-of-Service", TermsOfService)}
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
