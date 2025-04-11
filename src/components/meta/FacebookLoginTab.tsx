@@ -128,7 +128,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         scope={FACEBOOK_APP_CONFIG.scope}
         callback={responseFacebook}
         onFailure={handleFacebookError}
-        cssClass="bg-[#1877F2] text-white py-2 px-4 rounded flex items-center justify-center"
+        cssClass="bg-[#1877F2] text-white py-2 px-4 rounded flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors w-full md:w-auto justify-center"
         icon="fa-facebook"
         textButton="Connect with Facebook"
         redirectUri={FACEBOOK_APP_CONFIG.redirectUri}
