@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Facebook } from 'lucide-react';
 
 interface FacebookLoginButtonProps {
   onClick: () => void;
@@ -19,10 +19,13 @@ const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ onClick, isCo
       {isConnecting ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Connecting...
+          Connecting with Facebook...
         </>
       ) : (
-        'Connect with Facebook'
+        <>
+          <Facebook className="mr-2 h-4 w-4" />
+          Continue with Facebook
+        </>
       )}
     </Button>
   );

@@ -10,9 +10,8 @@ export const FACEBOOK_APP_CONFIG = {
   // App ID for the Facebook application
   appId: "1356517842213704",
   
-  // Permissions needed for ad account access
-  // Note: These advanced permissions require app review by Meta
-  // For development/testing, use only public_profile,email
+  // Permissions needed for the application
+  // Based on the app configuration shown in screenshot
   scope: "public_profile,email",
   
   // Valid redirect URIs must be configured in the Facebook Developer Console
@@ -31,7 +30,6 @@ export const FACEBOOK_APP_CONFIG = {
 //    - App Domains: Add all domains where your app will run
 //    - Valid OAuth Redirect URIs: Add all callback URLs (including localhost for dev)
 // 4. Complete the "Authenticate and request data from users with Facebook Login" use case
-// 5. Switch your app from Development to Live mode after completing app review
 
 export const FACEBOOK_LOGIN_REQUIREMENTS = {
   requiredSettings: [
@@ -47,20 +45,8 @@ export const FACEBOOK_LOGIN_REQUIREMENTS = {
   ]
 };
 
-// Required permissions for ad account access
-// These require Meta App Review before they can be used in production
-export const FACEBOOK_AD_PERMISSIONS = {
-  basic: "public_profile,email",
-  advanced: "ads_management,ads_read,business_management",
-  // Provide clear descriptions of what each permission allows
-  descriptions: {
-    ads_management: "Create, edit and manage ads",
-    ads_read: "Read advertising account data",
-    business_management: "Access Business Manager accounts"
-  },
-  // Development mode permissions (only basic permissions work without app review)
-  development: {
-    // In development, we can only use basic permissions
-    useBasicPermissionsOnly: true
-  }
+// The Meta App supports these use cases per the screenshot:
+export const FACEBOOK_USE_CASES = {
+  adsManager: "Create & manage app ads with Meta Ads Manager",
+  facebookLogin: "Authenticate and request data from users with Facebook Login"
 };

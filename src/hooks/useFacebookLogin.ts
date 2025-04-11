@@ -7,7 +7,6 @@ export interface UseFacebookLoginResult {
   loginError: string | null;
   isConnecting: boolean;
   handleManualLoginClick: () => void;
-  handleAdvancedPermissionsLogin: () => void;
   responseFacebook: (response: any) => void;
   handleFacebookError: (error: any) => void;
 }
@@ -21,7 +20,6 @@ export function useFacebookLogin(onLoginSuccess: (userData: any) => void): UseFa
     loginError,
     isConnecting,
     handleManualLoginClick,
-    handleAdvancedPermissionsLogin,
     responseFacebook,
     handleFacebookError
   } = useLoginMethods(onLoginSuccess);
@@ -31,7 +29,6 @@ export function useFacebookLogin(onLoginSuccess: (userData: any) => void): UseFa
     loginError,
     isConnecting,
     handleManualLoginClick,
-    handleAdvancedPermissionsLogin,
     responseFacebook,
     handleFacebookError
   };

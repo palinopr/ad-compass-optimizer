@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Info } from 'lucide-react';
-import { FACEBOOK_AD_PERMISSIONS } from '@/config/socialAuth';
 
 const FacebookPermissionsInfo: React.FC = () => {
   return (
@@ -13,11 +12,12 @@ const FacebookPermissionsInfo: React.FC = () => {
           <li>Email address</li>
         </ul>
         
-        <p className="font-medium mb-1">For full ad management, these additional permissions are needed:</p>
-        <ul className="list-disc pl-4 space-y-0.5">
-          {Object.entries(FACEBOOK_AD_PERMISSIONS.descriptions).map(([key, desc]) => (
-            <li key={key}><span className="text-blue-600">{key}</span>: {desc}</li>
-          ))}
+        <p className="text-sm mt-2">
+          Your Meta App is configured with the following use cases:
+        </p>
+        <ul className="list-disc pl-4 space-y-0.5 mt-1">
+          <li>Authenticate and request data from users with Facebook Login</li>
+          <li>Create & manage app ads with Meta Ads Manager</li>
         </ul>
       </div>
     </div>

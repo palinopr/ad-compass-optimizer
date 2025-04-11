@@ -9,8 +9,6 @@ import FacebookLoginButton from './facebook/FacebookLoginButton';
 import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
 import FacebookRequirementsInfo from './facebook/FacebookRequirementsInfo';
-import BusinessIntegrationInfo from './facebook/BusinessIntegrationInfo';
-import { Button } from '@/components/ui/button';
 
 interface FacebookLoginTabProps {
   onLoginSuccess: (userData: any) => void;
@@ -22,7 +20,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     loginError,
     isConnecting,
     handleManualLoginClick,
-    handleAdvancedPermissionsLogin,
     responseFacebook,
     handleFacebookError
   } = useFacebookLogin(onLoginSuccess);
@@ -36,9 +33,8 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       <FacebookLoginError error={loginError} />
       
       <FacebookNotice>
-        Important: For full ad management access, your Facebook App requires 
-        Meta's approval for additional permissions. During development, we're using basic 
-        permissions only.
+        We'll request basic information (profile and email) to identify your account.
+        Additional permissions for ad management are configured in your Meta App settings.
       </FacebookNotice>
       
       {isScriptLoaded ? (
@@ -48,17 +44,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
             isConnecting={isConnecting}
           />
           
-          <Button
-            variant="outline"
-            onClick={handleAdvancedPermissionsLogin}
-            disabled={isConnecting}
-            className="w-full"
-          >
-            Connect with Advanced Ad Permissions
-          </Button>
-          
-          <BusinessIntegrationInfo />
-
           <Separator className="my-2" />
           
           <FacebookPermissionsInfo />
