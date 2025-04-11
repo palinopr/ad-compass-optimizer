@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Building } from 'lucide-react';
-import { MetaAdsService } from '@/services/MetaAdsService';
+import { MetaApiService } from '@/services/MetaApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,14 +33,49 @@ const AdAccountSelector: React.FC = () => {
       
       setIsLoading(true);
       try {
-        const metaAdsService = new MetaAdsService(accessToken);
-        const accounts = await metaAdsService.getAdAccounts();
-        setAdAccounts(accounts);
+        // Check if there are selected ad accounts in local storage
+        const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
+        let selectedIds: string[] = [];
         
-        // Select the first account by default if available
-        if (accounts.length > 0) {
-          setSelectedAccount(accounts[0].id);
-          localStorage.setItem('selected_ad_account', accounts[0].id);
+        if (selectedAdAccounts) {
+          selectedIds = JSON.parse(selectedAdAccounts);
+          console.log('Found selected ad accounts:', selectedIds);
+        }
+        
+        if (selectedIds.length > 0) {
+          // Fetch details for these specific accounts
+          const token = metaAuthService.getAccessToken();
+          if (token) {
+            const accounts = await Promise.all(
+              selectedIds.map(async (id) => {
+                try {
+                  const accountDetails = await MetaApiService.fetchAdAccountDetails(token, id);
+                  return accountDetails;
+                } catch (error) {
+                  console.error(`Error fetching details for account ${id}:`, error);
+                  return null;
+                }
+              })
+            );
+            
+            const validAccounts = accounts.filter(account => account !== null) as AdAccount[];
+            setAdAccounts(validAccounts);
+            
+            // Select the first account by default if available
+            if (validAccounts.length > 0) {
+              setSelectedAccount(validAccounts[0].id);
+              localStorage.setItem('selected_ad_account', validAccounts[0].id);
+            }
+          }
+        } else {
+          // Fallback to fetching all available accounts
+          const accounts = await MetaApiService.fetchAdAccounts(accessToken);
+          setAdAccounts(accounts);
+          
+          if (accounts.length > 0) {
+            setSelectedAccount(accounts[0].id);
+            localStorage.setItem('selected_ad_account', accounts[0].id);
+          }
         }
       } catch (err) {
         setError('Failed to fetch ad accounts');
@@ -67,10 +102,18 @@ const AdAccountSelector: React.FC = () => {
   const handleAccountChange = (value: string) => {
     setSelectedAccount(value);
     localStorage.setItem('selected_ad_account', value);
+    
+    // Update selected_ad_accounts as well to maintain consistency
+    localStorage.setItem('selected_ad_accounts', JSON.stringify([value]));
+    
     toast({
       title: "Ad Account Selected",
       description: "Your ad account selection has been updated."
     });
+    
+    // Reload campaign data by forcing a page refresh
+    // This ensures the campaigns component re-fetches data with the new account
+    window.location.reload();
   };
   
   return (

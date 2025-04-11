@@ -31,14 +31,18 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         return;
       }
       
-      // Get selected ad account
-      const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
-      let adAccountId = null;
+      // First check for a directly selected ad account
+      let adAccountId = localStorage.getItem('selected_ad_account');
       
-      if (selectedAdAccounts) {
-        const accounts = JSON.parse(selectedAdAccounts);
-        if (accounts.length > 0) {
-          adAccountId = accounts[0]; // Use the first selected ad account
+      // If not found, try to get from selected_ad_accounts
+      if (!adAccountId) {
+        const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
+        
+        if (selectedAdAccounts) {
+          const accounts = JSON.parse(selectedAdAccounts);
+          if (accounts.length > 0) {
+            adAccountId = accounts[0]; // Use the first selected ad account
+          }
         }
       }
       

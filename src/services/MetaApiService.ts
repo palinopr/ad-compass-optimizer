@@ -29,6 +29,13 @@ export class MetaApiService {
   }
 
   /**
+   * Fetch details for a specific ad account by ID
+   */
+  public static async fetchAdAccountDetails(token: string, accountId: string) {
+    return MetaAdAccountService.fetchAdAccountDetails(token, accountId);
+  }
+
+  /**
    * Test Meta API connection with the provided token
    */
   public static async testConnection(token: string): Promise<ConnectionTestResult> {

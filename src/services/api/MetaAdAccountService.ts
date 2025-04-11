@@ -44,6 +44,32 @@ export class MetaAdAccountService extends BaseApiService {
   }
 
   /**
+   * Fetch details for a specific ad account by ID
+   */
+  public static async fetchAdAccountDetails(token: string, accountId: string): Promise<MetaAdAccount> {
+    try {
+      console.log(`Fetching details for ad account ${accountId}...`);
+      this.validateToken(token, 'fetchAdAccountDetails');
+      
+      // Ensure account ID has the proper format
+      const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+      
+      const response = await fetch(
+        `${this.BASE_URL}/${this.API_VERSION}/${accountId}?fields=name,account_id,account_status,currency&access_token=${token}`
+      );
+      
+      const data = await this.processApiResponse(response, 'fetchAdAccountDetails');
+      
+      console.log('Ad account details fetched successfully:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(`Error fetching details for ad account ${accountId}:`, error);
+      return this.handleApiError(error, `fetchAdAccountDetails for ${accountId}`);
+    }
+  }
+
+  /**
    * Fetch ad accounts for a specific business manager
    */
   public static async fetchAdAccountsForBusiness(token: string, businessId: string): Promise<MetaAdAccount[]> {

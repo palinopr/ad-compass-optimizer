@@ -29,7 +29,7 @@ const BusinessManagerSelector: React.FC<BusinessManagerSelectorProps> = ({ onSel
       onSelect(selectedBusinessManager);
       toast({
         title: "Business Manager Selected",
-        description: "Business Manager selection successful."
+        description: "Business Manager selection successful. Loading ad accounts..."
       });
     }
   };
@@ -83,7 +83,7 @@ const BusinessManagerSelector: React.FC<BusinessManagerSelectorProps> = ({ onSel
       <Button 
         onClick={handleContinue} 
         disabled={!selectedBusinessManager}
-        className="w-full"
+        className="w-full bg-meta-blue hover:bg-meta-dark"
       >
         Continue with Selected Business Manager
       </Button>
