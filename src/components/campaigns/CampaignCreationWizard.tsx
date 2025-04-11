@@ -1,65 +1,24 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  ArrowRight, 
-  ArrowLeft, 
-  Target, 
-  Users, 
-  Image, 
-  DollarSign, 
-  Calendar,
-  Check,
-  X
-} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import CampaignObjectiveStep from './wizard/CampaignObjectiveStep';
 import AudienceTargetingStep from './wizard/AudienceTargetingStep';
 import AdCreativeStep from './wizard/AdCreativeStep';
 import BudgetAndScheduleStep from './wizard/BudgetAndScheduleStep';
 import ReviewAndCreateStep from './wizard/ReviewAndCreateStep';
-import { useToast } from '@/hooks/use-toast';
+import StepProgressIndicator from './wizard/StepProgressIndicator';
+import WizardHeader from './wizard/WizardHeader';
+import WizardControls from './wizard/WizardControls';
+import { STEPS, CampaignData } from './wizard/WizardSteps';
 
 interface CampaignCreationWizardProps {
   onCancel: () => void;
 }
 
-const STEPS = [
-  {
-    id: 'objective',
-    title: 'Campaign Objective',
-    description: 'Select the goal for your campaign',
-    icon: Target,
-  },
-  {
-    id: 'audience',
-    title: 'Audience Targeting',
-    description: 'Define who will see your ads',
-    icon: Users,
-  },
-  {
-    id: 'creative',
-    title: 'Ad Creatives',
-    description: 'Design ads that convert',
-    icon: Image,
-  },
-  {
-    id: 'budget',
-    title: 'Budget & Schedule',
-    description: 'Set your spending limits and timeline',
-    icon: DollarSign,
-  },
-  {
-    id: 'review',
-    title: 'Review & Create',
-    description: 'Finalize your campaign',
-    icon: Check,
-  },
-];
-
 const CampaignCreationWizard = ({ onCancel }: CampaignCreationWizardProps) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [campaignData, setCampaignData] = useState({
+  const [campaignData, setCampaignData] = useState<CampaignData>({
     name: '',
     objective: '',
     event: null,
@@ -82,7 +41,7 @@ const CampaignCreationWizard = ({ onCancel }: CampaignCreationWizardProps) => {
   });
   const { toast } = useToast();
   
-  const updateCampaignData = (data: any) => {
+  const updateCampaignData = (data: Partial<CampaignData>) => {
     setCampaignData(prevData => ({
       ...prevData,
       ...data
@@ -127,10 +86,8 @@ const CampaignCreationWizard = ({ onCancel }: CampaignCreationWizardProps) => {
     }
   };
   
-  const currentStepInfo = STEPS[currentStep];
-  const StepIcon = currentStepInfo.icon;
-  
   const renderStepContent = () => {
+    const currentStepInfo = STEPS[currentStep];
     switch (currentStepInfo.id) {
       case 'objective':
         return <CampaignObjectiveStep 
@@ -166,89 +123,24 @@ const CampaignCreationWizard = ({ onCancel }: CampaignCreationWizardProps) => {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center text-lg font-medium">
-            <StepIcon className="w-5 h-5 mr-2" />
-            {currentStepInfo.title}
-            <span className="text-sm text-muted-foreground ml-2">
-              Step {currentStep + 1} of {STEPS.length}
-            </span>
+          <CardTitle>
+            <WizardHeader currentStep={currentStep} />
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-6 text-muted-foreground">{currentStepInfo.description}</p>
+          <p className="mb-6 text-muted-foreground">{STEPS[currentStep].description}</p>
           
-          {/* Step progress indicators */}
-          <div className="flex items-center justify-center mb-8">
-            {STEPS.map((step, index) => (
-              <React.Fragment key={step.id}>
-                <div 
-                  className={`flex items-center justify-center rounded-full w-8 h-8 ${
-                    index < currentStep 
-                      ? 'bg-meta-blue text-white' 
-                      : index === currentStep 
-                        ? 'border-2 border-meta-blue text-meta-blue' 
-                        : 'border-2 border-gray-300 text-gray-300'
-                  }`}
-                >
-                  {index < currentStep ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    <span>{index + 1}</span>
-                  )}
-                </div>
-                {index < STEPS.length - 1 && (
-                  <div 
-                    className={`h-1 w-12 ${
-                      index < currentStep ? 'bg-meta-blue' : 'bg-gray-300'
-                    }`}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+          <StepProgressIndicator currentStep={currentStep} />
           
           {renderStepContent()}
           
-          <div className="flex justify-between mt-8">
-            <div>
-              {currentStep > 0 && (
-                <Button 
-                  variant="outline" 
-                  onClick={handleBack}
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-              )}
-            </div>
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={onCancel}
-              >
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-              
-              {currentStep === STEPS.length - 1 ? (
-                <Button 
-                  onClick={handleCreate} 
-                  className="bg-meta-blue hover:bg-meta-dark"
-                >
-                  <Check className="mr-2 h-4 w-4" />
-                  Create Campaign
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleNext} 
-                  className="bg-meta-blue hover:bg-meta-dark"
-                >
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
+          <WizardControls
+            currentStep={currentStep}
+            onNext={handleNext}
+            onBack={handleBack}
+            onCancel={onCancel}
+            onCreate={handleCreate}
+          />
         </CardContent>
       </Card>
     </div>
