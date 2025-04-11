@@ -14,7 +14,7 @@ interface UseCampaignsResult {
 
 export function useCampaigns(status?: string): UseCampaignsResult {
   const [campaigns, setCampaigns] = useState<MetaCampaign[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
@@ -58,9 +58,13 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
         
         if (selectedAdAccounts) {
-          const accounts = JSON.parse(selectedAdAccounts);
-          if (accounts.length > 0) {
-            adAccountId = accounts[0]; // Use the first selected ad account
+          try {
+            const accounts = JSON.parse(selectedAdAccounts);
+            if (accounts.length > 0) {
+              adAccountId = accounts[0]; // Use the first selected ad account
+            }
+          } catch (e) {
+            console.error('Error parsing selected ad accounts:', e);
           }
         }
       }

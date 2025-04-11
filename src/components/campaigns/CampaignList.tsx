@@ -37,7 +37,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   }
   
   // Handle empty state
-  if (campaigns.length === 0) {
+  if (!campaigns || campaigns.length === 0) {
     return (
       <Card>
         <EmptyState status={status} />

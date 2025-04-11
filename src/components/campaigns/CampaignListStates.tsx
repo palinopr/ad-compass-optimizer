@@ -28,9 +28,18 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   onRetry
 }) => {
   // Parse the error message to provide better guidance
-  const isTokenError = error.toLowerCase().includes('token') || error.includes('400');
-  const isPermissionError = error.toLowerCase().includes('permission');
-  const isAccountError = error.toLowerCase().includes('account');
+  const isTokenError = error.toLowerCase().includes('token') || 
+    error.includes('400') || 
+    error.includes('401') || 
+    error.includes('expired') || 
+    error.includes('invalid');
+    
+  const isPermissionError = error.toLowerCase().includes('permission') || 
+    error.includes('403') || 
+    error.includes('ads_read');
+    
+  const isAccountError = error.toLowerCase().includes('account') || 
+    error.toLowerCase().includes('no ad account');
   
   return (
     <CardContent className="flex flex-col items-center justify-center py-8 text-center">
@@ -51,7 +60,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       
       <div className="flex gap-3">
         {!isAuthenticated && (
-          <Button className="bg-meta-blue hover:bg-meta-dark">
+          <Button className="bg-meta-blue hover:bg-meta-dark" onClick={() => window.location.reload()}>
             Connect Meta Account
           </Button>
         )}
