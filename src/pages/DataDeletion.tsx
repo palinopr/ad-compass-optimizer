@@ -1,168 +1,163 @@
 
 import React, { useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Trash, Shield, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 const DataDeletion = () => {
   const [email, setEmail] = useState('');
-  const [reason, setReason] = useState('');
+  const [userId, setUserId] = useState('');
+  const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Pre-fill userId if user is logged in with Meta
+  React.useEffect(() => {
+    const metaUserId = metaAuthService.getUserId();
+    if (metaUserId) {
+      setUserId(metaUserId);
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call to process deletion request
+    // Simulate API call
     setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setEmail('');
-      setReason('');
+      // If the user is logged in with Meta, also log them out
+      if (metaAuthService.isAuthenticated()) {
+        metaAuthService.logout();
+      }
       
       toast({
-        title: "Request submitted successfully",
-        description: "We'll process your data deletion request within 30 days."
+        title: "Request Submitted",
+        description: "Your data deletion request has been received. We will process it within 30 days."
       });
+      
+      setIsSubmitting(false);
+      setEmail('');
+      setUserId('');
+      setMessage('');
     }, 1500);
   };
 
   return (
     <AppLayout>
-      <div className="space-y-4 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold tracking-tight">Data Deletion Request</h1>
-        <p className="text-muted-foreground">
-          Request deletion of your personal data in accordance with our Privacy Policy.
+      <div className="container max-w-4xl py-8">
+        <h1 className="text-2xl font-bold tracking-tight mb-2">Data Deletion Request</h1>
+        <p className="text-muted-foreground mb-6">
+          Request deletion of your user data from JO Media (App ID: 1356517842213704)
         </p>
         
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Trash2 className="w-5 h-5 mr-2" />
-              Data Deletion Request Form
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Important Information</AlertTitle>
-              <AlertDescription>
-                Submitting this form will initiate the process to delete your personal data from our systems.
-                This action cannot be undone. We will process your request within 30 days as required by 
-                applicable privacy regulations.
-              </AlertDescription>
-            </Alert>
-            
-            {submitted ? (
-              <div className="space-y-4 py-4">
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5" />
-                  <div>
-                    <h3 className="font-medium text-lg">Request Received</h3>
-                    <p className="text-gray-600">
-                      Your data deletion request has been submitted successfully. Our team will process your request 
-                      and permanently delete your personal data from our systems within 30 days.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="border-t pt-4">
-                  <p className="text-sm text-gray-500">
-                    If you have any questions regarding your deletion request, please contact us at{" "}
-                    <a href="mailto:contact@outletmedia.net" className="text-blue-600 hover:underline">
-                      contact@outletmedia.net
-                    </a>
-                  </p>
-                </div>
-                
-                <Button 
-                  variant="outline"
-                  onClick={() => setSubmitted(false)}
-                  className="mt-4"
-                >
-                  Submit Another Request
-                </Button>
-              </div>
-            ) : (
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Shield className="w-5 h-5 mr-2 text-blue-600" />
+                About Data Deletion
+              </CardTitle>
+              <CardDescription>
+                Information about how we handle deletion of your Meta user data
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p>
+                In compliance with Meta Platform Terms, we provide this dedicated method for users to delete their data 
+                from our application. When you request deletion, we will:
+              </p>
+              
+              <ul className="list-disc list-inside space-y-2 text-gray-600">
+                <li>Remove all your personal information associated with Facebook/Meta</li>
+                <li>Delete any stored access tokens and authentication data</li>
+                <li>Remove your user profile and associated ad account data</li>
+                <li>Delete any analytics or insights data linked to your account</li>
+              </ul>
+              
+              <p className="text-sm text-gray-600">
+                Data deletion will be processed within 30 days of your request. 
+                After processing, your data will be permanently deleted from our systems.
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Trash className="w-5 h-5 mr-2 text-red-500" />
+                Request Data Deletion
+              </CardTitle>
+              <CardDescription>
+                Fill out this form to request deletion of your data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm font-medium">
-                    Email Address <span className="text-red-500">*</span>
+                    Email Address
                   </label>
                   <Input
                     id="email"
                     type="email"
+                    placeholder="Enter your email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter the email associated with your account"
                     required
-                    autoComplete="email"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <label htmlFor="reason" className="text-sm font-medium">
-                    Reason for Deletion (Optional)
+                  <label htmlFor="userId" className="text-sm font-medium">
+                    Meta User ID (if known)
+                  </label>
+                  <Input
+                    id="userId"
+                    placeholder="Your Meta User ID"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500">
+                    If you're currently logged in with Meta, this will be automatically filled.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="message" className="text-sm font-medium">
+                    Additional Information (optional)
                   </label>
                   <Textarea
-                    id="reason"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="Please let us know why you're requesting data deletion"
+                    id="message"
+                    placeholder="Any additional details about your deletion request"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
                     rows={4}
                   />
                 </div>
                 
-                <div className="pt-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={!email || isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-white"></span>
-                        Processing...
-                      </>
-                    ) : (
-                      'Submit Deletion Request'
-                    )}
-                  </Button>
-                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Processing..." : "Submit Deletion Request"}
+                </Button>
                 
-                <p className="text-xs text-gray-500 mt-4">
-                  By submitting this form, you confirm that you want AdCompass to delete all personal data
-                  associated with the provided email address. This process may take up to 30 days to complete.
+                <p className="text-center text-xs text-gray-500 pt-3">
+                  You can also email deletion requests to:{" "}
+                  <a href="mailto:contact@outletmedia.net" className="text-blue-600 hover:underline">
+                    contact@outletmedia.net
+                  </a>
                 </p>
               </form>
-            )}
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Mail className="w-5 h-5 mr-2" />
-              Contact Us
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">
-              If you have any questions about the data deletion process or need assistance with your request, 
-              please contact our privacy team at{" "}
-              <a href="mailto:contact@outletmedia.net" className="text-blue-600 hover:underline">
-                contact@outletmedia.net
-              </a>
-            </p>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AppLayout>
   );

@@ -60,7 +60,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         Note that during development we're using limited permissions.
       </p>
       <FacebookLogin
-        appId="2472498316312585"
+        appId="1356517842213704"
         autoLoad={false}
         fields="name,email,picture"
         scope="public_profile,email"
