@@ -21,8 +21,16 @@ import {
   SidebarMenuButton,
   SidebarTrigger
 } from '@/components/ui/sidebar';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const AppSidebar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -38,7 +46,10 @@ const AppSidebar = () => {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton className="flex items-center space-x-3 w-full py-2 px-3 rounded-lg bg-meta-lightBlue text-meta-blue font-medium">
+                  <SidebarMenuButton 
+                    className={`flex items-center space-x-3 w-full py-2 px-3 rounded-lg ${isActive('/') ? 'bg-meta-lightBlue text-meta-blue font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
+                    onClick={() => navigate('/')}
+                  >
                     <LayoutDashboard className="w-5 h-5" />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
@@ -80,7 +91,10 @@ const AppSidebar = () => {
                 </SidebarMenuItem>
                 
                 <SidebarMenuItem>
-                  <SidebarMenuButton className="flex items-center space-x-3 w-full py-2 px-3 rounded-lg text-gray-700 hover:bg-gray-100">
+                  <SidebarMenuButton 
+                    className={`flex items-center space-x-3 w-full py-2 px-3 rounded-lg ${isActive('/settings') ? 'bg-meta-lightBlue text-meta-blue font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
+                    onClick={() => navigate('/settings')}
+                  >
                     <Settings className="w-5 h-5" />
                     <span>Settings</span>
                   </SidebarMenuButton>
