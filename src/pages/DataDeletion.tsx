@@ -76,8 +76,8 @@ const DataDeletion = () => {
                 <div className="border-t pt-4">
                   <p className="text-sm text-gray-500">
                     If you have any questions regarding your deletion request, please contact us at{" "}
-                    <a href="mailto:privacy@adcompass-example.com" className="text-blue-600 hover:underline">
-                      privacy@adcompass-example.com
+                    <a href="mailto:contact@outletmedia.net" className="text-blue-600 hover:underline">
+                      contact@outletmedia.net
                     </a>
                   </p>
                 </div>
@@ -157,8 +157,8 @@ const DataDeletion = () => {
             <p className="text-sm">
               If you have any questions about the data deletion process or need assistance with your request, 
               please contact our privacy team at{" "}
-              <a href="mailto:privacy@adcompass-example.com" className="text-blue-600 hover:underline">
-                privacy@adcompass-example.com
+              <a href="mailto:contact@outletmedia.net" className="text-blue-600 hover:underline">
+                contact@outletmedia.net
               </a>
             </p>
           </CardContent>

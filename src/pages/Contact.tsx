@@ -7,12 +7,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ChevronLeft, Send } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const Contact = () => {
+  const { toast } = useToast();
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // This would be connected to an actual form submission service
-    alert('Thank you for your message. We will get back to you soon!');
+    toast({
+      title: "Message sent",
+      description: "Thank you for your message. We will get back to you soon!"
+    });
   };
 
   return (
@@ -29,7 +35,9 @@ const Contact = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-600">
-              Have questions about AdCompass? We're here to help. Fill out the form below, and our team will get back to you as soon as possible.
+              Have questions about AdCompass? We're here to help. Fill out the form below, 
+              or email us directly at <a href="mailto:contact@outletmedia.net" 
+              className="text-blue-600 hover:underline">contact@outletmedia.net</a>.
             </p>
             
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
