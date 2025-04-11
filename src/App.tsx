@@ -8,6 +8,21 @@ import Index from "./pages/Index";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+// Create placeholder pages for our new routes
+import Profile from "./pages/Profile";
+import Campaigns from "./pages/Campaigns";
+import Events from "./pages/Events";
+import Analytics from "./pages/Analytics";
+import Audience from "./pages/Audience";
+import Reports from "./pages/Reports";
+import Messages from "./pages/Messages";
+import Import from "./pages/Import";
+
+// Admin-specific pages
+import Clients from "./pages/admin/Clients";
+import Performance from "./pages/admin/Performance";
+import Pipeline from "./pages/admin/Pipeline";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -19,6 +34,20 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/campaigns" element={<Campaigns />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/audience" element={<Audience />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/import" element={<Import />} />
+          
+          {/* Admin routes */}
+          <Route path="/clients" element={<Clients />} />
+          <Route path="/performance" element={<Performance />} />
+          <Route path="/pipeline" element={<Pipeline />} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

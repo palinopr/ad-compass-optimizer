@@ -2,24 +2,24 @@
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard } from 'lucide-react';
+import { LineChart } from 'lucide-react';
 
-const Index = () => {
+const Performance = () => {
   return (
     <AppLayout>
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome to your Outlet Media dashboard.</p>
+        <h1 className="text-2xl font-bold tracking-tight">Agency Performance</h1>
+        <p className="text-muted-foreground">Overall agency performance metrics.</p>
         
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <LayoutDashboard className="w-5 h-5 mr-2" />
-              Overview
+              <LineChart className="w-5 h-5 mr-2" />
+              Performance Metrics
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p>The main dashboard content will be implemented here.</p>
+            <p>Agency-wide performance tracking will be implemented here.</p>
           </CardContent>
         </Card>
       </div>
@@ -27,4 +27,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Performance;
