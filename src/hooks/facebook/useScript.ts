@@ -22,10 +22,8 @@ export function useFacebookScript() {
       console.log("FB Async Init called, initializing with version:", FACEBOOK_APP_CONFIG.version);
       window.FB?.init({
         appId: FACEBOOK_APP_CONFIG.appId,
-        cookie: true,
         xfbml: true,
-        version: FACEBOOK_APP_CONFIG.version,
-        status: true // Enable checking login status
+        version: FACEBOOK_APP_CONFIG.version
       });
       
       // Log page view as recommended
@@ -38,15 +36,8 @@ export function useFacebookScript() {
       setIsScriptLoaded(true);
     };
 
-    // Create and append the script element using Facebook's recommended approach
-    (function(d, s, id) {
-      var js, fjs = d.getElementsByTagName(s)[0];
-      if (d.getElementById(id)) return;
-      js = d.createElement(s); js.id = id;
-      js.src = "https://connect.facebook.net/en_US/sdk.js";
-      fjs.parentNode.insertBefore(js, fjs);
-    }(document, 'script', 'facebook-jssdk'));
-
+    // No need to load the script here since it's already in the HTML
+    
     // No cleanup needed as we want the SDK to persist across the app
   }, []);
 

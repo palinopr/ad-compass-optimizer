@@ -21,7 +21,7 @@ export const FACEBOOK_APP_CONFIG = {
   redirectUri: window.location.origin,
   
   // App version (must be a valid version supported by Facebook)
-  version: "v17.0"
+  version: "v22.0"
 };
 
 // Required Facebook App Configuration for Production Use:

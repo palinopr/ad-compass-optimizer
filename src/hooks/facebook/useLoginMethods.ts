@@ -55,6 +55,7 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
     if (window.FB) {
       window.FB.api(
         '/me', 
+        'GET',
         { fields: 'name,email,picture' },
         (userInfo) => {
           console.log("Received Facebook user info:", userInfo);

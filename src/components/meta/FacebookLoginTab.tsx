@@ -19,7 +19,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     loginStatus,
     loginError,
     isConnecting,
-    handleManualLoginClick,
     fbLogin,
     responseFacebook,
     handleFacebookError
@@ -55,8 +54,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
   const handleClick = (useAdvancedPermissions = true) => {
     if (typeof fbLogin === 'function') {
       fbLogin(useAdvancedPermissions);
-    } else {
-      handleManualLoginClick(useAdvancedPermissions);
     }
   };
 
