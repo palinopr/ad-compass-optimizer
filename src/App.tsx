@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import Index from "./pages/Index";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -28,30 +29,32 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/campaigns" element={<Campaigns />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/audience" element={<Audience />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/import" element={<Import />} />
-          
-          {/* Admin routes */}
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/performance" element={<Performance />} />
-          <Route path="/pipeline" element={<Pipeline />} />
-          
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <SidebarProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/audience" element={<Audience />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/import" element={<Import />} />
+            
+            {/* Admin routes */}
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/performance" element={<Performance />} />
+            <Route path="/pipeline" element={<Pipeline />} />
+            
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </SidebarProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
