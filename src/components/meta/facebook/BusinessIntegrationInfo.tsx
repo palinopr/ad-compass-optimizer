@@ -2,7 +2,6 @@
 import React from 'react';
 import { AlertCircle, ExternalLink } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { FACEBOOK_AD_PERMISSIONS } from '@/config/socialAuth';
 
 const BusinessIntegrationInfo: React.FC = () => {
   return (
@@ -17,13 +16,11 @@ const BusinessIntegrationInfo: React.FC = () => {
             asking you to approve access to your business assets.
           </p>
           
-          {FACEBOOK_AD_PERMISSIONS.development.useBasicPermissionsOnly && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-2 text-blue-700 text-xs">
-              <strong>Development Mode:</strong> Currently using basic permissions only. 
-              Advanced permissions like {Object.keys(FACEBOOK_AD_PERMISSIONS.descriptions).join(", ")} 
-              require Meta App Review before they can be used in production.
-            </div>
-          )}
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-2 text-blue-700 text-xs">
+            <strong>Development Mode:</strong> Currently using basic permissions only. 
+            Advanced permissions like ads_management, ads_read, business_management 
+            require Meta App Review before they can be used in production.
+          </div>
           
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
