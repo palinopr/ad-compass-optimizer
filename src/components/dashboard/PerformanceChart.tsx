@@ -4,50 +4,50 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Calendar, TrendingUp } from 'lucide-react';
+import { Calendar, TrendingUp, Ticket, DollarSign } from 'lucide-react';
 
-// Sample data - in a real application, this would come from your API
+// Sample data with event-specific metrics
 const weeklyData = [
-  { date: 'Mon', spend: 120, impressions: 1200, clicks: 82, conversions: 5 },
-  { date: 'Tue', spend: 150, impressions: 1500, clicks: 95, conversions: 7 },
-  { date: 'Wed', spend: 180, impressions: 1700, clicks: 110, conversions: 9 },
-  { date: 'Thu', spend: 170, impressions: 1600, clicks: 105, conversions: 8 },
-  { date: 'Fri', spend: 200, impressions: 1900, clicks: 130, conversions: 11 },
-  { date: 'Sat', spend: 220, impressions: 2100, clicks: 140, conversions: 13 },
-  { date: 'Sun', spend: 250, impressions: 2400, clicks: 160, conversions: 15 },
+  { date: 'Mon', adSpend: 120, ticketSales: 12, revenue: 600, roas: 5.0 },
+  { date: 'Tue', adSpend: 150, ticketSales: 15, revenue: 750, roas: 5.0 },
+  { date: 'Wed', adSpend: 180, ticketSales: 22, revenue: 1100, roas: 6.1 },
+  { date: 'Thu', adSpend: 170, ticketSales: 18, revenue: 900, roas: 5.3 },
+  { date: 'Fri', adSpend: 200, ticketSales: 25, revenue: 1250, roas: 6.3 },
+  { date: 'Sat', adSpend: 220, ticketSales: 29, revenue: 1450, roas: 6.6 },
+  { date: 'Sun', adSpend: 250, ticketSales: 35, revenue: 1750, roas: 7.0 },
 ];
 
 const monthlyData = [
-  { date: 'Week 1', spend: 980, impressions: 9800, clicks: 650, conversions: 42 },
-  { date: 'Week 2', spend: 1050, impressions: 10500, clicks: 720, conversions: 51 },
-  { date: 'Week 3', spend: 1200, impressions: 12000, clicks: 830, conversions: 65 },
-  { date: 'Week 4', spend: 1350, impressions: 13500, clicks: 920, conversions: 78 },
+  { date: 'Week 1', adSpend: 980, ticketSales: 98, revenue: 4900, roas: 5.0 },
+  { date: 'Week 2', adSpend: 1050, ticketSales: 120, revenue: 6000, roas: 5.7 },
+  { date: 'Week 3', adSpend: 1200, ticketSales: 150, revenue: 7500, roas: 6.3 },
+  { date: 'Week 4', adSpend: 1350, ticketSales: 180, revenue: 9000, roas: 6.7 },
 ];
 
 const chartConfig = {
-  spend: {
-    label: "Spend ($)",
-    theme: {
-      light: "#1877F2",
-      dark: "#60a5fa"
-    }
-  },
-  clicks: {
-    label: "Clicks",
-    theme: {
-      light: "#4CAF50",
-      dark: "#86efac"
-    }
-  },
-  conversions: {
-    label: "Conversions",
+  adSpend: {
+    label: "Ad Spend ($)",
     theme: {
       light: "#FF5722",
       dark: "#fdba74"
     }
   },
-  impressions: {
-    label: "Impressions",
+  ticketSales: {
+    label: "Ticket Sales",
+    theme: {
+      light: "#4CAF50",
+      dark: "#86efac"
+    }
+  },
+  revenue: {
+    label: "Revenue ($)",
+    theme: {
+      light: "#1877F2",
+      dark: "#60a5fa"
+    }
+  },
+  roas: {
+    label: "ROAS",
     theme: {
       light: "#9b87f5",
       dark: "#c4b5fd"
@@ -61,8 +61,8 @@ const PerformanceChart = () => {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center text-lg font-medium">
-            <TrendingUp className="w-5 h-5 mr-2" />
-            Campaign Performance
+            <Ticket className="w-5 h-5 mr-2" />
+            Event Marketing Performance
           </CardTitle>
           <Tabs defaultValue="weekly" className="w-[300px]">
             <TabsList className="grid w-full grid-cols-2">
@@ -85,24 +85,24 @@ const PerformanceChart = () => {
                   <Legend />
                   <Line
                     type="monotone"
-                    dataKey="spend"
-                    stroke="var(--color-spend)"
+                    dataKey="adSpend"
+                    stroke="var(--color-adSpend)"
                     activeDot={{ r: 8 }}
                   />
                   <Line
                     type="monotone"
-                    dataKey="clicks"
-                    stroke="var(--color-clicks)"
+                    dataKey="ticketSales"
+                    stroke="var(--color-ticketSales)"
                   />
                   <Line
                     type="monotone"
-                    dataKey="conversions"
-                    stroke="var(--color-conversions)"
+                    dataKey="revenue"
+                    stroke="var(--color-revenue)"
                   />
                   <Line
                     type="monotone"
-                    dataKey="impressions" 
-                    stroke="var(--color-impressions)"
+                    dataKey="roas" 
+                    stroke="var(--color-roas)"
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -119,30 +119,53 @@ const PerformanceChart = () => {
                   <Legend />
                   <Line
                     type="monotone"
-                    dataKey="spend"
-                    stroke="var(--color-spend)"
+                    dataKey="adSpend"
+                    stroke="var(--color-adSpend)"
                     activeDot={{ r: 8 }}
                   />
                   <Line
                     type="monotone"
-                    dataKey="clicks"
-                    stroke="var(--color-clicks)"
+                    dataKey="ticketSales"
+                    stroke="var(--color-ticketSales)"
                   />
                   <Line
                     type="monotone"
-                    dataKey="conversions"
-                    stroke="var(--color-conversions)"
+                    dataKey="revenue"
+                    stroke="var(--color-revenue)"
                   />
                   <Line
                     type="monotone"
-                    dataKey="impressions" 
-                    stroke="var(--color-impressions)"
+                    dataKey="roas" 
+                    stroke="var(--color-roas)"
                   />
                 </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
           </TabsContent>
         </Tabs>
+
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-slate-50 p-3 rounded-md border">
+            <div className="text-sm text-slate-500">Total Ad Spend</div>
+            <div className="text-lg font-bold">$2,290</div>
+            <div className="text-xs text-green-600 mt-1">+12% vs. last period</div>
+          </div>
+          <div className="bg-slate-50 p-3 rounded-md border">
+            <div className="text-sm text-slate-500">Total Tickets</div>
+            <div className="text-lg font-bold">156</div>
+            <div className="text-xs text-green-600 mt-1">+18% vs. last period</div>
+          </div>
+          <div className="bg-slate-50 p-3 rounded-md border">
+            <div className="text-sm text-slate-500">Total Revenue</div>
+            <div className="text-lg font-bold">$7,800</div>
+            <div className="text-xs text-green-600 mt-1">+22% vs. last period</div>
+          </div>
+          <div className="bg-slate-50 p-3 rounded-md border">
+            <div className="text-sm text-slate-500">Average ROAS</div>
+            <div className="text-lg font-bold">6.0x</div>
+            <div className="text-xs text-green-600 mt-1">+0.4 vs. last period</div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

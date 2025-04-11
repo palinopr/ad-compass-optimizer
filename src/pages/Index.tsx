@@ -2,7 +2,7 @@
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, TicketIcon, Users, Calendar } from 'lucide-react';
+import { Ticket, Calendar, Users, DollarSign, TrendingUp } from 'lucide-react';
 import PerformanceChart from '@/components/dashboard/PerformanceChart';
 import MetricCard from '@/components/dashboard/MetricCard';
 import AudienceInsights from '@/components/dashboard/AudienceInsights';
@@ -15,46 +15,58 @@ const Index = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Welcome to your Outlet Media dashboard.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Event Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Monitor your event advertising performance.</p>
           </div>
         </div>
         
-        {/* Key Metrics */}
+        {/* Key Event Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard 
-            title="Total Impressions" 
-            value="102,543" 
-            change={12.5} 
-            icon={<LayoutDashboard className="w-4 h-4" />} 
-          />
-          <MetricCard 
-            title="Ticket Sales" 
+            title="Total Tickets Sold" 
             value="1,245" 
-            change={8.2} 
-            icon={<TicketIcon className="w-4 h-4" />} 
+            change={8.2}
+            trend={+52}
+            trendLabel="vs. last week" 
+            icon={<Ticket className="w-4 h-4" />} 
           />
           <MetricCard 
-            title="Audience Reach" 
-            value="58,492" 
-            change={-3.1} 
-            icon={<Users className="w-4 h-4" />} 
+            title="Ticket Revenue" 
+            value="$62,250" 
+            change={12.5}
+            trend={+2600}
+            trendLabel="vs. last week" 
+            icon={<DollarSign className="w-4 h-4" />} 
           />
           <MetricCard 
-            title="Upcoming Events" 
-            value="7" 
-            icon={<Calendar className="w-4 h-4" />} 
+            title="Ad Spend" 
+            value="$15,425" 
+            change={3.6}
+            trend={+525}
+            trendLabel="vs. last week"
+            trendDesired="down" 
+            icon={<DollarSign className="w-4 h-4" />} 
+          />
+          <MetricCard 
+            title="ROAS" 
+            value="4.0x" 
+            change={8.7}
+            trend={+0.3}
+            trendLabel="vs. last week" 
+            icon={<TrendingUp className="w-4 h-4" />} 
           />
         </div>
         
-        {/* Main charts */}
+        {/* Performance Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <PerformanceChart />
           </div>
-          <div>
-            <EventMetrics />
-          </div>
+        </div>
+        
+        {/* Events Table */}
+        <div className="grid grid-cols-1 gap-6">
+          <EventMetrics />
         </div>
         
         {/* Demographics and Campaign table */}
