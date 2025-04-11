@@ -21,9 +21,26 @@ export const FACEBOOK_APP_CONFIG = {
   version: "v18.0"
 };
 
-// Facebook app setup instructions:
-// 1. Go to https://developers.facebook.com/apps/
-// 2. Create a new app with the "Business" type
-// 3. Add the "Facebook Login" product
-// 4. Configure the valid OAuth redirect URIs in settings
-// 5. Request app review if using permissions beyond basic
+// Required Facebook App Configuration for Production Use:
+// 1. Create a business app at https://developers.facebook.com/apps/
+// 2. Add "Facebook Login" product to your app
+// 3. Configure these REQUIRED settings in your Facebook App:
+//    - Privacy Policy URL: Link to your privacy policy page
+//    - App Domains: Add all domains where your app will run
+//    - Valid OAuth Redirect URIs: Add all callback URLs (including localhost for dev)
+// 4. Complete the "Authenticate and request data from users with Facebook Login" use case
+// 5. Switch your app from Development to Live mode after completing app review
+
+export const FACEBOOK_LOGIN_REQUIREMENTS = {
+  requiredSettings: [
+    "Privacy Policy URL",
+    "App Domains",
+    "Valid OAuth Redirect URIs",
+    "Terms of Service URL (recommended)"
+  ],
+  requiredPages: [
+    "Privacy Policy",
+    "Terms of Service",
+    "Data Deletion Instructions"
+  ]
+};

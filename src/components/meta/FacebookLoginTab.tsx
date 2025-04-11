@@ -3,8 +3,10 @@ import React from 'react';
 import FacebookLogin from 'react-facebook-login';
 import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
-import { ExternalLink, AlertCircle } from 'lucide-react';
-import { FACEBOOK_APP_CONFIG } from '@/config/socialAuth';
+import { ExternalLink, AlertCircle, Info } from 'lucide-react';
+import { FACEBOOK_APP_CONFIG, FACEBOOK_LOGIN_REQUIREMENTS } from '@/config/socialAuth';
+import { Separator } from '@/components/ui/separator';
+import { Link } from 'react-router-dom';
 
 interface FacebookAuthResponse {
   accessToken: string;
@@ -54,18 +56,34 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     }
   };
 
+  // Function to handle the "Feature Unavailable" error
+  const handleFacebookError = (error: any) => {
+    if (error) {
+      console.error('Facebook Login Error:', error);
+      
+      // Check for common "Feature Unavailable" error
+      if (error.message && error.message.includes('Feature Unavailable')) {
+        toast({
+          title: "Facebook Login Unavailable",
+          description: "Your Facebook App needs additional configuration. Please check developer settings.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col items-center py-4">
-      <p className="mb-4 text-center text-sm text-gray-500">
+      <p className="mb-3 text-center text-sm text-gray-500">
         Connect your personal Facebook account to manage your Meta ad campaigns.
       </p>
       
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md w-full">
         <div className="flex items-start space-x-2 text-xs text-blue-700">
-          <AlertCircle className="h-4 w-4 mt-0.5" />
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
           <span>
-            This integration uses an App ID for development purposes. For production use, 
-            you should create your own Facebook App in the Meta for Developers portal.
+            If you encounter a "Feature Unavailable" error, your Facebook App requires additional configuration.
+            Complete the "Authenticate and request data from users" use case in your Facebook App settings.
           </span>
         </div>
       </div>
@@ -76,10 +94,46 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         fields="name,email,picture"
         scope={FACEBOOK_APP_CONFIG.scope}
         callback={responseFacebook}
+        onFailure={handleFacebookError}
         cssClass="bg-[#1877F2] text-white py-2 px-4 rounded flex items-center justify-center"
         icon="fa-facebook"
         textButton="Connect with Facebook"
+        redirectUri={FACEBOOK_APP_CONFIG.redirectUri}
+        version={FACEBOOK_APP_CONFIG.version}
       />
+      
+      <Separator className="my-4" />
+      
+      <div className="w-full space-y-3 text-xs">
+        <div className="flex items-center text-gray-800">
+          <Info className="h-4 w-4 mr-1.5 text-blue-600" />
+          <span className="font-medium">Required Facebook App Settings:</span>
+        </div>
+        
+        <ul className="list-disc pl-5 space-y-1 text-gray-600">
+          {FACEBOOK_LOGIN_REQUIREMENTS.requiredSettings.map((setting, index) => (
+            <li key={index}>{setting}</li>
+          ))}
+        </ul>
+        
+        <div className="flex flex-wrap gap-2 mt-2">
+          <Link 
+            to="/privacy-policy"
+            className="text-blue-600 hover:underline flex items-center"
+          >
+            Privacy Policy
+            <ExternalLink className="h-3 w-3 ml-0.5" />
+          </Link>
+          
+          <Link 
+            to="/terms-of-service"
+            className="text-blue-600 hover:underline flex items-center"
+          >
+            Terms of Service
+            <ExternalLink className="h-3 w-3 ml-0.5" />
+          </Link>
+        </div>
+      </div>
       
       <div className="text-center mt-4">
         <a 
@@ -88,7 +142,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
           rel="noopener noreferrer"
           className="text-xs text-blue-600 hover:underline flex items-center justify-center"
         >
-          Learn about Facebook Login
+          Facebook Login Documentation
           <ExternalLink className="h-3 w-3 ml-1" />
         </a>
       </div>
