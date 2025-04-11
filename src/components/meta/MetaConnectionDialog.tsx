@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -25,10 +24,6 @@ const MetaConnectionDialog: React.FC<MetaConnectionDialogProps> = ({
   onError
 }) => {
   const [activeTab, setActiveTab] = useState<string>("token");
-  
-  const handleTokenSuccess = (userData: any) => {
-    onSuccess(userData);
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -47,7 +42,7 @@ const MetaConnectionDialog: React.FC<MetaConnectionDialogProps> = ({
           
           <TabsContent value="token" className="space-y-4">
             <TokenInputTab 
-              onTokenSuccess={handleTokenSuccess} 
+              onTokenSuccess={onSuccess} 
               onTokenError={onError}
             />
           </TabsContent>
