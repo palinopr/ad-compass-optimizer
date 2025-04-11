@@ -3,6 +3,9 @@
  * Base service with common API functionality
  */
 export class BaseApiService {
+  protected static readonly API_VERSION = 'v17.0';
+  protected static readonly BASE_URL = 'https://graph.facebook.com';
+
   /**
    * Handle API errors consistently
    */

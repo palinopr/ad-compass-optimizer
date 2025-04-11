@@ -32,7 +32,7 @@ export class MetaConnectionService extends BaseApiService {
       console.log(`Testing connection with token: ${token.substring(0, 4)}... (${token.length} chars)`);
       
       const response = await fetch(
-        `https://graph.facebook.com/v18.0/me?access_token=${token}`
+        `${this.BASE_URL}/${this.API_VERSION}/me?access_token=${token}`
       );
       
       if (!response.ok) {
@@ -74,7 +74,7 @@ export class MetaConnectionService extends BaseApiService {
       // Now check if the token has the required permissions by testing ad account access
       try {
         const adAccountsResponse = await fetch(
-          `https://graph.facebook.com/v18.0/me/adaccounts?limit=1&access_token=${token}`
+          `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?limit=1&access_token=${token}`
         );
         
         const adAccountsData = await adAccountsResponse.json();

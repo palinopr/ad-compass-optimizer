@@ -9,6 +9,7 @@ import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
 import { useToast } from '@/hooks/use-toast';
 import ReAuthenticateButton from './ReAuthenticateButton';
+import { Button } from '@/components/ui/button';
 
 enum ConnectionStep {
   LOGIN,
@@ -137,6 +138,8 @@ const MetaConnectionFlow: React.FC = () => {
           <div className="space-y-4">
             <ConnectedAccountInfo 
               userData={userData} 
+              adAccounts={adAccounts}
+              errorMessage={errorMessage}
               onLogout={handleLogout}
             />
             
