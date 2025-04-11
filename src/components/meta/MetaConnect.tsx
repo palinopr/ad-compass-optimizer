@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Facebook, CheckCircle, XCircle, Loader2, Info } from 'lucide-react';
+import { Facebook, CheckCircle, XCircle, Loader2, Info, Key } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -14,12 +14,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 const MetaConnect: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [accessToken, setAccessToken] = useState<string>('');
   const location = useLocation();
   const { toast } = useToast();
   
@@ -31,61 +33,10 @@ const MetaConnect: React.FC = () => {
     };
     
     checkAuth();
-    
-    // Handle redirect from Meta OAuth
-    const handleAuthRedirect = async () => {
-      const params = new URLSearchParams(location.search);
-      const code = params.get('code');
-      const errorParam = params.get('error');
-      
-      if (errorParam) {
-        setError('Authentication failed: ' + errorParam);
-        toast({
-          title: "Authentication Failed",
-          description: `Error: ${errorParam}`,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (code) {
-        setIsLoading(true);
-        try {
-          await metaAuthService.handleRedirect(code);
-          setIsConnected(true);
-          toast({
-            title: "Connected Successfully",
-            description: "Your Meta account is now connected.",
-          });
-          // Remove the code from the URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (err) {
-          setError('Failed to complete authentication');
-          toast({
-            title: "Connection Failed",
-            description: "Could not complete Meta authentication",
-            variant: "destructive"
-          });
-          console.error(err);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-    
-    handleAuthRedirect();
-  }, [location, toast]);
+  }, []);
   
   const handleConnect = () => {
-    setIsLoading(true);
-    try {
-      metaAuthService.initiateLogin();
-    } catch (err: any) {
-      setError(err.message || 'Failed to initiate authentication');
-      setIsLoading(false);
-      // Show the configuration dialog
-      setIsDialogOpen(true);
-    }
+    setIsDialogOpen(true);
   };
   
   const handleDisconnect = () => {
@@ -95,6 +46,29 @@ const MetaConnect: React.FC = () => {
       title: "Disconnected",
       description: "Your Meta account has been disconnected."
     });
+  };
+
+  const handleTokenSubmit = () => {
+    if (!accessToken.trim()) {
+      setError("Please enter a valid access token");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      metaAuthService.storeAccessToken(accessToken);
+      setIsConnected(true);
+      setIsDialogOpen(false);
+      setError(null);
+      toast({
+        title: "Connected Successfully",
+        description: "Your Meta account is now connected.",
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to connect with provided token');
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -153,30 +127,67 @@ const MetaConnect: React.FC = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Meta Configuration Required</DialogTitle>
+            <DialogTitle>Connect to Meta Ads</DialogTitle>
             <DialogDescription>
-              To connect your Meta account, you need to set up a Meta App ID first.
+              Enter your Meta Ads access token to connect your account directly.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
+            {error && (
+              <div className="flex items-start space-x-3 bg-red-50 border border-red-200 p-3 rounded-md">
+                <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                <div className="text-sm text-red-600">{error}</div>
+              </div>
+            )}
+            
+            <div>
+              <label htmlFor="accessToken" className="text-sm font-medium block mb-1">
+                Meta Ads Access Token
+              </label>
+              <Input
+                id="accessToken"
+                type="password" 
+                value={accessToken}
+                onChange={(e) => setAccessToken(e.target.value)}
+                placeholder="Enter your access token"
+                className="w-full"
+              />
+            </div>
+            
             <div className="flex items-start space-x-3 bg-amber-50 border border-amber-200 p-3 rounded-md">
               <Info className="h-5 w-5 text-amber-500 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium">Follow these steps to set up a Meta App:</p>
+                <p className="font-medium">How to get your access token:</p>
                 <ol className="list-decimal list-inside space-y-1 mt-2 pl-1">
-                  <li>Create a developer account at <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">developers.facebook.com</a></li>
-                  <li>Create a new app in the Meta for Developers Console</li>
-                  <li>Select "Business" as the app type</li>
-                  <li>Add the "Marketing API" product to your app</li>
-                  <li>Copy your App ID from the app settings</li>
-                  <li>Open the <code className="bg-gray-100 p-1 rounded">src/services/MetaAuthService.ts</code> file</li>
-                  <li>Update the <code className="bg-gray-100 p-1 rounded">appId</code> with your Meta App ID</li>
+                  <li>Go to <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Meta Business Settings</a></li>
+                  <li>Click on "System Users" in the left sidebar</li>
+                  <li>Create a new System User or select an existing one</li>
+                  <li>Go to the "Generate New Token" section</li>
+                  <li>Select your Ad account and request "ads_management" and "ads_read" permissions</li>
+                  <li>Copy the generated token and paste it above</li>
                 </ol>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button 
+              className="bg-meta-blue hover:bg-meta-dark"
+              onClick={handleTokenSubmit}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Key className="mr-2 h-4 w-4" />
+                  Connect Account
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
