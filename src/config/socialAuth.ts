@@ -57,5 +57,10 @@ export const FACEBOOK_AD_PERMISSIONS = {
     ads_management: "Create, edit and manage ads",
     ads_read: "Read advertising account data",
     business_management: "Access Business Manager accounts"
+  },
+  // Development mode permissions (only basic permissions work without app review)
+  development: {
+    // In development, we can only use basic permissions
+    useBasicPermissionsOnly: true
   }
 };

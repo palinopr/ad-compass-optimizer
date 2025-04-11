@@ -45,6 +45,13 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
     console.log("Attempting login with advanced permissions");
     setIsConnecting(true);
     
+    // For development environments where app is not approved for advanced permissions yet
+    const permissionsToRequest = FACEBOOK_AD_PERMISSIONS.development.useBasicPermissionsOnly ? 
+      FACEBOOK_AD_PERMISSIONS.basic : 
+      `${FACEBOOK_APP_CONFIG.scope},${FACEBOOK_AD_PERMISSIONS.advanced}`;
+      
+    console.log("Requesting permissions:", permissionsToRequest);
+    
     if (window.FB) {
       window.FB.login(
         (response) => {
@@ -82,7 +89,7 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
           }
         },
         { 
-          scope: `${FACEBOOK_APP_CONFIG.scope},${FACEBOOK_AD_PERMISSIONS.advanced}`,
+          scope: permissionsToRequest,
           return_scopes: true  // This will return the granted scopes in the response
         }
       );

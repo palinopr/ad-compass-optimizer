@@ -2,6 +2,7 @@
 import React from 'react';
 import { AlertCircle, ExternalLink } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { FACEBOOK_AD_PERMISSIONS } from '@/config/socialAuth';
 
 const BusinessIntegrationInfo: React.FC = () => {
   return (
@@ -16,6 +17,14 @@ const BusinessIntegrationInfo: React.FC = () => {
             asking you to approve access to your business assets.
           </p>
           
+          {FACEBOOK_AD_PERMISSIONS.development.useBasicPermissionsOnly && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-2 text-blue-700 text-xs">
+              <strong>Development Mode:</strong> Currently using basic permissions only. 
+              Advanced permissions like {Object.keys(FACEBOOK_AD_PERMISSIONS.descriptions).join(", ")} 
+              require Meta App Review before they can be used in production.
+            </div>
+          )}
+          
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
               <AccordionTrigger className="text-sm font-medium text-amber-900">
@@ -29,6 +38,24 @@ const BusinessIntegrationInfo: React.FC = () => {
                   <li>Click "Continue" to grant access to your business assets</li>
                   <li>Select the business(es) you want to connect with</li>
                   <li>Complete the Facebook flow to return to the app</li>
+                </ol>
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="item-2">
+              <AccordionTrigger className="text-sm font-medium text-amber-900">
+                App Review Requirements
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="text-amber-700 mb-2">
+                  Before your app can request advanced permissions in production, you must:
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-amber-700 pl-1">
+                  <li>Complete the Meta App Review process</li>
+                  <li>Submit your app for review with detailed use cases</li>
+                  <li>Explain why each permission is needed</li>
+                  <li>Provide testing instructions for Meta's review team</li>
+                  <li>Get approval for each requested permission</li>
                 </ol>
               </AccordionContent>
             </AccordionItem>

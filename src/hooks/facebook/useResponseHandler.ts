@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
@@ -86,8 +85,16 @@ export function useResponseHandler(onLoginSuccess: (userData: any) => void) {
         );
       } else if (error.message && error.message.includes('Invalid Scopes')) {
         setLoginError(
-          'Permission error: Advanced permissions like ads_management require Meta App Review. Currently using basic permissions only.'
+          'Permission error: Advanced permissions like ads_management require Meta App Review approval. Currently using basic permissions only.'
         );
+        // Show a helpful toast
+        toast({
+          title: "Permission Request Limited",
+          description: "Advanced permissions require Meta App Review. Connected with basic permissions only.",
+          variant: "default"
+        });
+        // Note: We're keeping the login flow going, just with basic permissions
+        return;
       } else if (error.message && error.message.includes('Business Integration')) {
         setLoginError(
           'Business Integration approval is required. Please complete the business integration setup in Facebook.'
