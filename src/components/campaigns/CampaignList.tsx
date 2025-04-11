@@ -11,7 +11,7 @@ interface CampaignListProps {
 }
 
 const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
-  const { campaigns, isLoading, error } = useCampaigns(status);
+  const { campaigns, isLoading, error, refetchCampaigns } = useCampaigns(status);
   const isAuthenticated = metaAuthService.isAuthenticated();
   
   // Handle loading state
@@ -27,7 +27,11 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   if (error) {
     return (
       <Card>
-        <ErrorState error={error} isAuthenticated={isAuthenticated} />
+        <ErrorState 
+          error={error} 
+          isAuthenticated={isAuthenticated} 
+          onRetry={refetchCampaigns}
+        />
       </Card>
     );
   }

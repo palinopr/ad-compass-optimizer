@@ -23,6 +23,13 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     setError(null);
     
     try {
+      // Check if user is authenticated
+      if (!metaAuthService.isAuthenticated()) {
+        setError('Not authenticated with Meta');
+        setIsLoading(false);
+        return;
+      }
+      
       // Check if user has the necessary permissions
       const permissions = metaAuthService.getPermissions();
       const hasAdsPermission = permissions.some(p => 
@@ -59,7 +66,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       }
       
       if (!adAccountId) {
-        setError('No ad account selected');
+        setError('No ad account selected. Please select an ad account to view campaigns.');
         setIsLoading(false);
         return;
       }
@@ -83,14 +90,39 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     } catch (err) {
       console.error('Error fetching campaigns:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch campaigns';
-      setError(errorMessage);
       
-      // Provide more specific error message based on common issues
+      // Try to extract HTTP error code for more specific errors
+      let enhancedError = errorMessage;
+      if (typeof errorMessage === 'string') {
+        // Extract error code if present
+        const errorCodeMatch = errorMessage.match(/(\d{3})/);
+        if (errorCodeMatch && errorCodeMatch[0]) {
+          const errorCode = errorCodeMatch[0];
+          
+          if (errorCode === '400') {
+            enhancedError = 'Failed to fetch campaign data (Error 400). This usually indicates an invalid token format or expired token.';
+          } else if (errorCode === '401') {
+            enhancedError = 'Authentication failed (Error 401). Your Meta access token has expired.';
+          } else if (errorCode === '403') {
+            enhancedError = 'Permission denied (Error 403). You don\'t have the required permissions to access this data.';
+          }
+        }
+      }
+      
+      setError(enhancedError);
+      
+      // Show toast notification with more friendly error message
       if (typeof errorMessage === 'string') {
         if (errorMessage.includes('permission')) {
           toast({
             title: "Permission Error",
             description: "You don't have the required permissions to view campaign data. Please update your token permissions.",
+            variant: "destructive"
+          });
+        } else if (errorMessage.includes('400') || errorMessage.includes('401')) {
+          toast({
+            title: "Authentication Error",
+            description: "Your Meta access token appears to be invalid or expired. Please reconnect your account.",
             variant: "destructive"
           });
         } else {
