@@ -140,7 +140,7 @@ const MetaAuth: React.FC = () => {
           <div className="flex flex-col items-center">
             <p className="mb-4">Connect your Facebook account to access your ad accounts and campaign data</p>
             <FacebookLogin
-              appId="1059544515252389" // Replace with actual App ID from Meta for Developers
+              appId="2472498316312585" // Your Facebook App ID
               autoLoad={false}
               fields="name,email,picture"
               scope="public_profile,email,ads_management,ads_read,business_management"
