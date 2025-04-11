@@ -1,7 +1,7 @@
 
 export class MetaAuthService {
   // Replace these with your actual Meta App credentials
-  private appId: string = 'YOUR_META_APP_ID';
+  private appId: string = '';
   private redirectUri: string = window.location.origin + '/campaigns';
   private scopes: string[] = [
     'ads_management',
@@ -13,6 +13,11 @@ export class MetaAuthService {
 
   // Initiate the login process
   public initiateLogin(): void {
+    if (!this.appId) {
+      // No App ID provided, show an error through alert dialog
+      throw new Error('Meta App ID is not configured. Please set your Meta App ID in the MetaAuthService.ts file');
+    }
+
     const scopeString = this.scopes.join(',');
     const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${this.appId}&redirect_uri=${encodeURIComponent(this.redirectUri)}&scope=${scopeString}&response_type=code&state=${this.generateState()}`;
     
