@@ -62,5 +62,5 @@ export const FACEBOOK_AD_PERMISSIONS = {
   }
 };
 
-// Development mode status - set to true if app hasn't completed app review
+// Development mode status - set to false since app has completed app review
 export const IS_DEV_MODE = false;

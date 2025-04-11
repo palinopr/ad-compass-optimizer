@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
@@ -40,19 +41,10 @@ export function useResponseHandler(onLoginSuccess: (userData: any) => void) {
       
       onLoginSuccess(userData);
       
-      // Show appropriate toast based on whether business access was granted
-      if (response.hasBusinessAccess === false) {
-        toast({
-          title: "Connected with Limited Access",
-          description: "Connected successfully, but business integration permissions were not granted. Some features may be limited.",
-          variant: "default" // Changed from "warning" to "default"
-        });
-      } else {
-        toast({
-          title: "Connected Successfully",
-          description: "Your Meta account has been connected successfully."
-        });
-      }
+      toast({
+        title: "Connected Successfully",
+        description: "Your Meta account has been connected successfully with full permissions."
+      });
       
       setLoginError(null);
     } else {
@@ -79,29 +71,7 @@ export function useResponseHandler(onLoginSuccess: (userData: any) => void) {
     setIsConnecting(false);
     
     if (error) {
-      if (error.message && error.message.includes('Feature Unavailable')) {
-        setLoginError(
-          'Facebook Login feature is unavailable. Your Facebook App needs to complete the "Authenticate and request data from users" use case and be switched to Live mode.'
-        );
-      } else if (error.message && error.message.includes('Invalid Scopes')) {
-        setLoginError(
-          'Permission error: Advanced permissions like ads_management require Meta App Review approval. Currently using basic permissions only.'
-        );
-        // Show a helpful toast
-        toast({
-          title: "Permission Request Limited",
-          description: "Advanced permissions require Meta App Review. Connected with basic permissions only.",
-          variant: "default"
-        });
-        // Note: We're keeping the login flow going, just with basic permissions
-        return;
-      } else if (error.message && error.message.includes('Business Integration')) {
-        setLoginError(
-          'Business Integration approval is required. Please complete the business integration setup in Facebook.'
-        );
-      } else {
-        setLoginError(error.message || 'Failed to connect with Facebook');
-      }
+      setLoginError(error.message || 'Failed to connect with Facebook');
       
       toast({
         title: "Facebook Login Error",

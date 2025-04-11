@@ -8,9 +8,8 @@ import FacebookLoginError from './facebook/FacebookLoginError';
 import FacebookLoginButton from './facebook/FacebookLoginButton';
 import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
-import FacebookRequirementsInfo from './facebook/FacebookRequirementsInfo';
-import BusinessIntegrationInfo from './facebook/BusinessIntegrationInfo';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface FacebookLoginTabProps {
   onLoginSuccess: (userData: any) => void;
@@ -44,7 +43,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       return (
         <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
           <p className="text-amber-700 flex items-center">
-            <AlertCircle className="h-4 w-4 mr-2" />
+            <CheckCircle className="h-4 w-4 mr-2" />
             You are logged in to Facebook but haven't authorized this app yet
           </p>
         </div>
@@ -56,8 +55,16 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
 
   return (
     <div className="flex flex-col items-center py-4">
+      <Alert className="mb-4 border-green-200 bg-green-50 text-green-800">
+        <CheckCircle className="h-4 w-4" />
+        <AlertTitle>App Approved by Meta</AlertTitle>
+        <AlertDescription>
+          Your app has been approved for all requested permissions and can now create and manage campaigns with full access.
+        </AlertDescription>
+      </Alert>
+      
       <p className="mb-3 text-center text-sm text-gray-500">
-        Connect your Facebook account to access your ad accounts and campaign data.
+        Connect your Facebook account to access your ad accounts and campaign data with full permissions.
       </p>
       
       {/* Show login status if available */}
@@ -66,31 +73,18 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       <FacebookLoginError error={loginError} />
       
       <FacebookNotice>
-        We'll request basic profile information to identify your account.
-        For ad management features, please use the advanced permissions option.
+        We request permissions for your Meta Business assets to help you create and manage campaigns. 
+        All your data is handled securely according to our Privacy Policy.
       </FacebookNotice>
       
       {isScriptLoaded ? (
         <div className="w-full space-y-4">
           <FacebookLoginButton 
-            onClick={() => handleManualLoginClick()}
-            isConnecting={isConnecting}
-            advancedPermissions={false}
-            text="Continue with Facebook"
-          />
-          
-          <Separator className="my-2">
-            <div className="px-2 text-xs text-gray-500">OR</div>
-          </Separator>
-          
-          <FacebookLoginButton 
             onClick={() => handleManualLoginClick(true)}
             isConnecting={isConnecting}
             advancedPermissions={true}
-            text="Connect with Advanced Ad Permissions"
+            text="Connect with Full Permissions"
           />
-          
-          <BusinessIntegrationInfo />
           
           <FacebookPermissionsInfo />
           
@@ -118,8 +112,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       )}
       
       <Separator className="my-4" />
-      
-      <FacebookRequirementsInfo />
     </div>
   );
 };
