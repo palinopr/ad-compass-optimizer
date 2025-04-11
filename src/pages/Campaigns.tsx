@@ -3,15 +3,9 @@ import React, { useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  BarChart3, 
   PlusCircle, 
-  ArrowRight, 
-  Target, 
-  Users, 
-  Image, 
-  DollarSign, 
-  LayoutGrid,
-  Calendar
+  AlertCircle,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,11 +14,18 @@ import CampaignList from '@/components/campaigns/CampaignList';
 import MetaConnect from '@/components/meta/MetaConnect';
 import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Campaigns = () => {
   const [activeTab, setActiveTab] = useState('campaigns');
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const isAuthenticated = metaAuthService.isAuthenticated();
+  
+  // Check if ad account is selected
+  const hasAdAccount = () => {
+    const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
+    return selectedAdAccounts && JSON.parse(selectedAdAccounts).length > 0;
+  };
 
   return (
     <AppLayout>
@@ -37,7 +38,7 @@ const Campaigns = () => {
           <Button 
             onClick={() => setShowCreateWizard(true)}
             className="bg-meta-blue hover:bg-meta-dark"
-            disabled={showCreateWizard || !isAuthenticated}
+            disabled={showCreateWizard || !isAuthenticated || !hasAdAccount()}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Campaign
@@ -52,11 +53,29 @@ const Campaigns = () => {
               <MetaConnect />
               {isAuthenticated && <AdAccountSelector />}
             </div>
+            
+            {isAuthenticated && !hasAdAccount() && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Please select an ad account to view and manage campaigns.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {isAuthenticated && hasAdAccount() && (
+              <Alert variant="outline" className="bg-blue-50 border-blue-200">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-700">
+                  Viewing campaigns from your Meta ad account. Campaign creation through the API requires extra permissions.
+                </AlertDescription>
+              </Alert>
+            )}
           
             <Tabs defaultValue="campaigns" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-3 mb-4">
                 <TabsTrigger value="campaigns">Active Campaigns</TabsTrigger>
-                <TabsTrigger value="drafts">Drafts</TabsTrigger>
+                <TabsTrigger value="drafts">Paused/Draft</TabsTrigger>
                 <TabsTrigger value="archived">Archived</TabsTrigger>
               </TabsList>
               

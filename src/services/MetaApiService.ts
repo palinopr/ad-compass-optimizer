@@ -3,6 +3,7 @@ import { MetaUserService } from './api/MetaUserService';
 import { MetaAdAccountService } from './api/MetaAdAccountService';
 import { MetaBusinessService } from './api/MetaBusinessService';
 import { MetaConnectionService } from './api/MetaConnectionService';
+import MetaCampaignService, { MetaCampaign } from './api/MetaCampaignService';
 import type { ConnectionTestResult } from './api/MetaConnectionService';
 
 /**
@@ -46,5 +47,12 @@ export class MetaApiService {
    */
   public static async fetchAdAccountsForBusiness(token: string, businessId: string) {
     return MetaAdAccountService.fetchAdAccountsForBusiness(token, businessId);
+  }
+  
+  /**
+   * Fetch campaigns for a specific ad account
+   */
+  public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
+    return MetaCampaignService.fetchCampaigns(token, adAccountId);
   }
 }

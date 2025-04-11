@@ -18,7 +18,8 @@ import {
   Edit, 
   Copy,
   Archive, 
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -27,72 +28,86 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { useCampaigns } from '@/hooks/useCampaigns';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
 }
 
-// Sample campaign data - would come from API in real app
-const sampleCampaigns = {
-  active: [
-    {
-      id: 'camp-1',
-      name: 'Summer Festival Tickets',
-      event: 'Summer Festival 2025',
-      status: 'Active',
-      budget: '$50/day',
-      spent: '$350',
-      results: '128 tickets',
-      cpa: '$2.73',
-      roas: '4.2x',
-      daysRemaining: 12
-    },
-    {
-      id: 'camp-2',
-      name: 'Tech Conference Early Birds',
-      event: 'Tech Conference 2025',
-      status: 'Active',
-      budget: '$75/day',
-      spent: '$525',
-      results: '95 tickets',
-      cpa: '$5.53',
-      roas: '3.7x',
-      daysRemaining: 18
-    }
-  ],
-  draft: [
-    {
-      id: 'camp-draft-1',
-      name: 'Music Concert Promotion',
-      event: 'Music Concert 2025',
-      status: 'Draft',
-      budget: '$40/day',
-      spent: '$0',
-      results: '0 tickets',
-      cpa: '-',
-      roas: '-',
-      daysRemaining: 0
-    }
-  ],
-  archived: [
-    {
-      id: 'camp-arch-1',
-      name: 'Art Exhibition Presale',
-      event: 'Art Exhibition 2025',
-      status: 'Completed',
-      budget: '$30/day',
-      spent: '$600',
-      results: '212 tickets',
-      cpa: '$2.83',
-      roas: '5.1x',
-      daysRemaining: 0
-    }
-  ]
+// Helper function to map Meta API status to our status
+const mapStatusToDisplay = (apiStatus: string): string => {
+  switch (apiStatus) {
+    case 'ACTIVE':
+      return 'Active';
+    case 'PAUSED':
+      return 'Paused';
+    case 'ARCHIVED':
+      return 'Archived';
+    case 'DELETED':
+      return 'Deleted';
+    default:
+      return apiStatus;
+  }
+};
+
+// Helper function to format date
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return 'N/A';
+  
+  const date = new Date(dateString);
+  return date.toLocaleDateString();
+};
+
+// Helper function to calculate days remaining
+const calculateDaysRemaining = (endDate: string | null): number => {
+  if (!endDate) return 0;
+  
+  const end = new Date(endDate);
+  const now = new Date();
+  
+  const diffTime = end.getTime() - now.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
 const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
-  const campaigns = sampleCampaigns[status] || [];
+  const { campaigns, isLoading, error } = useCampaigns(status);
+  const isAuthenticated = metaAuthService.isAuthenticated();
   
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 text-meta-blue animate-spin mb-2" />
+          <p className="text-muted-foreground">Loading campaigns...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Handle error state
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+          <p className="text-red-500 mb-2">{error}</p>
+          <p className="text-muted-foreground mb-4">
+            {!isAuthenticated ? 
+              "Please connect your Meta account to view campaigns." : 
+              "Please check your permissions or select an ad account."}
+          </p>
+          {!isAuthenticated && (
+            <Button className="bg-meta-blue hover:bg-meta-dark">
+              Connect Meta Account
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Handle empty state
   if (campaigns.length === 0) {
     return (
       <Card>
@@ -115,7 +130,6 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
           <TableHeader>
             <TableRow>
               <TableHead>Campaign</TableHead>
-              <TableHead>Event</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Budget</TableHead>
               <TableHead>Spent</TableHead>
@@ -129,30 +143,28 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
             {campaigns.map((campaign) => (
               <TableRow key={campaign.id}>
                 <TableCell className="font-medium">{campaign.name}</TableCell>
-                <TableCell>{campaign.event}</TableCell>
                 <TableCell>
                   <Badge 
                     variant={
-                      campaign.status === 'Active' ? 'default' : 
-                      campaign.status === 'Draft' ? 'outline' : 
-                      campaign.status === 'Completed' ? 'secondary' : 
-                      'destructive'
+                      campaign.status === 'ACTIVE' ? 'default' : 
+                      campaign.status === 'PAUSED' ? 'outline' : 
+                      'secondary'
                     }
                   >
-                    {campaign.status}
+                    {mapStatusToDisplay(campaign.status)}
                   </Badge>
                 </TableCell>
                 <TableCell>{campaign.budget}</TableCell>
-                <TableCell>{campaign.spent}</TableCell>
+                <TableCell>{campaign.spend}</TableCell>
                 <TableCell>{campaign.results}</TableCell>
-                <TableCell>{campaign.cpa}</TableCell>
+                <TableCell>{campaign.insights?.cpa || '-'}</TableCell>
                 <TableCell>
-                  {campaign.roas !== '-' && (
-                    <span className={parseFloat(campaign.roas) >= 4 ? 'text-green-600 font-medium' : ''}>
-                      {campaign.roas}
+                  {campaign.insights?.roas !== '-' && campaign.insights?.roas && (
+                    <span className={parseFloat(campaign.insights.roas) >= 4 ? 'text-green-600 font-medium' : ''}>
+                      {campaign.insights.roas}
                     </span>
                   )}
-                  {campaign.roas === '-' && '-'}
+                  {(!campaign.insights?.roas || campaign.insights?.roas === '-') && '-'}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
