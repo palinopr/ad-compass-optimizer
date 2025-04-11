@@ -17,10 +17,14 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
 import CampaignList from '@/components/campaigns/CampaignList';
+import MetaConnect from '@/components/meta/MetaConnect';
+import AdAccountSelector from '@/components/meta/AdAccountSelector';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 const Campaigns = () => {
   const [activeTab, setActiveTab] = useState('campaigns');
   const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const isAuthenticated = metaAuthService.isAuthenticated();
 
   return (
     <AppLayout>
@@ -33,7 +37,7 @@ const Campaigns = () => {
           <Button 
             onClick={() => setShowCreateWizard(true)}
             className="bg-meta-blue hover:bg-meta-dark"
-            disabled={showCreateWizard}
+            disabled={showCreateWizard || !isAuthenticated}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Campaign
@@ -43,25 +47,32 @@ const Campaigns = () => {
         {showCreateWizard ? (
           <CampaignCreationWizard onCancel={() => setShowCreateWizard(false)} />
         ) : (
-          <Tabs defaultValue="campaigns" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3 mb-4">
-              <TabsTrigger value="campaigns">Active Campaigns</TabsTrigger>
-              <TabsTrigger value="drafts">Drafts</TabsTrigger>
-              <TabsTrigger value="archived">Archived</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="campaigns">
-              <CampaignList status="active" />
-            </TabsContent>
-            
-            <TabsContent value="drafts">
-              <CampaignList status="draft" />
-            </TabsContent>
-            
-            <TabsContent value="archived">
-              <CampaignList status="archived" />
-            </TabsContent>
-          </Tabs>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <MetaConnect />
+              {isAuthenticated && <AdAccountSelector />}
+            </div>
+          
+            <Tabs defaultValue="campaigns" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="campaigns">Active Campaigns</TabsTrigger>
+                <TabsTrigger value="drafts">Drafts</TabsTrigger>
+                <TabsTrigger value="archived">Archived</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="campaigns">
+                <CampaignList status="active" />
+              </TabsContent>
+              
+              <TabsContent value="drafts">
+                <CampaignList status="draft" />
+              </TabsContent>
+              
+              <TabsContent value="archived">
+                <CampaignList status="archived" />
+              </TabsContent>
+            </Tabs>
+          </>
         )}
       </div>
     </AppLayout>
