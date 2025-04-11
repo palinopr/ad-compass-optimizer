@@ -59,12 +59,12 @@ const PerformanceChart = () => {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="flex items-center text-lg font-medium">
             <Ticket className="w-5 h-5 mr-2" />
             Event Marketing Performance
           </CardTitle>
-          <Tabs defaultValue="weekly" className="w-[300px]">
+          <Tabs defaultValue="weekly" className="w-auto">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="weekly">Weekly</TabsTrigger>
               <TabsTrigger value="monthly">Monthly</TabsTrigger>
@@ -77,32 +77,36 @@ const PerformanceChart = () => {
           <TabsContent value="weekly" className="h-[300px] mt-0">
             <ChartContainer config={chartConfig}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <LineChart data={weeklyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
-                  <YAxis />
+                  <YAxis width={40} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend />
+                  <Legend verticalAlign="bottom" height={36} />
                   <Line
                     type="monotone"
                     dataKey="adSpend"
                     stroke="var(--color-adSpend)"
                     activeDot={{ r: 8 }}
+                    strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="ticketSales"
                     stroke="var(--color-ticketSales)"
+                    strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="revenue"
                     stroke="var(--color-revenue)"
+                    strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="roas" 
                     stroke="var(--color-roas)"
+                    strokeWidth={2}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -111,32 +115,36 @@ const PerformanceChart = () => {
           <TabsContent value="monthly" className="h-[300px] mt-0">
             <ChartContainer config={chartConfig}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <LineChart data={monthlyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
-                  <YAxis />
+                  <YAxis width={40} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend />
+                  <Legend verticalAlign="bottom" height={36} />
                   <Line
                     type="monotone"
                     dataKey="adSpend"
                     stroke="var(--color-adSpend)"
                     activeDot={{ r: 8 }}
+                    strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="ticketSales"
                     stroke="var(--color-ticketSales)"
+                    strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="revenue"
                     stroke="var(--color-revenue)"
+                    strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="roas" 
                     stroke="var(--color-roas)"
+                    strokeWidth={2}
                   />
                 </LineChart>
               </ResponsiveContainer>
