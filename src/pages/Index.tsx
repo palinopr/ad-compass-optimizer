@@ -9,6 +9,7 @@ import AudienceInsights from '@/components/dashboard/AudienceInsights';
 import CampaignTable from '@/components/dashboard/CampaignTable';
 import EventMetrics from '@/components/dashboard/EventMetrics';
 import EventTimelineView from '@/components/dashboard/EventTimelineView';
+import MetaAuth from '@/components/meta/MetaAuth';
 
 const Index = () => {
   return (
@@ -19,6 +20,11 @@ const Index = () => {
             <h1 className="text-3xl font-bold tracking-tight">Event Dashboard</h1>
             <p className="text-muted-foreground mt-1">Monitor your event advertising performance.</p>
           </div>
+        </div>
+        
+        {/* Meta Authentication */}
+        <div className="grid grid-cols-1 gap-6">
+          <MetaAuth />
         </div>
         
         {/* Key Event Metrics */}

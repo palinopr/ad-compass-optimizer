@@ -1,17 +1,15 @@
-
 export class MetaAuthService {
-  // Instead of requiring an App ID, we'll use a direct token approach
+  // We'll keep the token storage and redirect URI for compatibility
   private redirectUri: string = window.location.origin + '/campaigns';
 
-  // Initiate the login process
+  // Initiate the login process - this will now be handled by the Facebook SDK
   public initiateLogin(): void {
-    // Display instructions for how to get a token instead of redirecting
-    // This will be handled by the MetaConnect component
+    // This is handled by the FacebookLogin component
     return;
   }
 
-  // Store the manually entered access token
-  public storeAccessToken(accessToken: string, userId: string = 'manual_user'): void {
+  // Store the access token from Facebook login
+  public storeAccessToken(accessToken: string, userId: string = 'facebook_user'): void {
     localStorage.setItem('meta_access_token', accessToken);
     localStorage.setItem('meta_user_id', userId);
   }
