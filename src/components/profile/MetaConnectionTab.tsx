@@ -45,11 +45,15 @@ const MetaConnectionTab: React.FC<MetaConnectionTabProps> = ({ userData, handleD
                 </div>
               </div>
               
-              <div>
+              <div className="bg-white border rounded-lg p-4 shadow-sm">
                 <h4 className="text-sm font-medium mb-2 flex items-center">
                   <Key className="h-4 w-4 mr-1" />
                   Token Permissions
                 </h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Configure which permissions are enabled for your Meta connection. 
+                  Note that changing permissions might require re-authentication for some operations.
+                </p>
                 <TokenPermissionsList />
               </div>
               

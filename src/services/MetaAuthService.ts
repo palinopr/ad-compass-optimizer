@@ -40,6 +40,11 @@ export class MetaAuthService {
     return permissions ? JSON.parse(permissions) : [];
   }
 
+  // Update permissions for the current token
+  public updatePermissions(permissions: string[]): void {
+    localStorage.setItem(MetaAuthService.PERMISSIONS_KEY, JSON.stringify(permissions));
+  }
+
   // Check if a specific permission is granted
   public hasPermission(permission: string): boolean {
     const permissions = this.getPermissions();
