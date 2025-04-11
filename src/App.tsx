@@ -18,6 +18,7 @@ import Audience from "./pages/Audience";
 import Reports from "./pages/Reports";
 import Messages from "./pages/Messages";
 import Import from "./pages/Import";
+import Contact from "./pages/Contact";
 
 // Admin-specific pages
 import Clients from "./pages/admin/Clients";
@@ -61,6 +62,7 @@ const App = () => (
             {createCaseInsensitiveRoute("/reports", Reports)}
             {createCaseInsensitiveRoute("/messages", Messages)}
             {createCaseInsensitiveRoute("/import", Import)}
+            {createCaseInsensitiveRoute("/contact", Contact)}
             
             {/* Admin routes with case-insensitive variants */}
             {createCaseInsensitiveRoute("/clients", Clients)}

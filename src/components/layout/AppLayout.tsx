@@ -2,6 +2,7 @@
 import React from 'react';
 import Navbar from './Navbar';
 import AppSidebar from './Sidebar';
+import FooterLinks from './FooterLinks';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,8 +14,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <AppSidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Navbar />
-        <main className="flex-1 overflow-y-auto px-4 py-4 md:px-6">
-          {children}
+        <main className="flex-1 overflow-y-auto px-4 py-4 md:px-6 flex flex-col">
+          <div className="flex-1">
+            {children}
+          </div>
+          <FooterLinks />
         </main>
       </div>
     </div>
