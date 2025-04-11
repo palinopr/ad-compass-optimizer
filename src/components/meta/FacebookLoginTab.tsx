@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { useFacebookLogin } from '@/hooks/useFacebookLogin';
 import FacebookLoginError from './facebook/FacebookLoginError';
 import FacebookLoginButton from './facebook/FacebookLoginButton';
 import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
+import FacebookPermissionsSelector from './FacebookPermissionsSelector';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -14,6 +15,9 @@ interface FacebookLoginTabProps {
 }
 
 const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) => {
+  const [showPermissionSelector, setShowPermissionSelector] = useState(false);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  
   const {
     isScriptLoaded,
     loginStatus,
@@ -51,16 +55,31 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     return null;
   };
 
-  const handleClick = (useAdvancedPermissions = true) => {
+  const handlePermissionsButtonClick = () => {
+    setShowPermissionSelector(true);
+  };
+
+  const handlePermissionsSelected = (permissions: string[]) => {
+    setSelectedPermissions(permissions);
+    setShowPermissionSelector(false);
+    // Now login with the selected permissions
     if (typeof fbLogin === 'function') {
-      fbLogin(useAdvancedPermissions);
+      fbLogin(true, permissions); // Pass the selected permissions to fbLogin
+    }
+  };
+
+  const handleClick = (useAdvancedPermissions = true) => {
+    if (useAdvancedPermissions) {
+      setShowPermissionSelector(true);
+    } else if (typeof fbLogin === 'function') {
+      fbLogin(false);
     }
   };
 
   return (
     <div className="flex flex-col items-center py-4">
       <p className="mb-3 text-center text-sm text-gray-500">
-        Connect your Facebook account to access your ad accounts and campaign data with full permissions.
+        Connect your Facebook account to access your ad accounts and campaign data with your selected permissions.
       </p>
       
       {/* Show login status if available */}
@@ -74,29 +93,38 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       </FacebookNotice>
       
       {isScriptLoaded ? (
-        <div className="w-full space-y-4">
-          <FacebookLoginButton 
-            onClick={() => handleClick(true)}
-            isConnecting={isConnecting}
-            advancedPermissions={true}
-            text="Connect with Full Permissions"
-          />
-          
-          <div className="text-center my-2">
-            <p className="text-sm text-gray-500">or</p>
-          </div>
-          
-          <Button 
-            variant="outline" 
-            className="w-full flex items-center justify-center" 
-            onClick={() => handleClick(false)}
-            disabled={isConnecting}
-          >
-            Log in with Basic Permissions
-          </Button>
-          
-          <FacebookPermissionsInfo />
-        </div>
+        <>
+          {showPermissionSelector ? (
+            <FacebookPermissionsSelector
+              onPermissionsSelected={handlePermissionsSelected}
+              onCancel={() => setShowPermissionSelector(false)}
+            />
+          ) : (
+            <div className="w-full space-y-4">
+              <FacebookLoginButton 
+                onClick={handlePermissionsButtonClick}
+                isConnecting={isConnecting}
+                advancedPermissions={true}
+                text="Connect with Custom Permissions"
+              />
+              
+              <div className="text-center my-2">
+                <p className="text-sm text-gray-500">or</p>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                className="w-full flex items-center justify-center" 
+                onClick={() => handleClick(false)}
+                disabled={isConnecting}
+              >
+                Log in with Basic Permissions
+              </Button>
+              
+              <FacebookPermissionsInfo />
+            </div>
+          )}
+        </>
       ) : (
         <div className="flex items-center justify-center p-4 text-gray-500">
           Loading Facebook login...

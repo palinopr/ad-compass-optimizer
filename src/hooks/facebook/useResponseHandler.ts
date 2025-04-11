@@ -1,92 +1,50 @@
 
-import { useState } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
-import { useToast } from '@/hooks/use-toast';
 
-export interface FacebookAuthResponse {
-  accessToken: string;
-  userID: string;
-  name?: string;
-  email?: string;
-  picture?: {
-    data: {
-      url: string;
-    };
-  };
-  status?: string;
-  error?: string;
-  hasBusinessAccess?: boolean;
+interface UseResponseHandlerProps {
+  onSuccess: (userData: any) => void;
+  onFailure: (error: string) => void;
+  setIsConnecting: (isConnecting: boolean) => void;
 }
 
-export function useResponseHandler(onLoginSuccess: (userData: any) => void) {
-  const { toast } = useToast();
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  const responseFacebook = (response: FacebookAuthResponse) => {
-    console.log('Facebook login response:', response);
-    setIsConnecting(false);
-    
-    if (response.accessToken) {
-      console.log('Facebook login success with token:', response.accessToken.substring(0, 10) + '...');
-      
-      metaAuthService.storeAccessToken(response.accessToken, response.userID, 'facebook');
-      
-      const userData = {
-        name: response.name,
-        email: response.email,
-        picture: response.picture?.data.url,
-        hasBusinessAccess: response.hasBusinessAccess
-      };
-      
-      onLoginSuccess(userData);
-      
-      toast({
-        title: "Connected Successfully",
-        description: "Your Meta account has been connected successfully with full permissions."
-      });
-      
-      setLoginError(null);
-    } else {
-      console.error('Facebook login failed:', response);
-      
-      if (response.status === 'unknown') {
-        setLoginError('Login was cancelled or failed');
-      } else if (response.error) {
-        setLoginError(response.error);
-      } else {
-        setLoginError('Could not connect to Meta. Please try again.');
+export function useResponseHandler({
+  onSuccess,
+  onFailure,
+  setIsConnecting
+}: UseResponseHandlerProps) {
+  const handleFacebookResponse = (response: any) => {
+    try {
+      if (!response || !response.accessToken) {
+        onFailure('Invalid response from Facebook');
+        return;
       }
+
+      const token = response.accessToken;
+      const userId = response.userID || 'facebook_user';
+      const name = response.name;
+      const email = response.email;
+      const picture = response.picture;
+      const grantedPermissions = response.grantedPermissions || [];
       
-      toast({
-        title: "Connection Failed",
-        description: "Could not connect to Meta. Please try again.",
-        variant: "destructive"
+      // Store the access token and user info
+      metaAuthService.storeAccessToken(token, userId, 'facebook', grantedPermissions);
+      
+      // Call the success callback
+      onSuccess({
+        name,
+        email,
+        picture,
+        userId,
+        tokenSource: 'facebook',
+        tokenPermissions: grantedPermissions
       });
+    } catch (error) {
+      console.error('Error handling Facebook response:', error);
+      onFailure(error instanceof Error ? error.message : 'Failed to process login');
+    } finally {
+      setIsConnecting(false);
     }
   };
 
-  const handleFacebookError = (error: any) => {
-    console.error('Facebook Login Error:', error);
-    setIsConnecting(false);
-    
-    if (error) {
-      setLoginError(error.message || 'Failed to connect with Facebook');
-      
-      toast({
-        title: "Facebook Login Error",
-        description: error.message || "An error occurred with Facebook Login",
-        variant: "destructive"
-      });
-    }
-  };
-
-  return { 
-    loginError, 
-    isConnecting, 
-    setIsConnecting, 
-    responseFacebook, 
-    handleFacebookError,
-    setLoginError
-  };
+  return { handleFacebookResponse };
 }

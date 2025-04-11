@@ -9,8 +9,8 @@ export interface UseFacebookLoginResult {
   loginStatus: 'connected' | 'not_authorized' | 'unknown' | null;
   loginError: string | null;
   isConnecting: boolean;
-  handleManualLoginClick: (useAdvancedPermissions?: boolean) => void;
-  fbLogin: (useAdvancedPermissions?: boolean) => void;
+  handleManualLoginClick: (useAdvancedPermissions?: boolean, customPermissions?: string[]) => void;
+  fbLogin: (useAdvancedPermissions?: boolean, customPermissions?: string[]) => void;
   responseFacebook: (response: any) => void;
   handleFacebookError: (error: any) => void;
   checkLoginStatus: () => void;
