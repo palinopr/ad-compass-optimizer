@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Calendar, TrendingUp, Ticket, DollarSign } from 'lucide-react';
+import { Ticket } from 'lucide-react';
 
 // Sample data with event-specific metrics
 const weeklyData = [
@@ -74,41 +74,45 @@ const PerformanceChart = () => {
           </Tabs>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-[350px] mt-0">
+      <CardContent className="pt-2 px-2">
+        <div className="h-[380px] mt-0 w-full" style={{ maxWidth: '100%' }}>
           {activeTab === "weekly" && (
             <ChartContainer config={chartConfig}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <LineChart data={weeklyData} margin={{ top: 20, right: 30, left: 60, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
-                  <YAxis width={50} />
+                  <YAxis width={55} tickFormatter={(value) => `${value}`} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Legend verticalAlign="bottom" height={36} />
                   <Line
                     type="monotone"
                     dataKey="adSpend"
                     stroke="var(--color-adSpend)"
-                    activeDot={{ r: 8 }}
+                    activeDot={{ r: 6 }}
                     strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
                   <Line
                     type="monotone"
                     dataKey="ticketSales"
                     stroke="var(--color-ticketSales)"
                     strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
                   <Line
                     type="monotone"
                     dataKey="revenue"
                     stroke="var(--color-revenue)"
                     strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
                   <Line
                     type="monotone"
                     dataKey="roas" 
                     stroke="var(--color-roas)"
                     strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -117,36 +121,40 @@ const PerformanceChart = () => {
           {activeTab === "monthly" && (
             <ChartContainer config={chartConfig}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <LineChart data={monthlyData} margin={{ top: 20, right: 30, left: 60, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
-                  <YAxis width={50} />
+                  <YAxis width={55} tickFormatter={(value) => `${value}`} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Legend verticalAlign="bottom" height={36} />
                   <Line
                     type="monotone"
                     dataKey="adSpend"
                     stroke="var(--color-adSpend)"
-                    activeDot={{ r: 8 }}
+                    activeDot={{ r: 6 }}
                     strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
                   <Line
                     type="monotone"
                     dataKey="ticketSales"
                     stroke="var(--color-ticketSales)"
                     strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
                   <Line
                     type="monotone"
                     dataKey="revenue"
                     stroke="var(--color-revenue)"
                     strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
                   <Line
                     type="monotone"
                     dataKey="roas" 
                     stroke="var(--color-roas)"
                     strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
