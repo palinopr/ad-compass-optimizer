@@ -1,33 +1,42 @@
+
 export class MetaAuthService {
-  // We'll keep the token storage and redirect URI for compatibility
-  private redirectUri: string = window.location.origin + '/campaigns';
+  // Keys for localStorage
+  private static readonly TOKEN_KEY = 'meta_access_token';
+  private static readonly USER_ID_KEY = 'meta_user_id';
+  private static readonly TOKEN_SOURCE_KEY = 'meta_token_source';
 
-  // Initiate the login process - this will now be handled by the Facebook SDK
-  public initiateLogin(): void {
-    // This is handled by the FacebookLogin component
-    return;
-  }
-
-  // Store the access token from Facebook login
-  public storeAccessToken(accessToken: string, userId: string = 'facebook_user'): void {
-    localStorage.setItem('meta_access_token', accessToken);
-    localStorage.setItem('meta_user_id', userId);
+  // Store the access token from login
+  public storeAccessToken(accessToken: string, userId: string = 'facebook_user', source: string = 'facebook'): void {
+    localStorage.setItem(MetaAuthService.TOKEN_KEY, accessToken);
+    localStorage.setItem(MetaAuthService.USER_ID_KEY, userId);
+    localStorage.setItem(MetaAuthService.TOKEN_SOURCE_KEY, source);
   }
 
   // Check if user is authenticated
   public isAuthenticated(): boolean {
-    return !!localStorage.getItem('meta_access_token');
+    return !!localStorage.getItem(MetaAuthService.TOKEN_KEY);
   }
 
   // Get the stored access token
   public getAccessToken(): string | null {
-    return localStorage.getItem('meta_access_token');
+    return localStorage.getItem(MetaAuthService.TOKEN_KEY);
+  }
+
+  // Get the token source (facebook or manual)
+  public getTokenSource(): string {
+    return localStorage.getItem(MetaAuthService.TOKEN_SOURCE_KEY) || 'unknown';
+  }
+
+  // Get the user ID
+  public getUserId(): string | null {
+    return localStorage.getItem(MetaAuthService.USER_ID_KEY);
   }
 
   // Logout user
   public logout(): void {
-    localStorage.removeItem('meta_access_token');
-    localStorage.removeItem('meta_user_id');
+    localStorage.removeItem(MetaAuthService.TOKEN_KEY);
+    localStorage.removeItem(MetaAuthService.USER_ID_KEY);
+    localStorage.removeItem(MetaAuthService.TOKEN_SOURCE_KEY);
   }
 }
 
