@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FacebookLogin from 'react-facebook-login';
 import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -30,14 +29,44 @@ interface FacebookLoginTabProps {
 const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) => {
   const { toast } = useToast();
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  
+  useEffect(() => {
+    console.log("Initializing Facebook SDK");
+    if (window.FB) {
+      console.log("Facebook SDK already loaded");
+      setIsScriptLoaded(true);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://connect.facebook.net/en_US/sdk.js';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      console.log("Facebook SDK loaded");
+      window.FB.init({
+        appId: FACEBOOK_APP_CONFIG.appId,
+        cookie: true,
+        xfbml: true,
+        version: FACEBOOK_APP_CONFIG.version
+      });
+      setIsScriptLoaded(true);
+    };
+
+    document.body.appendChild(script);
+    
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const responseFacebook = (response: FacebookAuthResponse) => {
     console.log('Facebook login response:', response);
     
     if (response.accessToken) {
-      console.log('Facebook login success:', response);
+      console.log('Facebook login success with token:', response.accessToken.substring(0, 10) + '...');
       
-      // Save token to our auth service
       metaAuthService.storeAccessToken(response.accessToken, response.userID, 'facebook');
       
       const userData = {
@@ -53,12 +82,10 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         description: "Your Meta account has been connected successfully."
       });
       
-      // Clear any previous errors
       setLoginError(null);
     } else {
       console.error('Facebook login failed:', response);
       
-      // Set login error message
       if (response.status === 'unknown') {
         setLoginError('Login was cancelled or failed');
       } else if (response.error) {
@@ -75,12 +102,10 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     }
   };
 
-  // Function to handle the "Feature Unavailable" error
   const handleFacebookError = (error: any) => {
     console.error('Facebook Login Error:', error);
     
     if (error) {
-      // Set more specific error message
       if (error.message && error.message.includes('Feature Unavailable')) {
         setLoginError(
           'Facebook Login feature is unavailable. Your Facebook App needs to complete the "Authenticate and request data from users" use case and be switched to Live mode.'
@@ -94,6 +119,30 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         description: error.message || "An error occurred with Facebook Login",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleManualLoginClick = () => {
+    console.log("Manual Facebook login clicked");
+    if (window.FB) {
+      window.FB.login(
+        (response) => {
+          console.log("Manual FB.login response:", response);
+          if (response.authResponse) {
+            responseFacebook({
+              accessToken: response.authResponse.accessToken,
+              userID: response.authResponse.userID
+            });
+          } else {
+            console.log('User cancelled login or did not fully authorize.');
+            setLoginError('Login was cancelled');
+          }
+        },
+        { scope: FACEBOOK_APP_CONFIG.scope }
+      );
+    } else {
+      console.error("Facebook SDK not loaded");
+      setLoginError("Facebook SDK not loaded. Please try again.");
     }
   };
 
@@ -121,20 +170,35 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         </div>
       </div>
       
-      <FacebookLogin
-        appId={FACEBOOK_APP_CONFIG.appId}
-        autoLoad={false}
-        fields="name,email,picture"
-        scope={FACEBOOK_APP_CONFIG.scope}
-        callback={responseFacebook}
-        onFailure={handleFacebookError}
-        cssClass="bg-[#1877F2] text-white py-2 px-4 rounded flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors w-full md:w-auto justify-center"
-        icon="fa-facebook"
-        textButton="Connect with Facebook"
-        redirectUri={FACEBOOK_APP_CONFIG.redirectUri}
-        version={FACEBOOK_APP_CONFIG.version}
-        disableMobileRedirect={true}
-      />
+      {isScriptLoaded ? (
+        <>
+          <FacebookLogin
+            appId={FACEBOOK_APP_CONFIG.appId}
+            autoLoad={false}
+            fields="name,email,picture"
+            scope={FACEBOOK_APP_CONFIG.scope}
+            callback={responseFacebook}
+            onFailure={handleFacebookError}
+            cssClass="bg-[#1877F2] text-white py-2 px-4 rounded flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors w-full md:w-auto"
+            icon="fa-facebook"
+            textButton="Connect with Facebook"
+            redirectUri={FACEBOOK_APP_CONFIG.redirectUri}
+            version={FACEBOOK_APP_CONFIG.version}
+            disableMobileRedirect={true}
+          />
+          
+          <button 
+            onClick={handleManualLoginClick}
+            className="mt-3 text-sm text-blue-600 hover:underline cursor-pointer"
+          >
+            Alternative Login Method
+          </button>
+        </>
+      ) : (
+        <div className="flex items-center justify-center p-4 text-gray-500">
+          Loading Facebook login...
+        </div>
+      )}
       
       <Separator className="my-4" />
       
