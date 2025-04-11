@@ -1,62 +1,28 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Loader2, Building } from 'lucide-react';
-import { MetaApiService } from '@/services/MetaApiService';
-import { metaAuthService } from '@/services/MetaAuthService';
+import { Building } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-interface BusinessManager {
-  id: string;
-  name: string;
-  verification_status?: string;
-  created_time?: string;
-}
+import { useBusinessManagers } from '@/hooks/useBusinessManagers';
+import BusinessManagerLoading from './business/BusinessManagerLoading';
+import BusinessManagerError from './business/BusinessManagerError';
+import NoBusinessManagers from './business/NoBusinessManagers';
+import BusinessManagerDetails from './business/BusinessManagerDetails';
 
 interface BusinessManagerSelectorProps {
   onSelect: (businessManagerId: string) => void;
 }
 
 const BusinessManagerSelector: React.FC<BusinessManagerSelectorProps> = ({ onSelect }) => {
-  const [businessManagers, setBusinessManagers] = useState<BusinessManager[]>([]);
-  const [selectedBusinessManager, setSelectedBusinessManager] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { 
+    businessManagers, 
+    selectedBusinessManager, 
+    setSelectedBusinessManager, 
+    isLoading, 
+    error 
+  } = useBusinessManagers();
   const { toast } = useToast();
-
-  useEffect(() => {
-    const fetchBusinessManagers = async () => {
-      try {
-        const token = metaAuthService.getAccessToken();
-        if (!token) {
-          setError('Not authenticated with Meta');
-          setIsLoading(false);
-          return;
-        }
-
-        const businessManagersData = await MetaApiService.fetchBusinessManagers(token);
-        setBusinessManagers(businessManagersData);
-        
-        // If there are business managers, select the first one by default
-        if (businessManagersData.length > 0) {
-          setSelectedBusinessManager(businessManagersData[0].id);
-        }
-      } catch (err) {
-        setError('Failed to fetch Business Managers');
-        toast({
-          title: "Error",
-          description: "Could not load Business Managers. Please try again.",
-          variant: "destructive"
-        });
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBusinessManagers();
-  }, [toast]);
 
   const handleContinue = () => {
     if (selectedBusinessManager) {
@@ -69,34 +35,19 @@ const BusinessManagerSelector: React.FC<BusinessManagerSelectorProps> = ({ onSel
   };
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8 space-y-2">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="text-sm text-gray-500">Loading Business Managers...</span>
-      </div>
-    );
+    return <BusinessManagerLoading />;
   }
 
   if (error) {
-    return (
-      <div className="text-red-500 py-4">
-        <p className="font-medium">{error}</p>
-        <p className="text-sm mt-2">Please try reconnecting your Facebook account.</p>
-      </div>
-    );
+    return <BusinessManagerError error={error} />;
   }
 
   if (businessManagers.length === 0) {
-    return (
-      <div className="py-4">
-        <p className="text-amber-600 font-medium">No Business Managers found for your account.</p>
-        <p className="text-sm text-gray-500 mt-2">
-          You need access to a Business Manager to connect ad accounts.
-          Please create a Business Manager in Meta Business Suite first.
-        </p>
-      </div>
-    );
+    return <NoBusinessManagers />;
   }
+
+  // Find the selected business manager object
+  const selectedBM = businessManagers.find(bm => bm.id === selectedBusinessManager);
 
   return (
     <div className="space-y-4 py-4">
@@ -125,22 +76,8 @@ const BusinessManagerSelector: React.FC<BusinessManagerSelectorProps> = ({ onSel
         </SelectContent>
       </Select>
       
-      {selectedBusinessManager && (
-        <div className="bg-gray-50 p-3 rounded-md border text-sm">
-          <p className="font-medium">Selected Business Manager Details:</p>
-          {businessManagers
-            .filter(bm => bm.id === selectedBusinessManager)
-            .map(bm => (
-              <div key={bm.id} className="mt-1">
-                <p><span className="text-gray-600">Name:</span> {bm.name}</p>
-                <p><span className="text-gray-600">ID:</span> {bm.id}</p>
-                {bm.verification_status && (
-                  <p><span className="text-gray-600">Status:</span> {bm.verification_status}</p>
-                )}
-              </div>
-            ))
-          }
-        </div>
+      {selectedBusinessManager && selectedBM && (
+        <BusinessManagerDetails businessManager={selectedBM} />
       )}
       
       <Button 
