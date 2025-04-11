@@ -1,7 +1,5 @@
 
 import React from 'react';
-import FacebookLogin from 'react-facebook-login';
-import { FACEBOOK_APP_CONFIG } from '@/config/socialAuth';
 import { Separator } from '@/components/ui/separator';
 import { useFacebookLogin } from '@/hooks/useFacebookLogin';
 import FacebookLoginError from './facebook/FacebookLoginError';
@@ -9,6 +7,7 @@ import FacebookLoginButton from './facebook/FacebookLoginButton';
 import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
 import { CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface FacebookLoginTabProps {
   onLoginSuccess: (userData: any) => void;
@@ -21,6 +20,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     loginError,
     isConnecting,
     handleManualLoginClick,
+    fbLogin,
     responseFacebook,
     handleFacebookError
   } = useFacebookLogin(onLoginSuccess);
@@ -52,6 +52,14 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     return null;
   };
 
+  const handleClick = (useAdvancedPermissions = true) => {
+    if (typeof fbLogin === 'function') {
+      fbLogin(useAdvancedPermissions);
+    } else {
+      handleManualLoginClick(useAdvancedPermissions);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center py-4">
       <p className="mb-3 text-center text-sm text-gray-500">
@@ -71,30 +79,26 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       {isScriptLoaded ? (
         <div className="w-full space-y-4">
           <FacebookLoginButton 
-            onClick={() => handleManualLoginClick(true)}
+            onClick={() => handleClick(true)}
             isConnecting={isConnecting}
             advancedPermissions={true}
             text="Connect with Full Permissions"
           />
           
-          <FacebookPermissionsInfo />
-          
-          <div className="hidden">
-            <FacebookLogin
-              appId={FACEBOOK_APP_CONFIG.appId}
-              autoLoad={false}
-              fields="name,email,picture"
-              scope={FACEBOOK_APP_CONFIG.scope}
-              callback={responseFacebook}
-              onFailure={handleFacebookError}
-              cssClass="bg-[#1877F2] text-white py-2 px-4 rounded flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors w-full md:w-auto"
-              icon="fa-facebook"
-              textButton="Connect with Facebook"
-              redirectUri={FACEBOOK_APP_CONFIG.redirectUri}
-              version={FACEBOOK_APP_CONFIG.version}
-              disableMobileRedirect={true}
-            />
+          <div className="text-center my-2">
+            <p className="text-sm text-gray-500">or</p>
           </div>
+          
+          <Button 
+            variant="outline" 
+            className="w-full flex items-center justify-center" 
+            onClick={() => handleClick(false)}
+            disabled={isConnecting}
+          >
+            Log in with Basic Permissions
+          </Button>
+          
+          <FacebookPermissionsInfo />
         </div>
       ) : (
         <div className="flex items-center justify-center p-4 text-gray-500">

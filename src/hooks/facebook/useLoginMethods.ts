@@ -1,4 +1,3 @@
-
 import { FACEBOOK_APP_CONFIG } from '@/config/socialAuth';
 import { useResponseHandler, FacebookAuthResponse } from './useResponseHandler';
 import { useState } from 'react';
@@ -16,7 +15,8 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
   
   const { toast } = useToast();
 
-  const handleManualLoginClick = (useAdvancedPermissions = false) => {
+  // Main function to handle Facebook login
+  const fbLogin = (useAdvancedPermissions = false) => {
     console.log("Facebook login clicked", useAdvancedPermissions ? "with advanced permissions" : "with basic permissions");
     setIsConnecting(true);
     
@@ -28,11 +28,8 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
         (response) => {
           console.log("FB.login response:", response);
           if (response.authResponse) {
-            responseFacebook({
-              accessToken: response.authResponse.accessToken,
-              userID: response.authResponse.userID,
-              hasBusinessAccess: useAdvancedPermissions // Always reflect the requested permissions
-            });
+            // After successful login, fetch user data
+            fetchUserData(response.authResponse, useAdvancedPermissions);
           } else {
             console.log('User cancelled login or did not fully authorize.');
             setLoginError('Login was cancelled');
@@ -42,8 +39,8 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
         { 
           scope, 
           return_scopes: true,
-          auth_type: 'rerequest',  // Add this to force re-authentication
-          enable_profile_selector: true // Enable profile selector where applicable
+          auth_type: 'rerequest',  // Force re-authentication
+          enable_profile_selector: true // Enable profile selector
         }
       );
     } else {
@@ -53,10 +50,41 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
     }
   };
 
+  // Function to fetch user data after successful login
+  const fetchUserData = (authResponse: FacebookAuthResponse, hasBusinessAccess: boolean) => {
+    if (window.FB) {
+      window.FB.api(
+        '/me', 
+        { fields: 'name,email,picture' },
+        (userInfo) => {
+          console.log("Received Facebook user info:", userInfo);
+          
+          if (userInfo && !userInfo.error) {
+            responseFacebook({
+              accessToken: authResponse.accessToken,
+              userID: authResponse.userID,
+              name: userInfo.name,
+              email: userInfo.email,
+              picture: userInfo.picture?.data?.url,
+              hasBusinessAccess: hasBusinessAccess
+            });
+          } else {
+            setLoginError('Could not fetch user information');
+            setIsConnecting(false);
+          }
+        }
+      );
+    }
+  };
+
+  // Keep the previous function name for backward compatibility
+  const handleManualLoginClick = fbLogin;
+
   return {
     loginError,
     isConnecting,
     handleManualLoginClick,
+    fbLogin,
     responseFacebook,
     handleFacebookError,
     setIsConnecting,
