@@ -17,14 +17,6 @@ const PERMISSION_CATEGORIES: Record<string, { label: string; description: string
     label: 'Manage Ads', 
     description: 'Create and edit ad campaigns and assets' 
   },
-  'public_profile': { 
-    label: 'Basic Profile', 
-    description: 'Access to name and profile picture' 
-  },
-  'email': { 
-    label: 'Email', 
-    description: 'Access to your email address' 
-  },
   'pages_read_engagement': { 
     label: 'Page Insights', 
     description: 'View page engagement metrics' 
@@ -61,7 +53,10 @@ const TokenPermissionsList: React.FC = () => {
 
   useEffect(() => {
     // Load current permissions
-    const currentPermissions = metaAuthService.getPermissions();
+    const currentPermissions = metaAuthService.getPermissions()
+      // Filter out the public_profile and email permissions
+      .filter(perm => perm !== 'public_profile' && perm !== 'email');
+    
     setPermissions(currentPermissions);
     
     // Initialize toggle states based on current permissions
@@ -85,8 +80,11 @@ const TokenPermissionsList: React.FC = () => {
       .filter(([_, isEnabled]) => isEnabled)
       .map(([permission]) => permission);
     
+    // Add back the required permissions (though they won't be displayed)
+    const fullPermissions = [...newPermissions, 'public_profile', 'email'];
+    
     // Save the updated permissions
-    metaAuthService.updatePermissions(newPermissions);
+    metaAuthService.updatePermissions(fullPermissions);
     setPermissions(newPermissions);
     setEditMode(false);
     
@@ -129,7 +127,6 @@ const TokenPermissionsList: React.FC = () => {
               <Switch
                 checked={permissionToggles[permission] || false}
                 onCheckedChange={(checked) => togglePermission(permission, checked)}
-                disabled={permission === 'public_profile' || permission === 'email'} // Basic permissions can't be disabled
               />
             </div>
           ))}
@@ -146,6 +143,11 @@ const TokenPermissionsList: React.FC = () => {
       ) : (
         <div className="flex flex-wrap gap-2">
           {permissions.map((permission) => {
+            // Skip displaying public_profile and email
+            if (permission === 'public_profile' || permission === 'email') {
+              return null;
+            }
+            
             const permInfo = PERMISSION_CATEGORIES[permission] || { 
               label: permission, 
               description: 'Custom permission' 

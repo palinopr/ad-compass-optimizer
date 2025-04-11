@@ -25,13 +25,15 @@ const FacebookPermissionsSelector: React.FC<FacebookPermissionsSelectorProps> = 
   onCancel
 }) => {
   const permissionOptions: FacebookPermissionOption[] = [
+    // Note: Basic info is still required but won't be shown in the UI
     {
       id: 'basic_info',
       label: 'Basic Information',
       description: 'Your name, profile picture, and email',
       icon: <Shield className="h-4 w-4 text-blue-600" />,
       scope: 'public_profile,email',
-      required: true
+      required: true,
+      hidden: true // Mark as hidden to not display in UI
     },
     {
       id: 'ad_accounts',
@@ -102,11 +104,11 @@ const FacebookPermissionsSelector: React.FC<FacebookPermissionsSelectorProps> = 
       </div>
       
       <p className="text-sm text-gray-500 mb-4">
-        Choose what information you want to allow this app to access. Only basic information is required.
+        Choose what information you want to allow this app to access. Basic information is required but won't be shown in permissions list.
       </p>
       
       <div className="space-y-4">
-        {permissionOptions.map((option) => (
+        {permissionOptions.filter(option => !option.hidden).map((option) => (
           <div key={option.id} className="flex items-start space-x-3 p-3 border rounded-md hover:bg-slate-50">
             <Checkbox 
               id={option.id} 
