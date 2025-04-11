@@ -9,26 +9,37 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
 
 interface PermissionsErrorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSwitchToToken: () => void;
+  errorMessage?: string;
 }
 
 const PermissionsErrorDialog: React.FC<PermissionsErrorDialogProps> = ({ 
   open,
   onOpenChange,
-  onSwitchToToken
+  onSwitchToToken,
+  errorMessage
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Permission Restrictions</DialogTitle>
+          <DialogTitle className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+            Connection Error
+          </DialogTitle>
           <DialogDescription>
-            Your app is currently using limited permissions during development. 
-            To access ad data, you have two options:
+            {errorMessage ? (
+              <div className="text-red-500 font-medium mb-4 mt-2">
+                Error: {errorMessage}
+              </div>
+            ) : (
+              "Your app is currently experiencing permission restrictions with Meta."
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -56,6 +67,15 @@ const PermissionsErrorDialog: React.FC<PermissionsErrorDialogProps> = ({
             Switch to Token Method
           </Button>
         </div>
+
+        {errorMessage && (
+          <div className="mt-4 text-xs border-t pt-4 text-gray-500">
+            <p className="font-medium mb-1">Technical Details:</p>
+            <p className="font-mono bg-gray-100 p-2 rounded overflow-auto max-h-32">
+              {errorMessage}
+            </p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

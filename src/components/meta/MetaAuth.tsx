@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
 
-// Import our new components
+// Import our components
 import FacebookLoginTab from './FacebookLoginTab';
 import TokenInputTab from './TokenInputTab';
 import ConnectedAccountInfo from './ConnectedAccountInfo';
@@ -19,6 +19,7 @@ const MetaAuth: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("facebook");
   const [showDialog, setShowDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isConnectionTesting, setIsConnectionTesting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,10 +29,43 @@ const MetaAuth: React.FC = () => {
       setIsLoggedIn(true);
       const token = metaAuthService.getAccessToken();
       if (token) {
-        fetchInitialData(token);
+        testConnection(token);
       }
     }
   }, []);
+
+  const testConnection = async (token: string) => {
+    setIsConnectionTesting(true);
+    try {
+      console.log("Testing Meta API connection...");
+      const connectionResult = await MetaApiService.testConnection(token);
+      
+      if (connectionResult.success) {
+        console.log("Connection test successful:", connectionResult);
+        toast({
+          title: "Connection Successful",
+          description: `Connected to Meta as ${connectionResult.userName}`,
+        });
+        fetchInitialData(token);
+      } else {
+        console.error("Connection test failed:", connectionResult);
+        setErrorMessage(connectionResult.error || "Connection failed");
+        setShowDialog(true);
+        
+        toast({
+          title: "Connection Failed",
+          description: "Could not connect to Meta API. See details for more information.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error testing connection:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred");
+      setShowDialog(true);
+    } finally {
+      setIsConnectionTesting(false);
+    }
+  };
 
   const fetchInitialData = async (token: string) => {
     try {
@@ -40,6 +74,7 @@ const MetaAuth: React.FC = () => {
       fetchAdAccounts(token);
     } catch (error) {
       console.error("Error fetching initial data:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred");
     }
   };
 
@@ -130,6 +165,7 @@ const MetaAuth: React.FC = () => {
         open={showDialog}
         onOpenChange={setShowDialog}
         onSwitchToToken={handleSwitchToToken}
+        errorMessage={errorMessage || undefined}
       />
     </Card>
   );
