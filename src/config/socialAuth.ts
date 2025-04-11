@@ -10,8 +10,8 @@ export const FACEBOOK_APP_CONFIG = {
   // App ID for the Facebook application
   appId: "1356517842213704",
   
-  // Required permissions for Business Manager & Ad Account access
-  scope: "public_profile,email,ads_management,ads_read,business_management",
+  // Use only basic permissions that are available without app review
+  scope: "public_profile,email",
   
   // Valid redirect URIs must be configured in the Facebook Developer Console
   // For development, localhost is typically allowed

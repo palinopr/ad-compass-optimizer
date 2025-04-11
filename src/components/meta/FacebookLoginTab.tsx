@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import FacebookLogin from 'react-facebook-login';
 import { useToast } from '@/hooks/use-toast';
@@ -7,6 +8,7 @@ import { FACEBOOK_APP_CONFIG, FACEBOOK_LOGIN_REQUIREMENTS } from '@/config/socia
 import { Separator } from '@/components/ui/separator';
 import { Link } from 'react-router-dom';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 interface FacebookAuthResponse {
   accessToken: string;
@@ -45,7 +47,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     script.defer = true;
     script.onload = () => {
       console.log("Facebook SDK loaded");
-      window.FB.init({
+      window.FB?.init({
         appId: FACEBOOK_APP_CONFIG.appId,
         cookie: true,
         xfbml: true,
@@ -57,7 +59,9 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     document.body.appendChild(script);
     
     return () => {
-      document.body.removeChild(script);
+      if (script.parentNode) {
+        document.body.removeChild(script);
+      }
     };
   }, []);
 
@@ -149,7 +153,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
   return (
     <div className="flex flex-col items-center py-4">
       <p className="mb-3 text-center text-sm text-gray-500">
-        Connect your Facebook account to access your Business Manager and ad accounts.
+        Connect your Facebook account to access your profile information.
       </p>
       
       {loginError && (
@@ -162,38 +166,41 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md w-full">
         <div className="flex items-start space-x-2 text-xs text-blue-700">
-          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
           <span>
-            If you encounter a "Feature Unavailable" error, your Facebook App requires additional configuration.
-            Complete the "Authenticate and request data from users" use case in your Facebook App settings.
+            Note: This app currently only has access to basic permissions (public profile and email).
+            Advanced features like Business Manager access require app review by Meta.
           </span>
         </div>
       </div>
       
       {isScriptLoaded ? (
-        <>
-          <FacebookLogin
-            appId={FACEBOOK_APP_CONFIG.appId}
-            autoLoad={false}
-            fields="name,email,picture"
-            scope={FACEBOOK_APP_CONFIG.scope}
-            callback={responseFacebook}
-            onFailure={handleFacebookError}
-            cssClass="bg-[#1877F2] text-white py-2 px-4 rounded flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors w-full md:w-auto"
-            icon="fa-facebook"
-            textButton="Connect with Facebook"
-            redirectUri={FACEBOOK_APP_CONFIG.redirectUri}
-            version={FACEBOOK_APP_CONFIG.version}
-            disableMobileRedirect={true}
-          />
-          
-          <button 
+        <div className="w-full space-y-4">
+          <Button 
+            className="w-full bg-[#1877F2] hover:bg-blue-600 text-white"
             onClick={handleManualLoginClick}
-            className="mt-3 text-sm text-blue-600 hover:underline cursor-pointer"
+            size="lg"
           >
-            Alternative Login Method
-          </button>
-        </>
+            Connect with Facebook
+          </Button>
+          
+          <div className="hidden">
+            <FacebookLogin
+              appId={FACEBOOK_APP_CONFIG.appId}
+              autoLoad={false}
+              fields="name,email,picture"
+              scope={FACEBOOK_APP_CONFIG.scope}
+              callback={responseFacebook}
+              onFailure={handleFacebookError}
+              cssClass="bg-[#1877F2] text-white py-2 px-4 rounded flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors w-full md:w-auto"
+              icon="fa-facebook"
+              textButton="Connect with Facebook"
+              redirectUri={FACEBOOK_APP_CONFIG.redirectUri}
+              version={FACEBOOK_APP_CONFIG.version}
+              disableMobileRedirect={true}
+            />
+          </div>
+        </div>
       ) : (
         <div className="flex items-center justify-center p-4 text-gray-500">
           Loading Facebook login...
