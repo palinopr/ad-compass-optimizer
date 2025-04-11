@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ExternalLink } from 'lucide-react';
 
 interface PermissionsErrorDialogProps {
   open: boolean;
@@ -26,7 +26,7 @@ const PermissionsErrorDialog: React.FC<PermissionsErrorDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
@@ -43,29 +43,51 @@ const PermissionsErrorDialog: React.FC<PermissionsErrorDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <h4 className="font-semibold text-sm">Option 1: System User Token</h4>
-            <p className="text-sm text-gray-500">
-              For development, use a System User Token from Meta Business Settings
-              with the appropriate permissions (ads_read, ads_management).
-            </p>
+        <div className="space-y-6 py-2">
+          <div className="space-y-3">
+            <h4 className="font-semibold text-sm">The recommended solution: System User Token</h4>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <h5 className="font-medium text-sm mb-2">How to get a System User Token:</h5>
+              <ol className="list-decimal list-inside text-sm text-gray-600 space-y-2 pl-1">
+                <li>Go to <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center">Meta Business Settings <ExternalLink className="h-3 w-3 ml-0.5" /></a></li>
+                <li>Click on <strong>System Users</strong> in the left sidebar</li>
+                <li>Create a new System User or select an existing one</li>
+                <li>Click <strong>Generate New Token</strong></li>
+                <li>Select your Ad Account and request these specific permissions:
+                  <ul className="list-disc list-inside ml-4 mt-1 text-sm text-gray-600">
+                    <li><strong>ads_management</strong></li>
+                    <li><strong>ads_read</strong></li>
+                  </ul>
+                </li>
+                <li>Set an expiration date (90 days recommended)</li>
+                <li>Copy your token and paste it in our token input field</li>
+              </ol>
+            </div>
+            
+            <Button 
+              className="w-full mt-2"
+              onClick={onSwitchToToken}
+            >
+              Switch to Token Method
+            </Button>
           </div>
           
-          <div className="space-y-2">
-            <h4 className="font-semibold text-sm">Option 2: App Review</h4>
+          <div className="space-y-2 border-t pt-4">
+            <h4 className="font-semibold text-sm">Alternative: App Review (for production apps)</h4>
             <p className="text-sm text-gray-500">
-              Submit your app for review by Meta to request the extended permissions.
-              This is required for production apps using these permissions.
+              Submit your app for review by Meta to request extended permissions.
+              This process can take several weeks and is required for production apps.
             </p>
+            <a
+              href="https://developers.facebook.com/docs/app-review"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:underline inline-flex items-center"
+            >
+              Learn about Meta App Review <ExternalLink className="h-3 w-3 ml-0.5" />
+            </a>
           </div>
-
-          <Button 
-            className="w-full"
-            onClick={onSwitchToToken}
-          >
-            Switch to Token Method
-          </Button>
         </div>
 
         {errorMessage && (
