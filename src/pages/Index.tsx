@@ -8,6 +8,7 @@ import MetricCard from '@/components/dashboard/MetricCard';
 import AudienceInsights from '@/components/dashboard/AudienceInsights';
 import CampaignTable from '@/components/dashboard/CampaignTable';
 import EventMetrics from '@/components/dashboard/EventMetrics';
+import EventTimelineView from '@/components/dashboard/EventTimelineView';
 
 const Index = () => {
   return (
@@ -55,6 +56,11 @@ const Index = () => {
             trendLabel="vs. last week" 
             icon={<TrendingUp className="w-4 h-4" />} 
           />
+        </div>
+        
+        {/* Event Timeline View */}
+        <div className="grid grid-cols-1 gap-6">
+          <EventTimelineView />
         </div>
         
         {/* Performance Charts */}
