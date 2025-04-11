@@ -24,6 +24,10 @@ import Clients from "./pages/admin/Clients";
 import Performance from "./pages/admin/Performance";
 import Pipeline from "./pages/admin/Pipeline";
 
+// Meta approval required pages
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import DataDeletion from "./pages/DataDeletion";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -49,6 +53,10 @@ const App = () => (
             <Route path="/clients" element={<Clients />} />
             <Route path="/performance" element={<Performance />} />
             <Route path="/pipeline" element={<Pipeline />} />
+            
+            {/* Meta approval required pages */}
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/data-deletion" element={<DataDeletion />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
