@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Dollar, MousePointer, Eye, Target, BarChart, Activity } from 'lucide-react';
+import { DollarSign, MousePointer, Eye, Target, BarChart, Activity } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import AppSidebar from '@/components/layout/Sidebar';
 import MetricCard from '@/components/dashboard/MetricCard';
@@ -37,7 +37,7 @@ const Index = () => {
                 title="Total Spend" 
                 value="$2,456.78" 
                 change={12.5} 
-                icon={<Dollar className="w-4 h-4" />} 
+                icon={<DollarSign className="w-4 h-4" />} 
               />
               <MetricCard 
                 title="Impressions" 

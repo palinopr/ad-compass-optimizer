@@ -18,11 +18,10 @@ const OptimizationScore = () => {
         </div>
         <Progress 
           value={score} 
-          className="h-2 mb-4"
-          indicatorClassName={`${
-            score >= 80 ? 'bg-green-500' :
-            score >= 60 ? 'bg-yellow-500' :
-            'bg-red-500'
+          className={`h-2 mb-4 ${
+            score >= 80 ? 'bg-green-100' :
+            score >= 60 ? 'bg-yellow-100' :
+            'bg-red-100'
           }`}
         />
         
