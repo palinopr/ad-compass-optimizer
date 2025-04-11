@@ -39,7 +39,7 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
     }
   };
 
-  const connectWithToken = async (token: string) => {
+  const connectWithToken = async (token: string, permissions: string[] = []) => {
     if (!token.trim()) {
       const errorMsg = "Please enter a valid access token";
       setErrorMessage(errorMsg);
@@ -56,12 +56,15 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
     setErrorMessage(null);
     
     try {
-      // Store the token
-      metaAuthService.storeAccessToken(token, 'manual_token_user');
+      // Store the token with permissions
+      metaAuthService.storeAccessToken(token, 'manual_token_user', 'token', permissions);
       
       // Test the token by fetching user data
       const userData = await fetchUserData(token);
-      onSuccess(userData);
+      onSuccess({
+        ...userData,
+        tokenPermissions: permissions
+      });
       
       toast({
         title: "Connected Successfully",

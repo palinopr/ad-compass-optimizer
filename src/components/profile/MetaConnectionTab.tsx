@@ -1,11 +1,12 @@
 
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { ShareIcon, User } from 'lucide-react';
+import { ShareIcon, User, Key } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import { Button } from '@/components/ui/button';
 import { metaAuthService } from '@/services/MetaAuthService';
+import TokenPermissionsList from '@/components/meta/TokenPermissionsList';
 
 interface MetaConnectionTabProps {
   userData: any | null;
@@ -42,6 +43,14 @@ const MetaConnectionTab: React.FC<MetaConnectionTabProps> = ({ userData, handleD
                   <h4 className="text-sm font-medium mb-1">Connection Method</h4>
                   <p className="text-sm capitalize">{metaAuthService.getTokenSource()}</p>
                 </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium mb-2 flex items-center">
+                  <Key className="h-4 w-4 mr-1" />
+                  Token Permissions
+                </h4>
+                <TokenPermissionsList />
               </div>
               
               <Separator />

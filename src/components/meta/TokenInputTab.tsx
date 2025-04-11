@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, ExternalLink, Key, Loader2 } from 'lucide-react';
 import { useMetaTokenConnection } from '@/hooks/useMetaTokenConnection';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface TokenInputTabProps {
   onTokenSuccess: (userData: any) => void;
@@ -21,9 +22,19 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
     onSuccess: onTokenSuccess,
     onError: onTokenError
   });
+  
+  const [permissions, setPermissions] = useState({
+    ads_management: true,
+    ads_read: true,
+    read_insights: true
+  });
 
   const handleManualTokenConnect = () => {
-    connectWithToken(manualToken);
+    const selectedPermissions = Object.entries(permissions)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([permission]) => permission);
+      
+    connectWithToken(manualToken, selectedPermissions);
   };
 
   return (
@@ -49,11 +60,46 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
         />
       </div>
       
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Permissions</label>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="ads_management" 
+              checked={permissions.ads_management}
+              onCheckedChange={(checked) => 
+                setPermissions({...permissions, ads_management: checked === true})
+              }
+            />
+            <label htmlFor="ads_management" className="text-sm">ads_management</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="ads_read" 
+              checked={permissions.ads_read}
+              onCheckedChange={(checked) => 
+                setPermissions({...permissions, ads_read: checked === true})
+              }
+            />
+            <label htmlFor="ads_read" className="text-sm">ads_read</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="read_insights" 
+              checked={permissions.read_insights}
+              onCheckedChange={(checked) => 
+                setPermissions({...permissions, read_insights: checked === true})
+              }
+            />
+            <label htmlFor="read_insights" className="text-sm">read_insights</label>
+          </div>
+        </div>
+      </div>
+      
       <div className="flex items-start space-x-2 text-xs text-gray-500">
         <AlertCircle className="h-4 w-4 mt-0.5" />
         <span>
-          Generate a token in Meta Business Settings under System Users. 
-          For testing ad data, the token should have ads_read permission.
+          Make sure your token has the permissions you selected above. Tokens with incorrect permissions will cause API errors.
         </span>
       </div>
       
