@@ -23,7 +23,7 @@ const Index = () => {
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-bold">Dashboard</h1>
               <div>
-                <SidebarTrigger asChild>
+                <SidebarTrigger>
                   <button className="text-sm text-gray-600 flex items-center">
                     <span className="mr-1">Toggle sidebar</span>
                   </button>

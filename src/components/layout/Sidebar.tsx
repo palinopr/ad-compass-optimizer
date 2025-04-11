@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { 
-  BarChart3, 
   LayoutDashboard, 
   Target, 
   Users, 
@@ -9,8 +8,8 @@ import {
   PieChart,
   Upload,
   Lightbulb,
-  ChevronLeft,
-  ChevronRight
+  BarChart3,
+  ChevronLeft
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -93,7 +92,7 @@ const AppSidebar = () => {
       </SidebarContent>
       
       <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-        <SidebarTrigger asChild>
+        <SidebarTrigger>
           <button className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300">
             <ChevronLeft className="w-4 h-4" />
           </button>
