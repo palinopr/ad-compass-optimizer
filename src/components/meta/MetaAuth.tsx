@@ -1,60 +1,30 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useMetaConnection } from './hooks/useMetaConnection';
-import MetaLoginTabs from './MetaLoginTabs';
-import ConnectedAccountInfo from './ConnectedAccountInfo';
-import MetaConnectionErrorHandler from './MetaConnectionErrorHandler';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import MetaConnectionFlow from './MetaConnectionFlow';
+import MetaConnect from './MetaConnect';
+import MetaReviewGuide from './MetaReviewGuide';
 
 const MetaAuth: React.FC = () => {
-  const { 
-    isLoggedIn, 
-    userData, 
-    adAccounts, 
-    errorMessage,
-    handleLoginSuccess, 
-    handleLogout
-  } = useMetaConnection();
-
-  const handleError = (error: string) => {
-    // This is just a pass-through function - the error handling 
-    // is now managed in the useMetaConnection hook
-    console.error("Connection error:", error);
-  };
-
-  const handleSwitchToToken = () => {
-    handleLogout();
-  };
-
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Meta Ads Account Connection</CardTitle>
-        <CardDescription>
-          Connect to Meta to manage your ad campaigns and access advertising data
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {!isLoggedIn ? (
-          <MetaLoginTabs 
-            onLoginSuccess={handleLoginSuccess} 
-            onError={handleError} 
-          />
-        ) : (
-          <ConnectedAccountInfo 
-            userData={userData}
-            adAccounts={adAccounts}
-            errorMessage={errorMessage}
-            onLogout={handleLogout}
-          />
-        )}
-      </CardContent>
-
-      <MetaConnectionErrorHandler 
-        errorMessage={errorMessage} 
-        onSwitchToToken={handleSwitchToToken} 
-      />
-    </Card>
+    <div className="space-y-4">
+      <MetaReviewGuide />
+      
+      <Tabs defaultValue="flow" className="w-full">
+        <TabsList>
+          <TabsTrigger value="flow">Connection Flow</TabsTrigger>
+          <TabsTrigger value="token">API Token</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="flow">
+          <MetaConnectionFlow />
+        </TabsContent>
+        
+        <TabsContent value="token">
+          <MetaConnect />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 
