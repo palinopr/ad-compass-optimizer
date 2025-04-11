@@ -23,12 +23,19 @@ const monthlyData = [
   { date: 'Week 4', adSpend: 1350, ticketSales: 180, revenue: 9000, roas: 6.7 },
 ];
 
+// Define the props interface for the CustomTooltip component
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+}
+
 const PerformanceChart = () => {
   const [activeTab, setActiveTab] = useState("weekly");
   const currentData = activeTab === "weekly" ? weeklyData : monthlyData;
 
   // Custom tooltip to control size and appearance
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-gray-200 shadow-md rounded-md max-w-[200px]">
