@@ -3,15 +3,18 @@ import React from 'react';
 import { Bell, HelpCircle, Search, Settings, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
   return (
     <nav className="flex items-center justify-between px-6 py-3 bg-white border-b">
       <div className="flex items-center space-x-6">
-        <h1 className="text-xl font-bold flex items-center">
+        <Link to="/" className="text-xl font-bold flex items-center">
           <span className="text-meta-blue">Ad</span>
           <span className="text-gray-800">Compass</span>
-        </h1>
+        </Link>
         <div className="relative hidden md:block">
           <Search className="w-4 h-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <Input 
@@ -27,7 +30,12 @@ const Navbar = () => {
         <Button variant="ghost" size="icon">
           <Bell className="w-5 h-5 text-gray-600" />
         </Button>
-        <Button variant="ghost" size="icon">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate('/settings')}
+          aria-label="Settings"
+        >
           <Settings className="w-5 h-5 text-gray-600" />
         </Button>
         <Button variant="ghost" size="icon" className="rounded-full">
