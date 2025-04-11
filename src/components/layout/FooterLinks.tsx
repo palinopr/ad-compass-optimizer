@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquare, FileText, Shield, Mail } from 'lucide-react';
+import { MessageSquare, FileText, Shield, Mail, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const FooterLinks: React.FC = () => {
@@ -26,6 +26,13 @@ const FooterLinks: React.FC = () => {
           <Link to="/contact" className="flex items-center hover:text-gray-900 transition-colors">
             <MessageSquare className="w-4 h-4 mr-1" />
             Contact Us
+          </Link>
+          
+          <span className="hidden sm:inline">•</span>
+          
+          <Link to="/data-deletion" className="flex items-center hover:text-gray-900 transition-colors">
+            <Trash2 className="w-4 h-4 mr-1" />
+            Data Deletion
           </Link>
           
           <span className="hidden sm:inline">•</span>
