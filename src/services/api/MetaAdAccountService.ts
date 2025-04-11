@@ -30,6 +30,15 @@ export class MetaAdAccountService extends BaseApiService {
       
       return data.data || [];
     } catch (error) {
+      console.error('Error fetching ad accounts:', error);
+      
+      // Check if this is a permissions error and provide more helpful information
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('permission') || errorMessage.includes('403')) {
+        console.error('This appears to be a permissions error. For ad account access, your token needs ads_read and ads_management permissions.');
+        console.error('Consider using a System User token with the right permissions. Regular user tokens require app review.');
+      }
+      
       return this.handleApiError(error, 'fetchAdAccounts');
     }
   }
@@ -58,6 +67,15 @@ export class MetaAdAccountService extends BaseApiService {
       
       return data.data || [];
     } catch (error) {
+      console.error(`Error fetching ad accounts for business ${businessId}:`, error);
+      
+      // Check if this is a permissions error and provide more helpful information
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('permission') || errorMessage.includes('403')) {
+        console.error('This appears to be a permissions error. For business manager access, your token needs business_management permission.');
+        console.error('Consider using a System User token with the right permissions. Regular user tokens require app review.');
+      }
+      
       return this.handleApiError(error, `fetchAdAccountsForBusiness for ${businessId}`);
     }
   }

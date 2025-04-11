@@ -74,17 +74,32 @@ export class MetaConnectionService extends BaseApiService {
       // Now check if the token has the required permissions by testing ad account access
       try {
         const adAccountsResponse = await fetch(
-          `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?limit=1&access_token=${token}`
+          `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&limit=1&access_token=${token}`
         );
         
         const adAccountsData = await adAccountsResponse.json();
+        console.log('Ad accounts test response:', adAccountsData);
         
         if (adAccountsData.error) {
+          // Specifically check for permission related errors
+          if (adAccountsData.error.code === 200 || 
+              adAccountsData.error.code === 10 || 
+              adAccountsData.error.code === 294) {
+            return {
+              success: true,
+              permissionsWarning: 'Connected to Meta, but your token lacks required ad account permissions (ads_read, ads_management). For full access, you need a token with these permissions.',
+              userId: data.id,
+              userName: data.name,
+              hasAdAccess: false
+            };
+          }
+          
           return {
             success: true,
-            permissionsWarning: 'Connected to Meta, but your token may not have required ad account permissions.',
+            permissionsWarning: adAccountsData.error.message || 'Connected to Meta, but could not access ad accounts.',
             userId: data.id,
-            userName: data.name
+            userName: data.name,
+            hasAdAccess: false
           };
         }
         
@@ -95,12 +110,14 @@ export class MetaConnectionService extends BaseApiService {
           hasAdAccess: true
         };
       } catch (permError) {
+        console.error('Error checking permissions:', permError);
         // Still return success since the basic connection worked
         return {
           success: true,
-          permissionsWarning: 'Connected to Meta, but could not verify ad account access.',
+          permissionsWarning: 'Connected to Meta, but could not verify ad account access due to a technical error.',
           userId: data.id,
-          userName: data.name
+          userName: data.name,
+          hasAdAccess: false
         };
       }
       

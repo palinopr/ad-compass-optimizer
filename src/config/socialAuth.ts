@@ -10,7 +10,9 @@ export const FACEBOOK_APP_CONFIG = {
   // App ID for the Facebook application
   appId: "1356517842213704",
   
-  // Use only basic permissions that are available without app review
+  // Permissions needed for ad account access
+  // Note: These advanced permissions require app review by Meta
+  // For development/testing, use only public_profile,email
   scope: "public_profile,email",
   
   // Valid redirect URIs must be configured in the Facebook Developer Console
@@ -43,4 +45,17 @@ export const FACEBOOK_LOGIN_REQUIREMENTS = {
     "Terms of Service",
     "Data Deletion Instructions"
   ]
+};
+
+// Required permissions for ad account access
+// These require Meta App Review before they can be used in production
+export const FACEBOOK_AD_PERMISSIONS = {
+  basic: "public_profile,email",
+  advanced: "ads_management,ads_read,business_management",
+  // Provide clear descriptions of what each permission allows
+  descriptions: {
+    ads_management: "Create, edit and manage ads",
+    ads_read: "Read advertising account data",
+    business_management: "Access Business Manager accounts"
+  }
 };

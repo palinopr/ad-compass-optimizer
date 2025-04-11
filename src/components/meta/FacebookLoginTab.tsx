@@ -4,7 +4,7 @@ import FacebookLogin from 'react-facebook-login';
 import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { ExternalLink, AlertCircle, Info } from 'lucide-react';
-import { FACEBOOK_APP_CONFIG, FACEBOOK_LOGIN_REQUIREMENTS } from '@/config/socialAuth';
+import { FACEBOOK_APP_CONFIG, FACEBOOK_LOGIN_REQUIREMENTS, FACEBOOK_AD_PERMISSIONS } from '@/config/socialAuth';
 import { Separator } from '@/components/ui/separator';
 import { Link } from 'react-router-dom';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -32,6 +32,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
   const { toast } = useToast();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   
   useEffect(() => {
     console.log("Initializing Facebook SDK");
@@ -67,6 +68,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
 
   const responseFacebook = (response: FacebookAuthResponse) => {
     console.log('Facebook login response:', response);
+    setIsConnecting(false);
     
     if (response.accessToken) {
       console.log('Facebook login success with token:', response.accessToken.substring(0, 10) + '...');
@@ -108,11 +110,16 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
 
   const handleFacebookError = (error: any) => {
     console.error('Facebook Login Error:', error);
+    setIsConnecting(false);
     
     if (error) {
       if (error.message && error.message.includes('Feature Unavailable')) {
         setLoginError(
           'Facebook Login feature is unavailable. Your Facebook App needs to complete the "Authenticate and request data from users" use case and be switched to Live mode.'
+        );
+      } else if (error.message && error.message.includes('Invalid Scopes')) {
+        setLoginError(
+          'Permission error: Advanced permissions like ads_management require Meta App Review. Currently using basic permissions only.'
         );
       } else {
         setLoginError(error.message || 'Failed to connect with Facebook');
@@ -128,6 +135,8 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
 
   const handleManualLoginClick = () => {
     console.log("Manual Facebook login clicked");
+    setIsConnecting(true);
+    
     if (window.FB) {
       window.FB.login(
         (response) => {
@@ -140,6 +149,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
           } else {
             console.log('User cancelled login or did not fully authorize.');
             setLoginError('Login was cancelled');
+            setIsConnecting(false);
           }
         },
         { scope: FACEBOOK_APP_CONFIG.scope }
@@ -147,13 +157,42 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     } else {
       console.error("Facebook SDK not loaded");
       setLoginError("Facebook SDK not loaded. Please try again.");
+      setIsConnecting(false);
+    }
+  };
+
+  const handleAdvancedPermissionsLogin = () => {
+    console.log("Attempting login with advanced permissions");
+    setIsConnecting(true);
+    
+    if (window.FB) {
+      window.FB.login(
+        (response) => {
+          console.log("Advanced permissions FB.login response:", response);
+          if (response.authResponse) {
+            responseFacebook({
+              accessToken: response.authResponse.accessToken,
+              userID: response.authResponse.userID
+            });
+          } else {
+            console.log('User cancelled login or did not fully authorize.');
+            setLoginError('Login was cancelled or advanced permissions were declined');
+            setIsConnecting(false);
+          }
+        },
+        { scope: FACEBOOK_AD_PERMISSIONS.basic + ',' + FACEBOOK_AD_PERMISSIONS.advanced }
+      );
+    } else {
+      console.error("Facebook SDK not loaded");
+      setLoginError("Facebook SDK not loaded. Please try again.");
+      setIsConnecting(false);
     }
   };
 
   return (
     <div className="flex flex-col items-center py-4">
       <p className="mb-3 text-center text-sm text-gray-500">
-        Connect your Facebook account to access your profile information.
+        Connect your Facebook account to access your ad accounts and campaign data.
       </p>
       
       {loginError && (
@@ -168,8 +207,9 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         <div className="flex items-start space-x-2 text-xs text-blue-700">
           <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
           <span>
-            Note: This app currently only has access to basic permissions (public profile and email).
-            Advanced features like Business Manager access require app review by Meta.
+            <strong>Important:</strong> For full ad management access, your Facebook App requires 
+            Meta's approval for additional permissions. During development, we're using basic 
+            permissions only.
           </span>
         </div>
       </div>
@@ -180,9 +220,27 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
             className="w-full bg-[#1877F2] hover:bg-blue-600 text-white"
             onClick={handleManualLoginClick}
             size="lg"
+            disabled={isConnecting}
           >
-            Connect with Facebook
+            {isConnecting ? 'Connecting...' : 'Connect with Facebook'}
           </Button>
+
+          <Separator className="my-2" />
+          
+          <div className="text-xs text-gray-600">
+            <p className="font-medium mb-1">Permissions we request:</p>
+            <ul className="list-disc pl-4 mb-3 space-y-0.5">
+              <li>Public profile (name, profile picture)</li>
+              <li>Email address</li>
+            </ul>
+            
+            <p className="font-medium mb-1">For full ad management, these additional permissions are needed:</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              {Object.entries(FACEBOOK_AD_PERMISSIONS.descriptions).map(([key, desc]) => (
+                <li key={key}><span className="text-blue-600">{key}</span>: {desc}</li>
+              ))}
+            </ul>
+          </div>
           
           <div className="hidden">
             <FacebookLogin
