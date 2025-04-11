@@ -16,6 +16,10 @@ interface FacebookLoginResponse {
   status: string;
 }
 
+interface FacebookAppEvents {
+  logPageView: () => void;
+}
+
 interface FacebookSDK {
   init(options: {
     appId: string;
@@ -37,11 +41,13 @@ interface FacebookSDK {
     params: object,
     callback: (response: any) => void
   ): void;
+  AppEvents?: FacebookAppEvents;
 }
 
 declare global {
   interface Window {
     FB?: FacebookSDK;
+    fbAsyncInit?: () => void;
   }
 }
 
