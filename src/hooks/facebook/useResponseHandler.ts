@@ -15,6 +15,7 @@ export interface FacebookAuthResponse {
   };
   status?: string;
   error?: string;
+  hasBusinessAccess?: boolean;
 }
 
 export function useResponseHandler(onLoginSuccess: (userData: any) => void) {
@@ -34,15 +35,25 @@ export function useResponseHandler(onLoginSuccess: (userData: any) => void) {
       const userData = {
         name: response.name,
         email: response.email,
-        picture: response.picture?.data.url
+        picture: response.picture?.data.url,
+        hasBusinessAccess: response.hasBusinessAccess
       };
       
       onLoginSuccess(userData);
       
-      toast({
-        title: "Connected Successfully",
-        description: "Your Meta account has been connected successfully."
-      });
+      // Show appropriate toast based on whether business access was granted
+      if (response.hasBusinessAccess === false) {
+        toast({
+          title: "Connected with Limited Access",
+          description: "Connected successfully, but business integration permissions were not granted. Some features may be limited.",
+          variant: "warning"
+        });
+      } else {
+        toast({
+          title: "Connected Successfully",
+          description: "Your Meta account has been connected successfully."
+        });
+      }
       
       setLoginError(null);
     } else {
@@ -76,6 +87,10 @@ export function useResponseHandler(onLoginSuccess: (userData: any) => void) {
       } else if (error.message && error.message.includes('Invalid Scopes')) {
         setLoginError(
           'Permission error: Advanced permissions like ads_management require Meta App Review. Currently using basic permissions only.'
+        );
+      } else if (error.message && error.message.includes('Business Integration')) {
+        setLoginError(
+          'Business Integration approval is required. Please complete the business integration setup in Facebook.'
         );
       } else {
         setLoginError(error.message || 'Failed to connect with Facebook');

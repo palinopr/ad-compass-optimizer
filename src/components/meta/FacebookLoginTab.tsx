@@ -9,6 +9,7 @@ import FacebookLoginButton from './facebook/FacebookLoginButton';
 import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
 import FacebookRequirementsInfo from './facebook/FacebookRequirementsInfo';
+import BusinessIntegrationInfo from './facebook/BusinessIntegrationInfo';
 import { Button } from '@/components/ui/button';
 
 interface FacebookLoginTabProps {
@@ -55,6 +56,8 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
           >
             Connect with Advanced Ad Permissions
           </Button>
+          
+          <BusinessIntegrationInfo />
 
           <Separator className="my-2" />
           
