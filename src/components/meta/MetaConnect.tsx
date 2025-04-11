@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Facebook, CheckCircle, XCircle, Loader2, Info, Key } from 'lucide-react';
+import { Facebook, CheckCircle, XCircle, Loader2, Info, Key, ExternalLink } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -100,7 +100,7 @@ const MetaConnect: React.FC = () => {
                 </div>
               )}
               <p className="text-sm text-slate-500">
-                Connect your Meta Ads account to access all your ad accounts, create campaigns, and optimize your event promotions.
+                Connect your Meta Ads account to access campaign data and manage your ad campaigns.
               </p>
               <Button 
                 className="bg-meta-blue hover:bg-meta-dark" 
@@ -114,8 +114,8 @@ const MetaConnect: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <Facebook className="mr-2 h-4 w-4" />
-                    Connect Meta Account
+                    <Key className="mr-2 h-4 w-4" />
+                    Connect with Access Token
                   </>
                 )}
               </Button>
@@ -125,11 +125,11 @@ const MetaConnect: React.FC = () => {
       </Card>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Connect to Meta Ads</DialogTitle>
+            <DialogTitle>Connect Meta Ads Account</DialogTitle>
             <DialogDescription>
-              Enter your Meta Ads access token to connect your account directly.
+              Enter your Meta Ads access token to connect your account
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -154,39 +154,44 @@ const MetaConnect: React.FC = () => {
               />
             </div>
             
-            <div className="flex items-start space-x-3 bg-amber-50 border border-amber-200 p-3 rounded-md">
-              <Info className="h-5 w-5 text-amber-500 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium">How to get your access token:</p>
-                <ol className="list-decimal list-inside space-y-1 mt-2 pl-1">
-                  <li>Go to <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Meta Business Settings</a></li>
-                  <li>Click on "System Users" in the left sidebar</li>
-                  <li>Create a new System User or select an existing one</li>
-                  <li>Go to the "Generate New Token" section</li>
-                  <li>Select your Ad account and request "ads_management" and "ads_read" permissions</li>
-                  <li>Copy the generated token and paste it above</li>
-                </ol>
+            <div className="flex flex-col space-y-3">
+              <div className="text-sm font-medium">How to get your Meta access token:</div>
+              
+              <ol className="list-decimal list-inside text-sm text-gray-600 space-y-2 pl-1">
+                <li>Go to the <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center">Meta Business Manager <ExternalLink className="h-3 w-3 ml-0.5" /></a></li>
+                <li>In the left sidebar, click on <strong>System Users</strong></li>
+                <li>Select an existing System User or create a new one</li>
+                <li>Click <strong>Generate New Token</strong></li>
+                <li>Select your Ad Account and check the permissions:
+                  <ul className="list-disc list-inside ml-4 mt-1 text-sm text-gray-600">
+                    <li>ads_management</li>
+                    <li>ads_read</li>
+                  </ul>
+                </li>
+                <li>Set an expiration date (90 days recommended)</li>
+                <li>Copy the generated token and paste it above</li>
+              </ol>
+              
+              <div className="pt-2">
+                <a 
+                  href="https://developers.facebook.com/docs/marketing-api/overview/authorization#access-token" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline inline-flex items-center"
+                >
+                  Learn more about Meta access tokens <ExternalLink className="h-3 w-3 ml-0.5" />
+                </a>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
             <Button 
-              className="bg-meta-blue hover:bg-meta-dark"
+              className="bg-meta-blue hover:bg-meta-dark" 
               onClick={handleTokenSubmit}
               disabled={isLoading}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Key className="mr-2 h-4 w-4" />
-                  Connect Account
-                </>
-              )}
+              Connect Account
             </Button>
           </DialogFooter>
         </DialogContent>

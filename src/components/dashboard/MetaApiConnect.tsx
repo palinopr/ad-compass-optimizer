@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Facebook, Key, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import { Key, AlertCircle, Loader2, CheckCircle, ExternalLink } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
 
 const MetaApiConnect = () => {
@@ -65,7 +65,7 @@ const MetaApiConnect = () => {
     <Card className="mb-4">
       <CardHeader>
         <CardTitle className="flex items-center">
-          <Facebook className="w-5 h-5 mr-2 text-meta-blue" />
+          <Key className="w-5 h-5 mr-2 text-meta-blue" />
           Connect Meta Marketing API
         </CardTitle>
       </CardHeader>
@@ -103,12 +103,27 @@ const MetaApiConnect = () => {
                 />
               </div>
               
-              <div className="text-xs flex items-start space-x-2 text-gray-500">
-                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>
-                  You can generate an access token in Meta Business Settings under System Users. 
-                  Your token needs ads_management and ads_read permissions.
-                </span>
+              <div className="space-y-2">
+                <div className="text-sm font-medium">How to get your token:</div>
+                <ol className="list-decimal list-inside text-xs text-gray-500 space-y-1 pl-1">
+                  <li>Go to <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center">Meta Business Settings <ExternalLink className="h-3 w-3 ml-0.5" /></a></li>
+                  <li>Click on <strong>System Users</strong> in the left sidebar</li>
+                  <li>Create or select a System User</li>
+                  <li>Click <strong>Generate New Token</strong></li>
+                  <li>Select your Ad account and request <strong>ads_management</strong> and <strong>ads_read</strong> permissions</li>
+                </ol>
+                
+                <div className="pt-1">
+                  <a 
+                    href="https://developers.facebook.com/docs/marketing-api/system-users" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline flex items-center"
+                  >
+                    Learn more about System Users
+                    <ExternalLink className="h-3 w-3 ml-1" />
+                  </a>
+                </div>
               </div>
               
               <Button 
