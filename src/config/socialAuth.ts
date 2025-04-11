@@ -17,8 +17,8 @@ export const FACEBOOK_APP_CONFIG = {
   // For development, localhost is typically allowed
   redirectUri: window.location.origin,
   
-  // App version (optional)
-  version: "v18.0"
+  // App version (must be a valid version supported by Facebook)
+  version: "v17.0"
 };
 
 // Required Facebook App Configuration for Production Use:

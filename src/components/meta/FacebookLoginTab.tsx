@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import FacebookLogin from 'react-facebook-login';
 import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -7,6 +7,7 @@ import { ExternalLink, AlertCircle, Info } from 'lucide-react';
 import { FACEBOOK_APP_CONFIG, FACEBOOK_LOGIN_REQUIREMENTS } from '@/config/socialAuth';
 import { Separator } from '@/components/ui/separator';
 import { Link } from 'react-router-dom';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 interface FacebookAuthResponse {
   accessToken: string;
@@ -18,6 +19,8 @@ interface FacebookAuthResponse {
       url: string;
     };
   };
+  status?: string;
+  error?: string;
 }
 
 interface FacebookLoginTabProps {
@@ -26,8 +29,11 @@ interface FacebookLoginTabProps {
 
 const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) => {
   const { toast } = useToast();
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const responseFacebook = (response: FacebookAuthResponse) => {
+    console.log('Facebook login response:', response);
+    
     if (response.accessToken) {
       console.log('Facebook login success:', response);
       
@@ -46,8 +52,21 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         title: "Connected Successfully",
         description: "Your Meta account has been connected successfully."
       });
+      
+      // Clear any previous errors
+      setLoginError(null);
     } else {
       console.error('Facebook login failed:', response);
+      
+      // Set login error message
+      if (response.status === 'unknown') {
+        setLoginError('Login was cancelled or failed');
+      } else if (response.error) {
+        setLoginError(response.error);
+      } else {
+        setLoginError('Could not connect to Meta. Please try again.');
+      }
+      
       toast({
         title: "Connection Failed",
         description: "Could not connect to Meta. Please try again.",
@@ -58,17 +77,23 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
 
   // Function to handle the "Feature Unavailable" error
   const handleFacebookError = (error: any) => {
+    console.error('Facebook Login Error:', error);
+    
     if (error) {
-      console.error('Facebook Login Error:', error);
-      
-      // Check for common "Feature Unavailable" error
+      // Set more specific error message
       if (error.message && error.message.includes('Feature Unavailable')) {
-        toast({
-          title: "Facebook Login Unavailable",
-          description: "Your Facebook App needs additional configuration. Please check developer settings.",
-          variant: "destructive"
-        });
+        setLoginError(
+          'Facebook Login feature is unavailable. Your Facebook App needs to complete the "Authenticate and request data from users" use case and be switched to Live mode.'
+        );
+      } else {
+        setLoginError(error.message || 'Failed to connect with Facebook');
       }
+      
+      toast({
+        title: "Facebook Login Error",
+        description: error.message || "An error occurred with Facebook Login",
+        variant: "destructive"
+      });
     }
   };
 
@@ -77,6 +102,14 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       <p className="mb-3 text-center text-sm text-gray-500">
         Connect your personal Facebook account to manage your Meta ad campaigns.
       </p>
+      
+      {loginError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Connection Error</AlertTitle>
+          <AlertDescription>{loginError}</AlertDescription>
+        </Alert>
+      )}
       
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md w-full">
         <div className="flex items-start space-x-2 text-xs text-blue-700">
@@ -100,6 +133,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         textButton="Connect with Facebook"
         redirectUri={FACEBOOK_APP_CONFIG.redirectUri}
         version={FACEBOOK_APP_CONFIG.version}
+        disableMobileRedirect={true}
       />
       
       <Separator className="my-4" />
