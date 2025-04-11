@@ -8,11 +8,12 @@ import PerformanceChart from '@/components/dashboard/PerformanceChart';
 const Performance = () => {
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-full">
+      <div className="space-y-6 p-4 max-w-full">
         <h1 className="text-2xl font-bold tracking-tight">Agency Performance</h1>
         <p className="text-muted-foreground">Overall agency performance metrics.</p>
         
-        <div className="w-full overflow-hidden">
+        {/* Chart container with proper spacing */}
+        <div className="w-full">
           <PerformanceChart />
         </div>
         
