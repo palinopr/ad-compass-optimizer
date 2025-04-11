@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TokenInputTab from './TokenInputTab';
+import FacebookLoginTab from './FacebookLoginTab';
 
 interface MetaConnectionDialogProps {
   isOpen: boolean;
@@ -36,9 +37,14 @@ const MetaConnectionDialog: React.FC<MetaConnectionDialogProps> = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-1 w-full mb-4">
+          <TabsList className="grid grid-cols-2 w-full mb-4">
+            <TabsTrigger value="facebook">Facebook Login</TabsTrigger>
             <TabsTrigger value="token">Access Token</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="facebook" className="space-y-4">
+            <FacebookLoginTab onLoginSuccess={onSuccess} />
+          </TabsContent>
           
           <TabsContent value="token" className="space-y-4">
             <TokenInputTab 
