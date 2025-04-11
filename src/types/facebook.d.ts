@@ -20,16 +20,26 @@ interface FacebookAppEvents {
   logPageView: () => void;
 }
 
+interface FacebookLoginOptions {
+  scope: string;
+  return_scopes?: boolean;
+  auth_type?: 'rerequest' | 'reauthenticate' | 'reauthorize';
+  enable_profile_selector?: boolean;
+}
+
+interface FacebookInitParams {
+  appId: string;
+  cookie?: boolean;
+  xfbml?: boolean;
+  version: string;
+  status?: boolean;
+}
+
 interface FacebookSDK {
-  init(options: {
-    appId: string;
-    cookie?: boolean;
-    xfbml?: boolean;
-    version: string;
-  }): void;
+  init(options: FacebookInitParams): void;
   login(
     callback: (response: FacebookLoginResponse) => void,
-    options?: { scope: string; return_scopes?: boolean }
+    options?: FacebookLoginOptions
   ): void;
   getLoginStatus(
     callback: (response: FacebookLoginStatusResponse) => void,
