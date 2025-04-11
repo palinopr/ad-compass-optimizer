@@ -1,5 +1,8 @@
 
 export class MetaApiService {
+  private static readonly API_VERSION = 'v17.0';
+  private static readonly BASE_URL = 'https://graph.facebook.com';
+
   /**
    * Fetch user data using a Meta access token
    */
@@ -7,7 +10,7 @@ export class MetaApiService {
     try {
       console.log('Fetching Meta user data...');
       const response = await fetch(
-        `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${token}`
+        `${this.BASE_URL}/${this.API_VERSION}/me?fields=id,name,email,picture&access_token=${token}`
       );
       
       if (!response.ok) {
@@ -52,7 +55,7 @@ export class MetaApiService {
       console.log(`Token validation: ${token.length} characters, starts with ${token.substring(0, 4)}...`);
       
       const response = await fetch(
-        `https://graph.facebook.com/v18.0/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`
+        `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`
       );
       
       if (!response.ok) {
@@ -117,7 +120,7 @@ export class MetaApiService {
       console.log(`Testing connection with token: ${token.substring(0, 4)}... (${token.length} chars)`);
       
       const response = await fetch(
-        `https://graph.facebook.com/v18.0/me?access_token=${token}`
+        `${this.BASE_URL}/${this.API_VERSION}/me?access_token=${token}`
       );
       
       if (!response.ok) {
@@ -159,7 +162,7 @@ export class MetaApiService {
       // Now check if the token has the required permissions by testing ad account access
       try {
         const adAccountsResponse = await fetch(
-          `https://graph.facebook.com/v18.0/me/adaccounts?limit=1&access_token=${token}`
+          `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?limit=1&access_token=${token}`
         );
         
         const adAccountsData = await adAccountsResponse.json();
@@ -188,7 +191,6 @@ export class MetaApiService {
           userName: data.name
         };
       }
-      
     } catch (error) {
       console.error('Meta API Connection Test Exception:', error);
       return {
@@ -196,6 +198,90 @@ export class MetaApiService {
         error: error instanceof Error ? error.message : 'Unknown error',
         exception: error
       };
+    }
+  }
+
+  /**
+   * Fetch business managers for the authenticated user
+   */
+  public static async fetchBusinessManagers(token: string) {
+    try {
+      console.log('Fetching Meta business managers...');
+      
+      // Validate token
+      if (!token || typeof token !== 'string' || token.trim() === '') {
+        throw new Error('Invalid access token provided');
+      }
+      
+      const response = await fetch(
+        `${this.BASE_URL}/${this.API_VERSION}/me/businesses?fields=id,name,verification_status,created_time&access_token=${token}`
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Meta API Error (fetchBusinessManagers):', errorText);
+        throw new Error(`Failed to fetch business managers: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Meta API Error Response:', data.error);
+        throw new Error(data.error.message || 'Failed to fetch business managers');
+      }
+
+      // Log successful response
+      console.log('Business managers fetched successfully:', data);
+      console.log(`Found ${data.data?.length || 0} business managers`);
+      
+      return data.data || [];
+    } catch (error) {
+      console.error('Error fetching business managers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch ad accounts for a specific business manager
+   */
+  public static async fetchAdAccountsForBusiness(token: string, businessId: string) {
+    try {
+      console.log(`Fetching ad accounts for business ${businessId}...`);
+      
+      // Validate inputs
+      if (!token || typeof token !== 'string' || token.trim() === '') {
+        throw new Error('Invalid access token provided');
+      }
+      
+      if (!businessId) {
+        throw new Error('Business ID is required');
+      }
+      
+      const response = await fetch(
+        `${this.BASE_URL}/${this.API_VERSION}/${businessId}/owned_ad_accounts?fields=id,name,account_id,account_status,currency,timezone_name&access_token=${token}`
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Meta API Error (fetchAdAccountsForBusiness):', errorText);
+        throw new Error(`Failed to fetch business ad accounts: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Meta API Error Response:', data.error);
+        throw new Error(data.error.message || 'Failed to fetch business ad accounts');
+      }
+
+      // Log successful response
+      console.log('Business ad accounts fetched successfully:', data);
+      console.log(`Found ${data.data?.length || 0} ad accounts for business ${businessId}`);
+      
+      return data.data || [];
+    } catch (error) {
+      console.error(`Error fetching ad accounts for business ${businessId}:`, error);
+      throw error;
     }
   }
 }

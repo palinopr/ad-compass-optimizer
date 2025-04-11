@@ -100,7 +100,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
   return (
     <div className="flex flex-col items-center py-4">
       <p className="mb-3 text-center text-sm text-gray-500">
-        Connect your personal Facebook account to manage your Meta ad campaigns.
+        Connect your Facebook account to access your Business Manager and ad accounts.
       </p>
       
       {loginError && (
@@ -167,18 +167,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
             <ExternalLink className="h-3 w-3 ml-0.5" />
           </Link>
         </div>
-      </div>
-      
-      <div className="text-center mt-4">
-        <a 
-          href="https://developers.facebook.com/docs/facebook-login/overview"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-blue-600 hover:underline flex items-center justify-center"
-        >
-          Facebook Login Documentation
-          <ExternalLink className="h-3 w-3 ml-1" />
-        </a>
       </div>
     </div>
   );
