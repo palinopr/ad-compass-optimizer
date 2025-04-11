@@ -73,31 +73,41 @@ export function useLoginMethods(onSuccess: (userData: any) => void) {
           if (response.status === 'connected') {
             console.log('Facebook login successful', response);
             
-            // Get user information
-            window.FB.api('/me', { fields: 'name,email,picture' }, (userInfo) => {
-              console.log('User info response:', userInfo);
-              
-              if (userInfo && !userInfo.error) {
-                // Get granted permissions
-                window.FB.api('/me/permissions', (permResponse) => {
-                  console.log('Permissions response:', permResponse);
-                  
-                  const grantedPermissions = permResponse.data
-                    ?.filter((p: any) => p.status === 'granted')
-                    .map((p: any) => p.permission) || [];
-                  
-                  responseFacebook({
-                    ...response.authResponse,
-                    name: userInfo.name,
-                    email: userInfo.email,
-                    picture: userInfo.picture?.data?.url,
-                    grantedPermissions
-                  });
-                });
-              } else {
-                handleFacebookError(userInfo?.error || new Error('Could not fetch user data'));
+            // Get user information - Fix: Adding the required arguments (method and params)
+            window.FB.api(
+              '/me', 
+              'GET',
+              { fields: 'name,email,picture' },
+              (userInfo) => {
+                console.log('User info response:', userInfo);
+                
+                if (userInfo && !userInfo.error) {
+                  // Get granted permissions - Fix: Adding the required arguments (method)
+                  window.FB.api(
+                    '/me/permissions',
+                    'GET',
+                    {},
+                    (permResponse) => {
+                      console.log('Permissions response:', permResponse);
+                      
+                      const grantedPermissions = permResponse.data
+                        ?.filter((p: any) => p.status === 'granted')
+                        .map((p: any) => p.permission) || [];
+                      
+                      responseFacebook({
+                        ...response.authResponse,
+                        name: userInfo.name,
+                        email: userInfo.email,
+                        picture: userInfo.picture?.data?.url,
+                        grantedPermissions
+                      });
+                    }
+                  );
+                } else {
+                  handleFacebookError(userInfo?.error || new Error('Could not fetch user data'));
+                }
               }
-            });
+            );
           } else {
             console.log('Facebook login failed or cancelled', response);
             setIsConnecting(false);
