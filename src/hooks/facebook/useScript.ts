@@ -24,7 +24,8 @@ export function useFacebookScript() {
         appId: FACEBOOK_APP_CONFIG.appId,
         cookie: true,
         xfbml: true,
-        version: FACEBOOK_APP_CONFIG.version
+        version: FACEBOOK_APP_CONFIG.version,
+        status: true // Enable checking login status
       });
       
       // Log page view as recommended
@@ -64,7 +65,7 @@ export function useFacebookScript() {
         // You could handle automatic login here if needed
         console.log("User is already connected with Facebook", response.authResponse);
       }
-    });
+    }, true); // Force status check
   };
 
   return { isScriptLoaded, loginStatus, checkLoginStatus };

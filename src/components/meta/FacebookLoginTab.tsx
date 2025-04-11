@@ -9,7 +9,6 @@ import FacebookLoginButton from './facebook/FacebookLoginButton';
 import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
 import { CheckCircle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface FacebookLoginTabProps {
   onLoginSuccess: (userData: any) => void;
@@ -55,14 +54,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
 
   return (
     <div className="flex flex-col items-center py-4">
-      <Alert className="mb-4 border-green-200 bg-green-50 text-green-800">
-        <CheckCircle className="h-4 w-4" />
-        <AlertTitle>App Approved by Meta</AlertTitle>
-        <AlertDescription>
-          Your app has been approved for all requested permissions and can now create and manage campaigns with full access.
-        </AlertDescription>
-      </Alert>
-      
       <p className="mb-3 text-center text-sm text-gray-500">
         Connect your Facebook account to access your ad accounts and campaign data with full permissions.
       </p>

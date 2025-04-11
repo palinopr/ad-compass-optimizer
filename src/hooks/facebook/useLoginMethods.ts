@@ -39,7 +39,12 @@ export function useLoginMethods(onLoginSuccess: (userData: any) => void) {
             setIsConnecting(false);
           }
         },
-        { scope, return_scopes: true }
+        { 
+          scope, 
+          return_scopes: true,
+          auth_type: 'rerequest',  // Add this to force re-authentication
+          enable_profile_selector: true // Enable profile selector where applicable
+        }
       );
     } else {
       console.error("Facebook SDK not loaded");
