@@ -11,9 +11,9 @@ const BusinessIntegrationInfo: React.FC = () => {
         <div className="space-y-2">
           <h3 className="font-medium text-amber-800">Business Integration Required</h3>
           <p className="text-amber-700">
-            Advanced ad permissions require a Business Integration approval from Meta. 
-            During the connection process, you'll see a "Business Integrations" dialog 
-            asking you to approve access to your business assets.
+            Campaign management requires Business Integration approval from Meta. 
+            During connection, you'll see a "Business Integrations" dialog 
+            asking you to approve access to your ad accounts.
           </p>
           
           <Accordion type="single" collapsible className="w-full">
@@ -23,7 +23,7 @@ const BusinessIntegrationInfo: React.FC = () => {
               </AccordionTrigger>
               <AccordionContent>
                 <ol className="list-decimal list-inside space-y-1 text-amber-700 pl-1">
-                  <li>Click "Connect with Advanced Ad Permissions"</li>
+                  <li>Click "Connect with Campaign Permissions"</li>
                   <li>In the Facebook login dialog, accept the permissions</li>
                   <li>You'll see a "Business Integrations" screen</li>
                   <li>Click "Continue" to grant access to your business assets</li>
@@ -39,7 +39,7 @@ const BusinessIntegrationInfo: React.FC = () => {
               </AccordionTrigger>
               <AccordionContent>
                 <p className="text-amber-700 mb-2">
-                  Before your app can request advanced permissions in production, you must:
+                  Before your app can request campaign permissions in production, you must:
                 </p>
                 <ol className="list-decimal list-inside space-y-1 text-amber-700 pl-1">
                   <li>Complete the Meta App Review process</li>

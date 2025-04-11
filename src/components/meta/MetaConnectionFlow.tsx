@@ -110,10 +110,10 @@ const MetaConnectionFlow: React.FC = () => {
       <CardHeader>
         <CardTitle>Meta Business Integration</CardTitle>
         <CardDescription>
-          {currentStep === ConnectionStep.LOGIN && "Connect your Facebook account to access your Business Manager and ad accounts"}
-          {currentStep === ConnectionStep.SELECT_BUSINESS && "Select a Business Manager to continue"}
-          {currentStep === ConnectionStep.SELECT_ACCOUNTS && "Choose which ad accounts you want to connect"}
-          {currentStep === ConnectionStep.CONNECTED && "Your Meta Business Manager is connected"}
+          {currentStep === ConnectionStep.LOGIN && "Connect your Facebook account to manage campaigns with your Meta Business assets"}
+          {currentStep === ConnectionStep.SELECT_BUSINESS && "Select a Business Manager to access campaign data"}
+          {currentStep === ConnectionStep.SELECT_ACCOUNTS && "Choose which ad accounts you want to use for campaigns"}
+          {currentStep === ConnectionStep.CONNECTED && "Your Meta Business Manager is connected for campaign management"}
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -57,7 +57,7 @@ const BusinessManagerSelector: React.FC<BusinessManagerSelectorProps> = ({ onSel
       </h3>
       
       <p className="text-sm text-gray-500">
-        Choose which Business Manager you want to use for accessing ad accounts.
+        Choose which Business Manager you want to use for campaign management.
       </p>
       
       <Select 

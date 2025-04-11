@@ -79,7 +79,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
   return (
     <div className="flex flex-col items-center py-4">
       <p className="mb-3 text-center text-sm text-gray-500">
-        Connect your Facebook account to access your ad accounts and campaign data with your selected permissions.
+        Connect your Facebook account to access campaign data and manage Meta ad accounts
       </p>
       
       {/* Show login status if available */}
@@ -88,7 +88,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       <FacebookLoginError error={loginError} />
       
       <FacebookNotice>
-        We request permissions for your Meta Business assets to help you create and manage campaigns. 
+        We request permissions for your Meta Business assets to help you create and manage ad campaigns. 
         All your data is handled securely according to our Privacy Policy.
       </FacebookNotice>
       
@@ -105,7 +105,7 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
                 onClick={handlePermissionsButtonClick}
                 isConnecting={isConnecting}
                 advancedPermissions={true}
-                text="Connect with Custom Permissions"
+                text="Connect with Campaign Permissions"
               />
               
               <div className="text-center my-2">
