@@ -46,7 +46,7 @@ export function useResponseHandler(onLoginSuccess: (userData: any) => void) {
         toast({
           title: "Connected with Limited Access",
           description: "Connected successfully, but business integration permissions were not granted. Some features may be limited.",
-          variant: "warning"
+          variant: "default" // Changed from "warning" to "default"
         });
       } else {
         toast({
