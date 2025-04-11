@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -56,15 +56,17 @@ const chartConfig = {
 };
 
 const PerformanceChart = () => {
+  const [activeTab, setActiveTab] = useState("weekly");
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="flex items-center text-lg font-medium">
             <Ticket className="w-5 h-5 mr-2" />
             Event Marketing Performance
           </CardTitle>
-          <Tabs defaultValue="weekly" className="w-auto">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="weekly">Weekly</TabsTrigger>
               <TabsTrigger value="monthly">Monthly</TabsTrigger>
@@ -73,14 +75,14 @@ const PerformanceChart = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="weekly" className="w-full">
-          <TabsContent value="weekly" className="h-[300px] mt-0">
+        <div className="h-[350px] mt-0">
+          {activeTab === "weekly" && (
             <ChartContainer config={chartConfig}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <LineChart data={weeklyData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
-                  <YAxis width={40} />
+                  <YAxis width={50} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Legend verticalAlign="bottom" height={36} />
                   <Line
@@ -111,14 +113,14 @@ const PerformanceChart = () => {
                 </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
-          </TabsContent>
-          <TabsContent value="monthly" className="h-[300px] mt-0">
+          )}
+          {activeTab === "monthly" && (
             <ChartContainer config={chartConfig}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <LineChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
-                  <YAxis width={40} />
+                  <YAxis width={50} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Legend verticalAlign="bottom" height={36} />
                   <Line
@@ -149,8 +151,8 @@ const PerformanceChart = () => {
                 </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
 
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-slate-50 p-3 rounded-md border">
