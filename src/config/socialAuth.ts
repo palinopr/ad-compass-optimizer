@@ -1,4 +1,3 @@
-
 /**
  * Social Authentication Configuration
  * 
@@ -8,7 +7,7 @@
 
 export const FACEBOOK_APP_CONFIG = {
   // App ID for the Facebook application
-  appId: "1356517842213704",
+  appId: "1349075236218599",
   
   // Permissions needed for the application including ad management permissions
   scope: "public_profile,email,ads_management,ads_read,business_management",
