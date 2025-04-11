@@ -40,30 +40,35 @@ export function useFacebookLogin(onLoginSuccess: (userData: any) => void): UseFa
         setIsConnecting(true);
         
         // Get user data from Facebook
-        window.FB.api('/me', { fields: 'name,email,picture' }, (userInfo) => {
-          console.log("Received Facebook user info:", userInfo);
-          
-          if (userInfo && !userInfo.error) {
-            // Get the auth response which contains the access token
-            window.FB.getLoginStatus((response) => {
-              if (response.status === 'connected' && response.authResponse) {
-                responseFacebook({
-                  accessToken: response.authResponse.accessToken,
-                  userID: response.authResponse.userID,
-                  name: userInfo.name,
-                  email: userInfo.email,
-                  picture: userInfo.picture?.data?.url
-                });
-              } else {
-                setIsConnecting(false);
-                setLoginError('Could not retrieve authentication information');
-              }
-            });
-          } else {
-            setIsConnecting(false);
-            setLoginError('Could not fetch user information');
+        window.FB.api(
+          '/me',
+          'GET', 
+          { fields: 'name,email,picture' }, 
+          (userInfo) => {
+            console.log("Received Facebook user info:", userInfo);
+            
+            if (userInfo && !userInfo.error) {
+              // Get the auth response which contains the access token
+              window.FB.getLoginStatus((response) => {
+                if (response.status === 'connected' && response.authResponse) {
+                  responseFacebook({
+                    accessToken: response.authResponse.accessToken,
+                    userID: response.authResponse.userID,
+                    name: userInfo.name,
+                    email: userInfo.email,
+                    picture: userInfo.picture?.data?.url
+                  });
+                } else {
+                  setIsConnecting(false);
+                  setLoginError('Could not retrieve authentication information');
+                }
+              });
+            } else {
+              setIsConnecting(false);
+              setLoginError('Could not fetch user information');
+            }
           }
-        });
+        );
       }
     }
   }, [loginStatus, isScriptLoaded]);
