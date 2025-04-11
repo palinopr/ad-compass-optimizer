@@ -16,12 +16,6 @@ const BusinessIntegrationInfo: React.FC = () => {
             asking you to approve access to your business assets.
           </p>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-2 text-blue-700 text-xs">
-            <strong>Development Mode:</strong> Currently using basic permissions only. 
-            Advanced permissions like ads_management, ads_read, business_management 
-            require Meta App Review before they can be used in production.
-          </div>
-          
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
               <AccordionTrigger className="text-sm font-medium text-amber-900">

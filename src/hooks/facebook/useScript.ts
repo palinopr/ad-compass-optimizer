@@ -7,38 +7,41 @@ export function useFacebookScript() {
 
   useEffect(() => {
     console.log("Initializing Facebook SDK");
+    
+    // If the SDK is already loaded, don't reload it
     if (window.FB) {
       console.log("Facebook SDK already loaded");
       setIsScriptLoaded(true);
       return;
     }
 
-    // Fix the version to a specific version number instead of using a variable
-    // This is to avoid the "invalid version specified" error
-    const apiVersion = 'v17.0'; // Hardcoded version that is known to work
-    
-    const script = document.createElement('script');
-    script.src = 'https://connect.facebook.net/en_US/sdk.js';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      console.log("Facebook SDK loaded, initializing with version:", apiVersion);
+    // Using Facebook's recommended method to load the SDK
+    window.fbAsyncInit = function() {
+      console.log("FB Async Init called, initializing with version:", FACEBOOK_APP_CONFIG.version);
       window.FB?.init({
         appId: FACEBOOK_APP_CONFIG.appId,
         cookie: true,
         xfbml: true,
-        version: apiVersion
+        version: FACEBOOK_APP_CONFIG.version
       });
+      
+      // Log page view as recommended
+      window.FB?.AppEvents?.logPageView();
+      
+      // Signal that the script is loaded
       setIsScriptLoaded(true);
     };
 
-    document.body.appendChild(script);
-    
-    return () => {
-      if (script.parentNode) {
-        document.body.removeChild(script);
-      }
-    };
+    // Create and append the script element using Facebook's recommended approach
+    (function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id;
+      js.src = "https://connect.facebook.net/en_US/sdk.js";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+
+    // No cleanup needed as we want the SDK to persist across the app
   }, []);
 
   return { isScriptLoaded };

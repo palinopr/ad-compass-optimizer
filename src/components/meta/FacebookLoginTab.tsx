@@ -1,7 +1,7 @@
 
 import React from 'react';
 import FacebookLogin from 'react-facebook-login';
-import { FACEBOOK_APP_CONFIG, IS_DEV_MODE } from '@/config/socialAuth';
+import { FACEBOOK_APP_CONFIG } from '@/config/socialAuth';
 import { Separator } from '@/components/ui/separator';
 import { useFacebookLogin } from '@/hooks/useFacebookLogin';
 import FacebookLoginError from './facebook/FacebookLoginError';
@@ -10,8 +10,6 @@ import FacebookNotice from './facebook/FacebookNotice';
 import FacebookPermissionsInfo from './facebook/FacebookPermissionsInfo';
 import FacebookRequirementsInfo from './facebook/FacebookRequirementsInfo';
 import BusinessIntegrationInfo from './facebook/BusinessIntegrationInfo';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
 
 interface FacebookLoginTabProps {
   onLoginSuccess: (userData: any) => void;
@@ -34,18 +32,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
       </p>
       
       <FacebookLoginError error={loginError} />
-      
-      {IS_DEV_MODE && (
-        <Alert className="mb-4 bg-amber-50 border-amber-200">
-          <InfoIcon className="h-4 w-4 text-amber-500" />
-          <AlertTitle>Development Mode Active</AlertTitle>
-          <AlertDescription className="text-sm text-amber-700">
-            Your app is in development mode. Advanced permissions (ads_management, ads_read, business_management) 
-            require Meta App Review approval before they can be used in production. Currently, only basic 
-            permissions will work.
-          </AlertDescription>
-        </Alert>
-      )}
       
       <FacebookNotice>
         We'll request basic profile information to identify your account.
