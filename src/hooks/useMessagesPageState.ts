@@ -94,11 +94,24 @@ export const useMessagesPageState = () => {
     setComponentState('ready');
   }, [isAuthenticated, checkForAdAccount, loadStoredAdAccounts]);
   
+  // Combined function to check auth and determine state
+  const checkAuthAndState = useCallback(() => {
+    console.log("Force checking auth and state...");
+    setComponentState('loading');
+    
+    // First check auth
+    checkAuth();
+    
+    // Then determine component state with slight delay to allow auth check to complete
+    setTimeout(() => {
+      determineComponentState();
+    }, 300);
+  }, [checkAuth, determineComponentState]);
+  
   useEffect(() => {
     console.log("Messages page mounted");
     
-    checkAuth();
-    determineComponentState();
+    checkAuthAndState();
     
     const interval = setInterval(() => {
       console.log("Running periodic state check");
@@ -137,6 +150,7 @@ export const useMessagesPageState = () => {
     adAccounts,
     isAuthenticated,
     handleConnectClick,
-    handleSelectAdAccount
+    handleSelectAdAccount,
+    checkAuthAndState
   };
 };

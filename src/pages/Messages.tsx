@@ -19,10 +19,21 @@ const Messages = () => {
     adAccounts, 
     isAuthenticated,
     handleConnectClick,
-    handleSelectAdAccount
+    handleSelectAdAccount,
+    checkAuthAndState
   } = useMessagesPageState();
   
   const { toast } = useToast();
+
+  // Handle retry connection
+  const handleRetryConnection = () => {
+    toast({
+      title: "Retrying connection",
+      description: "Checking authentication status..."
+    });
+    
+    checkAuthAndState();
+  };
 
   // Render appropriate state view based on component state
   const renderContent = () => {
@@ -70,6 +81,7 @@ const Messages = () => {
             <ConnectionStatusPanel 
               isAuthenticated={isAuthenticated}
               adAccounts={adAccounts}
+              onRetryConnection={handleRetryConnection}
             />
           </CardContent>
         </Card>
