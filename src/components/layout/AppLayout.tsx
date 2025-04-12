@@ -1,9 +1,9 @@
-
 import React, { useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,6 +13,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { isAuthenticated, checkAuth } = useMetaConnection();
   const [showConnectDialog, setShowConnectDialog] = React.useState(false);
   const [connectionChecked, setConnectionChecked] = React.useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // First effect: Initial load and connection check
   useEffect(() => {
@@ -34,7 +36,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       setShowConnectDialog(true);
       localStorage.removeItem('show_meta_connection');
     }
-  }, [isAuthenticated, checkAuth]);
+    
+    // Check if we need to redirect based on auth status
+    // Only redirect on certain pages that require authentication
+    const authRequiredPages = ['/campaigns', '/messages'];
+    if (!isAuthenticated && 
+        authRequiredPages.some(page => location.pathname.startsWith(page)) && 
+        connectionChecked) {
+      console.log('Authentication required for this page, showing dialog...');
+      setShowConnectDialog(true);
+    }
+  }, [isAuthenticated, checkAuth, location.pathname, connectionChecked]);
 
   // Second effect: Add visibility change listener to detect tab focus/return
   useEffect(() => {
@@ -80,6 +92,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     
     // Clear any cached connection status to force re-check
     localStorage.removeItem('meta_connection_status_checked');
+    
+    // If we're on a route that requires auth, stay there
+    // Otherwise, navigate to campaigns which is likely what people want to see
+    const authRequiredPages = ['/campaigns', '/messages'];
+    if (!authRequiredPages.some(page => location.pathname.startsWith(page))) {
+      navigate('/campaigns');
+    }
   };
 
   const handleConnectionError = (errorMessage: string) => {

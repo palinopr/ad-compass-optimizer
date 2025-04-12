@@ -18,9 +18,9 @@ function App() {
           <Route path="/analytics" element={<Dashboard />} /> 
           <Route path="/audiences" element={<Dashboard />} />
           <Route path="/events" element={<Dashboard />} />
-          <Route path="/messages" element={<Campaigns />} /> {/* Pointing to Campaigns as a fallback */}
+          <Route path="/messages" element={<Campaigns />} /> {/* Using Campaigns for messages too */}
           <Route path="/reports" element={<Dashboard />} />
-          <Route path="/settings" element={<Dashboard />} />
+          <Route path="/settings" element={<MetaIntegration />} /> {/* Using MetaIntegration for settings too */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

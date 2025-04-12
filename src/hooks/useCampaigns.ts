@@ -4,6 +4,7 @@ import { MetaApiService } from '@/services/MetaApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 
 interface UseCampaignsResult {
   campaigns: MetaCampaign[];
@@ -17,6 +18,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { isAuthenticated, hasPermissions, showConnectionDialog } = useMetaConnection();
   
   const fetchCampaigns = async () => {
     setIsLoading(true);
@@ -26,21 +28,15 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       console.log('Starting campaign fetch process...');
       
       // Check if user is authenticated
-      if (!metaAuthService.isAuthenticated()) {
+      if (!isAuthenticated) {
         console.log('User is not authenticated');
-        setError('Not authenticated with Meta');
+        setError('Not authenticated with Meta. Please connect your account.');
         setIsLoading(false);
         return;
       }
       
       // Check if user has the necessary permissions
-      const permissions = metaAuthService.getPermissions();
-      console.log('User permissions:', permissions);
-      const hasAdsPermission = permissions.some(p => 
-        p === 'ads_management' || p === 'ads_read'
-      );
-      
-      if (!hasAdsPermission) {
+      if (!hasPermissions) {
         console.log('User lacks required permissions');
         setError('Missing required ads permissions. Please update your token permissions to include ads_read or ads_management.');
         setIsLoading(false);
@@ -53,6 +49,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         console.log('No access token found');
         setError('Not authenticated with Meta');
         setIsLoading(false);
+        // Signal that connection dialog should be shown
+        showConnectionDialog();
         return;
       }
       
@@ -129,8 +127,12 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           
           if (errorCode === '400') {
             enhancedError = 'Failed to fetch campaign data (Error 400). This usually indicates an invalid token format or expired token.';
+            // Trigger connection dialog
+            showConnectionDialog();
           } else if (errorCode === '401') {
             enhancedError = 'Authentication failed (Error 401). Your Meta access token has expired.';
+            // Trigger connection dialog
+            showConnectionDialog();
           } else if (errorCode === '403') {
             enhancedError = 'Permission denied (Error 403). You don\'t have the required permissions to access this data.';
           }
@@ -168,7 +170,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   
   useEffect(() => {
     fetchCampaigns();
-  }, [status]);
+  }, [status, isAuthenticated, hasPermissions]);
   
   return {
     campaigns,

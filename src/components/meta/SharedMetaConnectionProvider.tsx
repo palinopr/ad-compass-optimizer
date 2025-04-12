@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 
@@ -6,6 +7,7 @@ interface MetaConnectionContextType {
   userData: any | null;
   hasPermissions: boolean;
   checkAuth: () => void;
+  showConnectionDialog: () => void;
 }
 
 const MetaConnectionContext = createContext<MetaConnectionContextType>({
@@ -13,6 +15,7 @@ const MetaConnectionContext = createContext<MetaConnectionContextType>({
   userData: null,
   hasPermissions: false,
   checkAuth: () => {},
+  showConnectionDialog: () => {},
 });
 
 export const useMetaConnection = () => useContext(MetaConnectionContext);
@@ -28,6 +31,14 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
   const [userData, setUserData] = useState<any | null>(null);
   const [hasPermissions, setHasPermissions] = useState<boolean>(false);
   const [lastCheckTime, setLastCheckTime] = useState<number>(0);
+
+  // Function to trigger showing connection dialog
+  const showConnectionDialog = useCallback(() => {
+    console.log('Setting flag to show connection dialog on next render');
+    localStorage.setItem('show_meta_connection', 'true');
+    // Force component reload to trigger dialog
+    window.location.reload();
+  }, []);
 
   // Function to check auth status - can be called from anywhere in the app
   const checkAuth = useCallback(() => {
@@ -52,6 +63,8 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
       // Clear session storage indicators
       sessionStorage.removeItem('meta_auth_valid');
       sessionStorage.removeItem('meta_auth_checked');
+      localStorage.removeItem('meta_auth_valid');
+      localStorage.removeItem('meta_auth_checked');
       return;
     }
     
@@ -72,7 +85,6 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
         setUserData({
           id: userId,
           name: localStorage.getItem('meta_user_name') || 'Meta User',
-          // Other user data might be added here from storage or API
         });
       }
       
@@ -94,7 +106,7 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
     }
   }, [lastCheckTime]);
 
-  // Check authentication on initial load
+  // Check authentication on initial load with improved persistence
   useEffect(() => {
     // Try to restore from localStorage first (for persistence between refreshes)
     const authValidLocal = localStorage.getItem('meta_auth_valid') === 'true';
@@ -129,8 +141,8 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
         const checkTime = parseInt(authChecked, 10);
         const now = Date.now();
         
-        // If the check was recent (less than 30 minutes ago), use the cached status
-        if (now - checkTime < 30 * 60 * 1000) {
+        // If the check was recent (less than 60 minutes ago), use the cached status
+        if (now - checkTime < 60 * 60 * 1000) {
           console.log('Using cached auth status from session storage');
           setIsAuthenticated(true);
           
@@ -154,13 +166,21 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
     
     // Always perform a fresh check, but after the potential quick restore
     checkAuth();
+    
+    // Set up interval for periodic auth checks (similar to Madgicx approach)
+    const checkInterval = setInterval(() => {
+      checkAuth();
+    }, 5 * 60 * 1000); // Check every 5 minutes
+    
+    return () => clearInterval(checkInterval);
   }, [checkAuth]);
 
   const value = {
     isAuthenticated,
     userData,
     hasPermissions,
-    checkAuth
+    checkAuth,
+    showConnectionDialog
   };
 
   return (

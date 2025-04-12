@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -38,6 +39,15 @@ export default function MetaIntegration() {
   const { toast } = useToast();
   const { isAuthenticated, hasPermissions, checkAuth } = useMetaConnection();
 
+  // Check URL params for tab selection
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab && ['accounts', 'flow', 'settings'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, []);
+
   const handleDisconnect = () => {
     metaAuthService.logout();
     checkAuth(); // Update the auth state after logout
@@ -62,9 +72,12 @@ export default function MetaIntegration() {
     }, 500);
   };
 
-  const hasAdAccount = () => {
-    const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
-    return selectedAdAccounts && JSON.parse(selectedAdAccounts).length > 0;
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    // Update URL without page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', value);
+    window.history.pushState({}, '', url);
   };
 
   return (
@@ -99,41 +112,11 @@ export default function MetaIntegration() {
         </div>
 
         {/* Connection Status Dashboard */}
-        {isAuthenticated && (
-          <div className="mb-4">
-            <MetaConnectionStatus />
-          </div>
-        )}
+        <div className="mb-4">
+          <MetaConnectionStatus />
+        </div>
 
-        {/* Alert Messages */}
-        {isAuthenticated && !hasPermissions && (
-          <Alert variant="destructive">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertDescription>
-              You don't have the necessary permissions to access ad campaigns. Please reconnect with permissions for ads_read or ads_management.
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {isAuthenticated && hasPermissions && !hasAdAccount() && (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Please select an ad account to manage campaigns and view insights.
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {isAuthenticated && hasPermissions && hasAdAccount() && (
-          <Alert className="bg-blue-50 border-blue-200">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-700">
-              Your Meta account is fully connected with required permissions and ad accounts.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="accounts">Account Connection</TabsTrigger>
             <TabsTrigger value="flow">Integration Flow</TabsTrigger>
