@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
@@ -11,14 +12,15 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { isAuthenticated, checkAuth } = useMetaConnection();
-  const [showConnectDialog, setShowConnectDialog] = React.useState(false);
-  const [connectionChecked, setConnectionChecked] = React.useState(false);
+  const [showConnectDialog, setShowConnectDialog] = useState(false);
+  const [connectionChecked, setConnectionChecked] = useState(false);
+  const [alreadyAuthenticated, setAlreadyAuthenticated] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   // First effect: Initial load and connection check
   useEffect(() => {
-    console.log('Checking Meta auth status...');
+    console.log('Checking Meta auth status on AppLayout mount...');
     
     // Check if token exists but was not recognized yet
     const token = metaAuthService.getAccessToken();
@@ -27,28 +29,50 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       checkAuth();
     }
 
+    // Track if we were already authenticated when the component mounted
+    if (isAuthenticated) {
+      setAlreadyAuthenticated(true);
+    }
+
     // Mark connection as checked
     setConnectionChecked(true);
+    
+    // Clear any stale connection flags after successful mount
+    if (isAuthenticated) {
+      localStorage.removeItem('show_meta_connection');
+      sessionStorage.removeItem('show_meta_connection');
+    }
+  }, [isAuthenticated, checkAuth]);
 
+  // Second effect: Handle showing connection dialog
+  useEffect(() => {
+    // Only check for showing dialog if we've completed the initial check
+    if (!connectionChecked) return;
+    
     // Check if we need to show connection dialog based on localStorage flag
     const needsConnection = localStorage.getItem('show_meta_connection') === 'true';
-    if (needsConnection && !isAuthenticated) {
-      setShowConnectDialog(true);
-      localStorage.removeItem('show_meta_connection');
-    }
     
     // Check if we need to redirect based on auth status
     // Only redirect on certain pages that require authentication
     const authRequiredPages = ['/campaigns', '/messages'];
-    if (!isAuthenticated && 
-        authRequiredPages.some(page => location.pathname.startsWith(page)) && 
-        connectionChecked) {
-      console.log('Authentication required for this page, showing dialog...');
+    const needsAuthForCurrentPage = authRequiredPages.some(page => location.pathname.startsWith(page));
+    
+    // Only show the dialog if:
+    // 1. We're not already authenticated, AND
+    // 2. Either there's a flag set OR we're on an auth-required page
+    if (!isAuthenticated && (needsConnection || needsAuthForCurrentPage)) {
+      console.log('Authentication required, showing dialog...');
       setShowConnectDialog(true);
+      // Clear the flag once we've decided to show the dialog
+      localStorage.removeItem('show_meta_connection');
+      sessionStorage.removeItem('show_meta_connection');
+    } else if (isAuthenticated) {
+      // Make sure dialog is hidden if we're authenticated
+      setShowConnectDialog(false);
     }
-  }, [isAuthenticated, checkAuth, location.pathname, connectionChecked]);
+  }, [isAuthenticated, connectionChecked, location.pathname]);
 
-  // Second effect: Add visibility change listener to detect tab focus/return
+  // Third effect: Add visibility change listener to detect tab focus/return
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {

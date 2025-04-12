@@ -36,19 +36,24 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
 
   // Function to trigger showing connection dialog
   const showConnectionDialog = useCallback(() => {
-    console.log('Setting flag to show connection dialog on next render');
-    localStorage.setItem('show_meta_connection', 'true');
-    sessionStorage.setItem('show_meta_connection', 'true');
-    
-    // Broadcast the event to other tabs for synchronization
-    try {
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'show_meta_connection',
-        newValue: 'true',
-        storageArea: localStorage
-      }));
-    } catch (e) {
-      console.error('Error dispatching storage event:', e);
+    // Only show connection dialog if user is not already authenticated
+    if (!metaAuthService.isAuthenticated()) {
+      console.log('Setting flag to show connection dialog on next render');
+      localStorage.setItem('show_meta_connection', 'true');
+      sessionStorage.setItem('show_meta_connection', 'true');
+      
+      // Broadcast the event to other tabs for synchronization
+      try {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'show_meta_connection',
+          newValue: 'true',
+          storageArea: localStorage
+        }));
+      } catch (e) {
+        console.error('Error dispatching storage event:', e);
+      }
+    } else {
+      console.log('User is already authenticated, not showing connection dialog');
     }
   }, []);
 
