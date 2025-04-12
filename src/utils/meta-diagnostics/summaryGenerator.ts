@@ -39,27 +39,39 @@ export const generateDiagnosticSummary = (
     }
   }
   
-  // Add CORS issues if any
+  const tokenSource = localStorage.getItem('meta_token_source') || 'unknown';
+  const isFacebookAuth = tokenSource === 'facebook';
+  
+  // Only add CORS issues if not using Facebook auth
   if (cors.hasCorsIssues) {
-    issues.push('CORS policy preventing API access');
-    
-    // Make Facebook login the primary recommendation for CORS issues
-    recommendations.push('Use Facebook Login to bypass CORS restrictions');
-    
-    if (proxy && proxy.proxyWorked) {
-      recommendations.push('Use a proxy server to bypass CORS restrictions');
-      status = 'medium'; // Downgraded since we have a workaround
-    } else if (proxy.error && proxy.error.includes('access denied')) {
-      recommendations.push('Request temporary access to the CORS proxy service');
-      recommendations.push('Or use a different CORS proxy service');
-      status = 'high';
-    } else if (compatibility.compatibility.score < 80) {
-      recommendations.push('Try using a different modern browser like Chrome or Firefox');
-      status = 'high';
+    if (!isFacebookAuth) {
+      issues.push('CORS policy preventing API access');
+      
+      // Make Facebook login the primary recommendation for CORS issues
+      recommendations.push('Use Facebook Login to bypass CORS restrictions');
+      
+      if (proxy && proxy.proxyWorked) {
+        recommendations.push('Use a proxy server to bypass CORS restrictions');
+        status = 'medium'; // Downgraded since we have a workaround
+      } else if (proxy.error && proxy.error.includes('access denied')) {
+        recommendations.push('Request temporary access to the CORS proxy service');
+        recommendations.push('Or use a different CORS proxy service');
+        status = 'high';
+      } else if (compatibility.compatibility.score < 80) {
+        recommendations.push('Try using a different modern browser like Chrome or Firefox');
+        status = 'high';
+      } else {
+        recommendations.push('Try using a browser extension to disable CORS protections for development');
+        recommendations.push('Or implement a server-side proxy in your production app');
+        status = 'high';
+      }
     } else {
-      recommendations.push('Try using a browser extension to disable CORS protections for development');
-      recommendations.push('Or implement a server-side proxy in your production app');
-      status = 'high';
+      // For Facebook auth, focus on other potential issues
+      issues.push('API access issue with Facebook authentication');
+      recommendations.push('Check Facebook permissions are complete (ads_read, ads_management)');
+      recommendations.push('Verify ad account selection is correct');
+      recommendations.push('Check for any API rate limits or temporary Facebook API issues');
+      status = 'medium';
     }
   }
   
@@ -68,6 +80,15 @@ export const generateDiagnosticSummary = (
     issues.push(...compatibility.compatibility.issues);
     recommendations.push('Use a modern browser like Chrome, Firefox, or Edge');
     if (status !== 'high') status = 'medium';
+  }
+  
+  // Check for campaign loading issues
+  if (isFacebookAuth && api.success && cors.hasCorsIssues) {
+    issues.push('Campaigns not loading despite successful Facebook authentication');
+    recommendations.push('Verify ad account selection is correct and accessible');
+    recommendations.push('Check browser console for specific API errors');
+    recommendations.push('Try reconnecting your Facebook account with fresh permissions');
+    status = 'high';
   }
   
   return {

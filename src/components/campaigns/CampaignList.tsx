@@ -11,13 +11,28 @@ interface CampaignListProps {
 }
 
 const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
-  const { campaigns, isLoading, error, refetchCampaigns } = useCampaigns(status);
+  const { campaigns, isLoading, error, refetchCampaigns, errorDetails } = useCampaigns(status);
   const { isAuthenticated, checkAuth } = useMetaConnection();
   
   // Force check auth status when component mounts
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+  
+  // Log additional debug information if there's an error
+  useEffect(() => {
+    if (error) {
+      console.log(`Campaign loading error (${status} campaigns):`, error);
+      console.log('Authentication status:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+      console.log('Error details:', errorDetails || 'No additional details');
+      
+      // Check ad account selection
+      const selectedAdAccount = localStorage.getItem('selected_ad_account');
+      const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
+      console.log('Selected ad account:', selectedAdAccount);
+      console.log('Selected ad accounts array:', selectedAdAccounts);
+    }
+  }, [error, isAuthenticated, status, errorDetails]);
   
   // Handle loading state
   if (isLoading) {
@@ -36,6 +51,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
           error={error} 
           isAuthenticated={isAuthenticated} 
           onRetry={refetchCampaigns}
+          errorDetails={errorDetails}
         />
       </Card>
     );

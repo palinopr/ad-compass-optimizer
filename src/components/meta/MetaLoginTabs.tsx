@@ -18,7 +18,7 @@ const MetaLoginTabs: React.FC<MetaLoginTabsProps> = ({ onLoginSuccess, onError }
           Connect with Facebook
         </CardTitle>
         <CardDescription>
-          Login with Facebook to bypass CORS restrictions and access your Meta Ads data
+          Log in with Facebook to securely access your Meta Ads data and bypass browser CORS restrictions
         </CardDescription>
       </CardHeader>
       <CardContent>

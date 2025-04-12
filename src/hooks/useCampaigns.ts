@@ -10,6 +10,7 @@ interface UseCampaignsResult {
   campaigns: MetaCampaign[];
   isLoading: boolean;
   error: string | null;
+  errorDetails?: any;
   refetchCampaigns: () => void;
 }
 
@@ -17,12 +18,14 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const [campaigns, setCampaigns] = useState<MetaCampaign[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<any>(null);
   const { toast } = useToast();
   const { isAuthenticated, hasPermissions, showConnectionDialog, checkAuth } = useMetaConnection();
   
   const fetchCampaigns = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setErrorDetails(null);
     
     try {
       console.log('Starting campaign fetch process...');
@@ -99,29 +102,57 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         adAccountId = `act_${adAccountId}`;
       }
       
+      // Log the auth method being used
+      const authMethod = metaAuthService.getTokenSource();
+      console.log(`Using auth method: ${authMethod} for ad account: ${adAccountId}`);
+      
       console.log(`Fetching campaigns for ad account: ${adAccountId}`);
-      const campaignsData = await MetaApiService.fetchCampaigns(token, adAccountId);
-      console.log('Campaigns data received:', campaignsData?.length || 0, 'campaigns');
-      
-      // Filter by status if provided
-      let filteredCampaigns = campaignsData;
-      if (status && campaignsData) {
-        console.log(`Filtering campaigns by status: ${status}`);
-        if (status === 'active') {
-          filteredCampaigns = campaignsData.filter(c => c.status === 'ACTIVE');
-        } else if (status === 'draft') {
-          filteredCampaigns = campaignsData.filter(c => c.status === 'PAUSED');
-        } else if (status === 'archived') {
-          filteredCampaigns = campaignsData.filter(c => c.status === 'ARCHIVED' || c.status === 'DELETED');
+      try {
+        const campaignsData = await MetaApiService.fetchCampaigns(token, adAccountId);
+        console.log('Campaigns data received:', campaignsData?.length || 0, 'campaigns');
+        
+        // Filter by status if provided
+        let filteredCampaigns = campaignsData;
+        if (status && campaignsData) {
+          console.log(`Filtering campaigns by status: ${status}`);
+          if (status === 'active') {
+            filteredCampaigns = campaignsData.filter(c => c.status === 'ACTIVE');
+          } else if (status === 'draft') {
+            filteredCampaigns = campaignsData.filter(c => c.status === 'PAUSED');
+          } else if (status === 'archived') {
+            filteredCampaigns = campaignsData.filter(c => c.status === 'ARCHIVED' || c.status === 'DELETED');
+          }
+          console.log(`After filtering: ${filteredCampaigns?.length || 0} campaigns`);
         }
-        console.log(`After filtering: ${filteredCampaigns?.length || 0} campaigns`);
+        
+        setCampaigns(filteredCampaigns || []);
+      } catch (apiErr: any) {
+        console.error('API error during campaign fetch:', apiErr);
+        let apiErrorMessage = apiErr?.message || 'Unknown API error';
+        
+        if (apiErr?.response) {
+          try {
+            const responseData = await apiErr.response.json();
+            console.error('API error response data:', responseData);
+            setErrorDetails(responseData);
+            
+            if (responseData.error && responseData.error.message) {
+              apiErrorMessage = responseData.error.message;
+            }
+          } catch (jsonErr) {
+            console.error('Failed to parse API error response:', jsonErr);
+          }
+        }
+        
+        throw new Error(apiErrorMessage);
       }
-      
-      setCampaigns(filteredCampaigns || []);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch campaigns';
       console.error('Error message:', errorMessage);
+      
+      // Save detailed error information
+      setErrorDetails(err);
       
       // Try to extract HTTP error code for more specific errors
       let enhancedError = errorMessage;
@@ -172,6 +203,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     campaigns,
     isLoading,
     error,
+    errorDetails,
     refetchCampaigns: fetchCampaigns
   };
 }

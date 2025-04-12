@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CardContent } from '@/components/ui/card';
-import { Loader2, RefreshCw, AlertCircle, PlusCircle } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle, PlusCircle, ShieldAlert } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
 import { MetaApiService } from '@/services/MetaApiService';
@@ -15,6 +15,7 @@ interface ErrorStateProps {
   error: string;
   isAuthenticated: boolean;
   onRetry?: () => void;
+  errorDetails?: any;
 }
 
 export const LoadingState = () => (
@@ -27,7 +28,8 @@ export const LoadingState = () => (
 export const ErrorState: React.FC<ErrorStateProps> = ({ 
   error, 
   isAuthenticated,
-  onRetry
+  onRetry,
+  errorDetails
 }) => {
   const { toast } = useToast();
   
@@ -44,6 +46,8 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
     
   const isAccountError = error.toLowerCase().includes('account') || 
     error.toLowerCase().includes('no ad account');
+    
+  const isFacebookAuth = metaAuthService.getTokenSource() === 'facebook';
   
   const handleReconnect = async () => {
     // Validate current token before logout
@@ -84,6 +88,15 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       <AlertCircle className="w-8 h-8 text-red-500 mb-3" />
       <p className="text-red-500 font-medium mb-2">{error}</p>
       
+      {isFacebookAuth && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 p-3 rounded-md">
+          <p className="flex items-start text-sm text-amber-800">
+            <ShieldAlert className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+            <span>You're using Facebook authentication which should bypass CORS issues, but campaign loading is still failing. This usually indicates an issue with ad account access or permissions.</span>
+          </p>
+        </div>
+      )}
+      
       <p className="text-muted-foreground mb-4 max-w-md">
         {isTokenError ? (
           "Your Meta access token appears to be invalid or expired. Please reconnect your Meta account with a valid token."
@@ -96,8 +109,19 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
         )}
       </p>
       
+      {errorDetails && (
+        <div className="mb-4 text-xs bg-gray-50 p-2 rounded border border-gray-200 max-w-md overflow-auto text-left">
+          <p className="font-medium mb-1">Additional details:</p>
+          <pre className="whitespace-pre-wrap">{
+            typeof errorDetails === 'object' 
+              ? JSON.stringify(errorDetails, null, 2) 
+              : errorDetails
+          }</pre>
+        </div>
+      )}
+      
       <div className="flex gap-3">
-        {(isTokenError || isPermissionError) && (
+        {(isTokenError || isPermissionError || isFacebookAuth) && (
           <Button 
             className="bg-meta-blue hover:bg-meta-dark" 
             onClick={handleReconnect}
