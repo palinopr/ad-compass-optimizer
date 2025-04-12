@@ -46,7 +46,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   
   const handleReconnect = () => {
     // Clear token and all Meta-related data
-    console.log('Clearing Meta auth data and reloading page');
+    console.log('User clicked reconnect button - clearing Meta auth data and reloading page');
     metaAuthService.logout();
     
     toast({
@@ -54,8 +54,9 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       description: "Please reconnect your Meta account with a valid token."
     });
     
-    // Short delay before reload to ensure toast is visible
+    // Add a short delay so the toast is visible before reload
     setTimeout(() => {
+      // For campaign page, just reload to trigger fresh authentication flow
       window.location.reload();
     }, 500);
   };

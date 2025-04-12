@@ -21,16 +21,17 @@ export class MetaConnectionService extends BaseApiService {
       console.log('Testing Meta API connection...');
       
       // Perform a basic validation check on the token format
-      if (!token || token.length < 10) {
+      if (!token || token.length < 20) {
         return {
           success: false,
           error: 'Token appears to be invalid or too short',
-          details: 'Please check that you have pasted the entire token correctly'
+          details: 'Please check that you have pasted the entire token correctly. Meta tokens are typically long strings.'
         };
       }
 
       console.log(`Testing connection with token: ${token.substring(0, 4)}... (${token.length} chars)`);
       
+      // First try a basic validation request to check if the token is valid at all
       const response = await fetch(
         `${this.BASE_URL}/${this.API_VERSION}/me?access_token=${token}`
       );
@@ -42,13 +43,33 @@ export class MetaConnectionService extends BaseApiService {
         let errorMessage = `Connection failed: ${response.status}`;
         let errorDetails = errorText;
         
+        try {
+          // Try to parse JSON error for better details
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error) {
+            errorMessage = errorJson.error.message || errorMessage;
+            
+            // Specific error type checks
+            if (errorJson.error.code === 190) {
+              errorDetails = "Invalid or expired access token. Please generate a new token.";
+            } else if (errorJson.error.code === 104) {
+              errorDetails = "Unsupported request or API version issue.";
+            }
+          }
+        } catch (e) {
+          // If parsing fails, use the raw error text
+        }
+        
         // Provide more helpful guidance based on status code
         if (response.status === 400) {
-          errorMessage += ' - Invalid token format';
+          errorMessage = 'Invalid token format';
           errorDetails = 'The token appears to be malformed. Please ensure you copied the entire token correctly.';
-        } else if (response.status === 401 || response.status === 403) {
-          errorMessage += ' - Authentication failed';
-          errorDetails = 'Your token may be expired or have insufficient permissions. Please generate a new System User token with ads_read and ads_management permissions.';
+        } else if (response.status === 401) {
+          errorMessage = 'Authentication failed';
+          errorDetails = 'Your token has expired. Please generate a new System User token.';
+        } else if (response.status === 403) {
+          errorMessage = 'Permission denied';
+          errorDetails = 'Your token may have insufficient permissions. Please generate a new token with ads_read and ads_management permissions.';
         }
         
         return {
