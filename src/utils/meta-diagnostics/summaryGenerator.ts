@@ -43,6 +43,9 @@ export const generateDiagnosticSummary = (
   if (cors.hasCorsIssues) {
     issues.push('CORS policy preventing API access');
     
+    // Make Facebook login the primary recommendation for CORS issues
+    recommendations.push('Use Facebook Login to bypass CORS restrictions');
+    
     if (proxy && proxy.proxyWorked) {
       recommendations.push('Use a proxy server to bypass CORS restrictions');
       status = 'medium'; // Downgraded since we have a workaround

@@ -1,19 +1,21 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Server, Globe, Shield } from 'lucide-react';
+import { AlertTriangle, Server, Globe, Shield, Facebook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface CorsIssueExplainerProps {
   onTryProxy?: () => void;
   corsProxyTested?: boolean;
   proxyError?: string;
+  onLoginWithFacebook?: () => void;
 }
 
 const CorsIssueExplainer: React.FC<CorsIssueExplainerProps> = ({ 
   onTryProxy,
   corsProxyTested,
-  proxyError
+  proxyError,
+  onLoginWithFacebook
 }) => {
   return (
     <Card className="mt-4">
@@ -47,23 +49,40 @@ const CorsIssueExplainer: React.FC<CorsIssueExplainerProps> = ({
             </div>
           </div>
           
-          <h3 className="font-medium text-sm">Why am I seeing this?</h3>
-          <p className="text-sm">
-            Most APIs, including Meta's, have CORS restrictions for security reasons. In development,
-            this prevents your browser from making direct API requests.
-          </p>
+          <h3 className="font-medium text-sm">Recommended Solution:</h3>
+          <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-3">
+            <div className="flex items-start">
+              <Facebook className="h-5 w-5 text-[#1877F2] mt-0.5 mr-2" />
+              <div>
+                <p className="text-sm font-medium">Use Facebook Login</p>
+                <p className="text-xs text-gray-700 mt-1">
+                  The Facebook SDK handles token management and API calls internally, bypassing CORS restrictions.
+                  This is the most reliable way to connect to Meta's APIs from a browser.
+                </p>
+                {onLoginWithFacebook && (
+                  <Button 
+                    className="mt-2 bg-[#1877F2] hover:bg-blue-600 text-white"
+                    onClick={onLoginWithFacebook}
+                    size="sm"
+                  >
+                    <Facebook className="mr-2 h-4 w-4" />
+                    Login with Facebook
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
           
-          <h3 className="font-medium text-sm">Solutions:</h3>
+          <h3 className="font-medium text-sm">Other Solutions:</h3>
           <ul className="list-disc pl-5 text-sm">
             <li>Use browser extensions like "CORS Unblock" or "Allow CORS" for testing</li>
             <li>Implement a server-side proxy in your application</li>
-            <li>Continue using the browser login flow (which handles CORS automatically)</li>
           </ul>
           
           <h3 className="font-medium text-sm">Production Applications:</h3>
           <p className="text-sm">
-            For production applications, you should implement a proper server-side proxy to handle API calls securely.
-            This is the recommended approach for handling sensitive operations like API calls with tokens.
+            For production applications, you should either use the Facebook Login SDK or implement a proper server-side proxy 
+            to handle API calls securely.
           </p>
           
           {onTryProxy && (
