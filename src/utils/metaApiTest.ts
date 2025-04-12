@@ -40,7 +40,7 @@ export const testMetaApi = async () => {
       }
       
       console.log('API call successful');
-      return { success: true, data };
+      return { success: true, data, error: '' }; // Adding empty error property to maintain consistent type
     } catch (parseError) {
       console.log('Failed to parse response as JSON:', parseError);
       return { success: false, error: 'Invalid JSON response' };
@@ -77,7 +77,8 @@ export const checkForCorsIssues = async () => {
     
     return { 
       hasCorsIssues: !corsHeaders['access-control-allow-origin'], 
-      corsHeaders 
+      corsHeaders,
+      error: '' // Adding empty error property to maintain consistent type
     };
   } catch (error) {
     console.error('CORS check error:', error);
