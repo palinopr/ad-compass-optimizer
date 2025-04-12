@@ -187,17 +187,21 @@ const MetaConnectionStatus: React.FC = () => {
       }
     });
     
-    // Calculate overall status
-    const statuses = connectionSteps.map(step => step.status);
+    // Get the updated steps after all checks are done
+    const updatedSteps = [...connectionSteps];
+    
+    // Calculate overall status based on the final state of all steps
+    const statuses = updatedSteps.map(step => step.status);
     
     if (statuses.includes('error')) {
       setOverallStatus('error');
     } else if (statuses.includes('warning')) {
       setOverallStatus('warning');
-    } else if (statuses.every(status => status === 'success')) {
-      setOverallStatus('success');
-    } else {
+    } else if (statuses.includes('pending')) {
       setOverallStatus('pending');
+    } else {
+      // If no error, warning, or pending statuses, then everything is successful
+      setOverallStatus('success');
     }
     
     setProgressValue(100);
