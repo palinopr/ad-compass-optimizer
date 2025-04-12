@@ -1,8 +1,10 @@
+
 import React from 'react';
-import { CheckCircle, XCircle, AlertCircle, Clock, Link, Link2Off, RefreshCw, Facebook } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { metaAuthService } from '@/services/MetaAuthService';
-import { Button } from '@/components/ui/button';
+import ConnectionStatusSummary from './connection-status/ConnectionStatusSummary';
+import Troubleshooting from './connection-status/Troubleshooting';
+import NextSteps from './connection-status/NextSteps';
+import DebugInfo from './connection-status/DebugInfo';
 
 interface ConnectionStatusPanelProps {
   isAuthenticated: boolean;
@@ -39,185 +41,34 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
       
       <div className="space-y-4">
         {/* Connection Status Summary */}
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>Authentication:</div>
-          <div className="flex items-center">
-            {isAuthenticated ? (
-              <>
-                <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                <span className="text-green-600">Authenticated</span>
-              </>
-            ) : (
-              <>
-                <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                <span className="text-red-600">Not Authenticated</span>
-              </>
-            )}
-          </div>
-          
-          <div>Ad Account:</div>
-          <div className="flex items-center">
-            {adAccounts.length > 0 ? (
-              <>
-                <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                <span className="text-green-600">Selected ({adAccounts.length})</span>
-              </>
-            ) : (
-              <>
-                <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                <span className="text-red-600">Not Selected</span>
-              </>
-            )}
-          </div>
-          
-          {isAuthenticated && (
-            <>
-              <div>Token Freshness:</div>
-              <div className="flex items-center">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger className="flex items-center">
-                      {tokenInfo.isFresh ? (
-                        <>
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                          <span className="text-green-600">Fresh</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="h-4 w-4 text-amber-600 mr-1" />
-                          <span className="text-amber-600">Aging</span>
-                        </>
-                      )}
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Token age: {tokenInfo.age} days</p>
-                      <p>Expires in: {daysUntilExpiry} days</p>
-                      {tokenInfo.age > 45 && (
-                        <p>Consider refreshing soon (60 day validity)</p>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              
-              <div>Permissions:</div>
-              <div className="flex items-center">
-                {hasAdPermissions ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                    <span className="text-green-600">Ad Permissions Granted</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="h-4 w-4 text-amber-600 mr-1" />
-                    <span className="text-amber-600">Missing Required Permissions</span>
-                  </>
-                )}
-              </div>
-              
-              <div>Permission Count:</div>
-              <div className="flex items-center">
-                <span>{permissions.length} permissions</span>
-                {permissions.length > 0 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger className="ml-1">
-                        <AlertCircle className="h-3 w-3 text-blue-600" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="max-w-[200px]">
-                          <p className="mb-1 font-medium">Granted permissions:</p>
-                          <ul className="list-disc pl-4 text-xs">
-                            {permissions.map(p => (
-                              <li key={p}>{p}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        <ConnectionStatusSummary
+          isAuthenticated={isAuthenticated}
+          adAccounts={adAccounts}
+          tokenInfo={tokenInfo}
+          daysUntilExpiry={daysUntilExpiry}
+          hasAdPermissions={hasAdPermissions}
+          permissions={permissions}
+        />
         
         {/* Connection Troubleshooting Section */}
         {!isAuthenticated && (
-          <div className="border-t pt-3 mt-2">
-            <h4 className="text-sm font-medium mb-2">Troubleshooting</h4>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2">
-                <Link2Off className="h-3.5 w-3.5 text-gray-500 mt-0.5" />
-                <span className="text-gray-700">
-                  Not connected to Meta API. Visit the <a href="/meta-integration" className="text-blue-600 underline">Meta Integration page</a> to connect.
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-3.5 w-3.5 text-gray-500 mt-0.5" />
-                <span className="text-gray-700">
-                  Token status: {tokenExists ? "Found but invalid" : "Not found"}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                {onRetryConnection && (
-                  <Button 
-                    onClick={onRetryConnection} 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                    Retry Connection
-                  </Button>
-                )}
-                
-                {onConnectWithBrowser && (
-                  <Button 
-                    onClick={onConnectWithBrowser}
-                    variant="default" 
-                    size="sm"
-                    className="w-full bg-meta-blue hover:bg-meta-dark"
-                  >
-                    <Facebook className="h-3.5 w-3.5 mr-1.5" />
-                    Connect with Browser
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
+          <Troubleshooting
+            tokenExists={tokenExists}
+            onRetryConnection={onRetryConnection}
+            onConnectWithBrowser={onConnectWithBrowser}
+          />
         )}
         
-        {isAuthenticated && adAccounts.length === 0 && (
-          <div className="border-t pt-3 mt-2">
-            <h4 className="text-sm font-medium mb-2">Next Steps</h4>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5" />
-                <span>
-                  Please select an ad account to view messages. Visit the <a href="/meta-integration?tab=accounts" className="text-blue-600 underline">Accounts tab</a>.
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Next Steps for Authenticated Users without Ad Accounts */}
+        {isAuthenticated && adAccounts.length === 0 && <NextSteps />}
         
         {/* Debug information for developers - hidden in production */}
-        {process.env.NODE_ENV !== 'production' && (
-          <div className="border-t pt-3 mt-2 text-xs text-gray-500">
-            <details>
-              <summary className="cursor-pointer font-medium">Debug Information</summary>
-              <div className="mt-2 space-y-1 pl-2">
-                <div>Token Source: {tokenSource}</div>
-                <div>User ID: {userId}</div>
-                <div>Token Status: {tokenExists ? 'Present' : 'Missing'}</div>
-                {tokenExists && (
-                  <div>Token Length: {token?.length}</div>
-                )}
-              </div>
-            </details>
-          </div>
-        )}
+        <DebugInfo
+          tokenSource={tokenSource}
+          userId={userId}
+          tokenExists={tokenExists}
+          tokenLength={token?.length}
+        />
       </div>
     </div>
   );
