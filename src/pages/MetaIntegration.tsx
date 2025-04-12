@@ -12,6 +12,7 @@ import { Info, ShieldAlert, RefreshCw } from 'lucide-react';
 import MetaConnectionFlow from '@/components/meta/MetaConnectionFlow';
 import { useToast } from '@/hooks/use-toast';
 import TokenPermissionsList from '@/components/meta/TokenPermissionsList';
+import MetaConnectionStatus from '@/components/meta/MetaConnectionStatus';
 
 const MetaIntegration = () => {
   const [activeTab, setActiveTab] = useState('accounts');
@@ -98,6 +99,14 @@ const MetaIntegration = () => {
           )}
         </div>
 
+        {/* Connection Status Dashboard */}
+        {isAuthenticated && (
+          <div className="mb-4">
+            <MetaConnectionStatus />
+          </div>
+        )}
+
+        {/* Alert Messages */}
         {isAuthenticated && !hasAdsPermission && (
           <Alert variant="destructive">
             <ShieldAlert className="h-4 w-4" />

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
+import { validateTokenFormat, cleanToken } from '@/utils/tokenUtils';
 
 interface UseMetaTokenConnectionOptions {
   onSuccess: (userData: any) => void;
@@ -14,25 +15,6 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
-
-  const validateTokenFormat = (token: string): { valid: boolean, reason?: string } => {
-    if (!token || token.trim().length === 0) {
-      return { valid: false, reason: "Token is empty" };
-    }
-    
-    // Meta tokens are typically very long
-    if (token.trim().length < 50) {
-      return { valid: false, reason: "Token is too short. Meta tokens are typically much longer." };
-    }
-    
-    // More permissive regex that allows for URL-safe characters in tokens
-    const tokenRegex = /^[A-Za-z0-9_\-\.]+$/;
-    if (!tokenRegex.test(token)) {
-      return { valid: false, reason: "Token contains invalid characters" };
-    }
-    
-    return { valid: true };
-  };
 
   const fetchUserData = async (token: string) => {
     try {
@@ -93,7 +75,7 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
   };
 
   const connectWithToken = async (token: string, permissions: string[] = []) => {
-    const cleanedToken = token.trim();
+    const cleanedToken = cleanToken(token);
     
     const validation = validateTokenFormat(cleanedToken);
     if (!validation.valid) {

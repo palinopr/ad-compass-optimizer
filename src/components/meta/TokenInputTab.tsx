@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { useMetaTokenConnection } from '@/hooks/useMetaTokenConnection';
 import { Checkbox } from '@/components/ui/checkbox';
 import { metaAuthService } from '@/services/MetaAuthService';
 import SystemUserTokenGuide from './SystemUserTokenGuide';
+import { cleanToken, validateTokenFormat } from '@/utils/tokenUtils';
 
 interface TokenInputTabProps {
   onTokenSuccess: (userData: any) => void;
@@ -55,23 +55,9 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
       return;
     }
     
-    const token = manualToken.trim();
-    
-    // More permissive regex that allows for URL-safe characters in tokens
-    const tokenRegex = /^[A-Za-z0-9_\-\.]+$/;
-    const isValidFormat = tokenRegex.test(token);
-    
-    setTokenFormatValid(isValidFormat);
-    
-    if (isValidFormat) {
-      if (token.length < 50) {
-        setTokenWarning("Token appears too short. Meta tokens are typically 100+ characters");
-      } else if (token.length < 100) {
-        setTokenWarning("Token length is unusual, but may be valid");
-      } else {
-        setTokenWarning(null);
-      }
-    }
+    const validation = validateTokenFormat(manualToken);
+    setTokenFormatValid(validation.valid);
+    setTokenWarning(validation.valid ? null : validation.reason || null);
   }, [manualToken]);
   
   const handleSelectAll = (checked: boolean) => {
@@ -92,8 +78,11 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
   };
 
   const handleManualTokenConnect = () => {
-    if (!manualToken || manualToken.trim().length < 50) {
-      onTokenError("Please enter a valid Meta access token. Tokens are typically at least 50 characters long.");
+    const cleanedToken = cleanToken(manualToken);
+    
+    const validation = validateTokenFormat(cleanedToken);
+    if (!validation.valid) {
+      onTokenError(validation.reason || "Please enter a valid Meta access token");
       return;
     }
 
@@ -101,20 +90,14 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
       .filter(([_, isSelected]) => isSelected)
       .map(([permission]) => permission);
       
-    connectWithToken(manualToken.trim(), selectedPermissions);
+    connectWithToken(cleanedToken, selectedPermissions);
   };
   
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    
-    let cleanedValue = value
-      .replace(/^['"]|['"]$/g, '')
-      .replace(/\s+/g, '');
-      
-    setManualToken(cleanedValue);
+    setManualToken(value);
   };
   
-  // Check if there's a potentially stale token
   const tokenFreshnessInfo = metaAuthService.checkTokenFreshness();
   const showTokenFreshnessWarning = tokenFreshnessInfo.age > 30; // Warning if token is older than 30 days
 
