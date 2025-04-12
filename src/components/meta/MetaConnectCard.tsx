@@ -105,7 +105,7 @@ const MetaConnectCard: React.FC = () => {
       </Card>
       
       <MetaConnectionDialog 
-        isOpen={isDialogOpen} 
+        open={isDialogOpen} 
         onOpenChange={setIsDialogOpen}
         onSuccess={handleConnectionSuccess}
         onError={handleConnectionError}
