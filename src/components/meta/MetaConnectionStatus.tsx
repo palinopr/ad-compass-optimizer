@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +7,7 @@ import { CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { META_API_CONFIG } from '@/config/socialAuth';
 import SystemUserTokenGuide from './SystemUserTokenGuide';
+import { useMetaConnection } from './SharedMetaConnectionProvider';
 
 interface ConnectionStep {
   id: string;
@@ -26,21 +26,34 @@ const MetaConnectionStatus: React.FC = () => {
   ]);
   const [overallStatus, setOverallStatus] = useState<'pending' | 'success' | 'error' | 'warning'>('pending');
   const [progressValue, setProgressValue] = useState(0);
+  const { isAuthenticated, checkAuth } = useMetaConnection();
   
   useEffect(() => {
-    // Check connection status when the component mounts
-    checkConnectionStatus();
+    const cachedSteps = localStorage.getItem('meta_connection_steps');
+    const cachedOverallStatus = localStorage.getItem('meta_connection_overall_status');
+    const cachedTimestamp = localStorage.getItem('meta_connection_timestamp');
     
-    // Set up an interval to periodically verify the connection status
-    const intervalId = setInterval(() => {
-      // Only do a passive check - not a full check that shows loading indicators
-      verifyConnectionStatus();
-    }, 60000); // Check every minute
+    const now = Date.now();
+    const timestampValid = cachedTimestamp && (now - parseInt(cachedTimestamp, 10)) < 30 * 60 * 1000; // 30 minutes
     
-    return () => clearInterval(intervalId);
-  }, []);
+    if (cachedSteps && cachedOverallStatus && timestampValid) {
+      try {
+        const parsedSteps = JSON.parse(cachedSteps);
+        setConnectionSteps(parsedSteps);
+        setOverallStatus(cachedOverallStatus as 'pending' | 'success' | 'error' | 'warning');
+        setProgressValue(100); // Set progress to complete
+        console.log('Loaded cached connection status from localStorage');
+      } catch (e) {
+        console.error('Error parsing cached connection steps:', e);
+        // Will perform a fresh check
+      }
+    } else {
+      if (isAuthenticated) {
+        checkConnectionStatus();
+      }
+    }
+  }, [isAuthenticated]);
   
-  // Passive verification without UI changes
   const verifyConnectionStatus = () => {
     const isAuthed = metaAuthService.isAuthenticated();
     if (!isAuthed) {
@@ -60,14 +73,12 @@ const MetaConnectionStatus: React.FC = () => {
     setIsChecking(true);
     setProgressValue(0);
     
-    // Reset all steps to pending
     setConnectionSteps(steps => steps.map(step => ({
       ...step,
       status: 'pending',
       message: `Checking ${step.name.toLowerCase()}...`
     })));
     
-    // Step 1: Check if token exists and validate format
     await updateStep(0, async () => {
       const token = metaAuthService.getAccessToken();
       
@@ -78,7 +89,6 @@ const MetaConnectionStatus: React.FC = () => {
         };
       }
       
-      // Check token format
       if (token.length < 50) {
         return { 
           status: 'error', 
@@ -86,7 +96,6 @@ const MetaConnectionStatus: React.FC = () => {
         };
       }
       
-      // Check token freshness
       const freshness = metaAuthService.checkTokenFreshness();
       if (!freshness.isFresh) {
         return { 
@@ -101,7 +110,6 @@ const MetaConnectionStatus: React.FC = () => {
       };
     });
     
-    // Step 2: Check permissions
     await updateStep(1, async () => {
       const token = metaAuthService.getAccessToken();
       if (!token || connectionSteps[0].status === 'error') {
@@ -131,7 +139,6 @@ const MetaConnectionStatus: React.FC = () => {
       };
     });
     
-    // Step 3: Test basic API connection
     await updateStep(2, async () => {
       const token = metaAuthService.getAccessToken();
       if (!token || connectionSteps[0].status === 'error') {
@@ -167,7 +174,6 @@ const MetaConnectionStatus: React.FC = () => {
       }
     });
     
-    // Step 4: Check ad accounts access
     await updateStep(3, async () => {
       const token = metaAuthService.getAccessToken();
       if (!token || connectionSteps[0].status === 'error' || connectionSteps[2].status === 'error') {
@@ -212,10 +218,8 @@ const MetaConnectionStatus: React.FC = () => {
       }
     });
     
-    // Get the updated steps after all checks are done
     const updatedSteps = [...connectionSteps];
     
-    // Calculate overall status based on the final state of all steps
     const statuses = updatedSteps.map(step => step.status);
     
     if (statuses.includes('error')) {
@@ -225,16 +229,18 @@ const MetaConnectionStatus: React.FC = () => {
     } else if (statuses.includes('pending')) {
       setOverallStatus('pending');
     } else {
-      // If no error, warning, or pending statuses, then everything is successful
       setOverallStatus('success');
     }
     
     setProgressValue(100);
     setIsChecking(false);
+    
+    localStorage.setItem('meta_connection_steps', JSON.stringify(updatedSteps));
+    localStorage.setItem('meta_connection_overall_status', overallStatus);
+    localStorage.setItem('meta_connection_timestamp', Date.now().toString());
   };
   
   const updateStep = async (stepIndex: number, checkFn: () => Promise<{ status: ConnectionStep['status'], message: string }>) => {
-    // Update progress
     setProgressValue(prev => Math.min(100, prev + 25));
     
     try {
@@ -300,7 +306,6 @@ const MetaConnectionStatus: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Overall Status */}
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-medium">Overall Connection Status</h3>
@@ -315,10 +320,8 @@ const MetaConnectionStatus: React.FC = () => {
             </div>
           </div>
           
-          {/* Progress */}
           <Progress value={progressValue} className="h-2" />
           
-          {/* Steps */}
           <div className="space-y-4">
             {connectionSteps.map((step) => (
               <div key={step.id} className="flex items-start">
@@ -336,7 +339,6 @@ const MetaConnectionStatus: React.FC = () => {
             ))}
           </div>
           
-          {/* Recommendations */}
           {overallStatus !== 'success' && (
             <div className="mt-6">
               <h3 className="text-lg font-medium mb-2">Recommendations</h3>

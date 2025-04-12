@@ -1,78 +1,133 @@
-
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { metaAuthService, MetaAuthService } from '@/services/MetaAuthService';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 interface MetaConnectionContextType {
   isAuthenticated: boolean;
+  userData: any | null;
   hasPermissions: boolean;
   checkAuth: () => void;
 }
 
 const MetaConnectionContext = createContext<MetaConnectionContextType>({
   isAuthenticated: false,
+  userData: null,
   hasPermissions: false,
-  checkAuth: () => {}
+  checkAuth: () => {},
 });
 
 export const useMetaConnection = () => useContext(MetaConnectionContext);
 
 interface SharedMetaConnectionProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
-export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [hasPermissions, setHasPermissions] = useState(false);
+export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProviderProps> = ({ 
+  children 
+}) => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [userData, setUserData] = useState<any | null>(null);
+  const [hasPermissions, setHasPermissions] = useState<boolean>(false);
+  const [lastCheckTime, setLastCheckTime] = useState<number>(0);
 
-  const checkAuth = () => {
-    console.log('Checking Meta auth status...');
-    const authenticated = metaAuthService.isAuthenticated();
-    console.log('Authentication check result:', authenticated);
-    setIsAuthenticated(authenticated);
+  // Function to check auth status - can be called from anywhere in the app
+  const checkAuth = useCallback(() => {
+    const now = Date.now();
     
-    if (authenticated) {
-      const permissions = metaAuthService.getPermissions();
-      console.log('Meta permissions:', permissions);
-      const hasAdPermission = permissions.some(p => 
-        p === 'ads_management' || p === 'ads_read'
-      );
-      setHasPermissions(hasAdPermission);
-    } else {
-      setHasPermissions(false);
+    // Throttle checks to prevent excessive calls (no more than once per second)
+    if (now - lastCheckTime < 1000) {
+      return;
     }
+    
+    setLastCheckTime(now);
+    console.log('Checking Meta auth status...');
+    
+    // Get token and check if it exists
+    const token = metaAuthService.getAccessToken();
+    if (!token) {
+      console.log('No token found in storage');
+      setIsAuthenticated(false);
+      setUserData(null);
+      setHasPermissions(false);
+      return;
+    }
+    
+    // Check if the token is valid
+    const isValid = metaAuthService.isAuthenticated();
+    console.log('Authentication check result:', isValid);
+    
+    if (isValid) {
+      setIsAuthenticated(true);
+      
+      // Check for permissions
+      const hasAdPermissions = metaAuthService.hasAdAccountPermissions();
+      setHasPermissions(hasAdPermissions);
+      
+      // Try to get user data if available
+      const userId = metaAuthService.getUserId();
+      if (userId) {
+        setUserData({
+          id: userId,
+          // Other user data might be added here from storage or API
+        });
+      }
+      
+      // Save auth state in sessionStorage for persistence across refreshes
+      sessionStorage.setItem('meta_auth_valid', 'true');
+      sessionStorage.setItem('meta_auth_checked', now.toString());
+    } else {
+      setIsAuthenticated(false);
+      setUserData(null);
+      setHasPermissions(false);
+      
+      // Clear session storage indicators
+      sessionStorage.removeItem('meta_auth_valid');
+      sessionStorage.removeItem('meta_auth_checked');
+    }
+  }, [lastCheckTime]);
+
+  // Check authentication on initial load
+  useEffect(() => {
+    // Try to restore from session storage first (for faster UI rendering)
+    const authValid = sessionStorage.getItem('meta_auth_valid') === 'true';
+    const authChecked = sessionStorage.getItem('meta_auth_checked');
+    
+    if (authValid && authChecked) {
+      // If we have a recent check in session storage, use it temporarily
+      const checkTime = parseInt(authChecked, 10);
+      const now = Date.now();
+      
+      // If the check was recent (less than 5 minutes ago), use the cached status
+      if (now - checkTime < 5 * 60 * 1000) {
+        console.log('Using cached auth status from session storage');
+        setIsAuthenticated(true);
+        
+        // Also set permissions if we had them
+        if (metaAuthService.getAccessToken()) {
+          setHasPermissions(metaAuthService.hasAdAccountPermissions());
+          
+          const userId = metaAuthService.getUserId();
+          if (userId) {
+            setUserData({
+              id: userId,
+            });
+          }
+        }
+      }
+    }
+    
+    // Always perform a fresh check, but after the potential quick restore from session
+    checkAuth();
+  }, [checkAuth]);
+
+  const value = {
+    isAuthenticated,
+    userData,
+    hasPermissions,
+    checkAuth
   };
 
-  useEffect(() => {
-    // Check auth status when the component mounts
-    checkAuth();
-    
-    // Set up a periodic check to ensure auth state is maintained
-    const intervalId = setInterval(() => {
-      checkAuth();
-    }, 30000); // Check every 30 seconds
-    
-    // Set up storage event listener to catch changes from other tabs
-    const handleStorageChange = (event: StorageEvent) => {
-      if (
-        event.key === MetaAuthService.TOKEN_KEY || 
-        event.key === MetaAuthService.PERMISSIONS_KEY ||
-        event.key === null // null means clear all storage
-      ) {
-        console.log('Meta auth storage changed, updating state');
-        checkAuth();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      clearInterval(intervalId);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
   return (
-    <MetaConnectionContext.Provider value={{ isAuthenticated, hasPermissions, checkAuth }}>
+    <MetaConnectionContext.Provider value={value}>
       {children}
     </MetaConnectionContext.Provider>
   );
