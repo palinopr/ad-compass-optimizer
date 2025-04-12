@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sidebar } from './Sidebar';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
-import { MetaConnectionDialog } from '@/components/meta/MetaConnectionDialog';
+import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 
 interface AppLayoutProps {
   children: React.ReactNode;
