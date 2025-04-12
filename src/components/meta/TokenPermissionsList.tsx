@@ -49,23 +49,34 @@ const TokenPermissionsList: React.FC = () => {
   const [permissionToggles, setPermissionToggles] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   
+  // Force check for authentication status
+  const isAuthenticated = metaAuthService.isAuthenticated();
   const hasAdPerms = permissions.includes('ads_management') || permissions.includes('ads_read');
 
   useEffect(() => {
-    // Load current permissions
-    const currentPermissions = metaAuthService.getPermissions()
-      // Filter out the public_profile and email permissions
-      .filter(perm => perm !== 'public_profile' && perm !== 'email');
+    console.log('TokenPermissionsList loaded, authenticated:', isAuthenticated);
     
-    setPermissions(currentPermissions);
-    
-    // Initialize toggle states based on current permissions
-    const initialToggles: Record<string, boolean> = {};
-    Object.keys(PERMISSION_CATEGORIES).forEach(perm => {
-      initialToggles[perm] = currentPermissions.includes(perm);
-    });
-    setPermissionToggles(initialToggles);
-  }, []);
+    // Load current permissions only if authenticated
+    if (isAuthenticated) {
+      const currentPermissions = metaAuthService.getPermissions()
+        // Filter out the public_profile and email permissions
+        .filter(perm => perm !== 'public_profile' && perm !== 'email');
+      
+      console.log('Current permissions:', currentPermissions);
+      setPermissions(currentPermissions);
+      
+      // Initialize toggle states based on current permissions
+      const initialToggles: Record<string, boolean> = {};
+      Object.keys(PERMISSION_CATEGORIES).forEach(perm => {
+        initialToggles[perm] = currentPermissions.includes(perm);
+      });
+      setPermissionToggles(initialToggles);
+    } else {
+      console.log('Not authenticated, no permissions to display');
+      setPermissions([]);
+      setPermissionToggles({});
+    }
+  }, [isAuthenticated]);
 
   const togglePermission = (permission: string, enabled: boolean) => {
     setPermissionToggles(prev => ({
@@ -93,6 +104,18 @@ const TokenPermissionsList: React.FC = () => {
       description: "Your token permissions have been updated successfully."
     });
   };
+
+  // If not authenticated, don't render anything
+  if (!isAuthenticated) {
+    return (
+      <Alert>
+        <ShieldAlert className="h-4 w-4" />
+        <AlertDescription>
+          Please connect your Meta account to manage permission settings.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-3">
