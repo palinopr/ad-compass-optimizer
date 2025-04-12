@@ -6,6 +6,7 @@ import { AlertCircle, ExternalLink, Key, Loader2, Info } from 'lucide-react';
 import { useMetaTokenConnection } from '@/hooks/useMetaTokenConnection';
 import { Checkbox } from '@/components/ui/checkbox';
 import { metaAuthService } from '@/services/MetaAuthService';
+import SystemUserTokenGuide from './SystemUserTokenGuide';
 
 interface TokenInputTabProps {
   onTokenSuccess: (userData: any) => void;
@@ -122,6 +123,8 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
       <p className="text-sm text-gray-500">
         For development with ad data, use a System User Access Token from Meta Business Settings.
       </p>
+      
+      <SystemUserTokenGuide />
       
       {errorMessage && (
         <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md border border-red-200 flex items-start">

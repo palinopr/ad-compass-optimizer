@@ -110,6 +110,11 @@ export class BaseApiService {
       throw new Error(`Token appears to be invalid (too short) for ${context}`);
     }
     
+    // Check for common token format issues
+    if (cleanedToken.includes(' ') || cleanedToken.includes('\n')) {
+      throw new Error(`Token contains whitespace characters which may cause API errors for ${context}`);
+    }
+    
     // Log token length to help identify token issues (without exposing the token)
     console.log(`Token validation for ${context}: ${cleanedToken.length} characters, starts with ${cleanedToken.substring(0, 4)}...`);
   }

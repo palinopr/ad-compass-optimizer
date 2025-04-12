@@ -1,5 +1,6 @@
 
 import { metaAuthService } from '@/services/MetaAuthService';
+import { META_API_CONFIG } from '@/config/socialAuth';
 
 interface UseResponseHandlerProps {
   onSuccess: (userData: any) => void;
@@ -26,8 +27,21 @@ export function useResponseHandler({
       const picture = response.picture;
       const grantedPermissions = response.grantedPermissions || [];
       
-      // Store the access token and user info
+      // Log the permissions we received
+      console.log('Permissions granted by Facebook:', grantedPermissions);
+      
+      // Store the token with the granted permissions
       metaAuthService.storeAccessToken(token, userId, 'facebook', grantedPermissions);
+      
+      // Check if we have the required permissions for ad management
+      const hasAdPermissions = META_API_CONFIG.adPermissions.every(
+        perm => grantedPermissions.includes(perm)
+      );
+      
+      // If we don't have ad permissions, warn but still proceed
+      if (!hasAdPermissions) {
+        console.warn('Connected successfully but missing ad permissions. Some features may not work.');
+      }
       
       // Call the success callback
       onSuccess({
@@ -36,7 +50,8 @@ export function useResponseHandler({
         picture,
         userId,
         tokenSource: 'facebook',
-        tokenPermissions: grantedPermissions
+        tokenPermissions: grantedPermissions,
+        hasAdPermissions
       });
     } catch (error) {
       console.error('Error handling Facebook response:', error);

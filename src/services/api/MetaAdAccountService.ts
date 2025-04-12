@@ -1,5 +1,7 @@
 
 import { BaseApiService } from './BaseApiService';
+import { metaAuthService } from '@/services/MetaAuthService';
+import { META_API_CONFIG } from '@/config/socialAuth';
 
 export interface MetaAdAccount {
   name: string;
@@ -17,6 +19,22 @@ export class MetaAdAccountService extends BaseApiService {
     try {
       console.log('Fetching Meta ad accounts...');
       this.validateToken(token, 'fetchAdAccounts');
+      
+      // Add permission verification
+      const requiredPermissions = META_API_CONFIG.adPermissions;
+      const storedPermissions = metaAuthService.getPermissions();
+      
+      const missingPermissions = requiredPermissions.filter(
+        perm => !storedPermissions.includes(perm)
+      );
+      
+      if (missingPermissions.length > 0) {
+        console.warn(`Token lacks required permissions: ${missingPermissions.join(', ')}`);
+        throw new Error(
+          `Your token lacks the required permissions (${missingPermissions.join(', ')}) to access ad accounts. ` +
+          `Please reconnect with the necessary permissions or use a System User Token.`
+        );
+      }
       
       const response = await fetch(
         `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`
@@ -51,6 +69,14 @@ export class MetaAdAccountService extends BaseApiService {
       console.log(`Fetching details for ad account ${accountId}...`);
       this.validateToken(token, 'fetchAdAccountDetails');
       
+      // Add permission verification
+      if (!metaAuthService.hasAdAccountPermissions()) {
+        throw new Error(
+          `Your token lacks the required permissions (ads_read, ads_management) to access ad account details. ` +
+          `Please reconnect with the necessary permissions or use a System User Token.`
+        );
+      }
+      
       // Ensure account ID has the proper format
       const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
       
@@ -76,6 +102,14 @@ export class MetaAdAccountService extends BaseApiService {
     try {
       console.log(`Fetching ad accounts for business ${businessId}...`);
       this.validateToken(token, 'fetchAdAccountsForBusiness');
+      
+      // Add permission verification
+      if (!metaAuthService.hasBusinessManagerPermissions()) {
+        throw new Error(
+          `Your token lacks the required permission (business_management) to access business manager data. ` +
+          `Please reconnect with the necessary permissions or use a System User Token.`
+        );
+      }
       
       if (!businessId) {
         throw new Error('Business ID is required');

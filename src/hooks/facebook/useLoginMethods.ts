@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useResponseHandler } from './useResponseHandler';
-import { FACEBOOK_AD_PERMISSIONS } from '@/config/socialAuth';
+import { META_API_CONFIG } from '@/config/socialAuth';
 
 export function useLoginMethods(onSuccess: (userData: any) => void) {
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -59,11 +59,11 @@ export function useLoginMethods(onSuccess: (userData: any) => void) {
         // Use custom permissions if provided
         permissions = customPermissions;
       } else if (useAdvancedPermissions) {
-        // Fix: Use a hard-coded array of advanced permissions instead of accessing nonexistent property
-        permissions = ['ads_management', 'ads_read', 'business_management', 'pages_read_engagement', 'pages_manage_ads'];
+        // Use the advanced permissions from config
+        permissions = META_API_CONFIG.advancedPermissions;
       } else {
         // Basic permissions only
-        permissions = ['public_profile', 'email'];
+        permissions = META_API_CONFIG.basicPermissions;
       }
       
       console.log(`Requesting permissions: ${permissions.join(', ')}`);

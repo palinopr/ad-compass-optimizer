@@ -1,11 +1,11 @@
 
 export class MetaAuthService {
   // Keys for localStorage
-  private static readonly TOKEN_KEY = 'meta_access_token';
-  private static readonly USER_ID_KEY = 'meta_user_id';
-  private static readonly TOKEN_SOURCE_KEY = 'meta_token_source';
-  private static readonly PERMISSIONS_KEY = 'meta_permissions';
-  private static readonly TOKEN_TIMESTAMP_KEY = 'meta_token_timestamp';
+  public static readonly TOKEN_KEY = 'meta_access_token';
+  public static readonly USER_ID_KEY = 'meta_user_id';
+  public static readonly TOKEN_SOURCE_KEY = 'meta_token_source';
+  public static readonly PERMISSIONS_KEY = 'meta_permissions';
+  public static readonly TOKEN_TIMESTAMP_KEY = 'meta_token_timestamp';
 
   // Store the access token from login
   public storeAccessToken(accessToken: string, userId: string = 'facebook_user', source: string = 'facebook', permissions: string[] = []): void {
@@ -138,6 +138,26 @@ export class MetaAuthService {
   public hasPermission(permission: string): boolean {
     const permissions = this.getPermissions();
     return permissions.includes(permission);
+  }
+
+  // Check if token has required permissions
+  public hasRequiredPermissions(requiredPermissions: string[]): boolean {
+    const storedPermissions = this.getPermissions();
+    
+    // Check if all required permissions are present
+    return requiredPermissions.every(permission => 
+      storedPermissions.includes(permission)
+    );
+  }
+
+  // Verify permissions for ad account access
+  public hasAdAccountPermissions(): boolean {
+    return this.hasRequiredPermissions(['ads_read', 'ads_management']);
+  }
+
+  // Verify permissions for business manager access
+  public hasBusinessManagerPermissions(): boolean {
+    return this.hasRequiredPermissions(['business_management']);
   }
 
   // Logout user and clear all Meta-related data
