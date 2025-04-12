@@ -1,116 +1,73 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Facebook, CheckCircle, XCircle, Loader2, Key } from 'lucide-react';
+import { CheckCircle, Facebook, Key } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
-import { useToast } from '@/hooks/use-toast';
 import MetaConnectionDialog from './MetaConnectionDialog';
 
-const MetaConnectCard: React.FC = () => {
-  const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const { toast } = useToast();
-  
+const MetaConnectCard = () => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [showConnectionDialog, setShowConnectionDialog] = useState(false);
+
   useEffect(() => {
-    // Check if user is already authenticated
-    const checkAuth = () => {
-      const isAuth = metaAuthService.isAuthenticated();
-      setIsConnected(isAuth);
-    };
-    
-    checkAuth();
+    // Check if already connected
+    setIsConnected(metaAuthService.isAuthenticated());
   }, []);
-  
-  const handleConnect = () => {
-    setIsDialogOpen(true);
-  };
-  
-  const handleDisconnect = () => {
-    metaAuthService.logout();
-    setIsConnected(false);
-    toast({
-      title: "Disconnected",
-      description: "Your Meta account has been disconnected."
-    });
-  };
 
-  const handleConnectionSuccess = () => {
+  const handleConnectionSuccess = (userData: any) => {
+    console.log('Connection successful, user data:', userData);
     setIsConnected(true);
-    setIsDialogOpen(false);
-    setError(null);
-    toast({
-      title: "Connected Successfully",
-      description: "Your Meta account is now connected.",
-    });
+    setShowConnectionDialog(false);
   };
 
-  const handleConnectionError = (errorMsg: string) => {
-    setError(errorMsg);
+  const handleConnectionError = () => {
+    // Just close the dialog but don't update auth state
+    setShowConnectionDialog(false);
   };
-  
+
   return (
-    <>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-medium">Meta Ads Account Connection</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isConnected ? (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2 text-green-600">
-                <CheckCircle className="h-5 w-5" />
-                <span>Connected to Meta Ads</span>
-              </div>
-              <p className="text-sm text-slate-500">
-                Your Meta account is connected. You can now create and manage campaigns, view insights, and optimize your ads.
-              </p>
-              <Button variant="outline" onClick={handleDisconnect}>
-                Disconnect Account
-              </Button>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Facebook className="w-5 h-5 mr-2 text-meta-blue" />
+          Connect Meta Account
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isConnected ? (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 text-green-600">
+              <CheckCircle className="h-5 w-5" />
+              <span>Connected to Meta</span>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {error && !isDialogOpen && (
-                <div className="flex items-center space-x-2 text-red-600 mb-4">
-                  <XCircle className="h-5 w-5" />
-                  <span>{error}</span>
-                </div>
-              )}
-              <p className="text-sm text-slate-500">
-                Connect your Meta Ads account to access campaign data and manage your ad campaigns.
-              </p>
-              <Button 
-                className="bg-meta-blue hover:bg-meta-dark" 
-                onClick={handleConnect}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <Key className="mr-2 h-4 w-4" />
-                    Connect with Access Token
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <p className="text-sm text-gray-500">
+              Your Meta account is connected. You can now access campaign data and manage your ad accounts.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Connect your Meta account to access campaign data and manage your ad accounts.
+            </p>
+            <Button 
+              className="w-full bg-meta-blue hover:bg-meta-dark"
+              onClick={() => setShowConnectionDialog(true)}
+            >
+              <Facebook className="w-4 h-4 mr-2" />
+              Connect with Facebook
+            </Button>
+          </div>
+        )}
+      </CardContent>
       
-      <MetaConnectionDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen}
+      {/* Meta Connection Dialog that automatically shows when needed */}
+      <MetaConnectionDialog
+        open={showConnectionDialog}
+        onOpenChange={setShowConnectionDialog}
         onSuccess={handleConnectionSuccess}
         onError={handleConnectionError}
       />
-    </>
+    </Card>
   );
 };
 

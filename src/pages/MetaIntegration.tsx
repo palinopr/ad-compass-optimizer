@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, ShieldAlert, RefreshCw } from 'lucide-react';
 import MetaConnectionFlow from '@/components/meta/MetaConnectionFlow';
 import { useToast } from '@/hooks/use-toast';
+import TokenPermissionsList from '@/components/meta/TokenPermissionsList';
 
 const MetaIntegration = () => {
   const [activeTab, setActiveTab] = useState('accounts');
@@ -19,7 +19,6 @@ const MetaIntegration = () => {
   const [hasAdsPermission, setHasAdsPermission] = useState(false);
   const { toast } = useToast();
 
-  // Check authentication status and permissions
   const checkAuthStatus = () => {
     const authenticated = metaAuthService.isAuthenticated();
     setIsAuthenticated(authenticated);
@@ -37,7 +36,6 @@ const MetaIntegration = () => {
     checkAuthStatus();
   }, []);
 
-  // Function to handle disconnection
   const handleDisconnect = () => {
     metaAuthService.logout();
     setIsAuthenticated(false);
@@ -49,11 +47,9 @@ const MetaIntegration = () => {
     });
   };
 
-  // Function to refresh connection status
   const handleRefresh = () => {
     setIsRefreshing(true);
     
-    // Add small delay to show loading state
     setTimeout(() => {
       checkAuthStatus();
       setIsRefreshing(false);
@@ -65,7 +61,6 @@ const MetaIntegration = () => {
     }, 500);
   };
 
-  // Check if ad account is selected
   const hasAdAccount = () => {
     const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
     return selectedAdAccounts && JSON.parse(selectedAdAccounts).length > 0;
@@ -156,8 +151,8 @@ const MetaIntegration = () => {
                 <div className="space-y-4">
                   {isAuthenticated ? (
                     <>
-                      <h3 className="font-medium">Current Permissions</h3>
-                      <PermissionsList />
+                      <TokenPermissionsList />
+                      
                       <h3 className="font-medium mt-4">Connection Details</h3>
                       <ConnectionDetails />
                     </>
@@ -174,35 +169,6 @@ const MetaIntegration = () => {
   );
 };
 
-// Component to display current permissions
-const PermissionsList = () => {
-  const permissions = metaAuthService.getPermissions();
-  
-  return (
-    <div className="space-y-2">
-      {permissions.length === 0 ? (
-        <p className="text-sm text-amber-600">No permissions found for your token.</p>
-      ) : (
-        <ul className="list-disc pl-5">
-          {permissions.map((permission, index) => (
-            <li key={index} className="text-sm">
-              <span className="font-mono bg-gray-100 px-1 py-0.5 rounded text-xs">{permission}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      
-      <div className="mt-4">
-        <p className="text-sm text-gray-500">
-          For full access to Meta campaigns, your token needs at least <code>ads_read</code> permission.
-          For creating and managing campaigns, you need <code>ads_management</code> permission.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-// Component to display connection details
 const ConnectionDetails = () => {
   const userId = metaAuthService.getUserId() || 'Unknown';
   const tokenSource = metaAuthService.getTokenSource();
