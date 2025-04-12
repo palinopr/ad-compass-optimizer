@@ -15,10 +15,10 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/meta-integration" element={<MetaIntegration />} />
           <Route path="/campaigns" element={<Campaigns />} />
+          <Route path="/messages" element={<Campaigns />} /> {/* Using Campaigns component for the messages route */}
           <Route path="/analytics" element={<Dashboard />} /> 
           <Route path="/audiences" element={<Dashboard />} />
           <Route path="/events" element={<Dashboard />} />
-          <Route path="/messages" element={<Campaigns />} /> {/* Using Campaigns for messages too */}
           <Route path="/reports" element={<Dashboard />} />
           <Route path="/settings" element={<MetaIntegration />} /> {/* Using MetaIntegration for settings too */}
           <Route path="*" element={<Navigate to="/" replace />} />

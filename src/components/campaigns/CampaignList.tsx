@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { useCampaigns } from '@/hooks/useCampaigns';
-import { metaAuthService } from '@/services/MetaAuthService';
+import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import CampaignTable from './CampaignTable';
 import { LoadingState, ErrorState, EmptyState } from './CampaignListStates';
 
@@ -12,7 +12,7 @@ interface CampaignListProps {
 
 const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const { campaigns, isLoading, error, refetchCampaigns } = useCampaigns(status);
-  const isAuthenticated = metaAuthService.isAuthenticated();
+  const { isAuthenticated } = useMetaConnection();
   
   // Handle loading state
   if (isLoading) {

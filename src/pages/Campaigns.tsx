@@ -19,27 +19,17 @@ import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
+import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 
 const Campaigns = () => {
   const [activeTab, setActiveTab] = useState('campaigns');
   const [showCreateWizard, setShowCreateWizard] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [hasAdsPermission, setHasAdsPermission] = useState(false);
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
+  const { isAuthenticated, hasPermissions, userData, checkAuth } = useMetaConnection();
   
   useEffect(() => {
-    // Check if the user is authenticated
-    const authenticated = metaAuthService.isAuthenticated();
-    setIsAuthenticated(authenticated);
-    
-    // Check if user has ads permissions
-    if (authenticated) {
-      const permissions = metaAuthService.getPermissions();
-      const hasPermission = permissions.some(p => 
-        p === 'ads_management' || p === 'ads_read'
-      );
-      setHasAdsPermission(hasPermission);
-    }
+    // Force check auth status when component mounts
+    checkAuth();
     
     // Check if we should show the connection dialog (set by the ErrorState component)
     const shouldShowConnection = localStorage.getItem('show_meta_connection') === 'true';
@@ -48,7 +38,7 @@ const Campaigns = () => {
       setShowConnectionDialog(true);
       localStorage.removeItem('show_meta_connection');
     }
-  }, []);
+  }, [checkAuth]);
   
   // Check if ad account is selected
   const hasAdAccount = () => {
@@ -58,10 +48,7 @@ const Campaigns = () => {
   
   const handleConnectionSuccess = (userData: any) => {
     console.log('Connection successful, user data:', userData);
-    setIsAuthenticated(true);
-    setHasAdsPermission(userData.tokenPermissions.some((p: string) => 
-      p === 'ads_management' || p === 'ads_read'
-    ));
+    checkAuth(); // Update the connection state
     setShowConnectionDialog(false);
   };
   
@@ -81,7 +68,7 @@ const Campaigns = () => {
           <Button 
             onClick={() => setShowCreateWizard(true)}
             className="bg-meta-blue hover:bg-meta-dark"
-            disabled={showCreateWizard || !isAuthenticated || !hasAdAccount() || !hasAdsPermission}
+            disabled={showCreateWizard || !isAuthenticated || !hasAdAccount() || !hasPermissions}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Campaign
@@ -112,7 +99,7 @@ const Campaigns = () => {
               {isAuthenticated && <AdAccountSelector />}
             </div>
             
-            {isAuthenticated && !hasAdsPermission && (
+            {isAuthenticated && !hasPermissions && (
               <Alert variant="destructive">
                 <ShieldAlert className="h-4 w-4" />
                 <AlertDescription className="flex items-center justify-between">
@@ -127,7 +114,7 @@ const Campaigns = () => {
               </Alert>
             )}
             
-            {isAuthenticated && hasAdsPermission && !hasAdAccount() && (
+            {isAuthenticated && hasPermissions && !hasAdAccount() && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="flex items-center justify-between">
@@ -142,7 +129,7 @@ const Campaigns = () => {
               </Alert>
             )}
             
-            {isAuthenticated && hasAdsPermission && hasAdAccount() && (
+            {isAuthenticated && hasPermissions && hasAdAccount() && (
               <Alert className="bg-blue-50 border-blue-200">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-700">

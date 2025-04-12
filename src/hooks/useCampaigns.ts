@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MetaApiService } from '@/services/MetaApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
@@ -18,14 +18,17 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { isAuthenticated, hasPermissions, showConnectionDialog } = useMetaConnection();
+  const { isAuthenticated, hasPermissions, showConnectionDialog, checkAuth } = useMetaConnection();
   
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
     try {
       console.log('Starting campaign fetch process...');
+      
+      // Force a check of authentication status
+      checkAuth();
       
       // Check if user is authenticated
       if (!isAuthenticated) {
@@ -142,35 +145,19 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       setError(enhancedError);
       
       // Show toast notification with more friendly error message
-      if (typeof errorMessage === 'string') {
-        if (errorMessage.includes('permission')) {
-          toast({
-            title: "Permission Error",
-            description: "You don't have the required permissions to view campaign data. Please update your token permissions.",
-            variant: "destructive"
-          });
-        } else if (errorMessage.includes('400') || errorMessage.includes('401')) {
-          toast({
-            title: "Authentication Error",
-            description: "Your Meta access token appears to be invalid or expired. Please reconnect your account.",
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to load campaign data. Please check your Meta connection and ad account selection.",
-            variant: "destructive"
-          });
-        }
-      }
+      toast({
+        title: "Error Loading Campaigns",
+        description: "There was a problem loading your campaign data. Please check your connection.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [status, isAuthenticated, hasPermissions, showConnectionDialog, toast, checkAuth]);
   
   useEffect(() => {
     fetchCampaigns();
-  }, [status, isAuthenticated, hasPermissions]);
+  }, [fetchCampaigns]);
   
   return {
     campaigns,
