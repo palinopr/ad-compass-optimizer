@@ -75,3 +75,35 @@ export const FACEBOOK_AD_PERMISSIONS = {
 
 // Development mode status - set to false since app has completed app review
 export const IS_DEV_MODE = false;
+
+// Meta API configuration for centralized settings
+export const META_API_CONFIG = {
+  appId: "1349075236218599",
+  apiVersion: "v22.0",
+  basicPermissions: ["public_profile", "email"],
+  adPermissions: ["ads_management", "ads_read"],
+  businessPermissions: ["business_management"],
+  advancedPermissions: [
+    "public_profile",
+    "email",
+    "ads_management",
+    "ads_read",
+    "business_management",
+    "pages_read_engagement",
+    "pages_manage_ads"
+  ],
+  // System User Token guidance
+  systemUserGuide: {
+    steps: [
+      "Go to Meta Business Settings",
+      "Click on System Users in the left sidebar",
+      "Create a new System User or select an existing one",
+      "Click Generate New Token",
+      "Select your Ad Account and request these specific permissions:",
+      "- ads_management",
+      "- ads_read",
+      "Set an expiration date (90 days recommended)",
+      "Copy your token and paste it in our token input field"
+    ]
+  }
+};
