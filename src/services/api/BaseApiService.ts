@@ -33,7 +33,9 @@ export class BaseApiService {
           
           // Add helpful information based on common error codes
           if (errorCode === 190) {
-            detailedError += ". Your access token has expired or is invalid. Please reconnect your account.";
+            // Token expired error
+            localStorage.removeItem('meta_access_token'); // Clear invalid token
+            detailedError += ". Your access token has expired. Please reconnect your account.";
           } else if (errorCode === 200 || errorCode === 10) {
             detailedError += ". This is a permissions issue. Your token needs ads_read and ads_management permissions.";
           } else if (errorCode === 294) {
@@ -54,6 +56,8 @@ export class BaseApiService {
       let detailedError = `Failed to ${context}: ${response.status} ${response.statusText}`;
       
       if (response.status === 400) {
+        // Clear invalid token on 400 errors
+        localStorage.removeItem('meta_access_token');
         detailedError += ". This usually indicates an invalid token format or expired token.";
       } else if (response.status === 401 || response.status === 403) {
         detailedError += ". This indicates permission issues. Make sure your token has the required permissions.";
@@ -69,6 +73,8 @@ export class BaseApiService {
       
       // Provide more helpful error messages based on common error codes
       if (data.error.code === 190) {
+        // Clear invalid token
+        localStorage.removeItem('meta_access_token');
         throw new Error('Token has expired or is invalid. Please generate a new token.');
       } else if (data.error.code === 200 || data.error.code === 10) {
         throw new Error('Permission error: Your token needs ads_read and ads_management permissions. Using a System User token is recommended for ad account access.');
@@ -88,11 +94,23 @@ export class BaseApiService {
    * Validate token format before making requests
    */
   protected static validateToken(token: string, context: string): void {
-    if (!token || typeof token !== 'string' || token.trim() === '') {
-      throw new Error(`Invalid access token provided for ${context}`);
+    if (!token || typeof token !== 'string') {
+      throw new Error(`No access token provided for ${context}`);
+    }
+    
+    // Clean the token
+    const cleanedToken = token.trim();
+    
+    if (cleanedToken === '') {
+      throw new Error(`Empty access token provided for ${context}`);
+    }
+    
+    // Meta tokens are typically very long
+    if (cleanedToken.length < 50) {
+      throw new Error(`Token appears to be invalid (too short) for ${context}`);
     }
     
     // Log token length to help identify token issues (without exposing the token)
-    console.log(`Token validation for ${context}: ${token.length} characters, starts with ${token.substring(0, 4)}...`);
+    console.log(`Token validation for ${context}: ${cleanedToken.length} characters, starts with ${cleanedToken.substring(0, 4)}...`);
   }
 }

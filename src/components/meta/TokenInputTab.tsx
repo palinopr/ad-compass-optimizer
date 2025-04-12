@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, ExternalLink, Key, Loader2, Info } from 'lucide-react';
 import { useMetaTokenConnection } from '@/hooks/useMetaTokenConnection';
 import { Checkbox } from '@/components/ui/checkbox';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 interface TokenInputTabProps {
   onTokenSuccess: (userData: any) => void;
@@ -30,6 +32,7 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
   
   const [selectAll, setSelectAll] = useState(false);
   const [tokenFormatValid, setTokenFormatValid] = useState<boolean | null>(null);
+  const [tokenWarning, setTokenWarning] = useState<string | null>(null);
   
   useEffect(() => {
     const connectionContext = localStorage.getItem('meta_connection_context');
@@ -47,18 +50,27 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
   useEffect(() => {
     if (!manualToken || manualToken.trim().length === 0) {
       setTokenFormatValid(null);
+      setTokenWarning(null);
       return;
     }
     
     const token = manualToken.trim();
     
-    if (token.length < 20) {
-      setTokenFormatValid(false);
-      return;
-    }
+    // More permissive regex that allows for URL-safe characters in tokens
+    const tokenRegex = /^[A-Za-z0-9_\-\.]+$/;
+    const isValidFormat = tokenRegex.test(token);
     
-    const tokenRegex = /^[A-Za-z0-9_-]+$/;
-    setTokenFormatValid(tokenRegex.test(token));
+    setTokenFormatValid(isValidFormat);
+    
+    if (isValidFormat) {
+      if (token.length < 50) {
+        setTokenWarning("Token appears too short. Meta tokens are typically 100+ characters");
+      } else if (token.length < 100) {
+        setTokenWarning("Token length is unusual, but may be valid");
+      } else {
+        setTokenWarning(null);
+      }
+    }
   }, [manualToken]);
   
   const handleSelectAll = (checked: boolean) => {
@@ -79,8 +91,8 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
   };
 
   const handleManualTokenConnect = () => {
-    if (!manualToken || manualToken.trim().length < 20) {
-      onTokenError("Please enter a valid Meta access token. Tokens are typically at least 20 characters long.");
+    if (!manualToken || manualToken.trim().length < 50) {
+      onTokenError("Please enter a valid Meta access token. Tokens are typically at least 50 characters long.");
       return;
     }
 
@@ -100,6 +112,10 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
       
     setManualToken(cleanedValue);
   };
+  
+  // Check if there's a potentially stale token
+  const tokenFreshnessInfo = metaAuthService.checkTokenFreshness();
+  const showTokenFreshnessWarning = tokenFreshnessInfo.age > 30; // Warning if token is older than 30 days
 
   return (
     <div className="space-y-4 py-4">
@@ -111,6 +127,13 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
         <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md border border-red-200 flex items-start">
           <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
           <span>{errorMessage}</span>
+        </div>
+      )}
+      
+      {showTokenFreshnessWarning && metaAuthService.isAuthenticated() && (
+        <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md border border-amber-200 flex items-start">
+          <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+          <span>Your current token is {tokenFreshnessInfo.age} days old and may expire soon. Meta System User tokens typically last 60 days.</span>
         </div>
       )}
       
@@ -137,6 +160,11 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
           type="password"
           className={tokenFormatValid === false ? "border-red-300" : ""}
         />
+        {tokenWarning && (
+          <p className="text-xs text-amber-500">
+            {tokenWarning}
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">
           Paste the entire token without quotes or extra spaces
         </p>
@@ -147,10 +175,11 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
         <div className="text-xs text-blue-700">
           <p className="font-medium mb-1">Token Troubleshooting:</p>
           <ul className="list-disc list-inside space-y-0.5">
-            <li>Make sure to copy the entire token</li>
+            <li>Make sure to copy the entire token (100+ characters)</li>
             <li>Remove any quotes or spaces</li>
             <li>System User tokens are long-lived (up to 60 days)</li>
             <li>User tokens expire in hours and aren't recommended</li>
+            <li>Ensure token includes ads_management permission</li>
           </ul>
         </div>
       </div>

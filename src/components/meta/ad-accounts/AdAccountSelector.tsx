@@ -9,6 +9,7 @@ import AdAccountsEmpty from './AdAccountsEmpty';
 import AdAccountDetails from './AdAccountDetails';
 import { useAdAccounts } from './useAdAccounts';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { useToast } from '@/hooks/use-toast';
 
 const AdAccountSelector: React.FC = () => {
   const { 
@@ -20,15 +21,39 @@ const AdAccountSelector: React.FC = () => {
     handleAccountChange 
   } = useAdAccounts();
   
+  const { toast } = useToast();
+  
   // Function to handle refresh button click with token validation
   const handleRefresh = async () => {
     // Check if token is valid before refreshing
-    if (!metaAuthService.isAuthenticated()) {
+    const token = metaAuthService.getAccessToken();
+    if (!token || token.length < 50) {
+      // Show detailed error message
+      toast({
+        title: "Token Error",
+        description: "You need a valid Meta token to refresh ad accounts. Please reconnect your account.",
+        variant: "destructive"
+      });
+      
       // Force token refresh flow if token is invalid
       localStorage.setItem('show_meta_connection', 'true');
       localStorage.setItem('meta_connection_context', 'token');
-      window.location.reload();
+      
+      // Add a small delay before reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
       return;
+    }
+    
+    // Check token freshness
+    const freshness = metaAuthService.checkTokenFreshness();
+    if (freshness.age > 50) { // If token is older than 50 days
+      toast({
+        title: "Token Warning",
+        description: `Your token is ${freshness.age} days old and may expire soon. Consider generating a new token.`,
+        variant: "warning"
+      });
     }
     
     fetchAdAccounts();

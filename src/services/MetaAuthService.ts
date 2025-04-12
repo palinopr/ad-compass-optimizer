@@ -9,8 +9,11 @@ export class MetaAuthService {
 
   // Store the access token from login
   public storeAccessToken(accessToken: string, userId: string = 'facebook_user', source: string = 'facebook', permissions: string[] = []): void {
+    // Clean the token before storing (remove any whitespace)
+    const cleanedToken = accessToken.trim();
+    
     // Basic validation before storing
-    if (!accessToken || accessToken.trim().length < 20) {
+    if (!cleanedToken || cleanedToken.length < 50) {
       console.error('Invalid token format detected in storeAccessToken');
       return;
     }
@@ -24,7 +27,7 @@ export class MetaAuthService {
       permissions.push('ads_management');
     }
     
-    localStorage.setItem(MetaAuthService.TOKEN_KEY, accessToken);
+    localStorage.setItem(MetaAuthService.TOKEN_KEY, cleanedToken);
     localStorage.setItem(MetaAuthService.USER_ID_KEY, userId);
     localStorage.setItem(MetaAuthService.TOKEN_SOURCE_KEY, source);
     localStorage.setItem(MetaAuthService.PERMISSIONS_KEY, JSON.stringify(permissions));
@@ -32,8 +35,24 @@ export class MetaAuthService {
     // Store timestamp for token freshness checks
     localStorage.setItem(MetaAuthService.TOKEN_TIMESTAMP_KEY, Date.now().toString());
     
-    console.log('Token stored successfully with length:', accessToken.length);
+    console.log('Token stored successfully with length:', cleanedToken.length);
     console.log('Permissions stored:', permissions);
+  }
+
+  // Check token freshness
+  public checkTokenFreshness(): { isFresh: boolean, age: number } {
+    const timestamp = localStorage.getItem(MetaAuthService.TOKEN_TIMESTAMP_KEY);
+    if (!timestamp) {
+      return { isFresh: false, age: 0 };
+    }
+    
+    const tokenAge = Date.now() - parseInt(timestamp);
+    const sixtyDaysInMs = 60 * 24 * 60 * 60 * 1000;
+    
+    return { 
+      isFresh: tokenAge < sixtyDaysInMs, 
+      age: Math.floor(tokenAge / (24 * 60 * 60 * 1000)) // Age in days
+    };
   }
 
   // Check if user is authenticated with a valid token
@@ -41,22 +60,17 @@ export class MetaAuthService {
     const token = this.getAccessToken();
     
     // Basic validation to ensure token exists and has reasonable length
-    if (!token || token.length < 20) {
+    if (!token || token.length < 50) {
       console.log('Token validation failed: missing token or too short');
       return false;
     }
     
     // Check timestamp to detect potentially stale tokens (older than 60 days)
-    const timestamp = localStorage.getItem(MetaAuthService.TOKEN_TIMESTAMP_KEY);
-    if (timestamp) {
-      const tokenAge = Date.now() - parseInt(timestamp);
-      const sixtyDaysInMs = 60 * 24 * 60 * 60 * 1000;
-      
-      if (tokenAge > sixtyDaysInMs) {
-        console.log('Token may be stale (older than 60 days)');
-        // We don't auto-invalidate as some long-lived tokens are valid for longer
-        // Just log a warning
-      }
+    const tokenFreshness = this.checkTokenFreshness();
+    if (!tokenFreshness.isFresh) {
+      console.log(`Token may be stale (${tokenFreshness.age} days old)`);
+      // We don't auto-invalidate as some long-lived tokens are valid for longer
+      // Just log a warning
     }
     
     // Check if we have the minimal required permissions
@@ -82,7 +96,7 @@ export class MetaAuthService {
       return null;
     }
     
-    if (token.length < 20) {
+    if (token.length < 50) {
       console.log('Token found but appears invalid (too short)');
       return null;
     }

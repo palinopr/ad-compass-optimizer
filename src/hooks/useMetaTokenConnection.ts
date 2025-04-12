@@ -20,11 +20,13 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
       return { valid: false, reason: "Token is empty" };
     }
     
-    if (token.trim().length < 20) {
+    // Meta tokens are typically very long
+    if (token.trim().length < 50) {
       return { valid: false, reason: "Token is too short. Meta tokens are typically much longer." };
     }
     
-    const tokenRegex = /^[A-Za-z0-9_-]+$/;
+    // More permissive regex that allows for URL-safe characters in tokens
+    const tokenRegex = /^[A-Za-z0-9_\-\.]+$/;
     if (!tokenRegex.test(token)) {
       return { valid: false, reason: "Token contains invalid characters" };
     }
