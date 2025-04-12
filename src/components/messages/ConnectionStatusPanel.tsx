@@ -1,19 +1,22 @@
 import React from 'react';
-import { CheckCircle, XCircle, AlertCircle, Clock, Link, Link2Off, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Clock, Link, Link2Off, RefreshCw, Facebook } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button';
 
 interface ConnectionStatusPanelProps {
   isAuthenticated: boolean;
   adAccounts: any[];
   onRetryConnection?: () => void;
+  onConnectWithBrowser?: () => void;
 }
 
 const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({ 
   isAuthenticated, 
   adAccounts,
-  onRetryConnection
+  onRetryConnection,
+  onConnectWithBrowser
 }) => {
   // Get token freshness information
   const tokenInfo = isAuthenticated ? metaAuthService.checkTokenFreshness() : { isFresh: false, age: 0 };
@@ -157,17 +160,31 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
                   Token status: {tokenExists ? "Found but invalid" : "Not found"}
                 </span>
               </div>
-              {onRetryConnection && (
-                <Button 
-                  onClick={onRetryConnection} 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2 w-full"
-                >
-                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                  Retry Connection
-                </Button>
-              )}
+              <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                {onRetryConnection && (
+                  <Button 
+                    onClick={onRetryConnection} 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Retry Connection
+                  </Button>
+                )}
+                
+                {onConnectWithBrowser && (
+                  <Button 
+                    onClick={onConnectWithBrowser}
+                    variant="default" 
+                    size="sm"
+                    className="w-full bg-meta-blue hover:bg-meta-dark"
+                  >
+                    <Facebook className="h-3.5 w-3.5 mr-1.5" />
+                    Connect with Browser
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -20,7 +20,8 @@ const Messages = () => {
     isAuthenticated,
     handleConnectClick,
     handleSelectAdAccount,
-    checkAuthAndState
+    checkAuthAndState,
+    handleConnectWithBrowser
   } = useMessagesPageState();
   
   const { toast } = useToast();
@@ -82,6 +83,7 @@ const Messages = () => {
               isAuthenticated={isAuthenticated}
               adAccounts={adAccounts}
               onRetryConnection={handleRetryConnection}
+              onConnectWithBrowser={handleConnectWithBrowser}
             />
           </CardContent>
         </Card>

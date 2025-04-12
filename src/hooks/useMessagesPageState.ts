@@ -1,7 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
+import { useToast } from '@/hooks/use-toast';
 
 type ComponentState = 'loading' | 'not_authenticated' | 'no_ad_account' | 'ready';
 
@@ -15,6 +15,7 @@ export const useMessagesPageState = () => {
   const { isAuthenticated, checkAuth, showConnectionDialog } = useMetaConnection();
   const [componentState, setComponentState] = useState<ComponentState>('loading');
   const [adAccounts, setAdAccounts] = useState<any[]>([]);
+  const { toast } = useToast();
   
   const checkForAdAccount = useCallback(() => {
     try {
@@ -94,15 +95,12 @@ export const useMessagesPageState = () => {
     setComponentState('ready');
   }, [isAuthenticated, checkForAdAccount, loadStoredAdAccounts]);
   
-  // Combined function to check auth and determine state
   const checkAuthAndState = useCallback(() => {
     console.log("Force checking auth and state...");
     setComponentState('loading');
     
-    // First check auth
     checkAuth();
     
-    // Then determine component state with slight delay to allow auth check to complete
     setTimeout(() => {
       determineComponentState();
     }, 300);
@@ -145,12 +143,74 @@ export const useMessagesPageState = () => {
     window.location.href = '/meta-integration?tab=accounts';
   };
 
+  const handleConnectWithBrowser = useCallback(() => {
+    console.log("Browser-based connection initiated");
+    toast({
+      title: "Connecting with Meta",
+      description: "Opening Facebook login window..."
+    });
+    
+    try {
+      const FB = (window as any).FB;
+      
+      if (FB) {
+        FB.login(
+          (response: any) => {
+            console.log("Facebook login response:", response);
+            if (response.authResponse) {
+              const accessToken = response.authResponse.accessToken;
+              console.log("Got access token:", accessToken);
+              
+              metaAuthService.storeAccessToken(
+                accessToken, 
+                response.authResponse.userID,
+                'facebook_login',
+                ['email', 'public_profile', 'ads_management', 'ads_read']
+              );
+              
+              toast({
+                title: "Connection Successful",
+                description: "Successfully connected with Meta via browser"
+              });
+              
+              checkAuth();
+              setTimeout(checkAuthAndState, 500);
+            } else {
+              console.log('User cancelled login or did not fully authorize.');
+              toast({
+                title: "Connection Cancelled",
+                description: "Facebook login was cancelled or failed",
+                variant: "destructive"
+              });
+            }
+          },
+          { scope: 'email,public_profile,ads_management,ads_read' }
+        );
+      } else {
+        console.error("Facebook SDK not loaded");
+        toast({
+          title: "Connection Failed",
+          description: "Facebook SDK not available. Please try again later.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error in Facebook login:", error);
+      toast({
+        title: "Connection Error",
+        description: "An error occurred during Meta connection",
+        variant: "destructive"
+      });
+    }
+  }, [toast, checkAuth, checkAuthAndState]);
+
   return {
     componentState,
     adAccounts,
     isAuthenticated,
     handleConnectClick,
     handleSelectAdAccount,
-    checkAuthAndState
+    checkAuthAndState,
+    handleConnectWithBrowser
   };
 };
