@@ -1,17 +1,16 @@
 
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MessageSquare } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { useMessagesPageState } from '@/hooks/useMessagesPageState';
+import { useToast } from '@/hooks/use-toast';
 import { 
   LoadingState,
   NotAuthenticatedState,
   NoAdAccountState,
   ReadyState 
 } from '@/components/messages/MessagesStateView';
-import ConnectionStatusPanel from '@/components/messages/ConnectionStatusPanel';
+import MessagesHeader from '@/components/messages/MessagesHeader';
+import MessagesCard from '@/components/messages/MessagesCard';
 
 const Messages = () => {
   const { 
@@ -21,20 +20,11 @@ const Messages = () => {
     handleConnectClick,
     handleSelectAdAccount,
     checkAuthAndState,
-    handleConnectWithBrowser
+    handleConnectWithBrowser,
+    handleRetryConnection
   } = useMessagesPageState();
   
   const { toast } = useToast();
-
-  // Handle retry connection
-  const handleRetryConnection = () => {
-    toast({
-      title: "Retrying connection",
-      description: "Checking authentication status..."
-    });
-    
-    checkAuthAndState();
-  };
 
   // Render appropriate state view based on component state
   const renderContent = () => {
@@ -59,34 +49,16 @@ const Messages = () => {
   return (
     <AppLayout>
       <div className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <MessageSquare className="h-6 w-6" />
-            Messages
-          </h1>
-          <p className="text-muted-foreground">View and manage your Meta ad messages and conversations</p>
-        </div>
+        <MessagesHeader />
         
         {renderContent()}
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Messages & Conversations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              This feature is currently in development. Once implemented, you'll be able to view and respond
-              to messages related to your Meta advertising campaigns.
-            </p>
-            
-            <ConnectionStatusPanel 
-              isAuthenticated={isAuthenticated}
-              adAccounts={adAccounts}
-              onRetryConnection={handleRetryConnection}
-              onConnectWithBrowser={handleConnectWithBrowser}
-            />
-          </CardContent>
-        </Card>
+        <MessagesCard 
+          isAuthenticated={isAuthenticated}
+          adAccounts={adAccounts}
+          onRetryConnection={handleRetryConnection}
+          onConnectWithBrowser={handleConnectWithBrowser}
+        />
       </div>
     </AppLayout>
   );
