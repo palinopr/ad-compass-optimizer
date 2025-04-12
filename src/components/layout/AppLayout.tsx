@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
@@ -51,7 +52,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key && (
           event.key === 'meta_access_token' || 
-          event.key === 'meta_token_timestamp')) {
+          event.key === 'meta_token_timestamp' ||
+          event.key === 'meta_auth_valid')) {
         console.log('Storage changed, checking auth status...');
         checkAuth();
       }
@@ -68,7 +70,16 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const handleConnectionSuccess = (userData: any) => {
     console.log('Connection successful:', userData);
     setShowConnectDialog(false);
+    
+    // Store user data in localStorage for persistence
+    if (userData.name) {
+      localStorage.setItem('meta_user_name', userData.name);
+    }
+    
     checkAuth(); // Immediately check auth status after successful connection
+    
+    // Clear any cached connection status to force re-check
+    localStorage.removeItem('meta_connection_status_checked');
   };
 
   const handleConnectionError = (errorMessage: string) => {

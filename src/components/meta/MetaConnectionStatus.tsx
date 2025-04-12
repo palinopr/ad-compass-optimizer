@@ -29,6 +29,17 @@ const MetaConnectionStatus: React.FC = () => {
   const { isAuthenticated, checkAuth } = useMetaConnection();
   
   useEffect(() => {
+    loadCachedConnectionStatus();
+    
+    if (isAuthenticated) {
+      const shouldCheckOnLoad = !localStorage.getItem('meta_connection_status_checked');
+      if (shouldCheckOnLoad) {
+        checkConnectionStatus();
+      }
+    }
+  }, [isAuthenticated]);
+  
+  const loadCachedConnectionStatus = () => {
     const cachedSteps = localStorage.getItem('meta_connection_steps');
     const cachedOverallStatus = localStorage.getItem('meta_connection_overall_status');
     const cachedTimestamp = localStorage.getItem('meta_connection_timestamp');
@@ -43,16 +54,14 @@ const MetaConnectionStatus: React.FC = () => {
         setOverallStatus(cachedOverallStatus as 'pending' | 'success' | 'error' | 'warning');
         setProgressValue(100); // Set progress to complete
         console.log('Loaded cached connection status from localStorage');
+        
+        localStorage.setItem('meta_connection_status_checked', 'true');
       } catch (e) {
         console.error('Error parsing cached connection steps:', e);
         // Will perform a fresh check
       }
-    } else {
-      if (isAuthenticated) {
-        checkConnectionStatus();
-      }
     }
-  }, [isAuthenticated]);
+  };
   
   const verifyConnectionStatus = () => {
     const isAuthed = metaAuthService.isAuthenticated();
@@ -72,6 +81,8 @@ const MetaConnectionStatus: React.FC = () => {
   const checkConnectionStatus = async () => {
     setIsChecking(true);
     setProgressValue(0);
+    
+    localStorage.removeItem('meta_connection_status_checked');
     
     setConnectionSteps(steps => steps.map(step => ({
       ...step,
@@ -160,6 +171,10 @@ const MetaConnectionStatus: React.FC = () => {
             status: 'error', 
             message: `API Error ${data.error.code}: ${data.error.message}` 
           };
+        }
+        
+        if (data.name) {
+          localStorage.setItem('meta_user_name', data.name);
         }
         
         return { 

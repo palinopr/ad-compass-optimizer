@@ -48,6 +48,10 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
       setIsAuthenticated(false);
       setUserData(null);
       setHasPermissions(false);
+      
+      // Clear session storage indicators
+      sessionStorage.removeItem('meta_auth_valid');
+      sessionStorage.removeItem('meta_auth_checked');
       return;
     }
     
@@ -67,13 +71,16 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
       if (userId) {
         setUserData({
           id: userId,
+          name: localStorage.getItem('meta_user_name') || 'Meta User',
           // Other user data might be added here from storage or API
         });
       }
       
-      // Save auth state in sessionStorage for persistence across refreshes
+      // Save auth state in sessionStorage AND localStorage for persistence across refreshes
       sessionStorage.setItem('meta_auth_valid', 'true');
       sessionStorage.setItem('meta_auth_checked', now.toString());
+      localStorage.setItem('meta_auth_valid', 'true');
+      localStorage.setItem('meta_auth_checked', now.toString());
     } else {
       setIsAuthenticated(false);
       setUserData(null);
@@ -82,40 +89,70 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
       // Clear session storage indicators
       sessionStorage.removeItem('meta_auth_valid');
       sessionStorage.removeItem('meta_auth_checked');
+      localStorage.removeItem('meta_auth_valid');
+      localStorage.removeItem('meta_auth_checked');
     }
   }, [lastCheckTime]);
 
   // Check authentication on initial load
   useEffect(() => {
-    // Try to restore from session storage first (for faster UI rendering)
-    const authValid = sessionStorage.getItem('meta_auth_valid') === 'true';
-    const authChecked = sessionStorage.getItem('meta_auth_checked');
+    // Try to restore from localStorage first (for persistence between refreshes)
+    const authValidLocal = localStorage.getItem('meta_auth_valid') === 'true';
+    const authCheckedLocal = localStorage.getItem('meta_auth_checked');
     
-    if (authValid && authChecked) {
-      // If we have a recent check in session storage, use it temporarily
-      const checkTime = parseInt(authChecked, 10);
-      const now = Date.now();
+    if (authValidLocal && authCheckedLocal) {
+      // If we have auth data in localStorage, immediately restore the state
+      console.log('Using auth status from localStorage');
+      setIsAuthenticated(true);
       
-      // If the check was recent (less than 5 minutes ago), use the cached status
-      if (now - checkTime < 5 * 60 * 1000) {
-        console.log('Using cached auth status from session storage');
-        setIsAuthenticated(true);
+      // Also set permissions if we had them
+      if (metaAuthService.getAccessToken()) {
+        setHasPermissions(metaAuthService.hasAdAccountPermissions());
         
-        // Also set permissions if we had them
-        if (metaAuthService.getAccessToken()) {
-          setHasPermissions(metaAuthService.hasAdAccountPermissions());
+        const userId = metaAuthService.getUserId();
+        const userName = localStorage.getItem('meta_user_name');
+        
+        if (userId) {
+          setUserData({
+            id: userId,
+            name: userName || 'Meta User'
+          });
+        }
+      }
+    } else {
+      // Try from sessionStorage as backup
+      const authValid = sessionStorage.getItem('meta_auth_valid') === 'true';
+      const authChecked = sessionStorage.getItem('meta_auth_checked');
+      
+      if (authValid && authChecked) {
+        // If we have a recent check in session storage, use it temporarily
+        const checkTime = parseInt(authChecked, 10);
+        const now = Date.now();
+        
+        // If the check was recent (less than 30 minutes ago), use the cached status
+        if (now - checkTime < 30 * 60 * 1000) {
+          console.log('Using cached auth status from session storage');
+          setIsAuthenticated(true);
           
-          const userId = metaAuthService.getUserId();
-          if (userId) {
-            setUserData({
-              id: userId,
-            });
+          // Also set permissions if we had them
+          if (metaAuthService.getAccessToken()) {
+            setHasPermissions(metaAuthService.hasAdAccountPermissions());
+            
+            const userId = metaAuthService.getUserId();
+            const userName = localStorage.getItem('meta_user_name');
+            
+            if (userId) {
+              setUserData({
+                id: userId,
+                name: userName || 'Meta User'
+              });
+            }
           }
         }
       }
     }
     
-    // Always perform a fresh check, but after the potential quick restore from session
+    // Always perform a fresh check, but after the potential quick restore
     checkAuth();
   }, [checkAuth]);
 
