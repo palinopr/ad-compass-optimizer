@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   PlusCircle, 
   AlertCircle,
   Info,
-  ShieldAlert
+  ShieldAlert,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -90,6 +92,21 @@ const Campaigns = () => {
           <CampaignCreationWizard onCancel={() => setShowCreateWizard(false)} />
         ) : (
           <>
+            {!isAuthenticated && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <span>Connect your Meta account to access campaign features.</span>
+                  <Link to="/meta-integration">
+                    <Button variant="outline" size="sm" className="ml-4 flex items-center gap-1">
+                      Manage Integrations
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </Button>
+                  </Link>
+                </AlertDescription>
+              </Alert>
+            )}
+          
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <MetaConnect />
               {isAuthenticated && <AdAccountSelector />}
@@ -98,8 +115,14 @@ const Campaigns = () => {
             {isAuthenticated && !hasAdsPermission && (
               <Alert variant="destructive">
                 <ShieldAlert className="h-4 w-4" />
-                <AlertDescription>
-                  You don't have the necessary permissions to access ad campaigns. Please update your token permissions to include ads_read or ads_management.
+                <AlertDescription className="flex items-center justify-between">
+                  <span>You don't have the necessary permissions to access ad campaigns.</span>
+                  <Link to="/meta-integration">
+                    <Button variant="outline" size="sm" className="ml-4 flex items-center gap-1">
+                      Configure Permissions
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </Button>
+                  </Link>
                 </AlertDescription>
               </Alert>
             )}
@@ -107,8 +130,14 @@ const Campaigns = () => {
             {isAuthenticated && hasAdsPermission && !hasAdAccount() && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Please select an ad account to view and manage campaigns.
+                <AlertDescription className="flex items-center justify-between">
+                  <span>Please select an ad account to view and manage campaigns.</span>
+                  <Link to="/meta-integration">
+                    <Button variant="outline" size="sm" className="ml-4 flex items-center gap-1">
+                      Select Ad Account
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </Button>
+                  </Link>
                 </AlertDescription>
               </Alert>
             )}
