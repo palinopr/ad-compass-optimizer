@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
@@ -12,7 +12,12 @@ interface CampaignListProps {
 
 const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const { campaigns, isLoading, error, refetchCampaigns } = useCampaigns(status);
-  const { isAuthenticated } = useMetaConnection();
+  const { isAuthenticated, checkAuth } = useMetaConnection();
+  
+  // Force check auth status when component mounts
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
   
   // Handle loading state
   if (isLoading) {

@@ -29,12 +29,15 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       
       // Force a check of authentication status
       checkAuth();
+      console.log('Auth check result:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
       
       // Check if user is authenticated
       if (!isAuthenticated) {
         console.log('User is not authenticated');
         setError('Not authenticated with Meta. Please connect your account.');
         setIsLoading(false);
+        // Signal that connection dialog should be shown
+        showConnectionDialog();
         return;
       }
       
@@ -49,8 +52,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       // Get authentication token
       const token = metaAuthService.getAccessToken();
       if (!token) {
-        console.log('No access token found');
-        setError('Not authenticated with Meta');
+        console.log('No access token found even though isAuthenticated is true');
+        setError('Authentication error. Please reconnect your Meta account.');
         setIsLoading(false);
         // Signal that connection dialog should be shown
         showConnectionDialog();
@@ -142,7 +145,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         }
       }
       
-      setError(enhancedError);
+      setError(enhancedError || 'There was a problem loading your campaign data. Please check your connection.');
       
       // Show toast notification with more friendly error message
       toast({
@@ -156,7 +159,13 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   }, [status, isAuthenticated, hasPermissions, showConnectionDialog, toast, checkAuth]);
   
   useEffect(() => {
-    fetchCampaigns();
+    // Since we're on the messages page but using campaigns component, give a short delay
+    // to allow authentication to be checked properly
+    const timer = setTimeout(() => {
+      fetchCampaigns();
+    }, 300);
+    
+    return () => clearTimeout(timer);
   }, [fetchCampaigns]);
   
   return {
