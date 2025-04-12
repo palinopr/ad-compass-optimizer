@@ -12,14 +12,14 @@ import TokenInputTab from './TokenInputTab';
 import FacebookLoginTab from './FacebookLoginTab';
 
 interface MetaConnectionDialogProps {
-  isOpen: boolean;
+  open: boolean; // Changed from isOpen to open to match usage in Campaigns.tsx
   onOpenChange: (open: boolean) => void;
   onSuccess: (userData: any) => void;
   onError: (errorMessage: string) => void;
 }
 
 const MetaConnectionDialog: React.FC<MetaConnectionDialogProps> = ({ 
-  isOpen, 
+  open, // Changed from isOpen to open
   onOpenChange,
   onSuccess,
   onError
@@ -27,7 +27,7 @@ const MetaConnectionDialog: React.FC<MetaConnectionDialogProps> = ({
   const [activeTab, setActiveTab] = useState<string>("token");
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Connect Meta Ads Account</DialogTitle>
