@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
 import { useToast } from '@/hooks/use-toast';
+import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 
 interface ProfileDataState {
   userData: any | null;
@@ -17,9 +18,15 @@ export function useProfileData() {
     error: null
   });
   const { toast } = useToast();
+  const { isAuthenticated, checkAuth } = useMetaConnection();
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!isAuthenticated) {
+        setState(prev => ({ ...prev, userData: null }));
+        return;
+      }
+      
       const accessToken = metaAuthService.getAccessToken();
       
       if (!accessToken) {
@@ -42,11 +49,13 @@ export function useProfileData() {
     };
     
     fetchUserData();
-  }, []);
+  }, [isAuthenticated]);
 
   const handleDisconnect = () => {
     metaAuthService.logout();
     setState(prev => ({ ...prev, userData: null }));
+    checkAuth(); // Update shared auth state
+    
     toast({
       title: "Disconnected",
       description: "Your Meta account has been disconnected."

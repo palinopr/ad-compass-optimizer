@@ -20,34 +20,37 @@ import Clients from './pages/admin/Clients';
 import Pipeline from './pages/admin/Pipeline';
 import Performance from './pages/admin/Performance';
 import MetaIntegration from './pages/MetaIntegration';
+import { SharedMetaConnectionProvider } from './components/meta/SharedMetaConnectionProvider';
 import './App.css';
 
 const App: React.FC = () => {
   return (
     <Router>
-      <Suspense fallback={<div className="p-8">Loading...</div>}>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/campaigns" element={<Campaigns />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/audience" element={<Audience />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/terms" element={<TermsOfService />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/import" element={<Import />} />
-          <Route path="/meta-integration" element={<MetaIntegration />} />
-          <Route path="/admin/clients" element={<Clients />} />
-          <Route path="/admin/pipeline" element={<Pipeline />} />
-          <Route path="/admin/performance" element={<Performance />} />
-          <Route path="/data-deletion" element={<DataDeletion />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+      <SharedMetaConnectionProvider>
+        <Suspense fallback={<div className="p-8">Loading...</div>}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/audience" element={<Audience />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/import" element={<Import />} />
+            <Route path="/meta-integration" element={<MetaIntegration />} />
+            <Route path="/admin/clients" element={<Clients />} />
+            <Route path="/admin/pipeline" element={<Pipeline />} />
+            <Route path="/admin/performance" element={<Performance />} />
+            <Route path="/data-deletion" element={<DataDeletion />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </SharedMetaConnectionProvider>
     </Router>
   );
 };

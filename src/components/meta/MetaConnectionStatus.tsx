@@ -28,8 +28,33 @@ const MetaConnectionStatus: React.FC = () => {
   const [progressValue, setProgressValue] = useState(0);
   
   useEffect(() => {
+    // Check connection status when the component mounts
     checkConnectionStatus();
+    
+    // Set up an interval to periodically verify the connection status
+    const intervalId = setInterval(() => {
+      // Only do a passive check - not a full check that shows loading indicators
+      verifyConnectionStatus();
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(intervalId);
   }, []);
+  
+  // Passive verification without UI changes
+  const verifyConnectionStatus = () => {
+    const isAuthed = metaAuthService.isAuthenticated();
+    if (!isAuthed) {
+      console.log('Meta authentication state lost, updating status');
+      setConnectionSteps(steps => steps.map(step => 
+        step.id === 'token' ? { 
+          ...step, 
+          status: 'error',
+          message: 'Authentication lost. Please reconnect your Meta account.'
+        } : step
+      ));
+      setOverallStatus('error');
+    }
+  };
   
   const checkConnectionStatus = async () => {
     setIsChecking(true);

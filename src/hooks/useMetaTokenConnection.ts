@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
@@ -15,6 +15,30 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Check if we have a token at initialization
+  useEffect(() => {
+    const hasToken = metaAuthService.isAuthenticated();
+    if (hasToken) {
+      console.log('Found existing Meta authentication');
+      
+      // Verify token is still valid
+      const verifyExistingToken = async () => {
+        const token = metaAuthService.getAccessToken();
+        if (token) {
+          try {
+            const userData = await fetchUserData(token);
+            onSuccess(userData);
+          } catch (error) {
+            // Silent fail - we don't want to show errors for automatic checks
+            console.log('Failed to verify existing token:', error);
+          }
+        }
+      };
+      
+      verifyExistingToken();
+    }
+  }, []);
 
   const fetchUserData = async (token: string) => {
     try {

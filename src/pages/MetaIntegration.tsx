@@ -13,35 +13,17 @@ import MetaConnectionFlow from '@/components/meta/MetaConnectionFlow';
 import { useToast } from '@/hooks/use-toast';
 import TokenPermissionsList from '@/components/meta/TokenPermissionsList';
 import MetaConnectionStatus from '@/components/meta/MetaConnectionStatus';
+import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 
 const MetaIntegration = () => {
   const [activeTab, setActiveTab] = useState('accounts');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasAdsPermission, setHasAdsPermission] = useState(false);
   const { toast } = useToast();
-
-  const checkAuthStatus = () => {
-    const authenticated = metaAuthService.isAuthenticated();
-    setIsAuthenticated(authenticated);
-    
-    if (authenticated) {
-      const permissions = metaAuthService.getPermissions();
-      const hasPermission = permissions.some(p => 
-        p === 'ads_management' || p === 'ads_read'
-      );
-      setHasAdsPermission(hasPermission);
-    }
-  };
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
+  const { isAuthenticated, hasPermissions, checkAuth } = useMetaConnection();
 
   const handleDisconnect = () => {
     metaAuthService.logout();
-    setIsAuthenticated(false);
-    setHasAdsPermission(false);
+    checkAuth(); // Update the auth state after logout
     
     toast({
       title: "Disconnected",
@@ -53,7 +35,7 @@ const MetaIntegration = () => {
     setIsRefreshing(true);
     
     setTimeout(() => {
-      checkAuthStatus();
+      checkAuth();
       setIsRefreshing(false);
       
       toast({
@@ -107,7 +89,7 @@ const MetaIntegration = () => {
         )}
 
         {/* Alert Messages */}
-        {isAuthenticated && !hasAdsPermission && (
+        {isAuthenticated && !hasPermissions && (
           <Alert variant="destructive">
             <ShieldAlert className="h-4 w-4" />
             <AlertDescription>
@@ -116,7 +98,7 @@ const MetaIntegration = () => {
           </Alert>
         )}
         
-        {isAuthenticated && hasAdsPermission && !hasAdAccount() && (
+        {isAuthenticated && hasPermissions && !hasAdAccount() && (
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
@@ -125,7 +107,7 @@ const MetaIntegration = () => {
           </Alert>
         )}
         
-        {isAuthenticated && hasAdsPermission && hasAdAccount() && (
+        {isAuthenticated && hasPermissions && hasAdAccount() && (
           <Alert className="bg-blue-50 border-blue-200">
             <Info className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-700">
