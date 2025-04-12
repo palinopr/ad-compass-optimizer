@@ -41,6 +41,12 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   const isAccountError = error.toLowerCase().includes('account') || 
     error.toLowerCase().includes('no ad account');
   
+  const handleReconnect = () => {
+    // Clear token and reload the page to trigger authentication flow
+    metaAuthService.logout();
+    window.location.reload();
+  };
+  
   return (
     <CardContent className="flex flex-col items-center justify-center py-8 text-center">
       <AlertCircle className="w-8 h-8 text-red-500 mb-3" />
@@ -59,9 +65,12 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       </p>
       
       <div className="flex gap-3">
-        {!isAuthenticated && (
-          <Button className="bg-meta-blue hover:bg-meta-dark" onClick={() => window.location.reload()}>
-            Connect Meta Account
+        {isTokenError && (
+          <Button 
+            className="bg-meta-blue hover:bg-meta-dark" 
+            onClick={handleReconnect}
+          >
+            Reconnect Meta Account
           </Button>
         )}
         

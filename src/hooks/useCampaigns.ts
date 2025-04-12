@@ -23,8 +23,11 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     setError(null);
     
     try {
+      console.log('Starting campaign fetch process...');
+      
       // Check if user is authenticated
       if (!metaAuthService.isAuthenticated()) {
+        console.log('User is not authenticated');
         setError('Not authenticated with Meta');
         setIsLoading(false);
         return;
@@ -32,11 +35,13 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       
       // Check if user has the necessary permissions
       const permissions = metaAuthService.getPermissions();
+      console.log('User permissions:', permissions);
       const hasAdsPermission = permissions.some(p => 
         p === 'ads_management' || p === 'ads_read'
       );
       
       if (!hasAdsPermission) {
+        console.log('User lacks required permissions');
         setError('Missing required ads permissions. Please update your token permissions to include ads_read or ads_management.');
         setIsLoading(false);
         return;
@@ -45,6 +50,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       // Get authentication token
       const token = metaAuthService.getAccessToken();
       if (!token) {
+        console.log('No access token found');
         setError('Not authenticated with Meta');
         setIsLoading(false);
         return;
@@ -52,16 +58,19 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       
       // First check for a directly selected ad account
       let adAccountId = localStorage.getItem('selected_ad_account');
+      console.log('Direct ad account selection:', adAccountId);
       
       // If not found, try to get from selected_ad_accounts
       if (!adAccountId) {
         const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
+        console.log('Selected ad accounts from storage:', selectedAdAccounts);
         
         if (selectedAdAccounts) {
           try {
             const accounts = JSON.parse(selectedAdAccounts);
-            if (accounts.length > 0) {
+            if (Array.isArray(accounts) && accounts.length > 0) {
               adAccountId = accounts[0]; // Use the first selected ad account
+              console.log('Using first account from array:', adAccountId);
             }
           } catch (e) {
             console.error('Error parsing selected ad accounts:', e);
@@ -70,17 +79,30 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       }
       
       if (!adAccountId) {
+        console.log('No ad account selected');
         setError('No ad account selected. Please select an ad account to view campaigns.');
         setIsLoading(false);
         return;
       }
       
+      // Make sure the adAccountId is properly formatted (without 'act_' prefix for storage)
+      // But we need to ensure it has the 'act_' prefix for the API call
+      if (adAccountId.startsWith('act_')) {
+        // For storage consistency, strip the prefix
+        localStorage.setItem('selected_ad_account', adAccountId.substring(4));
+      } else {
+        // For API call, ensure it has the prefix
+        adAccountId = `act_${adAccountId}`;
+      }
+      
       console.log(`Fetching campaigns for ad account: ${adAccountId}`);
       const campaignsData = await MetaApiService.fetchCampaigns(token, adAccountId);
+      console.log('Campaigns data received:', campaignsData?.length || 0, 'campaigns');
       
       // Filter by status if provided
       let filteredCampaigns = campaignsData;
-      if (status) {
+      if (status && campaignsData) {
+        console.log(`Filtering campaigns by status: ${status}`);
         if (status === 'active') {
           filteredCampaigns = campaignsData.filter(c => c.status === 'ACTIVE');
         } else if (status === 'draft') {
@@ -88,12 +110,14 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         } else if (status === 'archived') {
           filteredCampaigns = campaignsData.filter(c => c.status === 'ARCHIVED' || c.status === 'DELETED');
         }
+        console.log(`After filtering: ${filteredCampaigns?.length || 0} campaigns`);
       }
       
-      setCampaigns(filteredCampaigns);
+      setCampaigns(filteredCampaigns || []);
     } catch (err) {
       console.error('Error fetching campaigns:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch campaigns';
+      console.error('Error message:', errorMessage);
       
       // Try to extract HTTP error code for more specific errors
       let enhancedError = errorMessage;

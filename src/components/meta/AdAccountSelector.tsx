@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Building } from 'lucide-react';
+import { Loader2, Building, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MetaApiService } from '@/services/MetaApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
@@ -22,89 +23,113 @@ const AdAccountSelector: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
-  useEffect(() => {
-    const fetchAdAccounts = async () => {
-      const accessToken = metaAuthService.getAccessToken();
+  const fetchAdAccounts = async () => {
+    const accessToken = metaAuthService.getAccessToken();
+    
+    if (!accessToken) {
+      setError('Not authenticated with Meta');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      console.log('Fetching ad accounts...');
+      // Check if there are selected ad accounts in local storage
+      const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
+      let selectedIds: string[] = [];
       
-      if (!accessToken) {
-        setError('Not authenticated with Meta');
-        return;
-      }
-      
-      setIsLoading(true);
-      try {
-        // Check if there are selected ad accounts in local storage
-        const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
-        let selectedIds: string[] = [];
-        
-        if (selectedAdAccounts) {
+      if (selectedAdAccounts) {
+        try {
           selectedIds = JSON.parse(selectedAdAccounts);
           console.log('Found selected ad accounts:', selectedIds);
+        } catch (e) {
+          console.error('Error parsing selected ad accounts:', e);
+          // Reset the corrupted storage
+          localStorage.removeItem('selected_ad_accounts');
         }
-        
-        if (selectedIds.length > 0) {
-          // Fetch details for these specific accounts
-          const token = metaAuthService.getAccessToken();
-          if (token) {
-            const accounts = await Promise.all(
-              selectedIds.map(async (id) => {
-                try {
-                  const accountDetails = await MetaApiService.fetchAdAccountDetails(token, id);
-                  return accountDetails;
-                } catch (error) {
-                  console.error(`Error fetching details for account ${id}:`, error);
-                  return null;
-                }
-              })
-            );
-            
-            const validAccounts = accounts.filter(account => account !== null) as AdAccount[];
-            setAdAccounts(validAccounts);
-            
-            // Select the first account by default if available
-            if (validAccounts.length > 0) {
-              setSelectedAccount(validAccounts[0].id);
-              localStorage.setItem('selected_ad_account', validAccounts[0].id);
-            }
-          }
-        } else {
-          // Fallback to fetching all available accounts
-          const accounts = await MetaApiService.fetchAdAccounts(accessToken);
-          setAdAccounts(accounts);
-          
-          if (accounts.length > 0) {
-            setSelectedAccount(accounts[0].id);
-            localStorage.setItem('selected_ad_account', accounts[0].id);
-          }
-        }
-      } catch (err) {
-        setError('Failed to fetch ad accounts');
-        toast({
-          title: "Error",
-          description: "Failed to load Meta ad accounts",
-          variant: "destructive"
-        });
-        console.error(err);
-      } finally {
-        setIsLoading(false);
       }
-    };
-    
+      
+      if (selectedIds.length > 0) {
+        // Fetch details for these specific accounts
+        const token = metaAuthService.getAccessToken();
+        if (token) {
+          const accounts = await Promise.all(
+            selectedIds.map(async (id) => {
+              try {
+                // Format the ID correctly for the API call
+                const formattedId = id.startsWith('act_') ? id : `act_${id}`;
+                console.log(`Fetching details for account ${formattedId}`);
+                const accountDetails = await MetaApiService.fetchAdAccountDetails(token, formattedId);
+                return accountDetails;
+              } catch (error) {
+                console.error(`Error fetching details for account ${id}:`, error);
+                return null;
+              }
+            })
+          );
+          
+          const validAccounts = accounts.filter(account => account !== null) as AdAccount[];
+          console.log('Valid accounts retrieved:', validAccounts.length);
+          setAdAccounts(validAccounts);
+          
+          // Select the first account by default if available
+          if (validAccounts.length > 0) {
+            // Store without 'act_' prefix for consistency
+            const accountId = validAccounts[0].id.replace(/^act_/, '');
+            setSelectedAccount(accountId);
+            localStorage.setItem('selected_ad_account', accountId);
+            console.log(`Selected account: ${accountId}`);
+          }
+        }
+      } else {
+        // Fallback to fetching all available accounts
+        console.log('No stored accounts, fetching all available accounts');
+        const accounts = await MetaApiService.fetchAdAccounts(accessToken);
+        setAdAccounts(accounts);
+        
+        if (accounts.length > 0) {
+          // Store without 'act_' prefix for consistency
+          const accountId = accounts[0].id.replace(/^act_/, '');
+          setSelectedAccount(accountId);
+          localStorage.setItem('selected_ad_account', accountId);
+          localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
+          console.log(`Selected first available account: ${accountId}`);
+        } else {
+          console.log('No accounts available');
+        }
+      }
+    } catch (err) {
+      setError('Failed to fetch ad accounts');
+      toast({
+        title: "Error",
+        description: "Failed to load Meta ad accounts",
+        variant: "destructive"
+      });
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     // Check if we have a stored account selection
     const storedAccountId = localStorage.getItem('selected_ad_account');
     if (storedAccountId) {
+      console.log('Using stored account selection:', storedAccountId);
       setSelectedAccount(storedAccountId);
     }
     
     fetchAdAccounts();
-  }, [toast]);
+  }, []);
   
   const handleAccountChange = (value: string) => {
-    setSelectedAccount(value);
-    localStorage.setItem('selected_ad_account', value);
+    // Store without 'act_' prefix for consistency
+    const accountId = value.replace(/^act_/, '');
+    setSelectedAccount(accountId);
+    localStorage.setItem('selected_ad_account', accountId);
     
     // Update selected_ad_accounts as well to maintain consistency
-    localStorage.setItem('selected_ad_accounts', JSON.stringify([value]));
+    localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
     
     toast({
       title: "Ad Account Selected",
@@ -132,19 +157,37 @@ const AdAccountSelector: React.FC = () => {
         ) : error ? (
           <div className="text-red-500 text-sm">{error}</div>
         ) : adAccounts.length === 0 ? (
-          <div className="text-slate-500 text-sm">No ad accounts found. Please make sure you have access to Meta Ads accounts.</div>
+          <div className="space-y-4">
+            <div className="text-slate-500 text-sm">
+              No ad accounts found. Please make sure you have access to Meta Ads accounts.
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={fetchAdAccounts}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh Accounts
+            </Button>
+          </div>
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-slate-500">
               Select the ad account you want to use for creating and managing campaigns.
             </p>
-            <Select value={selectedAccount || ''} onValueChange={handleAccountChange}>
+            <Select 
+              value={selectedAccount || ''} 
+              onValueChange={handleAccountChange}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select an ad account" />
               </SelectTrigger>
               <SelectContent>
                 {adAccounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
+                  <SelectItem 
+                    key={account.id} 
+                    value={account.id.replace(/^act_/, '')}
+                  >
                     {account.name || account.business_name} ({account.account_id})
                   </SelectItem>
                 ))}
@@ -155,7 +198,7 @@ const AdAccountSelector: React.FC = () => {
               <div className="mt-4 text-sm bg-slate-50 p-4 rounded-md border">
                 <p className="font-medium mb-2">Selected Account Details:</p>
                 {adAccounts
-                  .filter(account => account.id === selectedAccount)
+                  .filter(account => account.id.replace(/^act_/, '') === selectedAccount || account.id === selectedAccount)
                   .map(account => (
                     <div key={account.id} className="space-y-1">
                       <p><span className="font-medium">Name:</span> {account.name || account.business_name}</p>
