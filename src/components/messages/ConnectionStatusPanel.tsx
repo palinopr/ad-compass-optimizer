@@ -3,7 +3,6 @@ import { CheckCircle, XCircle, AlertCircle, Clock, Link, Link2Off, RefreshCw, Fa
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { Button } from '@/components/ui/button';
-import { ButtonGroup } from '@/components/ui/button';
 
 interface ConnectionStatusPanelProps {
   isAuthenticated: boolean;
