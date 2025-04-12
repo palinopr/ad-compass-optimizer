@@ -6,9 +6,15 @@ import Troubleshooting from './connection-status/Troubleshooting';
 import NextSteps from './connection-status/NextSteps';
 import DebugInfo from './connection-status/DebugInfo';
 import { Button } from '@/components/ui/button';
-import { Bug, Code, AlertTriangle, Stethoscope } from 'lucide-react';
+import { Bug, Code, AlertTriangle, Stethoscope, Globe, Shield } from 'lucide-react';
 import { runTokenDiagnostic } from '@/utils/metaTokenDiagnostic';
-import { testMetaApi, checkForCorsIssues, runComprehensiveDiagnostic } from '@/utils/metaApiTest';
+import { 
+  testMetaApi, 
+  checkForCorsIssues, 
+  runComprehensiveDiagnostic, 
+  testProxyApproach,
+  testBrowserCompatibility
+} from '@/utils/metaApiTest';
 
 interface ConnectionStatusPanelProps {
   isAuthenticated: boolean;
@@ -27,6 +33,7 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
   const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
   const [isRunningTest, setIsRunningTest] = useState(false);
   const [isRunningComprehensiveDiagnostic, setIsRunningComprehensiveDiagnostic] = useState(false);
+  const [proxyTestResult, setProxyTestResult] = useState<any>(null);
   
   // Get token freshness information
   const tokenInfo = isAuthenticated ? metaAuthService.checkTokenFreshness() : { isFresh: false, age: 0 };
@@ -75,6 +82,25 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
     setDiagnosticResults(results);
     setIsRunningComprehensiveDiagnostic(false);
   };
+
+  const handleTestProxy = async () => {
+    setIsRunningTest(true);
+    const results = await testProxyApproach();
+    setProxyTestResult(results);
+    setShowDiagnostics(true);
+    setIsRunningTest(false);
+  };
+
+  const handleBrowserCompatibility = () => {
+    setIsRunningTest(true);
+    const results = testBrowserCompatibility();
+    setDiagnosticResults(results);
+    setShowDiagnostics(true);
+    setIsRunningTest(false);
+  };
+
+  // Determine if there are CORS issues based on diagnostic results
+  const hasCorsIssues = diagnosticResults?.cors?.hasCorsIssues || false;
 
   return (
     <div className="mt-6 p-4 bg-gray-50 rounded-md border border-gray-200">
@@ -158,6 +184,15 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
                   CORS Check
                 </Button>
                 <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleBrowserCompatibility}
+                  disabled={isRunningTest || isRunningComprehensiveDiagnostic}
+                >
+                  <Globe className="h-3 w-3 mr-1" />
+                  Browser Check
+                </Button>
+                <Button 
                   variant="default" 
                   size="sm" 
                   onClick={handleComprehensiveDiagnostic}
@@ -217,6 +252,54 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
                               <li key={i} className="text-gray-700">{rec}</li>
                             ))}
                           </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Show CORS troubleshooting info if CORS issues detected */}
+                  {hasCorsIssues && (
+                    <div className="mt-3 border-t pt-2">
+                      <h5 className="font-medium text-xs mb-1 flex items-center">
+                        <Shield className="h-3 w-3 mr-1 text-red-600" />
+                        CORS Issue Detected
+                      </h5>
+
+                      <div className="bg-red-50 border border-red-100 rounded p-2 mb-2">
+                        <p className="text-xs text-red-700">
+                          Your browser's security settings are preventing direct API calls to Meta.
+                          This is a common issue when developing apps that use external APIs.
+                        </p>
+                      </div>
+
+                      <h6 className="text-xs font-medium mt-2">Possible Solutions:</h6>
+                      <ol className="list-decimal pl-5 text-xs space-y-0.5 mb-3">
+                        <li>Try a browser extension like "Allow CORS" or "CORS Unblock"</li>
+                        <li>Use a different browser</li>
+                        <li>Implement a server-side proxy in your application</li>
+                        <li>Continue using the application with Facebook browser login (this bypasses the CORS issue)</li>
+                      </ol>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleTestProxy}
+                        disabled={isRunningTest}
+                        className="text-xs"
+                      >
+                        Test Proxy Approach
+                      </Button>
+
+                      {proxyTestResult && (
+                        <div className="mt-2 text-xs">
+                          <p className={`font-medium ${proxyTestResult.proxyWorked ? 'text-green-600' : 'text-red-600'}`}>
+                            {proxyTestResult.proxyWorked 
+                              ? '✓ Proxy approach works!' 
+                              : '✗ Proxy approach failed'}
+                          </p>
+                          {proxyTestResult.error && (
+                            <p className="text-red-600 mt-1">{proxyTestResult.error}</p>
+                          )}
                         </div>
                       )}
                     </div>
