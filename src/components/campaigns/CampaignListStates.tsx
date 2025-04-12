@@ -5,6 +5,7 @@ import { CardContent } from '@/components/ui/card';
 import { Loader2, RefreshCw, AlertCircle, PlusCircle } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
+import { MetaApiService } from '@/services/MetaApiService';
 
 interface EmptyStateProps {
   status: 'active' | 'draft' | 'archived';
@@ -44,7 +45,20 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   const isAccountError = error.toLowerCase().includes('account') || 
     error.toLowerCase().includes('no ad account');
   
-  const handleReconnect = () => {
+  const handleReconnect = async () => {
+    // Validate current token before logout
+    const token = metaAuthService.getAccessToken();
+    if (token) {
+      const connectionTest = await MetaApiService.testConnection(token);
+      // If token is actually valid, maybe it's another issue
+      if (connectionTest.success) {
+        toast({
+          title: "Token Validation",
+          description: "Your token seems valid. The issue may be with permissions or the ad account. Trying to refresh connection.",
+        });
+      }
+    }
+    
     // Clear token and all Meta-related data
     console.log('User clicked reconnect button - clearing Meta auth data and redirecting to connection flow');
     metaAuthService.logout();

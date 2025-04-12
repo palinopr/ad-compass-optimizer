@@ -8,6 +8,7 @@ import AdAccountsLoading from './AdAccountsLoading';
 import AdAccountsEmpty from './AdAccountsEmpty';
 import AdAccountDetails from './AdAccountDetails';
 import { useAdAccounts } from './useAdAccounts';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 const AdAccountSelector: React.FC = () => {
   const { 
@@ -19,8 +20,17 @@ const AdAccountSelector: React.FC = () => {
     handleAccountChange 
   } = useAdAccounts();
   
-  // Function to handle refresh button click
-  const handleRefresh = () => {
+  // Function to handle refresh button click with token validation
+  const handleRefresh = async () => {
+    // Check if token is valid before refreshing
+    if (!metaAuthService.isAuthenticated()) {
+      // Force token refresh flow if token is invalid
+      localStorage.setItem('show_meta_connection', 'true');
+      localStorage.setItem('meta_connection_context', 'token');
+      window.location.reload();
+      return;
+    }
+    
     fetchAdAccounts();
   };
   
@@ -36,7 +46,18 @@ const AdAccountSelector: React.FC = () => {
         {isLoading ? (
           <AdAccountsLoading />
         ) : error ? (
-          <div className="text-red-500 text-sm">{error}</div>
+          <div className="space-y-4">
+            <div className="text-red-500 text-sm">{error}</div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Retry Connection
+            </Button>
+          </div>
         ) : adAccounts.length === 0 ? (
           <AdAccountsEmpty onRefresh={handleRefresh} />
         ) : (
