@@ -50,8 +50,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     // Add event listener for storage changes (for cross-tab synchronization)
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key && (
-          event.key === MetaAuthService.TOKEN_KEY || 
-          event.key === MetaAuthService.TOKEN_TIMESTAMP_KEY)) {
+          event.key === 'meta_access_token' || 
+          event.key === 'meta_token_timestamp')) {
         console.log('Storage changed, checking auth status...');
         checkAuth();
       }
