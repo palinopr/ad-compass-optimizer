@@ -72,8 +72,12 @@ const AdAccountSelector: React.FC = () => {
           console.log('Valid accounts retrieved:', validAccounts.length);
           setAdAccounts(validAccounts);
           
-          // Select the first account by default if available
-          if (validAccounts.length > 0) {
+          // Check for primary account selection
+          const primaryAccount = localStorage.getItem('selected_ad_account');
+          if (primaryAccount) {
+            setSelectedAccount(primaryAccount);
+            console.log(`Using stored primary account: ${primaryAccount}`);
+          } else if (validAccounts.length > 0) {
             // Store without 'act_' prefix for consistency
             const accountId = validAccounts[0].id.replace(/^act_/, '');
             setSelectedAccount(accountId);
@@ -141,6 +145,15 @@ const AdAccountSelector: React.FC = () => {
     window.location.reload();
   };
   
+  // Function to handle refresh button click
+  const handleRefresh = () => {
+    fetchAdAccounts();
+    toast({
+      title: "Refreshing",
+      description: "Refreshing ad account information..."
+    });
+  };
+  
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -163,7 +176,7 @@ const AdAccountSelector: React.FC = () => {
             </div>
             <Button 
               variant="outline" 
-              onClick={fetchAdAccounts}
+              onClick={handleRefresh}
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
@@ -193,6 +206,18 @@ const AdAccountSelector: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+            
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefresh}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Refresh
+              </Button>
+            </div>
             
             {selectedAccount && (
               <div className="mt-4 text-sm bg-slate-50 p-4 rounded-md border">

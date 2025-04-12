@@ -43,12 +43,12 @@ const ConnectedAccountInfo: React.FC<ConnectedAccountInfoProps> = ({
       
       <div className="mt-6">
         <h3 className="font-medium mb-2">Your Ad Accounts</h3>
-        {adAccounts.length > 0 ? (
+        {adAccounts && adAccounts.length > 0 ? (
           <div className="space-y-2">
             {adAccounts.map((account) => (
               <div key={account.id} className="p-3 border rounded">
                 <p className="font-medium">{account.name}</p>
-                <p className="text-sm">Account ID: {account.account_id}</p>
+                <p className="text-sm">Account ID: {account.account_id || account.id}</p>
                 <p className="text-sm">Status: {account.account_status === 1 ? 'Active' : 'Inactive'}</p>
                 <p className="text-sm">Currency: {account.currency}</p>
               </div>
@@ -73,7 +73,7 @@ const ConnectedAccountInfo: React.FC<ConnectedAccountInfoProps> = ({
       </div>
       
       <Button 
-        variant="outline" 
+        variant="destructive" 
         className="mt-4" 
         onClick={onLogout}
       >

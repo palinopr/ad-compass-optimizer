@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import FacebookLoginTab from '@/components/meta/FacebookLoginTab';
 import BusinessManagerSelector from '@/components/meta/BusinessManagerSelector';
@@ -25,9 +25,62 @@ const MetaConnectionFlow: React.FC = () => {
   const [userData, setUserData] = useState<any>(null);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
   const [adAccounts, setAdAccounts] = useState<any[]>([]);
+  const [selectedAccounts, setSelectedAccounts] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoadingAccounts, setIsLoadingAccounts] = useState<boolean>(false);
   const { toast } = useToast();
+
+  // Function to load user data and account information on component mount
+  useEffect(() => {
+    const loadInitialData = async () => {
+      if (metaAuthService.isAuthenticated()) {
+        // Try to fetch user data
+        const token = metaAuthService.getAccessToken();
+        if (token) {
+          try {
+            const userData = await MetaApiService.fetchUserData(token);
+            setUserData(userData);
+            
+            // Try to load selected ad accounts
+            const selectedAdAccountsStr = localStorage.getItem('selected_ad_accounts');
+            if (selectedAdAccountsStr) {
+              try {
+                const accountIds = JSON.parse(selectedAdAccountsStr);
+                if (Array.isArray(accountIds) && accountIds.length > 0) {
+                  const accounts = await Promise.all(
+                    accountIds.map(async (id) => {
+                      // Format the ID correctly for the API call
+                      const formattedId = id.startsWith('act_') ? id : `act_${id}`;
+                      try {
+                        return await MetaApiService.fetchAdAccountDetails(token, formattedId);
+                      } catch (err) {
+                        console.error(`Error fetching account ${id}:`, err);
+                        return null;
+                      }
+                    })
+                  );
+                  
+                  const validAccounts = accounts.filter(acc => acc !== null);
+                  console.log('Loaded accounts:', validAccounts);
+                  setAdAccounts(validAccounts);
+                  setSelectedAccounts(validAccounts);
+                }
+              } catch (err) {
+                console.error('Error parsing selected accounts:', err);
+                // Clear potentially corrupted data
+                localStorage.removeItem('selected_ad_accounts');
+              }
+            }
+          } catch (err) {
+            console.error('Error loading initial data:', err);
+            setErrorMessage('Failed to load user data');
+          }
+        }
+      }
+    };
+    
+    loadInitialData();
+  }, []);
 
   // Function to handle successful login
   const handleLoginSuccess = (userData: any) => {
@@ -64,19 +117,32 @@ const MetaConnectionFlow: React.FC = () => {
   };
 
   // Function to handle Ad Account selection
-  const handleAccountsSelected = (selectedAccounts: string[]) => {
-    // Store selected accounts in local storage or state management
-    localStorage.setItem('selected_ad_accounts', JSON.stringify(selectedAccounts));
+  const handleAccountsSelected = (selectedAccountIds: string[]) => {
+    // Store selected accounts in local storage
+    localStorage.setItem('selected_ad_accounts', JSON.stringify(selectedAccountIds));
+    
+    // Find the selected account objects from the adAccounts array
+    const selectedAccountObjects = adAccounts
+      .filter(account => selectedAccountIds.includes(account.id));
+    
+    setSelectedAccounts(selectedAccountObjects);
+    
+    // If we have selected accounts, also set the primary account
+    if (selectedAccountIds.length > 0) {
+      // Store without 'act_' prefix for consistency
+      const primaryAccountId = selectedAccountIds[0].replace(/^act_/, '');
+      localStorage.setItem('selected_ad_account', primaryAccountId);
+    }
     
     // Get names of selected accounts for the toast message
     const selectedAccountNames = adAccounts
-      .filter(account => selectedAccounts.includes(account.id))
+      .filter(account => selectedAccountIds.includes(account.id))
       .map(account => account.name)
       .join(', ');
     
     toast({
       title: "Success",
-      description: `${selectedAccounts.length} ad account(s) connected successfully: ${selectedAccountNames}`
+      description: `${selectedAccountIds.length} ad account(s) connected successfully: ${selectedAccountNames}`
     });
     
     setCurrentStep(ConnectionStep.CONNECTED);
@@ -88,10 +154,12 @@ const MetaConnectionFlow: React.FC = () => {
     setUserData(null);
     setSelectedBusinessId(null);
     setAdAccounts([]);
+    setSelectedAccounts([]);
     setErrorMessage(null);
     setCurrentStep(ConnectionStep.LOGIN);
     
     localStorage.removeItem('selected_ad_accounts');
+    localStorage.removeItem('selected_ad_account');
     
     toast({
       title: "Disconnected",
@@ -138,7 +206,7 @@ const MetaConnectionFlow: React.FC = () => {
           <div className="space-y-4">
             <ConnectedAccountInfo 
               userData={userData} 
-              adAccounts={adAccounts}
+              adAccounts={selectedAccounts}
               errorMessage={errorMessage}
               onLogout={handleLogout}
             />
