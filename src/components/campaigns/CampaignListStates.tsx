@@ -46,13 +46,17 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   
   const handleReconnect = () => {
     // Clear token and all Meta-related data
-    console.log('User clicked reconnect button - clearing Meta auth data and reloading page');
+    console.log('User clicked reconnect button - clearing Meta auth data and redirecting to connection flow');
     metaAuthService.logout();
     
     toast({
       title: "Reconnection Required",
-      description: "Please reconnect your Meta account with a valid token."
+      description: "Please reconnect your Meta account with all required permissions."
     });
+    
+    // Set a flag to show the connection dialog on campaigns page
+    localStorage.setItem('show_meta_connection', 'true');
+    localStorage.setItem('meta_connection_context', isPermissionError ? 'permissions' : 'token');
     
     // Add a short delay so the toast is visible before reload
     setTimeout(() => {
@@ -70,7 +74,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
         {isTokenError ? (
           "Your Meta access token appears to be invalid or expired. Please reconnect your Meta account with a valid token."
         ) : isPermissionError ? (
-          "You don't have the required permissions to access this campaign data. Please update your Meta connection with ads_read or ads_management permissions."
+          "You don't have the required permissions to access this campaign data. Please reconnect with ads_read or ads_management permissions."
         ) : isAccountError ? (
           "Please select an ad account to view campaign data."
         ) : (
@@ -79,7 +83,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       </p>
       
       <div className="flex gap-3">
-        {isTokenError && (
+        {(isTokenError || isPermissionError) && (
           <Button 
             className="bg-meta-blue hover:bg-meta-dark" 
             onClick={handleReconnect}

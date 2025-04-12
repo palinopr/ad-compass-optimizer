@@ -15,6 +15,15 @@ export class MetaAuthService {
       return;
     }
     
+    // Ensure we have ads_read and ads_management permissions
+    if (!permissions.includes('ads_read')) {
+      permissions.push('ads_read');
+    }
+    
+    if (!permissions.includes('ads_management')) {
+      permissions.push('ads_management');
+    }
+    
     localStorage.setItem(MetaAuthService.TOKEN_KEY, accessToken);
     localStorage.setItem(MetaAuthService.USER_ID_KEY, userId);
     localStorage.setItem(MetaAuthService.TOKEN_SOURCE_KEY, source);
@@ -24,6 +33,7 @@ export class MetaAuthService {
     localStorage.setItem(MetaAuthService.TOKEN_TIMESTAMP_KEY, Date.now().toString());
     
     console.log('Token stored successfully with length:', accessToken.length);
+    console.log('Permissions stored:', permissions);
   }
 
   // Check if user is authenticated with a valid token
@@ -47,6 +57,17 @@ export class MetaAuthService {
         // We don't auto-invalidate as some long-lived tokens are valid for longer
         // Just log a warning
       }
+    }
+    
+    // Check if we have the minimal required permissions
+    const permissions = this.getPermissions();
+    const hasAdPermission = permissions.some(p => 
+      p === 'ads_management' || p === 'ads_read'
+    );
+    
+    if (!hasAdPermission) {
+      console.log('Token lacks ads permissions, campaigns will not work');
+      // Don't return false here, let the component handle permissions separately
     }
     
     return true;
@@ -87,6 +108,15 @@ export class MetaAuthService {
 
   // Update permissions for the current token
   public updatePermissions(permissions: string[]): void {
+    // Ensure we always have the required permissions
+    if (!permissions.includes('ads_read')) {
+      permissions.push('ads_read');
+    }
+    
+    if (!permissions.includes('ads_management')) {
+      permissions.push('ads_management');
+    }
+    
     localStorage.setItem(MetaAuthService.PERMISSIONS_KEY, JSON.stringify(permissions));
   }
 

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -40,6 +41,7 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
       
       console.log(`Testing token validity: ${token.substring(0, 4)}...${token.substring(token.length - 4)} (length: ${token.length})`);
       
+      // First test the connection to check if the token is valid
       const connectionTest = await MetaApiService.testConnection(token);
       
       if (!connectionTest.success) {
@@ -50,7 +52,8 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
         console.log('Using user data from connection test');
         return {
           id: connectionTest.userId,
-          name: connectionTest.userName
+          name: connectionTest.userName,
+          hasAdAccess: connectionTest.hasAdAccess || false
         };
       }
       
@@ -107,10 +110,26 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
     setErrorMessage(null);
     
     try {
+      // Clear previous auth data
       metaAuthService.logout();
       
       console.log(`Connecting with token (first 4 chars): ${cleanedToken.substring(0, 4)}..., permissions:`, permissions);
       
+      // Ensure we have the necessary ad permissions
+      if (!permissions.includes('ads_read')) {
+        permissions.push('ads_read');
+      }
+      if (!permissions.includes('ads_management')) {
+        permissions.push('ads_management');
+      }
+      
+      // Test connection to validate token
+      const connectionTest = await MetaApiService.testConnection(cleanedToken);
+      if (!connectionTest.success) {
+        throw new Error(connectionTest.error || 'Failed to validate token');
+      }
+      
+      // After token is validated, fetch user data
       const userData = await fetchUserData(cleanedToken);
       
       metaAuthService.storeAccessToken(cleanedToken, userData.id || 'manual_token_user', 'token', permissions);

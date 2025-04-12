@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -29,9 +28,22 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
     read_insights: true
   });
   
+  const [selectAll, setSelectAll] = useState(false);
   const [tokenFormatValid, setTokenFormatValid] = useState<boolean | null>(null);
+  
+  useEffect(() => {
+    const connectionContext = localStorage.getItem('meta_connection_context');
+    if (connectionContext === 'permissions') {
+      setSelectAll(true);
+      setPermissions({
+        ads_management: true,
+        ads_read: true,
+        read_insights: true
+      });
+      localStorage.removeItem('meta_connection_context');
+    }
+  }, []);
 
-  // Validate token format as user types
   useEffect(() => {
     if (!manualToken || manualToken.trim().length === 0) {
       setTokenFormatValid(null);
@@ -40,7 +52,6 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
     
     const token = manualToken.trim();
     
-    // Basic format validation
     if (token.length < 20) {
       setTokenFormatValid(false);
       return;
@@ -49,9 +60,25 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
     const tokenRegex = /^[A-Za-z0-9_-]+$/;
     setTokenFormatValid(tokenRegex.test(token));
   }, [manualToken]);
+  
+  const handleSelectAll = (checked: boolean) => {
+    setSelectAll(checked);
+    if (checked) {
+      setPermissions({
+        ads_management: true,
+        ads_read: true,
+        read_insights: true
+      });
+    } else {
+      setPermissions({
+        ads_management: true,
+        ads_read: true,
+        read_insights: false
+      });
+    }
+  };
 
   const handleManualTokenConnect = () => {
-    // Basic validation before attempting connection
     if (!manualToken || manualToken.trim().length < 20) {
       onTokenError("Please enter a valid Meta access token. Tokens are typically at least 20 characters long.");
       return;
@@ -67,10 +94,9 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    // Remove common formatting issues like extra spaces, quotes, etc.
     let cleanedValue = value
-      .replace(/^['"]|['"]$/g, '') // Remove quotes at start/end
-      .replace(/\s+/g, ''); // Remove all whitespace
+      .replace(/^['"]|['"]$/g, '')
+      .replace(/\s+/g, '');
       
     setManualToken(cleanedValue);
   };
@@ -130,35 +156,46 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
       </div>
       
       <div className="space-y-2">
+        <div className="flex items-center space-x-2 p-2 border rounded-md bg-blue-50 border-blue-200 mb-2">
+          <Checkbox 
+            id="select-all-perms" 
+            checked={selectAll} 
+            onCheckedChange={(checked) => handleSelectAll(checked === true)}
+          />
+          <label
+            htmlFor="select-all-perms"
+            className="text-sm font-medium leading-none ml-2 text-blue-700"
+          >
+            Enable All Permissions (Recommended)
+          </label>
+        </div>
+        
         <label className="text-sm font-medium">Permissions</label>
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="ads_management" 
               checked={permissions.ads_management}
-              onCheckedChange={(checked) => 
-                setPermissions({...permissions, ads_management: checked === true})
-              }
+              disabled={true}
             />
-            <label htmlFor="ads_management" className="text-sm">ads_management</label>
+            <label htmlFor="ads_management" className="text-sm">ads_management <span className="text-xs text-meta-blue">(Required)</span></label>
           </div>
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="ads_read" 
               checked={permissions.ads_read}
-              onCheckedChange={(checked) => 
-                setPermissions({...permissions, ads_read: checked === true})
-              }
+              disabled={true}
             />
-            <label htmlFor="ads_read" className="text-sm">ads_read</label>
+            <label htmlFor="ads_read" className="text-sm">ads_read <span className="text-xs text-meta-blue">(Required)</span></label>
           </div>
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="read_insights" 
               checked={permissions.read_insights}
-              onCheckedChange={(checked) => 
-                setPermissions({...permissions, read_insights: checked === true})
-              }
+              onCheckedChange={(checked) => {
+                setPermissions({...permissions, read_insights: checked === true});
+                setSelectAll(checked === true && permissions.ads_management && permissions.ads_read);
+              }}
             />
             <label htmlFor="read_insights" className="text-sm">read_insights</label>
           </div>

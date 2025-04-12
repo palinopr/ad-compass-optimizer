@@ -16,23 +16,37 @@ import MetaConnect from '@/components/meta/MetaConnect';
 import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 
 const Campaigns = () => {
   const [activeTab, setActiveTab] = useState('campaigns');
   const [showCreateWizard, setShowCreateWizard] = useState(false);
-  const isAuthenticated = metaAuthService.isAuthenticated();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasAdsPermission, setHasAdsPermission] = useState(false);
+  const [showConnectionDialog, setShowConnectionDialog] = useState(false);
   
   useEffect(() => {
+    // Check if the user is authenticated
+    const authenticated = metaAuthService.isAuthenticated();
+    setIsAuthenticated(authenticated);
+    
     // Check if user has ads permissions
-    if (isAuthenticated) {
+    if (authenticated) {
       const permissions = metaAuthService.getPermissions();
       const hasPermission = permissions.some(p => 
         p === 'ads_management' || p === 'ads_read'
       );
       setHasAdsPermission(hasPermission);
     }
-  }, [isAuthenticated]);
+    
+    // Check if we should show the connection dialog (set by the ErrorState component)
+    const shouldShowConnection = localStorage.getItem('show_meta_connection') === 'true';
+    if (shouldShowConnection) {
+      console.log('Showing Meta connection dialog due to stored flag');
+      setShowConnectionDialog(true);
+      localStorage.removeItem('show_meta_connection');
+    }
+  }, []);
   
   // Check if ad account is selected
   const hasAdAccount = () => {
@@ -40,7 +54,19 @@ const Campaigns = () => {
     return selectedAdAccounts && JSON.parse(selectedAdAccounts).length > 0;
   };
   
-  const selectedAdAccount = localStorage.getItem('selected_ad_account');
+  const handleConnectionSuccess = (userData: any) => {
+    console.log('Connection successful, user data:', userData);
+    setIsAuthenticated(true);
+    setHasAdsPermission(userData.tokenPermissions.some((p: string) => 
+      p === 'ads_management' || p === 'ads_read'
+    ));
+    setShowConnectionDialog(false);
+  };
+  
+  const handleConnectionError = () => {
+    // Just close the dialog but don't update auth state
+    setShowConnectionDialog(false);
+  };
 
   return (
     <AppLayout>
@@ -118,6 +144,14 @@ const Campaigns = () => {
           </>
         )}
       </div>
+      
+      {/* Meta Connection Dialog that automatically shows when needed */}
+      <MetaConnectionDialog
+        open={showConnectionDialog}
+        onOpenChange={setShowConnectionDialog}
+        onSuccess={handleConnectionSuccess}
+        onError={handleConnectionError}
+      />
     </AppLayout>
   );
 };
