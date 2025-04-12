@@ -46,6 +46,10 @@ export const generateDiagnosticSummary = (
     if (proxy && proxy.proxyWorked) {
       recommendations.push('Use a proxy server to bypass CORS restrictions');
       status = 'medium'; // Downgraded since we have a workaround
+    } else if (proxy.error && proxy.error.includes('access denied')) {
+      recommendations.push('Request temporary access to the CORS proxy service');
+      recommendations.push('Or use a different CORS proxy service');
+      status = 'high';
     } else if (compatibility.compatibility.score < 80) {
       recommendations.push('Try using a different modern browser like Chrome or Firefox');
       status = 'high';

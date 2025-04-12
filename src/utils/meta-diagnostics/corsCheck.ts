@@ -63,6 +63,17 @@ export const testProxyApproach = async () => {
       const proxyCheckResponse = await fetch(corsProxy);
       const proxyText = await proxyCheckResponse.text();
       console.log('Proxy access check response:', proxyText);
+      
+      // Check if the response contains the expected access message
+      if (proxyText.includes('denied') || proxyText.includes('blocked')) {
+        console.log('Proxy access denied');
+        return { 
+          success: false, 
+          proxyTested: true, 
+          proxyWorked: false,
+          error: 'Proxy access denied. Visit the proxy service to request temporary access.' 
+        };
+      }
     } catch (e) {
       console.log('Proxy access check failed:', e);
     }
@@ -71,13 +82,38 @@ export const testProxyApproach = async () => {
     console.log('Making proxied request to:', apiUrl);
     const proxyResponse = await fetch(proxyUrl, {
       headers: {
-        'Origin': window.location.origin
+        'Origin': window.location.origin,
+        'X-Requested-With': 'XMLHttpRequest' // Required by many CORS proxies
       }
     });
     
     console.log('Proxy response status:', proxyResponse.status, proxyResponse.statusText);
     
+    if (!proxyResponse.ok) {
+      console.log('Proxy request failed with status:', proxyResponse.status);
+      return { 
+        success: false, 
+        proxyTested: true, 
+        proxyWorked: false,
+        error: `Proxy request failed with status: ${proxyResponse.status}` 
+      };
+    }
+    
+    // Get response as text first
     const responseText = await proxyResponse.text();
+    console.log('Raw proxy response:', responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
+    
+    // Check if the response is empty
+    if (!responseText.trim()) {
+      return { 
+        success: false, 
+        proxyTested: true, 
+        proxyWorked: false,
+        error: 'Empty response from proxy' 
+      };
+    }
+    
+    // Try to parse as JSON
     try {
       const data = JSON.parse(responseText);
       if (data.error) {
@@ -98,11 +134,12 @@ export const testProxyApproach = async () => {
         };
       }
     } catch (e) {
+      console.error('JSON parse error:', e, 'Response was:', responseText.substring(0, 150));
       return { 
         success: false, 
         proxyTested: true, 
         proxyWorked: false,
-        error: 'Failed to parse proxy response' 
+        error: `Failed to parse proxy response: ${e.message}` 
       };
     }
   } catch (error) {
