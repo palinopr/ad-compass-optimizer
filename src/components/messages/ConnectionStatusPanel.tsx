@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { CheckCircle, XCircle, AlertCircle, Clock, Link, LinkOff, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Clock, Link, Link2Off, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { Button } from '@/components/ui/button';
@@ -147,7 +146,7 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
             <h4 className="text-sm font-medium mb-2">Troubleshooting</h4>
             <div className="space-y-2 text-xs">
               <div className="flex items-start gap-2">
-                <LinkOff className="h-3.5 w-3.5 text-gray-500 mt-0.5" />
+                <Link2Off className="h-3.5 w-3.5 text-gray-500 mt-0.5" />
                 <span className="text-gray-700">
                   Not connected to Meta API. Visit the <a href="/meta-integration" className="text-blue-600 underline">Meta Integration page</a> to connect.
                 </span>
