@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import TokenPermissionsList from '@/components/meta/TokenPermissionsList';
 import MetaConnectionStatus from '@/components/meta/MetaConnectionStatus';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
+import DirectApiTest from '@/components/meta/DirectApiTest';
 
 const ConnectionDetails = () => {
   const userId = metaAuthService.getUserId() || 'Unknown';
@@ -39,18 +39,17 @@ export default function MetaIntegration() {
   const { toast } = useToast();
   const { isAuthenticated, hasPermissions, checkAuth } = useMetaConnection();
 
-  // Check URL params for tab selection
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
-    if (tab && ['accounts', 'flow', 'settings'].includes(tab)) {
+    if (tab && ['accounts', 'flow', 'settings', 'diagnostics'].includes(tab)) {
       setActiveTab(tab);
     }
   }, []);
 
   const handleDisconnect = () => {
     metaAuthService.logout();
-    checkAuth(); // Update the auth state after logout
+    checkAuth();
     
     toast({
       title: "Disconnected",
@@ -74,7 +73,6 @@ export default function MetaIntegration() {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // Update URL without page reload
     const url = new URL(window.location.href);
     url.searchParams.set('tab', value);
     window.history.pushState({}, '', url);
@@ -111,16 +109,16 @@ export default function MetaIntegration() {
           )}
         </div>
 
-        {/* Connection Status Dashboard */}
         <div className="mb-4">
           <MetaConnectionStatus />
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="accounts">Account Connection</TabsTrigger>
             <TabsTrigger value="flow">Integration Flow</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
           </TabsList>
           
           <TabsContent value="accounts" className="space-y-4 mt-4">
@@ -151,6 +149,43 @@ export default function MetaIntegration() {
                   ) : (
                     <p>Please connect your Meta account to manage permission settings.</p>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="diagnostics" className="space-y-4 mt-4">
+            <DirectApiTest />
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>API Troubleshooting</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <h3 className="font-medium">Common Issues</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-sm">
+                    <li>
+                      <strong>Invalid Token Format</strong>: Ensure your token doesn't contain any spaces or special characters.
+                    </li>
+                    <li>
+                      <strong>Expired Token</strong>: Meta tokens typically expire after 60 days. Check the token age in the diagnostics.
+                    </li>
+                    <li>
+                      <strong>Missing Permissions</strong>: Your token needs at least 'ads_management' and 'ads_read' permissions.
+                    </li>
+                    <li>
+                      <strong>CORS Issues</strong>: These occur when the API server doesn't allow requests from your domain.
+                    </li>
+                  </ul>
+                  
+                  <h3 className="font-medium mt-4">Recommendations</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-sm">
+                    <li>Generate a fresh System User Token with the correct permissions.</li>
+                    <li>Use the diagnostic tools to identify the exact issue.</li>
+                    <li>Check the browser console for any errors.</li>
+                    <li>Try the Direct API Test above to test the API connection.</li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>

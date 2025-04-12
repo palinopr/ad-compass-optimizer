@@ -1,4 +1,3 @@
-
 export class MetaAuthService {
   // Keys for localStorage
   public static readonly TOKEN_KEY = 'meta_access_token';
@@ -9,14 +8,19 @@ export class MetaAuthService {
 
   // Store the access token from login
   public storeAccessToken(accessToken: string, userId: string = 'facebook_user', source: string = 'facebook', permissions: string[] = []): void {
-    // Clean the token before storing (remove any whitespace)
-    const cleanedToken = accessToken.trim();
+    // Clean the token more thoroughly before storing (remove ALL whitespace)
+    const cleanedToken = accessToken.replace(/\s+/g, '').trim();
     
     // Basic validation before storing
     if (!cleanedToken || cleanedToken.length < 50) {
       console.error('Invalid token format detected in storeAccessToken');
       return;
     }
+    
+    // Log token details for debugging (without exposing the full token)
+    console.log('Storing token with length:', cleanedToken.length);
+    console.log('Token first 4 chars:', cleanedToken.substring(0, 4) + '...');
+    console.log('Token source:', source);
     
     // Ensure we have ads_read and ads_management permissions
     if (!permissions.includes('ads_read')) {
@@ -97,12 +101,16 @@ export class MetaAuthService {
       return null;
     }
     
-    if (token.length < 50) {
+    // Ensure the token doesn't have any whitespace
+    const cleanedToken = token.replace(/\s+/g, '').trim();
+    
+    if (cleanedToken.length < 50) {
       console.log('Token found but appears invalid (too short)');
       return null;
     }
     
-    return token;
+    // Return the cleaned token to ensure consistency
+    return cleanedToken;
   }
 
   // Get the token source (facebook or manual)
