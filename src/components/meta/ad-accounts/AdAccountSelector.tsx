@@ -52,7 +52,7 @@ const AdAccountSelector: React.FC = () => {
       toast({
         title: "Token Warning",
         description: `Your token is ${freshness.age} days old and may expire soon. Consider generating a new token.`,
-        variant: "default" // Changed from "warning" to "default"
+        variant: "default"  // Fixed: using "default" instead of "warning"
       });
     }
     
