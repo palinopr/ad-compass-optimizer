@@ -6,9 +6,9 @@ import Troubleshooting from './connection-status/Troubleshooting';
 import NextSteps from './connection-status/NextSteps';
 import DebugInfo from './connection-status/DebugInfo';
 import { Button } from '@/components/ui/button';
-import { Bug, Code, AlertTriangle } from 'lucide-react';
+import { Bug, Code, AlertTriangle, Stethoscope } from 'lucide-react';
 import { runTokenDiagnostic } from '@/utils/metaTokenDiagnostic';
-import { testMetaApi, checkForCorsIssues } from '@/utils/metaApiTest';
+import { testMetaApi, checkForCorsIssues, runComprehensiveDiagnostic } from '@/utils/metaApiTest';
 
 interface ConnectionStatusPanelProps {
   isAuthenticated: boolean;
@@ -26,6 +26,7 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
   const [isRunningTest, setIsRunningTest] = useState(false);
+  const [isRunningComprehensiveDiagnostic, setIsRunningComprehensiveDiagnostic] = useState(false);
   
   // Get token freshness information
   const tokenInfo = isAuthenticated ? metaAuthService.checkTokenFreshness() : { isFresh: false, age: 0 };
@@ -65,6 +66,14 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
     setDiagnosticResults(results);
     setShowDiagnostics(true);
     setIsRunningTest(false);
+  };
+
+  const handleComprehensiveDiagnostic = async () => {
+    setIsRunningComprehensiveDiagnostic(true);
+    setShowDiagnostics(true);
+    const results = await runComprehensiveDiagnostic();
+    setDiagnosticResults(results);
+    setIsRunningComprehensiveDiagnostic(false);
   };
 
   return (
@@ -125,7 +134,7 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
                   variant="outline" 
                   size="sm" 
                   onClick={handleRunDiagnostic}
-                  disabled={isRunningTest}
+                  disabled={isRunningTest || isRunningComprehensiveDiagnostic}
                 >
                   <Code className="h-3 w-3 mr-1" />
                   Token Diagnostic
@@ -134,7 +143,7 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
                   variant="outline" 
                   size="sm" 
                   onClick={handleApiTest}
-                  disabled={isRunningTest || !tokenExists}
+                  disabled={isRunningTest || isRunningComprehensiveDiagnostic || !tokenExists}
                 >
                   <AlertTriangle className="h-3 w-3 mr-1" />
                   API Test
@@ -143,10 +152,20 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
                   variant="outline" 
                   size="sm" 
                   onClick={handleCorsCheck}
-                  disabled={isRunningTest || !tokenExists}
+                  disabled={isRunningTest || isRunningComprehensiveDiagnostic || !tokenExists}
                 >
                   <Bug className="h-3 w-3 mr-1" />
                   CORS Check
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  onClick={handleComprehensiveDiagnostic}
+                  disabled={isRunningTest || isRunningComprehensiveDiagnostic}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Stethoscope className="h-3 w-3 mr-1" />
+                  Lovable Diagnostic
                 </Button>
               </div>
 
@@ -156,6 +175,59 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
                   <pre className="text-xs overflow-auto max-h-40">
                     {JSON.stringify(diagnosticResults, null, 2)}
                   </pre>
+                  
+                  {/* Display comprehensive diagnostic results in a more readable format */}
+                  {diagnosticResults.summary && (
+                    <div className="mt-3 border-t pt-2">
+                      <h5 className="font-medium text-sm">
+                        Summary
+                        <span 
+                          className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                            diagnosticResults.summary.overallStatus === 'high' 
+                              ? 'bg-red-100 text-red-700'
+                              : diagnosticResults.summary.overallStatus === 'medium'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}
+                        >
+                          {diagnosticResults.summary.overallStatus === 'high' 
+                            ? 'Critical Issues' 
+                            : diagnosticResults.summary.overallStatus === 'medium'
+                            ? 'Issues Found'
+                            : 'All Good'}
+                        </span>
+                      </h5>
+                      
+                      {diagnosticResults.summary.issues.length > 0 && (
+                        <div className="mt-2">
+                          <h6 className="text-xs font-medium">Issues:</h6>
+                          <ul className="list-disc pl-5 text-xs space-y-0.5">
+                            {diagnosticResults.summary.issues.map((issue: string, i: number) => (
+                              <li key={i} className="text-gray-700">{issue}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {diagnosticResults.summary.recommendations.length > 0 && (
+                        <div className="mt-2">
+                          <h6 className="text-xs font-medium">Recommendations:</h6>
+                          <ul className="list-disc pl-5 text-xs space-y-0.5">
+                            {diagnosticResults.summary.recommendations.map((rec: string, i: number) => (
+                              <li key={i} className="text-gray-700">{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {isRunningComprehensiveDiagnostic && (
+                <div className="flex items-center space-x-2 text-sm text-gray-500">
+                  <div className="animate-spin h-4 w-4 border-2 border-purple-500 rounded-full border-t-transparent"></div>
+                  <span>Running comprehensive diagnostic...</span>
                 </div>
               )}
             </div>

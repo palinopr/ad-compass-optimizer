@@ -84,3 +84,92 @@ export const checkForCorsIssues = async () => {
     return { hasCorsIssues: true, error: String(error) };
   }
 };
+
+// Run all diagnostic tests and return a comprehensive report
+export const runComprehensiveDiagnostic = async () => {
+  console.log('=== LOVABLE COMPREHENSIVE DIAGNOSTIC ===');
+  
+  // Get browser info
+  const browserInfo = {
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language
+  };
+  
+  console.log('Browser info:', browserInfo);
+  
+  // Step 1: Run token diagnostic
+  const { runTokenDiagnostic, analyzeDiagnosticResults } = await import('./metaTokenDiagnostic');
+  const tokenResults = runTokenDiagnostic();
+  console.log('Token diagnostic results:', tokenResults);
+  const tokenAnalysis = analyzeDiagnosticResults(tokenResults);
+  
+  // Step 2: Check API connection
+  let apiResults = { success: false, error: 'Test not run' };
+  if (tokenResults.hasToken) {
+    console.log('Testing API connection...');
+    apiResults = await testMetaApi();
+  }
+  
+  // Step 3: Check for CORS issues
+  let corsResults = { hasCorsIssues: false, error: 'Test not run' };
+  if (tokenResults.hasToken) {
+    console.log('Checking for CORS issues...');
+    corsResults = await checkForCorsIssues();
+  }
+  
+  console.log('=== END COMPREHENSIVE DIAGNOSTIC ===');
+  
+  return {
+    timestamp: new Date().toISOString(),
+    browser: browserInfo,
+    token: tokenResults,
+    tokenAnalysis,
+    api: apiResults,
+    cors: corsResults,
+    summary: generateDiagnosticSummary(tokenResults, tokenAnalysis, apiResults, corsResults)
+  };
+};
+
+// Generate a summary of all diagnostic checks
+const generateDiagnosticSummary = (token, tokenAnalysis, api, cors) => {
+  let status = 'ok';
+  const issues = [];
+  const recommendations = [];
+  
+  // Add token issues to summary
+  if (tokenAnalysis.issues.length > 0 && tokenAnalysis.issues[0] !== 'No token issues detected') {
+    issues.push(...tokenAnalysis.issues);
+    recommendations.push(...tokenAnalysis.recommendations);
+    status = tokenAnalysis.severity;
+  }
+  
+  // Add API issues if any
+  if (token.hasToken && !api.success) {
+    issues.push(`API connection failed: ${api.error?.message || JSON.stringify(api.error)}`);
+    
+    if (api.error?.code === 190) {
+      recommendations.push('Your token is invalid or expired. Generate a new token.');
+      status = 'high';
+    } else if (api.error?.code === 200) {
+      recommendations.push('Missing required permissions. Generate a token with ads_management and ads_read permissions.');
+      status = 'high';
+    } else {
+      recommendations.push('Check network connection and API availability.');
+      status = 'medium';
+    }
+  }
+  
+  // Add CORS issues if any
+  if (cors.hasCorsIssues) {
+    issues.push('CORS policy preventing API access');
+    recommendations.push('Try using a different connection method or browser');
+    status = 'high';
+  }
+  
+  return {
+    overallStatus: status,
+    issues: issues.length > 0 ? issues : ['No issues detected'],
+    recommendations: recommendations.length > 0 ? recommendations : ['Your Meta connection appears to be working correctly'],
+  };
+};
