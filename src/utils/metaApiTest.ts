@@ -94,7 +94,12 @@ export const testProxyApproach = async () => {
     // Get token
     const token = localStorage.getItem('meta_access_token');
     if (!token) {
-      return { success: false, error: 'No token available for proxy test' };
+      return { 
+        success: false, 
+        proxyTested: false, 
+        proxyWorked: false,
+        error: 'No token available for proxy test' 
+      };
     }
     
     // Use cors-anywhere demo proxy (note: this is rate-limited and for testing only)
@@ -288,10 +293,21 @@ export const runComprehensiveDiagnostic = async () => {
   const compatibilityResults = testBrowserCompatibility();
   
   // Step 5: Test proxy approach if CORS issues are detected
-  let proxyResults = { proxyTested: false, proxyWorked: false, error: 'Not tested' };
+  let proxyResults = { 
+    proxyTested: false, 
+    proxyWorked: false, 
+    error: 'Not tested' 
+  };
+  
   if (corsResults.hasCorsIssues) {
     console.log('CORS issues detected, testing proxy approach...');
-    proxyResults = await testProxyApproach();
+    const tempResults = await testProxyApproach();
+    // Ensure the result matches the expected format
+    proxyResults = {
+      proxyTested: tempResults.proxyTested || false,
+      proxyWorked: tempResults.proxyWorked || false,
+      error: tempResults.error || ''
+    };
   }
   
   console.log('=== END COMPREHENSIVE DIAGNOSTIC ===');
