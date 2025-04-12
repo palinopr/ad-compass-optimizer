@@ -1,20 +1,27 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import MetaConnect from '@/components/meta/MetaConnect';
 import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { Info, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 const Messages = () => {
-  const { isAuthenticated, hasPermissions, checkAuth } = useMetaConnection();
+  const { isAuthenticated, hasPermissions, checkAuth, showConnectionDialog } = useMetaConnection();
+  const [checkedAuth, setCheckedAuth] = useState(false);
+  const { toast } = useToast();
   
   // Check authentication status when component mounts
   useEffect(() => {
-    // Immediate auth check
-    checkAuth();
+    // Force auth check with a small delay to ensure it runs after initial render
+    setTimeout(() => {
+      checkAuth();
+      setCheckedAuth(true);
+    }, 100);
     
     // Clear any "show connection" flags that might be set
     localStorage.removeItem('show_meta_connection');
@@ -25,6 +32,14 @@ const Messages = () => {
   const hasAdAccount = () => {
     const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
     return selectedAdAccounts && JSON.parse(selectedAdAccounts).length > 0;
+  };
+
+  const handleConnectClick = () => {
+    showConnectionDialog();
+    toast({
+      title: "Connection Required",
+      description: "Please connect your Meta account to access messages",
+    });
   };
 
   return (
@@ -40,6 +55,32 @@ const Messages = () => {
             <Info className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-700">
               Messages feature is coming soon. This page will display your ad messages and conversations.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {!isAuthenticated && checkedAuth && (
+          <Alert className="bg-amber-50 border-amber-200">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-700">
+              Not authenticated with Meta. Please connect your account.
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-4 bg-amber-100"
+                onClick={handleConnectClick}
+              >
+                Connect Now
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {isAuthenticated && !hasAdAccount() && (
+          <Alert className="bg-amber-50 border-amber-200">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-700">
+              Please select an ad account to view message data.
             </AlertDescription>
           </Alert>
         )}
