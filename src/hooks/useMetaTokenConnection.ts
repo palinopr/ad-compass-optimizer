@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { MetaApiService } from '@/services/MetaApiService';
 
 interface UseMetaTokenConnectionOptions {
   onSuccess: (userData: any) => void;
@@ -16,16 +17,35 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
 
   const fetchUserData = async (token: string) => {
     try {
+      console.log(`Testing token validity: ${token.substring(0, 4)}...${token.substring(token.length - 4)} (length: ${token.length})`);
+      // First, test if the token is valid
+      const connectionTest = await MetaApiService.testConnection(token);
+      
+      if (!connectionTest.success) {
+        throw new Error(connectionTest.error || 'Failed to validate token');
+      }
+      
+      // If token test passed, fetch user data
+      console.log('Token test passed, fetching user data');
       const response = await fetch(
         `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${token}`
       );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error fetching user data:', errorText);
+        throw new Error(`Failed to fetch user data: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.error) {
         throw new Error(data.error.message || 'Failed to fetch user data');
       }
       
+      console.log('Successfully fetched user data');
       return {
+        id: data.id,
         name: data.name,
         email: data.email,
         picture: data.picture?.data.url
@@ -56,11 +76,19 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
     setErrorMessage(null);
     
     try {
-      // Store the token with permissions
-      metaAuthService.storeAccessToken(token, 'manual_token_user', 'token', permissions);
+      // Clear any existing token data first to avoid conflicts
+      metaAuthService.logout();
+      
+      console.log(`Connecting with token (first 4 chars): ${token.substring(0, 4)}..., permissions:`, permissions);
       
       // Test the token by fetching user data
       const userData = await fetchUserData(token);
+      
+      // If successful, store the token with permissions
+      metaAuthService.storeAccessToken(token, userData.id || 'manual_token_user', 'token', permissions);
+      
+      console.log('Token connection successful');
+      
       onSuccess({
         ...userData,
         tokenPermissions: permissions
@@ -72,9 +100,24 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
       });
     } catch (error) {
       console.error('Error with manual token:', error);
+      // Make sure we clear any partially stored data
       metaAuthService.logout();
-      const errorMsg = "The provided access token is invalid or has expired.";
+      
+      let errorMsg = "The provided access token is invalid or has expired.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('400')) {
+          errorMsg = "Invalid token format or expired token (Error 400). Please verify your token and try again.";
+        } else if (error.message.includes('401')) {
+          errorMsg = "Authentication failed (Error 401). Your token has expired.";
+        } else if (error.message.includes('403')) {
+          errorMsg = "Permission denied (Error 403). Your token lacks necessary permissions.";
+        }
+      }
+      
+      setErrorMessage(errorMsg);
       onError(errorMsg);
+      
       toast({
         title: "Connection Failed",
         description: errorMsg,

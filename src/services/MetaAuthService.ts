@@ -16,7 +16,8 @@ export class MetaAuthService {
 
   // Check if user is authenticated
   public isAuthenticated(): boolean {
-    return !!localStorage.getItem(MetaAuthService.TOKEN_KEY);
+    const token = this.getAccessToken();
+    return !!token && token.length > 20; // Basic validation to ensure token is non-empty and has reasonable length
   }
 
   // Get the stored access token
@@ -51,12 +52,18 @@ export class MetaAuthService {
     return permissions.includes(permission);
   }
 
-  // Logout user
+  // Logout user and clear all Meta-related data
   public logout(): void {
     localStorage.removeItem(MetaAuthService.TOKEN_KEY);
     localStorage.removeItem(MetaAuthService.USER_ID_KEY);
     localStorage.removeItem(MetaAuthService.TOKEN_SOURCE_KEY);
     localStorage.removeItem(MetaAuthService.PERMISSIONS_KEY);
+    
+    // Also clear ad account selections to prevent issues after reconnection
+    localStorage.removeItem('selected_ad_account');
+    localStorage.removeItem('selected_ad_accounts');
+    
+    console.log('Meta authentication data cleared');
   }
 }
 

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CardContent } from '@/components/ui/card';
 import { Loader2, RefreshCw, AlertCircle, PlusCircle } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { useToast } from '@/hooks/use-toast';
 
 interface EmptyStateProps {
   status: 'active' | 'draft' | 'archived';
@@ -27,6 +28,8 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   isAuthenticated,
   onRetry
 }) => {
+  const { toast } = useToast();
+  
   // Parse the error message to provide better guidance
   const isTokenError = error.toLowerCase().includes('token') || 
     error.includes('400') || 
@@ -42,9 +45,19 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
     error.toLowerCase().includes('no ad account');
   
   const handleReconnect = () => {
-    // Clear token and reload the page to trigger authentication flow
+    // Clear token and all Meta-related data
+    console.log('Clearing Meta auth data and reloading page');
     metaAuthService.logout();
-    window.location.reload();
+    
+    toast({
+      title: "Reconnection Required",
+      description: "Please reconnect your Meta account with a valid token."
+    });
+    
+    // Short delay before reload to ensure toast is visible
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
   
   return (
@@ -54,7 +67,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       
       <p className="text-muted-foreground mb-4 max-w-md">
         {isTokenError ? (
-          "Your Meta access token appears to be invalid or expired. Please reconnect your Meta account."
+          "Your Meta access token appears to be invalid or expired. Please reconnect your Meta account with a valid token."
         ) : isPermissionError ? (
           "You don't have the required permissions to access this campaign data. Please update your Meta connection with ads_read or ads_management permissions."
         ) : isAccountError ? (
@@ -74,7 +87,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
           </Button>
         )}
         
-        {onRetry && (
+        {onRetry && !isTokenError && (
           <Button 
             variant="outline"
             onClick={onRetry}

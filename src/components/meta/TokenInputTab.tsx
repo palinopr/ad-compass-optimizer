@@ -30,11 +30,17 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
   });
 
   const handleManualTokenConnect = () => {
+    // Basic validation before attempting connection
+    if (!manualToken || manualToken.trim().length < 20) {
+      onTokenError("Please enter a valid Meta access token. Tokens are typically at least 20 characters long.");
+      return;
+    }
+
     const selectedPermissions = Object.entries(permissions)
       .filter(([_, isSelected]) => isSelected)
       .map(([permission]) => permission);
       
-    connectWithToken(manualToken, selectedPermissions);
+    connectWithToken(manualToken.trim(), selectedPermissions);
   };
 
   return (
@@ -106,7 +112,7 @@ const TokenInputTab: React.FC<TokenInputTabProps> = ({ onTokenSuccess, onTokenEr
       <Button 
         onClick={handleManualTokenConnect}
         className="w-full"
-        disabled={isConnecting}
+        disabled={isConnecting || !manualToken.trim()}
       >
         {isConnecting ? (
           <>
