@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { metaAuthService } from '@/services/MetaAuthService';
+import { metaAuthService, MetaAuthService } from '@/services/MetaAuthService';
 
 interface MetaConnectionContextType {
   isAuthenticated: boolean;
@@ -51,8 +51,8 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
     // Set up storage event listener to catch changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
       if (
-        event.key === metaAuthService.constructor.TOKEN_KEY || 
-        event.key === metaAuthService.constructor.PERMISSIONS_KEY ||
+        event.key === MetaAuthService.TOKEN_KEY || 
+        event.key === MetaAuthService.PERMISSIONS_KEY ||
         event.key === null // null means clear all storage
       ) {
         console.log('Meta auth storage changed, updating state');
