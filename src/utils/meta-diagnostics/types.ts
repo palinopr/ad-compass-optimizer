@@ -55,7 +55,7 @@ export interface TokenDiagnosticResult {
 export interface TokenAnalysisResult {
   issues: string[];
   recommendations: string[];
-  severity: 'ok' | 'medium' | 'high';
+  severity: 'ok' | 'medium' | 'high';  // Explicitly defining the allowed values
 }
 
 export interface DiagnosticSummary {

@@ -5,7 +5,7 @@ import { testMetaApi } from './apiTest';
 import { checkForCorsIssues, testProxyApproach } from './corsCheck';
 import { testBrowserCompatibility } from './browserCheck';
 import { generateDiagnosticSummary } from './summaryGenerator';
-import { ComprehensiveDiagnosticResult } from './types';
+import { ComprehensiveDiagnosticResult, TokenAnalysisResult } from './types';
 
 // Run all diagnostic tests and return a comprehensive report
 export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnosticResult> => {
@@ -24,7 +24,7 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
   const { runTokenDiagnostic, analyzeDiagnosticResults } = await import('../metaTokenDiagnostic');
   const tokenResults = runTokenDiagnostic();
   console.log('Token diagnostic results:', tokenResults);
-  const tokenAnalysis = analyzeDiagnosticResults(tokenResults);
+  const tokenAnalysis = analyzeDiagnosticResults(tokenResults) as TokenAnalysisResult;
   
   // Step 2: Check API connection
   let apiResults = { success: false, error: 'Test not run' };

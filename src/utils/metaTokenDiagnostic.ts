@@ -1,4 +1,3 @@
-
 export const runTokenDiagnostic = () => {
   // Get token from localStorage
   const token = localStorage.getItem('meta_access_token');
@@ -89,9 +88,15 @@ export const analyzeDiagnosticResults = (results) => {
     }
   }
   
+  // Make sure we return a severity with the correct type
+  let severity: 'ok' | 'medium' | 'high' = 'ok';
+  if (issues.length > 0) {
+    severity = issues.length > 2 ? 'high' : 'medium';
+  }
+  
   return {
     issues: issues.length > 0 ? issues : ['No token issues detected'],
     recommendations: recommendations.length > 0 ? recommendations : ['Token appears to be valid'],
-    severity: issues.length === 0 ? 'ok' : (issues.length > 2 ? 'high' : 'medium')
+    severity: severity
   };
 };
