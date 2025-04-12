@@ -25,11 +25,14 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
   const [hasPermissions, setHasPermissions] = useState(false);
 
   const checkAuth = () => {
+    console.log('Checking Meta auth status...');
     const authenticated = metaAuthService.isAuthenticated();
+    console.log('Authentication check result:', authenticated);
     setIsAuthenticated(authenticated);
     
     if (authenticated) {
       const permissions = metaAuthService.getPermissions();
+      console.log('Meta permissions:', permissions);
       const hasAdPermission = permissions.some(p => 
         p === 'ads_management' || p === 'ads_read'
       );

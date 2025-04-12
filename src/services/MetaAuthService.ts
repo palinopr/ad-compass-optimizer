@@ -58,6 +58,7 @@ export class MetaAuthService {
   // Check if user is authenticated with a valid token
   public isAuthenticated(): boolean {
     const token = this.getAccessToken();
+    console.log('Token check in isAuthenticated:', token ? 'Token exists' : 'No token');
     
     // Basic validation to ensure token exists and has reasonable length
     if (!token || token.length < 50) {

@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
 import { validateTokenFormat, cleanToken } from '@/utils/tokenUtils';
+import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 
 interface UseMetaTokenConnectionOptions {
   onSuccess: (userData: any) => void;
@@ -15,6 +16,7 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
+  const { checkAuth } = useMetaConnection();
   
   // Check if we have a token at initialization
   useEffect(() => {
@@ -37,6 +39,8 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
       };
       
       verifyExistingToken();
+    } else {
+      console.log('No existing Meta authentication found');
     }
   }, []);
 
@@ -141,6 +145,9 @@ export function useMetaTokenConnection({ onSuccess, onError }: UseMetaTokenConne
       const userData = await fetchUserData(cleanedToken);
       
       metaAuthService.storeAccessToken(cleanedToken, userData.id || 'manual_token_user', 'token', permissions);
+      
+      // Update the shared auth state
+      checkAuth();
       
       console.log('Token connection successful');
       
