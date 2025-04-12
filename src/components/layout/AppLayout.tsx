@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
@@ -51,8 +50,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     // Add event listener for storage changes (for cross-tab synchronization)
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key && (
-          event.key === metaAuthService.TOKEN_KEY || 
-          event.key === metaAuthService.TOKEN_TIMESTAMP_KEY)) {
+          event.key === MetaAuthService.TOKEN_KEY || 
+          event.key === MetaAuthService.TOKEN_TIMESTAMP_KEY)) {
         console.log('Storage changed, checking auth status...');
         checkAuth();
       }
