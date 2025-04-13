@@ -4,6 +4,7 @@ import { MetaAdAccountService } from './api/MetaAdAccountService';
 import { MetaBusinessService } from './api/MetaBusinessService';
 import { MetaConnectionService } from './api/MetaConnectionService';
 import MetaCampaignService, { MetaCampaign } from './api/MetaCampaignService';
+import MetaInsightsService, { InsightFilterOptions, InsightsResponse } from './api/MetaInsightsService';
 import type { ConnectionTestResult } from './api/MetaConnectionService';
 
 /**
@@ -61,5 +62,40 @@ export class MetaApiService {
    */
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
     return MetaCampaignService.fetchCampaigns(token, adAccountId);
+  }
+
+  /**
+   * Fetch insights for any Meta ad object
+   */
+  public static async fetchInsights(token: string, objectId: string, options: InsightFilterOptions = {}): Promise<InsightsResponse> {
+    return MetaInsightsService.fetchInsights(token, objectId, options);
+  }
+
+  /**
+   * Fetch insights for a campaign
+   */
+  public static async fetchCampaignInsights(token: string, campaignId: string, options: InsightFilterOptions = {}): Promise<InsightsResponse> {
+    return MetaInsightsService.fetchCampaignInsights(token, campaignId, options);
+  }
+
+  /**
+   * Fetch insights for an ad account
+   */
+  public static async fetchAccountInsights(token: string, accountId: string, options: InsightFilterOptions = {}): Promise<InsightsResponse> {
+    return MetaInsightsService.fetchAccountInsights(token, accountId, options);
+  }
+
+  /**
+   * Fetch insights with demographic breakdowns
+   */
+  public static async fetchDemographicInsights(token: string, objectId: string, options: InsightFilterOptions = {}): Promise<InsightsResponse> {
+    return MetaInsightsService.fetchDemographicInsights(token, objectId, options);
+  }
+
+  /**
+   * Fetch insights with geographic breakdowns
+   */
+  public static async fetchGeographicInsights(token: string, objectId: string, options: InsightFilterOptions = {}): Promise<InsightsResponse> {
+    return MetaInsightsService.fetchGeographicInsights(token, objectId, options);
   }
 }
