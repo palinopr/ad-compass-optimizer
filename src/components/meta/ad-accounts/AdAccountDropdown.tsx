@@ -43,10 +43,23 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
     return account ? `${account.name} (${account.id})` : 'Select an ad account';
   }, [adAccounts, selectedAccount]);
 
-  // Prevent default event handling to avoid form submission
-  const handleSelect = React.useCallback((currentValue: string) => {
-    onChange(currentValue);
+  // Handle selection with proper event management
+  const handleSelect = React.useCallback((accountId: string, e?: React.MouseEvent | React.KeyboardEvent) => {
+    // Prevent any default browser behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('Account selection triggered:', accountId);
+    
+    // Close dropdown first to prevent UI freeze
     setOpen(false);
+    
+    // Use setTimeout to ensure UI updates before potentially heavy operations
+    setTimeout(() => {
+      onChange(accountId);
+    }, 10);
   }, [onChange]);
 
   return (
@@ -60,8 +73,8 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
           disabled={isLoading}
           type="button" // Explicitly set button type to prevent form submission
           onClick={(e) => {
-            e.preventDefault(); // Prevent any default action
-            e.stopPropagation(); // Stop event propagation
+            e.preventDefault();
+            e.stopPropagation();
           }}
         >
           {isLoading ? (
@@ -87,9 +100,10 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
                 key={account.id}
                 value={account.id}
                 onSelect={(value) => {
-                  console.log('Account selected:', account.id);
+                  console.log('Account selected from dropdown:', account.id);
                   handleSelect(account.id);
                 }}
+                className="cursor-pointer"
               >
                 <Check
                   className={cn(
