@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Sidebar } from './Sidebar';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
@@ -17,10 +16,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [alreadyAuthenticated, setAlreadyAuthenticated] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Use a ref to prevent multiple checks on mount
+  const initialCheckDoneRef = useRef(false);
 
-  // First effect: Initial load and connection check
+  // First effect: Initial load and connection check - ONCE only
   useEffect(() => {
+    if (initialCheckDoneRef.current) {
+      return; // Only run this effect once
+    }
+    
     console.log('Checking Meta auth status on AppLayout mount...');
+    initialCheckDoneRef.current = true;
     
     // Check if token exists but was not recognized yet
     const token = metaAuthService.getAccessToken();
@@ -72,37 +79,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     }
   }, [isAuthenticated, connectionChecked, location.pathname]);
 
-  // Third effect: Add visibility change listener to detect tab focus/return
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Tab is now visible, checking auth status...');
-        checkAuth();
-      }
-    };
-
-    // Add event listener for visibility change (tab switching)
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // Add event listener for storage changes (for cross-tab synchronization)
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key && (
-          event.key === 'meta_access_token' || 
-          event.key === 'meta_token_timestamp' ||
-          event.key === 'meta_auth_valid')) {
-        console.log('Storage changed, checking auth status...');
-        checkAuth();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [checkAuth]);
-
   const handleConnectionSuccess = (userData: any) => {
     console.log('Connection successful:', userData);
     setShowConnectDialog(false);
@@ -114,15 +90,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     
     checkAuth(); // Immediately check auth status after successful connection
     
-    // Clear any cached connection status to force re-check
-    localStorage.removeItem('meta_connection_status_checked');
-    
-    // If we're on a route that requires auth, stay there
-    // Otherwise, navigate to campaigns which is likely what people want to see
-    const authRequiredPages = ['/campaigns', '/messages'];
-    if (!authRequiredPages.some(page => location.pathname.startsWith(page))) {
-      navigate('/campaigns');
-    }
+    // Don't automatically navigate - this was causing refreshing loops
   };
 
   const handleConnectionError = (errorMessage: string) => {

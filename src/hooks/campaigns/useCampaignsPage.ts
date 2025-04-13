@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
@@ -15,11 +15,15 @@ export function useCampaignsPage() {
   const { validateAuthentication } = useAuthCheck();
   const { toast } = useToast();
   
+  // Add a ref to prevent excessive syncs
+  const syncInProgressRef = useRef(false);
+  
   // Force synchronize authentication state on mount and when component becomes visible
   const syncAuthState = useCallback(async () => {
     // Prevent multiple simultaneous auth checks
-    if (isAuthSyncing) return;
+    if (isAuthSyncing || syncInProgressRef.current) return;
     
+    syncInProgressRef.current = true;
     setIsAuthSyncing(true);
     console.log('Synchronizing authentication state...');
     
@@ -44,12 +48,18 @@ export function useCampaignsPage() {
       console.error('Error synchronizing auth state:', error);
     } finally {
       setIsAuthSyncing(false);
+      // Add a delay before allowing another sync
+      setTimeout(() => {
+        syncInProgressRef.current = false;
+      }, 3000);
     }
   }, [checkAuth, isAuthSyncing]);
   
   useEffect(() => {
-    // Perform initial sync
-    syncAuthState();
+    // Perform initial sync with delay to prevent racing with other checks
+    const initialSyncTimeout = setTimeout(() => {
+      syncAuthState();
+    }, 500);
     
     // Check if we should show the connection dialog (set by the ErrorState component)
     const shouldShowConnection = localStorage.getItem('show_meta_connection') === 'true';
@@ -59,19 +69,7 @@ export function useCampaignsPage() {
       localStorage.removeItem('show_meta_connection');
     }
     
-    // Set up event listener for visibility changes
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Page became visible, syncing auth state');
-        syncAuthState();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => clearTimeout(initialSyncTimeout);
   }, [syncAuthState]);
   
   // Check if ad account is selected

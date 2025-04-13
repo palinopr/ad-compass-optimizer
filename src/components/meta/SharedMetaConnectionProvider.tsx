@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { MetaConnectionContextType, initialMetaConnectionContext } from './types/metaConnection';
 import { useMetaConnectionState, MetaConnectionState } from '@/hooks/meta/useMetaConnectionState';
 import { useMetaAuthRestoration } from '@/hooks/meta/useMetaAuthRestoration';
@@ -33,6 +33,9 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
     hasPermissions,
     lastCheckTime
   });
+  
+  // Ref to track if we've reported auth changes to avoid loops
+  const reportedRef = useRef(false);
 
   // Update local state when hook state changes
   useEffect(() => {
@@ -48,10 +51,12 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
   useMetaAuthRestoration({ checkAuth, setState });
   useMetaConnectionListeners({ checkAuth });
 
-  // Report authentication changes
+  // Report authentication changes - but throttle to prevent loops
   useEffect(() => {
-    // Only report changes, not initial setup
-    if (lastCheckTime > 0) {
+    // Only report changes, not initial setup and prevent loops
+    if (lastCheckTime > 0 && !reportedRef.current) {
+      reportedRef.current = true;
+      
       if (isAuthenticated) {
         console.log('Authentication state updated: User is authenticated');
         if (!hasPermissions) {
@@ -60,6 +65,11 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
       } else {
         console.log('Authentication state updated: User is not authenticated');
       }
+      
+      // Reset the reported ref after a delay
+      setTimeout(() => {
+        reportedRef.current = false;
+      }, 3000);
     }
   }, [isAuthenticated, hasPermissions, lastCheckTime]);
 

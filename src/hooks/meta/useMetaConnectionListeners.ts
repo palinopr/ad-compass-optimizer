@@ -7,16 +7,17 @@ interface UseMetaConnectionListenersProps {
 
 export function useMetaConnectionListeners({ checkAuth }: UseMetaConnectionListenersProps) {
   useEffect(() => {
-    // Set up interval for periodic auth checks
+    // Set up interval for periodic auth checks - but with longer interval to prevent excessive refreshes
     const checkInterval = setInterval(() => {
       checkAuth();
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 10 * 60 * 1000); // Check every 10 minutes instead of 5
     
     // Add visibility change listener to detect tab focus/return
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('Tab is now visible, checking auth status...');
-        checkAuth();
+        // Add a small delay to prevent immediate check on tab return
+        setTimeout(() => checkAuth(), 500);
       }
     };
     
@@ -33,7 +34,8 @@ export function useMetaConnectionListeners({ checkAuth }: UseMetaConnectionListe
           event.key === 'selected_ad_account' ||
           event.key === 'selected_ad_accounts')) {
         console.log('Storage changed, checking auth status:', event.key);
-        checkAuth();
+        // Add small delay to prevent race conditions
+        setTimeout(() => checkAuth(), 300);
       }
     };
     

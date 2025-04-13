@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 
 export interface MetaConnectionState {
@@ -17,15 +17,35 @@ export function useMetaConnectionState() {
     lastCheckTime: 0,
   });
 
+  // Use a ref to track if we've recently checked auth to prevent loops
+  const recentlyCheckedRef = useRef(false);
+  const checkTimeoutRef = useRef<number | null>(null);
+
   const checkAuth = useCallback(() => {
+    // Prevent multiple rapid checks
+    if (recentlyCheckedRef.current) {
+      console.log('Skipping auth check - checked too recently');
+      return;
+    }
+
     const now = Date.now();
     
-    // Throttle checks to prevent excessive calls (no more than once per 500ms)
-    if (now - state.lastCheckTime < 500) {
+    // Throttle checks to prevent excessive calls (no more than once per second)
+    if (now - state.lastCheckTime < 1000) {
+      console.log('Throttling auth check');
       return;
     }
     
     console.log('Checking Meta auth status...');
+    recentlyCheckedRef.current = true;
+    
+    // Set timeout to allow checks again after 2 seconds
+    if (checkTimeoutRef.current) {
+      window.clearTimeout(checkTimeoutRef.current);
+    }
+    checkTimeoutRef.current = window.setTimeout(() => {
+      recentlyCheckedRef.current = false;
+    }, 2000);
     
     // Get token and check if it exists
     const token = metaAuthService.getAccessToken();
@@ -122,6 +142,15 @@ export function useMetaConnectionState() {
     } else {
       console.log('User is already authenticated, not showing connection dialog');
     }
+  }, []);
+
+  // Clear the timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (checkTimeoutRef.current) {
+        window.clearTimeout(checkTimeoutRef.current);
+      }
+    };
   }, []);
 
   return {
