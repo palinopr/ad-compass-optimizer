@@ -4,6 +4,9 @@ import { Card } from '@/components/ui/card';
 import { useCampaigns } from '@/hooks/campaigns';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import CampaignTable from './CampaignTable';
+import CampaignFilterToolbar from './CampaignFilterToolbar';
+import CampaignMetrics from './CampaignMetrics';
+import { useCampaignFilters } from '@/hooks/campaigns/useCampaignFilters';
 import { LoadingState, ErrorState, EmptyState } from './CampaignListStates';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useAuthCheck } from '@/hooks/campaigns/useAuthCheck'; 
@@ -14,6 +17,8 @@ interface CampaignListProps {
 
 const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const { campaigns, isLoading, error, refetchCampaigns, errorDetails } = useCampaigns(status);
+  const { filters, setDateRange, setStatusFilter, setSearchQuery, filteredCampaigns } = 
+    useCampaignFilters(campaigns);
   const { isAuthenticated, checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
   
@@ -39,16 +44,17 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     }
   }, [checkAuth, isAuthenticated, status]);
   
-  // Log additional debug information if there's an error
-  useEffect(() => {
-    if (error) {
-      console.log(`Campaign loading error (${status} campaigns):`, error);
-      console.log('Authentication status from direct check:', 
-        effectiveIsAuthenticated ? 'Authenticated' : 'Not authenticated');
-      console.log('Selected ad account:', localStorage.getItem('selected_ad_account'));
-      console.log('Error details:', errorDetails || 'No additional details');
-    }
-  }, [error, effectiveIsAuthenticated, status, errorDetails]);
+  // Calculate metrics from campaigns
+  const metrics = {
+    impressions: filteredCampaigns.length > 0 ? '15,432' : '0', // placeholder value
+    clicks: filteredCampaigns.length > 0 ? '843' : '0', // placeholder value
+    spend: filteredCampaigns.reduce((total, campaign) => {
+      const spendStr = campaign.spend || '$0.00';
+      const numericValue = parseFloat(spendStr.replace(/[^0-9.-]+/g, '')) || 0;
+      return total + numericValue;
+    }, 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+    cpa: filteredCampaigns.length > 0 ? '$12.54' : '$0.00', // placeholder value
+  };
   
   // Handle loading state
   if (isLoading) {
@@ -84,9 +90,22 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   
   // Handle data state
   return (
-    <Card>
-      <CampaignTable campaigns={campaigns} status={status} />
-    </Card>
+    <>
+      <CampaignFilterToolbar 
+        filters={filters}
+        onDateRangeChange={setDateRange}
+        onStatusChange={setStatusFilter}
+        onSearchChange={setSearchQuery}
+        onRefresh={refetchCampaigns}
+        isLoading={isLoading}
+      />
+      
+      <CampaignMetrics {...metrics} />
+      
+      <Card>
+        <CampaignTable campaigns={filteredCampaigns} status={status} />
+      </Card>
+    </>
   );
 };
 

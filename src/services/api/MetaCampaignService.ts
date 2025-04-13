@@ -19,6 +19,8 @@ export interface MetaCampaign {
   insights?: {
     cpa?: string;
     roas?: string;
+    impressions?: string;
+    clicks?: string;
   };
 }
 
@@ -66,7 +68,9 @@ export class MetaCampaignService extends BaseApiService {
               '-'),
           insights: {
             cpa: '-',
-            roas: '-'
+            roas: '-',
+            impressions: '0',
+            clicks: '0'
           }
         };
       });
@@ -79,7 +83,7 @@ export class MetaCampaignService extends BaseApiService {
           
           // Using a simpler insights request to avoid potential errors
           const insightsResponse = await fetch(
-            `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/insights?level=campaign&fields=campaign_id,spend&time_range[since]=2020-01-01&time_range[until]=2030-12-31&access_token=${token}`
+            `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/insights?level=campaign&fields=campaign_id,spend,impressions,clicks,cpc&time_range[since]=2020-01-01&time_range[until]=2030-12-31&access_token=${token}`
           );
           
           if (!insightsResponse.ok) {
@@ -98,10 +102,26 @@ export class MetaCampaignService extends BaseApiService {
             if (campaignInsights) {
               // Parse spend from insights
               const spend = campaignInsights.spend || '0';
+              const impressions = campaignInsights.impressions || '0';
+              const clicks = campaignInsights.clicks || '0';
+              const cpc = campaignInsights.cpc || '0';
               
+              // Calculate CPA (assuming CPA is cost per click here)
+              const cpa = parseFloat(spend) > 0 && parseInt(clicks) > 0 
+                ? (parseFloat(spend) / parseInt(clicks)).toFixed(2)
+                : '0.00';
+                
               return {
                 ...campaign,
-                spend: '$' + parseFloat(spend).toFixed(2)
+                spend: '$' + parseFloat(spend).toFixed(2),
+                results: clicks,
+                cost_per_result: '$' + parseFloat(cpc || '0').toFixed(2),
+                insights: {
+                  ...campaign.insights,
+                  impressions,
+                  clicks,
+                  cpa: '$' + cpa
+                }
               };
             }
             
