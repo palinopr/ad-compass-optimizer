@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CampaignsQuickAccess from '@/components/dashboard/CampaignsQuickAccess';
 import ProfileQuickAccess from '@/components/dashboard/ProfileQuickAccess';
 import InsightsDemoCard from '@/components/insights/InsightsDemoCard';
-import ApiRateLimitStatus from '@/components/dashboard/ApiRateLimitStatus';
+import ApiRateLimitStatus from '@/components/dashboard/rate-limit/ApiRateLimitStatus';
 import { MetaApiService } from '@/services/MetaApiService';
 
 export default function Dashboard() {
