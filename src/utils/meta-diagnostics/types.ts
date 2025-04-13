@@ -50,4 +50,8 @@ export interface TokenAnalysisResult {
   likelyIssue?: string;
   ageInDays?: number;
   daysUntilExpiry?: number;
+  // Add these properties to fix the type errors
+  severity?: 'high' | 'medium' | 'low';
+  issues: string[];
+  recommendations: string[];
 }

@@ -24,7 +24,16 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
   const { runTokenDiagnostic, analyzeDiagnosticResults } = await import('../metaTokenDiagnostic');
   const tokenResults = runTokenDiagnostic();
   console.log('Token diagnostic results:', tokenResults);
-  const tokenAnalysis = analyzeDiagnosticResults(tokenResults) as TokenAnalysisResult;
+  
+  // Fix the type conversion by adding required properties
+  const analysisResults = analyzeDiagnosticResults(tokenResults);
+  const tokenAnalysis: TokenAnalysisResult = {
+    isValid: analysisResults.isValid,
+    message: analysisResults.issues.length > 0 ? analysisResults.issues[0] : 'Token valid',
+    severity: analysisResults.severity as 'high' | 'medium' | 'low',
+    issues: analysisResults.issues,
+    recommendations: analysisResults.recommendations
+  };
   
   // Step 2: Check API connection
   let apiResults = { success: false, error: 'Test not run' };
@@ -41,7 +50,12 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
   }
   
   // Step 4: Test browser compatibility
-  const compatibilityResults = testBrowserCompatibility();
+  const browserTestResults = testBrowserCompatibility();
+  // Fix the compatibility results to match required structure
+  const compatibilityResults = {
+    isCompatible: browserTestResults.compatibility.score >= 80,
+    issues: browserTestResults.compatibility.issues as string[]
+  };
   
   // Step 5: Test proxy approach if CORS issues are detected
   let proxyResults = { 
@@ -63,6 +77,9 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
   
   console.log('=== END COMPREHENSIVE DIAGNOSTIC ===');
   
+  // Generate summary with correct type
+  const summaryResults = generateDiagnosticSummary(tokenResults, tokenAnalysis, apiResults, corsResults, compatibilityResults, proxyResults);
+  
   return {
     timestamp: new Date().toISOString(),
     browser: browserInfo,
@@ -72,6 +89,10 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
     cors: corsResults,
     compatibility: compatibilityResults,
     proxy: proxyResults,
-    summary: generateDiagnosticSummary(tokenResults, tokenAnalysis, apiResults, corsResults, compatibilityResults, proxyResults)
+    summary: {
+      overallStatus: summaryResults.overallStatus as 'high' | 'medium' | 'low' | 'none',
+      issues: summaryResults.issues,
+      recommendations: summaryResults.recommendations
+    }
   };
 };

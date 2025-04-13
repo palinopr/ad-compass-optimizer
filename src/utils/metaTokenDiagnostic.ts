@@ -110,6 +110,7 @@ export const analyzeDiagnosticResults = (results) => {
     isValid,
     severity,
     issues,
-    recommendations
+    recommendations,
+    message: issues.length > 0 ? issues[0] : 'Token is valid' // Add message property to match interface
   };
 };

@@ -41,7 +41,7 @@ export const testBrowserCompatibility = () => {
     hasPrivacyFeatures = true;
   }
   
-  const results = {
+  const browserInfo = {
     browser: {
       userAgent,
       isIE,
@@ -50,36 +50,46 @@ export const testBrowserCompatibility = () => {
       hasLocalStorage,
       hasCookies,
       hasPrivacyFeatures
-    },
-    compatibility: {
-      score: 0,
-      issues: []
     }
   };
   
   // Calculate compatibility score and issues
+  let score = 100;
+  const issues: string[] = [];
+  
   if (isIE) {
-    results.compatibility.issues.push('Internet Explorer is not supported by Meta API');
-    results.compatibility.score = 0;
+    issues.push('Internet Explorer is not supported by Meta API');
+    score = 0;
   } else if (isOldEdge) {
-    results.compatibility.issues.push('Old Microsoft Edge may have CORS issues with Meta API');
-    results.compatibility.score = 50;
+    issues.push('Old Microsoft Edge may have CORS issues with Meta API');
+    score = 50;
   } else if (!hasFetch) {
-    results.compatibility.issues.push('Browser does not support fetch API');
-    results.compatibility.score = 30;
+    issues.push('Browser does not support fetch API');
+    score = 30;
   } else if (!hasLocalStorage) {
-    results.compatibility.issues.push('Browser does not support localStorage');
-    results.compatibility.score = 40;
+    issues.push('Browser does not support localStorage');
+    score = 40;
   } else if (!hasCookies) {
-    results.compatibility.issues.push('Cookies are disabled, which may affect authentication');
-    results.compatibility.score = 60;
+    issues.push('Cookies are disabled, which may affect authentication');
+    score = 60;
   } else if (hasPrivacyFeatures) {
-    results.compatibility.issues.push('Browser has privacy features that may block third-party requests');
-    results.compatibility.score = 70;
+    issues.push('Browser has privacy features that may block third-party requests');
+    score = 70;
   } else {
-    results.compatibility.score = 100;
-    results.compatibility.issues.push('No compatibility issues detected');
+    issues.push('No compatibility issues detected');
   }
+  
+  // Return format that matches the required interface
+  const compatibility = {
+    isCompatible: score >= 80,
+    issues,
+    score // We'll keep this for internal use
+  };
+  
+  const results = {
+    ...browserInfo,
+    compatibility
+  };
   
   console.log('Browser compatibility test results:', results);
   console.log('=== END COMPATIBILITY TEST ===');

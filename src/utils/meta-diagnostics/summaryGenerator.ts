@@ -12,7 +12,7 @@ export const generateDiagnosticSummary = (
   compatibility: any, 
   proxy: any
 ) => {
-  let status = 'ok';
+  let status: 'high' | 'medium' | 'low' | 'none' = 'none';
   const issues: string[] = [];
   const recommendations: string[] = [];
   
@@ -21,10 +21,10 @@ export const generateDiagnosticSummary = (
     issues.push('Not authenticated with Meta. Please connect your account.');
     recommendations.push('Connect your Meta account or manually enter a valid token');
     status = 'high';
-  } else if (tokenAnalysis.issues.length > 0 && !tokenAnalysis.issues.includes('No token issues detected')) {
+  } else if (tokenAnalysis.issues && tokenAnalysis.issues.length > 0 && !tokenAnalysis.issues.includes('No token issues detected')) {
     issues.push(...tokenAnalysis.issues);
     recommendations.push(...tokenAnalysis.recommendations);
-    status = tokenAnalysis.severity;
+    status = tokenAnalysis.severity || 'medium';
   }
   
   // Add permission issues if token is valid but permissions are missing
@@ -68,7 +68,7 @@ export const generateDiagnosticSummary = (
         recommendations.push('Request temporary access to the CORS proxy service');
         recommendations.push('Or use a different CORS proxy service');
         status = 'high';
-      } else if (compatibility.compatibility.score < 80) {
+      } else if (compatibility.compatibility && compatibility.compatibility.score < 80) {
         recommendations.push('Try using a different modern browser like Chrome or Firefox');
         status = 'high';
       } else {
@@ -87,8 +87,8 @@ export const generateDiagnosticSummary = (
   }
   
   // Add browser compatibility issues
-  if (compatibility.compatibility.score < 100 && compatibility.compatibility.issues[0] !== 'No compatibility issues detected') {
-    issues.push(...compatibility.compatibility.issues);
+  if (compatibility.isCompatible === false) {
+    issues.push(...compatibility.issues);
     recommendations.push('Use a modern browser like Chrome, Firefox, or Edge');
     if (status !== 'high') status = 'medium';
   }
@@ -111,7 +111,7 @@ export const generateDiagnosticSummary = (
   if (!hasAuthIssues && !hasPermissionIssues && !hasApiIssues && !localStorage.getItem('selected_ad_account')) {
     issues.push('No ad account selected. Please select an ad account.');
     recommendations.push('Select an ad account to view campaign data');
-    if (status === 'ok') status = 'medium';
+    if (status === 'none') status = 'medium';
   }
   
   // If everything is good but campaigns aren't loading
