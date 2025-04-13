@@ -88,6 +88,12 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       if (!adAccountId) {
         console.log('No ad account selected');
         setError('No ad account selected. Please select an ad account to view campaigns.');
+        setErrorDetails({
+          error: {
+            type: 'NO_AD_ACCOUNT',
+            message: 'No ad account selected. You need to select an ad account to view campaign data.'
+          }
+        });
         setIsLoading(false);
         return;
       }
@@ -130,14 +136,26 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         console.error('API error during campaign fetch:', apiErr);
         let apiErrorMessage = apiErr?.message || 'Unknown API error';
         
+        // Enhanced error capture - extract Facebook API errors from response
         if (apiErr?.response) {
           try {
             const responseData = await apiErr.response.json();
             console.error('API error response data:', responseData);
+            
+            // Store the complete error details for the troubleshooter
             setErrorDetails(responseData);
             
             if (responseData.error && responseData.error.message) {
               apiErrorMessage = responseData.error.message;
+              
+              // Add more context based on error code
+              if (responseData.error.code === 200) {
+                apiErrorMessage += " (Permission error)";
+              } else if (responseData.error.code === 100) {
+                apiErrorMessage += " (Invalid parameter)";
+              } else if (responseData.error.code === 190) {
+                apiErrorMessage += " (Invalid/expired access token)";
+              } 
             }
           } catch (jsonErr) {
             console.error('Failed to parse API error response:', jsonErr);
@@ -151,8 +169,15 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch campaigns';
       console.error('Error message:', errorMessage);
       
-      // Save detailed error information
-      setErrorDetails(err);
+      // Enhanced error storage for troubleshooting
+      if (!errorDetails) {
+        setErrorDetails({
+          error: {
+            message: errorMessage,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
       
       // Try to extract HTTP error code for more specific errors
       let enhancedError = errorMessage;

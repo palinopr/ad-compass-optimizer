@@ -6,6 +6,7 @@ import { Loader2, RefreshCw, AlertCircle, PlusCircle, ShieldAlert } from 'lucide
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
 import { MetaApiService } from '@/services/MetaApiService';
+import CampaignLoadingTroubleshooter from '@/components/meta/CampaignLoadingTroubleshooter';
 
 interface EmptyStateProps {
   status: 'active' | 'draft' | 'archived';
@@ -48,6 +49,19 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
     error.toLowerCase().includes('no ad account');
     
   const isFacebookAuth = metaAuthService.getTokenSource() === 'facebook';
+  
+  // If we're authenticated with Facebook but still having campaign issues,
+  // show the specialized troubleshooter component
+  if (isFacebookAuth && isAuthenticated && (isAccountError || isPermissionError)) {
+    return (
+      <CardContent>
+        <CampaignLoadingTroubleshooter 
+          errorDetails={errorDetails}
+          onRetry={onRetry || (() => {})}
+        />
+      </CardContent>
+    );
+  }
   
   const handleReconnect = async () => {
     // Validate current token before logout
