@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, XCircle, Database, Search, ArrowDownToLine } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, Database, Search, ArrowDownToLine, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 

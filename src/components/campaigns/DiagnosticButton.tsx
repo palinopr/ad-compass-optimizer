@@ -37,7 +37,7 @@ const DiagnosticButton = () => {
         showResults={showResults}
         setShowResults={setShowResults}
         diagnosticResults={diagnosticResults}
-        hasIssues={hasIssues}
+        hasIssues={hasIssues()}
         isRunningDiagnostic={isRunningDiagnostic}
         runDiagnostics={runDiagnostics}
       />

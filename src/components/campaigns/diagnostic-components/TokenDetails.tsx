@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -12,9 +11,10 @@ interface TokenDetailsProps {
     isValid?: boolean;
     permissions?: string[];
   };
+  tokenAnalysis?: any; // Add tokenAnalysis prop to the interface
 }
 
-const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo }) => {
+const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis }) => {
   const getExpirationWarning = () => {
     if (!tokenInfo.tokenAge && tokenInfo.tokenAge !== 0) return null;
     
