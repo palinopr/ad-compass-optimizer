@@ -15,7 +15,7 @@ export const useAdAccounts = () => {
   
   const { selectedAccount, handleAccountChange } = useAdAccountSelection(adAccounts);
   
-  // Separated event handler for better error handling
+  // Separated event handler for better error handling and debugging
   const handleRefreshEvent = useCallback(() => {
     console.log('Ad account refresh event received');
     fetchAdAccounts();
@@ -23,19 +23,21 @@ export const useAdAccounts = () => {
   
   // Fetch ad accounts on initial load and set up event listeners
   useEffect(() => {
-    console.log('Initializing ad accounts component');
+    console.log('Initializing useAdAccounts hook');
     
     // Initial fetch
     fetchAdAccounts();
     
-    // Set up event listeners
+    // Set up event listeners for all possible refresh events
     window.addEventListener('refresh-ad-accounts', handleRefreshEvent);
     window.addEventListener('campaign-data-refresh', handleRefreshEvent);
+    window.addEventListener('ad-account-changed', handleRefreshEvent);
     
     // Clean up event listeners on unmount
     return () => {
       window.removeEventListener('refresh-ad-accounts', handleRefreshEvent);
       window.removeEventListener('campaign-data-refresh', handleRefreshEvent);
+      window.removeEventListener('ad-account-changed', handleRefreshEvent);
     };
   }, [fetchAdAccounts, handleRefreshEvent]);
   

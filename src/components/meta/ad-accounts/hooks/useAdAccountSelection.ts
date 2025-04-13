@@ -18,10 +18,13 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
   
   const handleAccountChange = (value: string) => {
     try {
+      // Prevent default event behavior to avoid page reloads
+      console.log('Account selection change initiated:', value);
+      
       // Store without 'act_' prefix for consistency
       const accountId = value.replace(/^act_/, '');
       
-      console.log('Changing ad account to:', accountId);
+      console.log('Normalized account ID for storage:', accountId);
       
       // Update state
       setSelectedAccount(accountId);
@@ -38,19 +41,29 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
         description: "Your ad account selection has been updated."
       });
       
-      // Safely dispatch events with error handling
-      console.log('Dispatching ad-account-changed event');
-      const accountEvent = new CustomEvent('ad-account-changed', { 
-        detail: { accountId } 
-      });
-      window.dispatchEvent(accountEvent);
-      
-      // Using setTimeout to ensure events are processed sequentially
+      // Safely dispatch events with error handling - use setTimeout to prevent UI freezing
       setTimeout(() => {
-        console.log('Dispatching campaign-data-refresh event');
-        const refreshEvent = new CustomEvent('campaign-data-refresh');
-        window.dispatchEvent(refreshEvent);
-      }, 200);
+        console.log('Dispatching ad-account-changed event');
+        try {
+          const accountEvent = new CustomEvent('ad-account-changed', { 
+            detail: { accountId } 
+          });
+          window.dispatchEvent(accountEvent);
+        } catch (err) {
+          console.error('Error dispatching ad-account-changed event:', err);
+        }
+        
+        // Allow a small delay between events to ensure proper processing
+        setTimeout(() => {
+          console.log('Dispatching campaign-data-refresh event');
+          try {
+            const refreshEvent = new CustomEvent('campaign-data-refresh');
+            window.dispatchEvent(refreshEvent);
+          } catch (err) {
+            console.error('Error dispatching campaign-data-refresh event:', err);
+          }
+        }, 100);
+      }, 50);
     } catch (err) {
       console.error('Error in account change handler:', err);
       toast({

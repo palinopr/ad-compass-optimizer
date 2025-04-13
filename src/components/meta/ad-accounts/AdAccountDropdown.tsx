@@ -37,7 +37,7 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
     const account = adAccounts.find(account => {
       // Normalize account IDs for comparison by removing 'act_' prefix if present
       const normalizedId = account.id.replace(/^act_/, '');
-      const normalizedSelected = selectedAccount.replace(/^act_/, '');
+      const normalizedSelected = selectedAccount?.replace(/^act_/, '') || '';
       return normalizedId === normalizedSelected;
     });
     return account ? `${account.name} (${account.id})` : 'Select an ad account';
@@ -69,7 +69,7 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className="w-full justify-between bg-white"
           disabled={isLoading}
           type="button" // Explicitly set button type to prevent form submission
           onClick={(e) => {
@@ -90,7 +90,7 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-full p-0 bg-white">
         <Command>
           <CommandInput placeholder="Search ad accounts..." />
           <CommandEmpty>No ad accounts found.</CommandEmpty>
@@ -108,7 +108,7 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
                 <Check
                   className={cn(
                     "mr-2 h-4 w-4",
-                    selectedAccount.replace(/^act_/, '') === account.id.replace(/^act_/, '') ? "opacity-100" : "opacity-0"
+                    selectedAccount?.replace(/^act_/, '') === account.id.replace(/^act_/, '') ? "opacity-100" : "opacity-0"
                   )}
                 />
                 <div className="flex flex-col">
