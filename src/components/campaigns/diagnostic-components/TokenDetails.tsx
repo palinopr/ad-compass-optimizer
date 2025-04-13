@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield, Globe, Calendar, Database, ExternalLink, LayoutDashboard, Rotate3D, RefreshCw, Cpu, Loader2, ArrowPathIcon } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield, Globe, Calendar, Database, ExternalLink, LayoutDashboard, Rotate3D, RefreshCw, Cpu, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
