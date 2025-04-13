@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertCircle, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Database, RefreshCw, AlertCircle as AlertCircleIcon } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RefreshCw, AlertCircle, Database } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { ConnectionStatusCards } from './ConnectionStatusCards';
 
@@ -41,7 +41,7 @@ export const ConnectionTab: React.FC<ConnectionTabProps> = ({
           {diagnosticResults.summary && diagnosticResults.summary.issues && 
            diagnosticResults.summary.issues.length > 0 && (
             <Alert className="bg-amber-50 border-amber-200">
-              <AlertCircleIcon className="h-4 w-4" />
+              <AlertCircle className="h-4 w-4" />
               <AlertTitle>Issues Detected</AlertTitle>
               <AlertDescription>
                 <ul className="list-disc pl-5 text-sm mt-1">
