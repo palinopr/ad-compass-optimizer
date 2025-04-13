@@ -12,6 +12,18 @@ export default function Dashboard() {
   useEffect(() => {
     // Initialize rate limit handling
     MetaApiService.initRateLimitState();
+    
+    // Check for any override settings
+    const isOverridden = MetaApiService.isRateLimitOverridden();
+    if (isOverridden) {
+      console.warn('⚠️ Meta API rate limit override is active. This should only be used for development.');
+    }
+    
+    // Log the current rate limit state for debugging
+    const rateLimitInfo = MetaApiService.getRateLimitInfo();
+    if (rateLimitInfo.isRateLimited) {
+      console.log('Current rate limit status:', rateLimitInfo);
+    }
   }, []);
 
   return (

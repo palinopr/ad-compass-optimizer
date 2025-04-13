@@ -1,4 +1,3 @@
-
 import { MetaUserService } from './api/MetaUserService';
 import { MetaAdAccountService } from './api/MetaAdAccountService';
 import { MetaBusinessService } from './api/MetaBusinessService';
@@ -14,6 +13,9 @@ interface RateLimitState {
   isRateLimited: boolean;
   timestamp?: number;
   retryAfter?: number;
+  limitType?: 'app' | 'user' | 'adaccount' | 'unknown';
+  errorCode?: number;
+  errorMessage?: string;
 }
 
 /**
@@ -119,16 +121,37 @@ export class MetaApiService {
   }
 
   /**
+   * Get the current rate limit state information
+   */
+  public static getRateLimitInfo(): RateLimitState {
+    return { ...this.rateLimitState };
+  }
+
+  /**
    * Set a rate limit based on an API response
    */
-  public static setRateLimit(retryAfter?: number) {
+  public static setRateLimit(retryAfter?: number, errorDetails?: { code?: number, message?: string }) {
     // Default to 5 minutes if no retry-after header
     const retrySeconds = retryAfter || 300;
+    
+    // Determine the type of rate limit
+    let limitType: 'app' | 'user' | 'adaccount' | 'unknown' = 'unknown';
+    
+    if (errorDetails?.code === 4) {
+      limitType = 'app';
+    } else if (errorDetails?.code === 17) {
+      limitType = 'user';
+    } else if (errorDetails?.code === 32 || (errorDetails?.code && errorDetails.code >= 80000 && errorDetails.code <= 80014)) {
+      limitType = 'adaccount';
+    }
     
     this.rateLimitState = {
       isRateLimited: true,
       timestamp: Date.now(),
-      retryAfter: retrySeconds
+      retryAfter: retrySeconds,
+      limitType: limitType,
+      errorCode: errorDetails?.code,
+      errorMessage: errorDetails?.message
     };
     
     // Store in localStorage
@@ -137,14 +160,23 @@ export class MetaApiService {
     // Store additional info for diagnostics
     localStorage.setItem('meta_rate_limit_timestamp', new Date().toISOString());
     localStorage.setItem('meta_rate_limit_retry_after', String(retrySeconds));
+    localStorage.setItem('meta_rate_limit_type', limitType);
+    if (errorDetails?.message) {
+      localStorage.setItem('meta_rate_limit_message', errorDetails.message);
+    }
     
     // Dispatch event for rate limit
     const event = new CustomEvent('meta-api-rate-limited', { 
-      detail: { retryAfter: retrySeconds } 
+      detail: { 
+        retryAfter: retrySeconds,
+        limitType: limitType,
+        errorCode: errorDetails?.code,
+        errorMessage: errorDetails?.message
+      } 
     });
     window.dispatchEvent(event);
     
-    console.warn(`Meta API rate limited. Will retry after ${retrySeconds} seconds`);
+    console.warn(`Meta API rate limited (${limitType}). Will retry after ${retrySeconds} seconds`);
   }
 
   /**
@@ -153,6 +185,11 @@ export class MetaApiService {
   public static clearRateLimit() {
     this.rateLimitState = { isRateLimited: false };
     localStorage.removeItem(this.RATE_LIMIT_STORAGE_KEY);
+    localStorage.removeItem('meta_rate_limit_timestamp');
+    localStorage.removeItem('meta_rate_limit_retry_after');
+    localStorage.removeItem('meta_rate_limit_type');
+    localStorage.removeItem('meta_rate_limit_message');
+    
     console.log('Rate limit cleared');
     
     // Dispatch event for rate limit cleared
@@ -160,6 +197,23 @@ export class MetaApiService {
     
     // Process any queued requests
     this.processQueue();
+  }
+
+  /**
+   * Manually override rate limit check
+   */
+  public static overrideRateLimit(override: boolean = true) {
+    if (override) {
+      this.clearRateLimit();
+    }
+    localStorage.setItem('meta_rate_limit_override', String(override));
+  }
+
+  /**
+   * Check if rate limit override is active
+   */
+  public static isRateLimitOverridden(): boolean {
+    return localStorage.getItem('meta_rate_limit_override') === 'true';
   }
 
   /**
@@ -191,7 +245,7 @@ export class MetaApiService {
    */
   private static async processQueue() {
     // If we're already processing or rate limited, don't start another process
-    if (this.isProcessingQueue || this.isRateLimited()) {
+    if (this.isProcessingQueue || (this.isRateLimited() && !this.isRateLimitOverridden())) {
       return;
     }
     
@@ -199,7 +253,7 @@ export class MetaApiService {
     
     try {
       // Process requests one by one with a delay
-      while (this.requestQueue.length > 0 && !this.isRateLimited()) {
+      while (this.requestQueue.length > 0 && (!this.isRateLimited() || this.isRateLimitOverridden())) {
         const request = this.requestQueue.shift();
         if (request) {
           try {
@@ -209,8 +263,8 @@ export class MetaApiService {
           } catch (error: any) {
             console.error('Error processing queued request:', error);
             // Check if this was a rate limit error
-            if (error?.message?.includes('request limit reached') || error?.code === 17) {
-              this.setRateLimit(300); // Default to 5 minutes for rate limit errors
+            if (this.isRateLimitError(error)) {
+              this.handleRateLimitError(error);
               break; // Stop processing queue
             }
           }
@@ -222,19 +276,74 @@ export class MetaApiService {
   }
 
   /**
+   * Check if an error is a rate limit error
+   */
+  private static isRateLimitError(error: any): boolean {
+    if (!error) return false;
+    
+    // Check for explicit rate limit codes
+    const errorCode = error?.code || error?.error?.code || (error?.error?.error && error?.error?.error.code);
+    if (errorCode === 4 || errorCode === 17 || errorCode === 32 || 
+        (errorCode >= 80000 && errorCode <= 80014)) {
+      return true;
+    }
+    
+    // Check for rate limit in error message
+    const errorMessage = error?.message || error?.error?.message || 
+                        (error?.error?.error && error?.error?.error.message);
+    
+    if (errorMessage && typeof errorMessage === 'string' && (
+      errorMessage.includes('rate limit') || 
+      errorMessage.includes('request limit') ||
+      errorMessage.includes('too many calls')
+    )) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Handle rate limit errors
+   */
+  private static handleRateLimitError(error: any) {
+    // Extract retry time if available
+    let retryAfter = 300; // Default to 5 minutes
+    if (error.headers?.['retry-after']) {
+      retryAfter = parseInt(error.headers['retry-after'], 10);
+    } else if (error.retryAfter) {
+      retryAfter = parseInt(error.retryAfter, 10);
+    }
+    
+    // Extract error code and message
+    const errorCode = error?.code || error?.error?.code || (error?.error?.error && error?.error?.error.code);
+    const errorMessage = error?.message || error?.error?.message || 
+                        (error?.error?.error && error?.error?.error.message);
+    
+    this.setRateLimit(retryAfter, { code: errorCode, message: errorMessage });
+    
+    // Log the detailed error for debugging
+    console.warn('Rate limit error details:', { 
+      code: errorCode, 
+      message: errorMessage, 
+      retryAfter
+    });
+  }
+
+  /**
    * Execute an API request with rate limit handling
    */
   public static async executeWithRateLimiting<T>(
     requestFn: () => Promise<T>, 
     options: { bypassQueue?: boolean, skipRateLimitCheck?: boolean } = {}
   ): Promise<T> {
-    // Check if we're currently rate limited
-    if (!options.skipRateLimitCheck && this.isRateLimited()) {
+    // Check if we're currently rate limited and not overridden
+    if (!options.skipRateLimitCheck && this.isRateLimited() && !this.isRateLimitOverridden()) {
       const remainingTime = this.getRateLimitTimeRemaining();
-      console.log(`API is rate limited. Remaining time: ${remainingTime} seconds`);
+      console.log(`API is rate limited (${this.rateLimitState.limitType}). Remaining time: ${remainingTime} seconds`);
       
       if (options.bypassQueue) {
-        throw new Error(`API rate limit in effect. Please retry after ${remainingTime} seconds.`);
+        throw new Error(`API rate limit (${this.rateLimitState.limitType}) in effect. Please retry after ${remainingTime} seconds.`);
       }
       
       // Add to queue to be executed later
@@ -246,20 +355,8 @@ export class MetaApiService {
       return await requestFn();
     } catch (error: any) {
       // Check for rate limit errors
-      if (
-        (error?.message?.includes('request limit reached') || error?.code === 17) || 
-        (error?.error?.code === 17) ||
-        (error?.error?.message?.includes('request limit reached'))
-      ) {
-        // Extract retry time if available
-        let retryAfter = 300; // Default to 5 minutes
-        if (error.headers?.['retry-after']) {
-          retryAfter = parseInt(error.headers['retry-after'], 10);
-        } else if (error.retryAfter) {
-          retryAfter = parseInt(error.retryAfter, 10);
-        }
-        
-        this.setRateLimit(retryAfter);
+      if (this.isRateLimitError(error)) {
+        this.handleRateLimitError(error);
         
         if (options.bypassQueue) {
           throw error;

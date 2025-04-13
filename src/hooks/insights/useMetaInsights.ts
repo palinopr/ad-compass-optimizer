@@ -9,17 +9,38 @@ interface UseMetaInsightsReturn {
   insights: InsightsResponse | null;
   isLoading: boolean;
   error: string | null;
+  rateLimitStatus: {
+    isRateLimited: boolean;
+    limitType?: string;
+    timeRemaining?: number | null;
+  };
   fetchInsights: (objectId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
   fetchCampaignInsights: (campaignId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
   fetchAccountInsights: (accountId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
   fetchAdSetInsights: (adSetId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
   fetchAdInsights: (adId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
+  clearRateLimit: () => void;
 }
 
 export function useMetaInsights(): UseMetaInsightsReturn {
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [rateLimitStatus, setRateLimitStatus] = useState({
+    isRateLimited: MetaApiService.isRateLimited(),
+    limitType: MetaApiService.getRateLimitInfo().limitType,
+    timeRemaining: MetaApiService.getRateLimitTimeRemaining()
+  });
+  
+  // Update rate limit status
+  const updateRateLimitStatus = useCallback(() => {
+    const rateLimitInfo = MetaApiService.getRateLimitInfo();
+    setRateLimitStatus({
+      isRateLimited: MetaApiService.isRateLimited(),
+      limitType: rateLimitInfo.limitType,
+      timeRemaining: MetaApiService.getRateLimitTimeRemaining()
+    });
+  }, []);
   
   const handleInsightsFetch = useCallback(async (
     fetchFunction: (token: string, id: string, options: InsightFilterOptions) => Promise<InsightsResponse>,
@@ -30,15 +51,23 @@ export function useMetaInsights(): UseMetaInsightsReturn {
     setError(null);
     
     try {
+      // Update the rate limit status
+      updateRateLimitStatus();
+      
       // Check if we're rate limited
-      if (MetaApiService.isRateLimited()) {
+      if (MetaApiService.isRateLimited() && !MetaApiService.isRateLimitOverridden()) {
+        const rateLimitInfo = MetaApiService.getRateLimitInfo();
         const remainingTime = MetaApiService.getRateLimitTimeRemaining();
-        const errorMsg = `Meta API rate limit reached. Please wait approximately ${Math.ceil((remainingTime || 0) / 60)} more minutes.`;
+        const limitTypeText = rateLimitInfo.limitType === 'app' ? 'Application' : 
+                             rateLimitInfo.limitType === 'user' ? 'User' :
+                             rateLimitInfo.limitType === 'adaccount' ? 'Ad Account' : 'API';
+        
+        const errorMsg = `Meta ${limitTypeText} rate limit reached. Please wait approximately ${Math.ceil((remainingTime || 0) / 60)} more minutes.`;
         setError(errorMsg);
         setIsLoading(false);
         
         toast({
-          title: "API Rate Limited",
+          title: `${limitTypeText} Rate Limited`,
           description: errorMsg,
           variant: "destructive",
         });
@@ -57,14 +86,30 @@ export function useMetaInsights(): UseMetaInsightsReturn {
       // Execute the fetch function
       const result = await fetchFunction(token, id, options);
       setInsights(result);
+      
+      // Re-check rate limit status after fetch
+      updateRateLimitStatus();
+      
       return result;
     } catch (err: any) {
       console.error('Error fetching insights:', err);
       let errorMessage = err.message || 'An error occurred while fetching insights data';
       
       // Check for rate limit error
-      if (errorMessage.includes('request limit reached') || err.code === 17) {
-        errorMessage = 'Meta API rate limit reached. Your request has been queued and will be processed when the rate limit expires.';
+      const isRateLimitError = errorMessage.includes('rate limit') || 
+                             errorMessage.includes('request limit') || 
+                             err.code === 17 || err.code === 4;
+      
+      if (isRateLimitError) {
+        // Re-check rate limit status 
+        updateRateLimitStatus();
+        
+        const rateLimitInfo = MetaApiService.getRateLimitInfo();
+        const limitTypeText = rateLimitInfo.limitType === 'app' ? 'Application' : 
+                            rateLimitInfo.limitType === 'user' ? 'User' :
+                            rateLimitInfo.limitType === 'adaccount' ? 'Ad Account' : 'API';
+                             
+        errorMessage = `Meta ${limitTypeText} rate limit reached. Your request has been queued and will be processed when the rate limit expires.`;
       }
       
       setError(errorMessage);
@@ -80,7 +125,7 @@ export function useMetaInsights(): UseMetaInsightsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [updateRateLimitStatus]);
   
   const fetchInsights = useCallback((objectId: string, options?: InsightFilterOptions) => {
     return handleInsightsFetch(MetaApiService.fetchInsights, objectId, options || {});
@@ -110,14 +155,21 @@ export function useMetaInsights(): UseMetaInsightsReturn {
     );
   }, [handleInsightsFetch]);
   
+  const clearRateLimit = useCallback(() => {
+    MetaApiService.clearRateLimit();
+    updateRateLimitStatus();
+  }, [updateRateLimitStatus]);
+  
   return {
     insights,
     isLoading,
     error,
+    rateLimitStatus,
     fetchInsights,
     fetchCampaignInsights,
     fetchAccountInsights,
     fetchAdSetInsights,
-    fetchAdInsights
+    fetchAdInsights,
+    clearRateLimit
   };
 }
