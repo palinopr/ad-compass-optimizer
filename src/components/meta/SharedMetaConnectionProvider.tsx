@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { MetaConnectionContextType, initialMetaConnectionContext } from './types/metaConnection';
-import { useMetaConnectionState } from '@/hooks/meta/useMetaConnectionState';
+import { useMetaConnectionState, MetaConnectionState } from '@/hooks/meta/useMetaConnectionState';
 import { useMetaAuthRestoration } from '@/hooks/meta/useMetaAuthRestoration';
 import { useMetaConnectionListeners } from '@/hooks/meta/useMetaConnectionListeners';
 
