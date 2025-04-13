@@ -26,7 +26,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     try {
       console.log('Starting campaign fetch process...');
       
-      // Step 1: Validate authentication
+      // Step 1: Validate authentication using the consolidated method
       const authResult = validateAuthentication();
       if (!authResult.isValid) {
         setError(authResult.error);
@@ -55,13 +55,22 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       } else {
         setCampaigns(fetchedCampaigns);
       }
+    } catch (err: any) {
+      console.error('Unexpected error in campaign fetch:', err);
+      setError(err?.message || 'An unexpected error occurred while fetching campaigns');
+      setErrorDetails({ 
+        error: { 
+          message: err?.message || 'Unexpected error',
+          stack: err?.stack
+        } 
+      });
     } finally {
       setIsLoading(false);
     }
   }, [status, validateAuthentication, getSelectedAdAccount, fetchCampaignData]);
   
   useEffect(() => {
-    // Since we're on the messages page but using campaigns component, give a short delay
+    // Since we're on the campaigns page but using campaigns component, give a short delay
     // to allow authentication to be checked properly
     const timer = setTimeout(() => {
       fetchCampaigns();

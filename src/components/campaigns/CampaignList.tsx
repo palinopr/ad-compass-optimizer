@@ -6,6 +6,7 @@ import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvide
 import CampaignTable from './CampaignTable';
 import { LoadingState, ErrorState, EmptyState } from './CampaignListStates';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { useAuthCheck } from '@/hooks/campaigns/useAuthCheck'; 
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
@@ -14,19 +15,23 @@ interface CampaignListProps {
 const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const { campaigns, isLoading, error, refetchCampaigns, errorDetails } = useCampaigns(status);
   const { isAuthenticated, checkAuth } = useMetaConnection();
+  const { validateAuthentication } = useAuthCheck();
   
-  // Ensure we have the most accurate authentication status
-  const directTokenExists = !!metaAuthService.getAccessToken();
-  const effectiveIsAuthenticated = isAuthenticated || directTokenExists;
+  // Get the most reliable auth check by running a full validation
+  const authResult = validateAuthentication();
+  const effectiveIsAuthenticated = authResult.isValid;
   
   // Force check auth status when component mounts
   useEffect(() => {
-    // Only trigger a check if state is inconsistent
-    if (directTokenExists && !isAuthenticated) {
-      console.log('Token exists but auth state is false, refreshing auth...');
+    // Ensure our shared provider has the most accurate authentication state
+    const authState = validateAuthentication();
+    
+    // If there's a state mismatch, trigger a refresh of the central auth state
+    if (authState.isValid && !isAuthenticated) {
+      console.log('Authentication state mismatch detected, refreshing auth state...');
       checkAuth();
     }
-  }, [checkAuth, isAuthenticated, directTokenExists]);
+  }, [checkAuth, isAuthenticated, validateAuthentication]);
   
   // Log additional debug information if there's an error
   useEffect(() => {
@@ -34,7 +39,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       console.log(`Campaign loading error (${status} campaigns):`, error);
       console.log('Authentication status:', effectiveIsAuthenticated ? 'Authenticated' : 'Not authenticated');
       console.log('Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
-      console.log('Direct token check:', directTokenExists ? 'Token exists' : 'No token');
+      console.log('Auth check result:', authResult.isValid ? 'Valid' : 'Invalid');
       console.log('Error details:', errorDetails || 'No additional details');
       
       // Check ad account selection
@@ -43,7 +48,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       console.log('Selected ad account:', selectedAdAccount);
       console.log('Selected ad accounts array:', selectedAdAccounts);
     }
-  }, [error, isAuthenticated, directTokenExists, effectiveIsAuthenticated, status, errorDetails]);
+  }, [error, isAuthenticated, effectiveIsAuthenticated, status, errorDetails, authResult]);
   
   // Handle loading state
   if (isLoading) {

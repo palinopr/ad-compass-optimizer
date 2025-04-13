@@ -11,6 +11,13 @@ export function useAuthCheck() {
     const token = metaAuthService.getAccessToken();
     const directAuthCheck = token && token.length >= 50;
     
+    // Perform a fresh auth check if we have a token but context says not authenticated
+    if (directAuthCheck && !isAuthenticated) {
+      console.log('Token exists but context says not authenticated, triggering checkAuth');
+      // Don't wait for this to complete as it's just ensuring future consistency
+      setTimeout(() => checkAuth(), 100);
+    }
+    
     // Use the directly checked token status if it contradicts the context state
     // This helps prevent false "not authenticated" errors when token exists
     const effectiveIsAuthenticated = directAuthCheck || isAuthenticated;
@@ -45,7 +52,7 @@ export function useAuthCheck() {
     }
     
     return { isValid: true, token };
-  }, [isAuthenticated, hasPermissions, showConnectionDialog]);
+  }, [isAuthenticated, hasPermissions, showConnectionDialog, checkAuth]);
 
   return { validateAuthentication };
 }

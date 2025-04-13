@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { runComprehensiveDiagnostic } from '@/utils/metaApiTest';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
+import { useAuthCheck } from '@/hooks/campaigns/useAuthCheck';
 
 interface CampaignLoadingTroubleshooterProps {
   errorDetails?: any;
@@ -36,10 +37,11 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
   const [runningDiagnostic, setRunningDiagnostic] = useState(false);
   const [diagnosticResults, setDiagnosticResults] = useState<DiagnosticResult | null>(null);
   const { isAuthenticated, checkAuth } = useMetaConnection();
+  const { validateAuthentication } = useAuthCheck();
   
-  // Get real-time authentication status directly from service
-  const directTokenExists = !!metaAuthService.getAccessToken();
-  const tokenSource = metaAuthService.getTokenSource();
+  // Run the full authentication check to get the most reliable state
+  const authResult = validateAuthentication();
+  const effectiveIsAuthenticated = authResult.isValid;
   
   // Check for specific error types
   const isPermissionError = errorDetails?.error?.message?.toLowerCase().includes('permission') || 
@@ -54,8 +56,8 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
     runDiagnostic();
     
     // Ensure authentication is fresh
-    if (directTokenExists && !isAuthenticated) {
-      console.log('Token exists but not reflected in auth state, refreshing auth...');
+    if (effectiveIsAuthenticated && !isAuthenticated) {
+      console.log('Authentication state mismatch detected, refreshing...');
       checkAuth();
     }
     
@@ -107,9 +109,7 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
     return diagnosticResults.api.success ? 'ok' : 'failed';
   };
 
-  // Use the most reliable authentication status
-  const effectiveIsAuthenticated = isAuthenticated || directTokenExists;
-
+  // Use the more reliable authentication status
   return (
     <Card className="border-amber-200 bg-amber-50">
       <CardHeader className="pb-2">
@@ -201,7 +201,7 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
                         )}
                       </div>
                       <p className="text-sm mt-1 capitalize">
-                        {effectiveIsAuthenticated ? `Using ${tokenSource || 'facebook'} auth` : 'Not authenticated'}
+                        {effectiveIsAuthenticated ? `Using ${metaAuthService.getTokenSource() || 'facebook'} auth` : 'Not authenticated'}
                       </p>
                     </div>
                     
@@ -264,7 +264,7 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
                   )}
                   
                   {/* CORS Specific Alert */}
-                  {diagnosticResults.cors && diagnosticResults.cors.hasCorsIssues && tokenSource === 'facebook' && (
+                  {diagnosticResults.cors && diagnosticResults.cors.hasCorsIssues && metaAuthService.getTokenSource() === 'facebook' && (
                     <div className="bg-blue-50 border border-blue-100 rounded-md p-3 text-sm">
                       <div className="flex">
                         <Database className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />

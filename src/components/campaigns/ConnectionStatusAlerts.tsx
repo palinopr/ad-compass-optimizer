@@ -8,6 +8,8 @@ import {
   ExternalLink 
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { useAuthCheck } from '@/hooks/campaigns/useAuthCheck';
 
 interface ConnectionStatusAlertsProps {
   isAuthenticated: boolean;
@@ -20,7 +22,13 @@ const ConnectionStatusAlerts: React.FC<ConnectionStatusAlertsProps> = ({
   hasPermissions,
   hasAdAccount
 }) => {
-  if (!isAuthenticated) {
+  // Use the more reliable authentication check
+  const { validateAuthentication } = useAuthCheck();
+  const authResult = validateAuthentication();
+  const effectiveIsAuthenticated = authResult.isValid;
+
+  // Use the effective authentication state
+  if (!effectiveIsAuthenticated) {
     return (
       <Alert>
         <Info className="h-4 w-4" />
@@ -82,6 +90,3 @@ const ConnectionStatusAlerts: React.FC<ConnectionStatusAlertsProps> = ({
 };
 
 export default ConnectionStatusAlerts;
-
-// Need to import Button which was used but not imported
-import { Button } from '@/components/ui/button';
