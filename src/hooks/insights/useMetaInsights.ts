@@ -1,9 +1,9 @@
 
 import { useState, useCallback } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
-import { MetaInsightsService, InsightFilterOptions, InsightsResponse } from '@/services/api/MetaInsightsService';
+import { MetaApiService } from '@/services/MetaApiService';
+import { InsightFilterOptions, InsightsResponse } from '@/services/api/MetaInsightsService';
 import { toast } from '@/hooks/use-toast';
-import { checkRateLimitStatus, notifyRateLimit } from '@/hooks/campaigns/fetch-utils/rateLimit';
 
 interface UseMetaInsightsReturn {
   insights: InsightsResponse | null;
@@ -31,11 +31,18 @@ export function useMetaInsights(): UseMetaInsightsReturn {
     
     try {
       // Check if we're rate limited
-      const rateStatus = checkRateLimitStatus();
-      if (rateStatus.isRateLimited) {
-        notifyRateLimit(rateStatus.timeRemaining || undefined);
-        setError(`Meta API rate limit reached. Please wait approximately ${rateStatus.timeRemaining} more minutes.`);
+      if (MetaApiService.isRateLimited()) {
+        const remainingTime = MetaApiService.getRateLimitTimeRemaining();
+        const errorMsg = `Meta API rate limit reached. Please wait approximately ${Math.ceil((remainingTime || 0) / 60)} more minutes.`;
+        setError(errorMsg);
         setIsLoading(false);
+        
+        toast({
+          title: "API Rate Limited",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        
         return null;
       }
       
@@ -53,7 +60,13 @@ export function useMetaInsights(): UseMetaInsightsReturn {
       return result;
     } catch (err: any) {
       console.error('Error fetching insights:', err);
-      const errorMessage = err.message || 'An error occurred while fetching insights data';
+      let errorMessage = err.message || 'An error occurred while fetching insights data';
+      
+      // Check for rate limit error
+      if (errorMessage.includes('request limit reached') || err.code === 17) {
+        errorMessage = 'Meta API rate limit reached. Your request has been queued and will be processed when the rate limit expires.';
+      }
+      
       setError(errorMessage);
       
       // Show toast notification for errors
@@ -70,23 +83,31 @@ export function useMetaInsights(): UseMetaInsightsReturn {
   }, []);
   
   const fetchInsights = useCallback((objectId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(MetaInsightsService.fetchInsights, objectId, options || {});
+    return handleInsightsFetch(MetaApiService.fetchInsights, objectId, options || {});
   }, [handleInsightsFetch]);
   
   const fetchCampaignInsights = useCallback((campaignId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(MetaInsightsService.fetchCampaignInsights, campaignId, options || {});
+    return handleInsightsFetch(MetaApiService.fetchCampaignInsights, campaignId, options || {});
   }, [handleInsightsFetch]);
   
   const fetchAccountInsights = useCallback((accountId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(MetaInsightsService.fetchAccountInsights, accountId, options || {});
+    return handleInsightsFetch(MetaApiService.fetchAccountInsights, accountId, options || {});
   }, [handleInsightsFetch]);
   
   const fetchAdSetInsights = useCallback((adSetId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(MetaInsightsService.fetchAdSetInsights, adSetId, options || {});
+    return handleInsightsFetch(
+      (token, id, opts) => MetaApiService.fetchInsights(token, id, { ...opts, level: 'adset' }), 
+      adSetId,
+      options || {}
+    );
   }, [handleInsightsFetch]);
   
   const fetchAdInsights = useCallback((adId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(MetaInsightsService.fetchAdInsights, adId, options || {});
+    return handleInsightsFetch(
+      (token, id, opts) => MetaApiService.fetchInsights(token, id, { ...opts, level: 'ad' }), 
+      adId,
+      options || {}
+    );
   }, [handleInsightsFetch]);
   
   return {

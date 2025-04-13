@@ -1,12 +1,19 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CampaignsQuickAccess from '@/components/dashboard/CampaignsQuickAccess';
 import ProfileQuickAccess from '@/components/dashboard/ProfileQuickAccess';
 import InsightsDemoCard from '@/components/insights/InsightsDemoCard';
+import ApiRateLimitStatus from '@/components/dashboard/ApiRateLimitStatus';
+import { MetaApiService } from '@/services/MetaApiService';
 
 export default function Dashboard() {
+  useEffect(() => {
+    // Initialize rate limit handling
+    MetaApiService.initRateLimitState();
+  }, []);
+
   return (
     <AppLayout>
       <div className="space-y-4">
@@ -21,14 +28,17 @@ export default function Dashboard() {
           <InsightsDemoCard />
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>No recent activity to display.</p>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ApiRateLimitStatus />
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>No recent activity to display.</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AppLayout>
   );
