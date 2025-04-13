@@ -150,11 +150,11 @@ export function useCampaignFetcher() {
           localStorage.setItem('meta_rate_limit_timestamp', new Date().toISOString());
         }
         
-        // Show specific toast for rate limiting - Fix the variant to be "destructive" instead of "warning"
+        // Show specific toast for rate limiting - Fixed to use "destructive" instead of "warning"
         toast({
           title: "API Rate Limit",
           description: "Meta API is rate limited. Please wait 5-10 minutes before trying again.",
-          variant: "destructive", // Changed from "warning" to "destructive"
+          variant: "destructive",
           duration: 10000
         });
         

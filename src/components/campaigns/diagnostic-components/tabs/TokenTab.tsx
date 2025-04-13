@@ -9,14 +9,14 @@ interface TokenTabProps {
   runDiagnostic: () => void;
 }
 
-const TokenTab: React.FC<TokenTabProps> = ({ 
+const TokenTab: React.FC<TokenTabProps> = ({
   diagnosticResults,
   runDiagnostic
 }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-sm font-medium">Meta Token Analysis</h3>
+        <h3 className="text-lg font-medium">Token Details</h3>
         <Button 
           variant="outline" 
           size="sm" 
@@ -24,19 +24,15 @@ const TokenTab: React.FC<TokenTabProps> = ({
           className="flex items-center gap-1"
         >
           <RefreshCw className="h-3 w-3" />
-          Recheck Token
+          Refresh Info
         </Button>
       </div>
       
-      {diagnosticResults && diagnosticResults.token ? (
+      {diagnosticResults?.tokenAnalysis && (
         <TokenDetails 
-          tokenInfo={diagnosticResults.token}
+          tokenInfo={diagnosticResults.token || {}}
           tokenAnalysis={diagnosticResults.tokenAnalysis}
         />
-      ) : (
-        <div className="text-center py-6 text-gray-500">
-          Run diagnostics to analyze token details
-        </div>
       )}
     </div>
   );
