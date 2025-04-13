@@ -3,6 +3,7 @@ import React from 'react';
 import { Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { getCachedCampaigns } from '@/hooks/campaigns/fetch-utils';
 
 interface RateLimitedSectionProps {
   rateLimitTimestamp: string | null;
@@ -51,8 +52,8 @@ const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimest
 
   // Check if we have cached data
   React.useEffect(() => {
-    const cachedData = localStorage.getItem('cached_campaigns');
-    setShowCachedData(!!cachedData);
+    const { campaigns } = getCachedCampaigns();
+    setShowCachedData(!!campaigns && campaigns.length > 0);
   }, []);
 
   const handleUseCachedData = () => {

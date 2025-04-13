@@ -1,0 +1,143 @@
+
+import { toast } from "@/hooks/use-toast";
+import { isRateLimitError, markRateLimited } from './rateLimit';
+
+/**
+ * Error handling for campaign fetching
+ */
+export const handleApiError = async (apiErr: any): Promise<{
+  message: string;
+  details: any;
+  isRateLimit: boolean;
+}> => {
+  console.error('API error during campaign fetch:', apiErr);
+  
+  // Record failed fetch for diagnostics
+  localStorage.setItem('last_campaign_fetch_success', 'false');
+  
+  let apiErrorMessage = apiErr?.message || 'Unknown API error';
+  let errorDetails = null;
+  let isRateLimitError = false;
+  
+  // Extract Facebook API errors from response
+  if (apiErr?.response) {
+    try {
+      const responseData = await apiErr.response.json();
+      console.error('API error response data:', responseData);
+      
+      // Store the complete error details
+      errorDetails = responseData;
+      
+      // Check for rate limit errors
+      if (responseData.error && 
+          (responseData.error.code === 4 || 
+           responseData.error.message?.includes('rate limit') || 
+           responseData.error.message?.includes('request limit'))) {
+        
+        console.log('Rate limit error detected');
+        markRateLimited();
+        
+        apiErrorMessage = 'Meta API rate limit reached. Please wait 5-10 minutes before trying again.';
+        isRateLimitError = true;
+      }
+      else if (responseData.error && responseData.error.message) {
+        apiErrorMessage = responseData.error.message;
+        
+        // Add more context based on error code
+        if (responseData.error.code === 200) {
+          apiErrorMessage += " (Permission error)";
+        } else if (responseData.error.code === 100) {
+          apiErrorMessage += " (Invalid parameter)";
+        } else if (responseData.error.code === 190) {
+          apiErrorMessage += " (Invalid/expired access token)";
+        } 
+      }
+    } catch (jsonErr) {
+      console.error('Failed to parse API error response:', jsonErr);
+    }
+  }
+  
+  // Store error details for diagnostics
+  localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
+    message: apiErrorMessage,
+    timestamp: new Date().toISOString(),
+    details: errorDetails
+  }));
+  
+  return { 
+    message: apiErrorMessage, 
+    details: errorDetails,
+    isRateLimit: isRateLimitError
+  };
+};
+
+export const processFetchError = (err: any): {
+  error: string;
+  errorDetails: any;
+} => {
+  // Check for rate limit messages in the error
+  if (isRateLimitError(err)) {
+    console.log('Rate limit error detected in catch block');
+    
+    // Store rate limit timestamp if not already stored
+    if (!localStorage.getItem('meta_rate_limit_timestamp')) {
+      markRateLimited();
+    }
+    
+    // Show specific toast for rate limiting
+    toast({
+      title: "API Rate Limit",
+      description: "Meta API is rate limited. Please wait 5-10 minutes before trying again.",
+      variant: "destructive",
+      duration: 10000
+    });
+    
+    return { 
+      error: 'Meta API rate limit reached. Please wait 5-10 minutes before trying again.',
+      errorDetails: err?.details || {
+        error: {
+          code: 4,
+          message: 'Application request limit reached',
+          isRateLimit: true
+        }
+      }
+    };
+  }
+  
+  const errorMessage = err?.message || (err instanceof Error ? err.message : 'Failed to fetch campaigns');
+  
+  // Enhanced error storage for troubleshooting
+  let errorDetails = err?.details || {
+    error: {
+      message: errorMessage,
+      timestamp: new Date().toISOString()
+    }
+  };
+  
+  // Try to extract HTTP error code for more specific errors
+  let enhancedError = errorMessage;
+  if (typeof errorMessage === 'string') {
+    // Extract error code if present
+    const errorCodeMatch = errorMessage.match(/(\d{3})/);
+    if (errorCodeMatch && errorCodeMatch[0]) {
+      const errorCode = errorCodeMatch[0];
+      
+      if (errorCode === '400') {
+        enhancedError = 'Failed to fetch campaign data (Error 400). This usually indicates an invalid token format or expired token.';
+      } else if (errorCode === '401') {
+        enhancedError = 'Authentication failed (Error 401). Your Meta access token has expired.';
+      } else if (errorCode === '403') {
+        enhancedError = 'Permission denied (Error 403). You don\'t have the required permissions to access this data.';
+      }
+    }
+  }
+  
+  // Show toast notification with more friendly error message
+  toast({
+    title: "Error Loading Campaigns",
+    description: "There was a problem loading your campaign data. Please check your connection.",
+    variant: "destructive"
+  });
+  
+  return { error: enhancedError, errorDetails };
+};
