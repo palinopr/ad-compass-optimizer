@@ -4,7 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Database, RefreshCw, Server, Shield } from 'lucide-react';
+import { AlertCircle, Database, RefreshCw, Server, Shield, ExternalLink } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { runComprehensiveDiagnostic } from '@/utils/metaApiTest';
 
@@ -61,6 +61,20 @@ const CampaignDiagnostics: React.FC = () => {
   };
   
   const systemStatus = getSystemStatus();
+  
+  const getSupabaseLink = () => {
+    return (
+      <a 
+        href="https://docs.lovable.dev/integrations/supabase/" 
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:underline flex items-center inline-flex"
+      >
+        Supabase integration
+        <ExternalLink className="h-3 w-3 ml-1" />
+      </a>
+    );
+  };
 
   return (
     <Card className="mb-4">
@@ -90,9 +104,12 @@ const CampaignDiagnostics: React.FC = () => {
               {systemStatus === 'no-database' && (
                 <div className="space-y-2">
                   <p>No database connection detected. Some campaign features may be limited.</p>
-                  <div className="flex items-center mt-2">
-                    <Database className="h-4 w-4 mr-2" />
-                    <span>To enable full functionality, connect to Supabase using the integration button in the top toolbar.</span>
+                  <div className="flex items-start gap-2 mt-2">
+                    <Database className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>
+                      To enable full functionality like campaign storage and user management, 
+                      connect to {getSupabaseLink()} using the green button in the top toolbar.
+                    </span>
                   </div>
                 </div>
               )}
@@ -190,10 +207,23 @@ const CampaignDiagnostics: React.FC = () => {
                   <p>This application currently doesn't have a database connection.</p>
                   <p className="mt-2">To enable advanced campaign storage and management features:</p>
                   <ul className="list-disc pl-5 text-sm mt-1">
-                    <li>Click the Supabase button in the top toolbar</li>
-                    <li>Connect to a Supabase project</li>
-                    <li>Create campaign tables for data persistence</li>
+                    <li>Click the green Supabase button in the top toolbar</li>
+                    <li>Connect your project to Supabase</li>
+                    <li>Create campaign tables to store campaign data</li>
+                    <li>Enable authentication to protect your campaign data</li>
                   </ul>
+                  
+                  <div className="mt-3">
+                    <a 
+                      href="https://docs.lovable.dev/integrations/supabase/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline flex items-center w-fit"
+                    >
+                      Learn about Supabase integration
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </a>
+                  </div>
                 </AlertDescription>
               </Alert>
             </div>
@@ -219,7 +249,7 @@ const CampaignDiagnostics: React.FC = () => {
                 <Shield className="h-4 w-4" />
                 <AlertTitle>Performance Analysis</AlertTitle>
                 <AlertDescription>
-                  Enable database integration to track and analyze campaign performance metrics.
+                  Enable {getSupabaseLink()} to track and analyze campaign performance metrics.
                 </AlertDescription>
               </Alert>
             </div>

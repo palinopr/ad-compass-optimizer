@@ -1,16 +1,55 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
+import { metaAuthService } from '@/services/MetaAuthService';
+import { useToast } from '@/hooks/use-toast';
+import { useAuthCheck } from '@/hooks/campaigns/useAuthCheck';
+import { MetaApiService } from '@/services/MetaApiService';
 
 export function useCampaignsPage() {
   const [activeTab, setActiveTab] = useState('campaigns');
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
+  const [isAuthSyncing, setIsAuthSyncing] = useState(false);
   const { isAuthenticated, hasPermissions, userData, checkAuth } = useMetaConnection();
+  const { validateAuthentication } = useAuthCheck();
+  const { toast } = useToast();
+  
+  // Force synchronize authentication state on mount and when component becomes visible
+  const syncAuthState = useCallback(async () => {
+    // Prevent multiple simultaneous auth checks
+    if (isAuthSyncing) return;
+    
+    setIsAuthSyncing(true);
+    console.log('Synchronizing authentication state...');
+    
+    try {
+      // Force check auth status
+      await checkAuth();
+      
+      // Validate auth through MetaApiService for direct API check
+      const token = metaAuthService.getAccessToken();
+      if (token) {
+        console.log('Testing API connection with current token');
+        const connectionTest = await MetaApiService.testConnection(token);
+        
+        if (connectionTest.success) {
+          console.log('API connection test successful');
+        } else {
+          console.warn('API connection test failed, but token exists:', connectionTest.error);
+          // Don't invalidate the token here, as it might work for some API endpoints
+        }
+      }
+    } catch (error) {
+      console.error('Error synchronizing auth state:', error);
+    } finally {
+      setIsAuthSyncing(false);
+    }
+  }, [checkAuth, isAuthSyncing]);
   
   useEffect(() => {
-    // Force check auth status when component mounts
-    checkAuth();
+    // Perform initial sync
+    syncAuthState();
     
     // Check if we should show the connection dialog (set by the ErrorState component)
     const shouldShowConnection = localStorage.getItem('show_meta_connection') === 'true';
@@ -19,23 +58,74 @@ export function useCampaignsPage() {
       setShowConnectionDialog(true);
       localStorage.removeItem('show_meta_connection');
     }
-  }, [checkAuth]);
+    
+    // Set up event listener for visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Page became visible, syncing auth state');
+        syncAuthState();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [syncAuthState]);
   
   // Check if ad account is selected
   const hasAdAccount = () => {
     const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
-    return selectedAdAccounts && JSON.parse(selectedAdAccounts).length > 0;
+    const directAdAccount = localStorage.getItem('selected_ad_account');
+    
+    return (selectedAdAccounts && JSON.parse(selectedAdAccounts).length > 0) || !!directAdAccount;
   };
   
   const handleConnectionSuccess = (userData: any) => {
     console.log('Connection successful, user data:', userData);
-    checkAuth(); // Update the connection state
+    syncAuthState(); // Fully sync auth state after successful connection
     setShowConnectionDialog(false);
+    
+    toast({
+      title: "Connected Successfully",
+      description: "Your Meta account is now connected."
+    });
   };
   
   const handleConnectionError = () => {
     // Just close the dialog but don't update auth state
     setShowConnectionDialog(false);
+  };
+  
+  const refreshConnection = () => {
+    console.log('Refreshing Meta connection');
+    syncAuthState();
+    
+    toast({
+      title: "Refreshing Connection",
+      description: "Checking your Meta connection status..."
+    });
+  };
+  
+  const resetConnection = () => {
+    console.log('Resetting Meta connection');
+    // Clear all Meta-related data
+    metaAuthService.logout();
+    localStorage.removeItem('show_meta_connection');
+    localStorage.removeItem('selected_ad_account');
+    localStorage.removeItem('selected_ad_accounts');
+    
+    // Force auth check
+    syncAuthState();
+    
+    // Show connection dialog
+    setShowConnectionDialog(true);
+    
+    toast({
+      title: "Connection Reset",
+      description: "Meta connection has been reset. Please reconnect."
+    });
   };
 
   return {
@@ -49,6 +139,9 @@ export function useCampaignsPage() {
     hasPermissions,
     hasAdAccount: hasAdAccount(),
     handleConnectionSuccess,
-    handleConnectionError
+    handleConnectionError,
+    refreshConnection,
+    resetConnection,
+    isAuthSyncing
   };
 }
