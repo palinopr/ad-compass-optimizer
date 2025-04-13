@@ -39,7 +39,7 @@ export const useDiagnostics = () => {
       console.log("Token validity from diagnostic:", results.tokenAnalysis?.isValid);
       
       // Sync up the authenticated state with the token analysis
-      if (results.token.hasToken && results.tokenAnalysis?.isValid !== false) {
+      if (results.token.hasToken && results.tokenAnalysis && results.tokenAnalysis.isValid !== false) {
         if (results.summary && results.summary.issues) {
           // Remove any authentication issues if the token is valid
           results.summary.issues = results.summary.issues.filter((issue: string) => 
@@ -77,7 +77,7 @@ export const useDiagnostics = () => {
     
     // Check for token issues
     const tokenIssues = !diagnosticResults.token.hasToken || 
-                        diagnosticResults.tokenAnalysis?.isValid === false ||
+                        (diagnosticResults.tokenAnalysis && diagnosticResults.tokenAnalysis.isValid === false) ||
                         diagnosticResults.token.tokenLength < 50;
     
     // Check for permission issues - must have at least one of these permissions

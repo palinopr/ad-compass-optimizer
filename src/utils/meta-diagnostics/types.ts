@@ -53,9 +53,10 @@ export interface TokenDiagnosticResult {
 }
 
 export interface TokenAnalysisResult {
+  isValid: boolean;  // Add the isValid property
   issues: string[];
   recommendations: string[];
-  severity: 'ok' | 'medium' | 'high';  // Explicitly defining the allowed values
+  severity: 'ok' | 'medium' | 'high';
 }
 
 export interface DiagnosticSummary {

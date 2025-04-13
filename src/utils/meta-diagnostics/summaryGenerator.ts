@@ -28,14 +28,14 @@ export const generateDiagnosticSummary = (
   }
   
   // Add permission issues if token is valid but permissions are missing
-  if (token.hasToken && tokenAnalysis.isValid !== false && !token.hasAdsRead && !token.hasAdsManagement) {
+  if (token.hasToken && tokenAnalysis.isValid && !token.hasAdsRead && !token.hasAdsManagement) {
     issues.push('Missing required permissions for accessing campaign data.');
     recommendations.push('Generate a token with ads_management and ads_read permissions');
     if (status !== 'high') status = 'medium';
   }
   
   // Add API issues if token is valid but API connection fails
-  if (token.hasToken && tokenAnalysis.isValid !== false && !api.success) {
+  if (token.hasToken && tokenAnalysis.isValid && !api.success) {
     issues.push(`API connection failed: ${api.error?.message || JSON.stringify(api.error)}`);
     
     if (api.error?.code === 190) {
