@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,13 +25,10 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const { isAuthenticated, hasPermissions, showConnectionDialog, checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
   
-  // Always use direct token validation as the source of truth
   const authResult = validateAuthentication();
   const effectiveIsAuthenticated = authResult.isValid;
   
-  // Force check auth status when component mounts
   useEffect(() => {
-    // Check token directly from localStorage for consistency
     const token = metaAuthService.getAccessToken();
     const directAuthCheck = token && token.length >= 50;
     
@@ -41,16 +37,13 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       'Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated'
     );
     
-    // If there's a state mismatch, trigger a shared context refresh
     if (directAuthCheck !== isAuthenticated) {
       console.log('Authentication state mismatch detected in CampaignList, refreshing...');
       checkAuth();
     }
   }, [checkAuth, isAuthenticated, status]);
   
-  // Add new effect to detect display inconsistencies
   useEffectKey(() => {
-    // If we have campaigns but nothing is displayed, show a helpful message
     const campaignCount = localStorage.getItem('last_campaign_count');
     if (campaignCount && parseInt(campaignCount) > 0 && campaigns.length === 0) {
       console.log('Display inconsistency detected - has campaigns in storage but not showing');
@@ -67,14 +60,12 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     }
   }, []);
   
-  // Add effect for display refresh
   useEffectKey(() => {
     if (displayRefresh > 0) {
       console.log(`Display refresh triggered (${displayRefresh})`);
     }
   }, [displayRefresh]);
   
-  // Calculate metrics from filtered campaigns
   const metrics = {
     impressions: filteredCampaigns.reduce((total, campaign) => {
       const impressions = campaign.insights?.impressions || '0';
@@ -110,7 +101,6 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     })()
   };
   
-  // Handle loading state
   if (isLoading) {
     return (
       <Card>
@@ -119,7 +109,6 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
   
-  // Handle error state
   if (error) {
     return (
       <Card>
@@ -133,7 +122,6 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
   
-  // Handle empty state
   if (!campaigns || campaigns.length === 0) {
     return (
       <Card>
@@ -142,10 +130,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
 
-  // Handle empty filtered results
   const hasFilteredResults = filteredCampaigns.length > 0;
   
-  // Handle data state
   return (
     <>
       <CampaignFilterToolbar 
@@ -168,10 +154,13 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
             <Button variant="outline" className="mt-4" onClick={() => {
               setStatusFilter(null);
               setSearchQuery('');
-              setDateRange({ 
-                from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 
-                to: new Date() 
-              });
+              setDateRange(
+                { 
+                  from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 
+                  to: new Date() 
+                },
+                'last30days'
+              );
             }}>
               Reset Filters
             </Button>
