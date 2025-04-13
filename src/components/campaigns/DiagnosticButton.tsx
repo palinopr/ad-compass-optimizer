@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Bug, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { Loader2, Bug, CheckCircle, AlertCircle, XCircle, RefreshCw } from 'lucide-react';
 import { runComprehensiveDiagnostic } from '@/utils/metaApiTest';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
