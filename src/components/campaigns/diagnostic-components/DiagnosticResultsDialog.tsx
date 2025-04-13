@@ -99,7 +99,10 @@ const DiagnosticResultsDialog: React.FC<DiagnosticResultsDialogProps> = ({
               tokenInfo={{
                 hasToken: diagnosticResults.token.hasToken,
                 tokenLength: diagnosticResults.token.tokenLength,
-                tokenAge: diagnosticResults.token.tokenAge
+                tokenAge: diagnosticResults.token.tokenAge,
+                source: diagnosticResults.token.source || localStorage.getItem('meta_token_source'),
+                isValid: diagnosticResults.tokenAnalysis?.isValid,
+                permissions: diagnosticResults.token.permissions
               }} 
             />
             

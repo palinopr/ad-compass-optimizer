@@ -1,6 +1,8 @@
+
 export const runTokenDiagnostic = () => {
   // Get token from localStorage
   const token = localStorage.getItem('meta_access_token');
+  const source = localStorage.getItem('meta_token_source') || 'unknown';
   
   console.log('=== META TOKEN DIAGNOSTIC ===');
   console.log('Token exists:', !!token);
@@ -22,8 +24,9 @@ export const runTokenDiagnostic = () => {
   
   // Get token timestamp
   const timestamp = localStorage.getItem('meta_token_timestamp');
+  let tokenAge = null;
   if (timestamp) {
-    const tokenAge = Math.floor((Date.now() - parseInt(timestamp)) / (24 * 60 * 60 * 1000));
+    tokenAge = Math.floor((Date.now() - parseInt(timestamp)) / (24 * 60 * 60 * 1000));
     console.log('Token age (days):', tokenAge);
   }
   
@@ -37,7 +40,8 @@ export const runTokenDiagnostic = () => {
     permissions,
     hasAdsManagement: permissions.includes('ads_management'),
     hasAdsRead: permissions.includes('ads_read'),
-    tokenAge: timestamp ? Math.floor((Date.now() - parseInt(timestamp)) / (24 * 60 * 60 * 1000)) : null
+    tokenAge,
+    source
   };
 };
 
@@ -45,6 +49,8 @@ export const runTokenDiagnostic = () => {
 export const analyzeDiagnosticResults = (results) => {
   const issues = [];
   const recommendations = [];
+  let isValid = false;
+  let severity = 'high'; // high, medium, low
   
   if (!results.hasToken) {
     issues.push('No Meta access token found in storage');
@@ -58,45 +64,52 @@ export const analyzeDiagnosticResults = (results) => {
     
     if (results.hasInvalidChars) {
       issues.push('Token contains invalid characters');
-      recommendations.push('Ensure token only contains alphanumeric characters, underscores, hyphens, and periods');
+      recommendations.push('Ensure token only contains letters, numbers, underscores, hyphens and periods');
     }
     
-    if (results.tokenLength < 20) {
-      issues.push('Token appears to be too short');
-      recommendations.push('Verify you have the complete token');
+    if (results.tokenLength < 50) {
+      issues.push('Token appears to be too short to be valid');
+      recommendations.push('Ensure you have copied the entire token correctly');
+    }
+    
+    // Check permissions
+    const missingPermissions = [];
+    if (!results.hasAdsRead) missingPermissions.push('ads_read');
+    if (!results.hasAdsManagement) missingPermissions.push('ads_management');
+    
+    if (missingPermissions.length > 0) {
+      issues.push(`Token is missing required permissions: ${missingPermissions.join(', ')}`);
+      recommendations.push('Generate a new token with the required permissions');
     }
     
     // Check token age
     if (results.tokenAge !== null) {
-      if (results.tokenAge > 50) {
-        issues.push(`Token is ${results.tokenAge} days old and may expire soon`);
-        recommendations.push('Generate a new token before it expires (standard expiry is 60 days)');
-      } else if (results.tokenAge > 60) {
+      if (results.tokenAge > 60) {
         issues.push(`Token is ${results.tokenAge} days old and likely expired`);
-        recommendations.push('Generate a new token as yours has likely expired');
+        recommendations.push('Generate a new token as the current one appears to be expired');
+      } else if (results.tokenAge > 50) {
+        issues.push(`Token is ${results.tokenAge} days old and will expire soon`);
+        severity = 'medium';
+        recommendations.push('Consider generating a new token soon as this one will expire');
       }
+    } else {
+      issues.push('Could not determine token age');
+      severity = 'medium';
+      recommendations.push('Check token timestamp in browser storage');
     }
     
-    // Permission issues
-    if (!results.hasAdsManagement || !results.hasAdsRead) {
-      const missingPermissions = [];
-      if (!results.hasAdsManagement) missingPermissions.push('ads_management');
-      if (!results.hasAdsRead) missingPermissions.push('ads_read');
-      
-      issues.push(`Missing required permissions: ${missingPermissions.join(', ')}`);
-      recommendations.push('Generate a new token with the required permissions');
-    }
-  }
-  
-  // Make sure we return a severity with the correct type
-  let severity: 'ok' | 'medium' | 'high' = 'ok';
-  if (issues.length > 0) {
-    severity = issues.length > 2 ? 'high' : 'medium';
+    // Determine overall validity
+    isValid = !results.hasWhitespace && 
+              !results.hasInvalidChars && 
+              results.tokenLength >= 50 && 
+              (results.hasAdsRead || results.hasAdsManagement) &&
+              (results.tokenAge === null || results.tokenAge <= 60);
   }
   
   return {
-    issues: issues.length > 0 ? issues : ['No token issues detected'],
-    recommendations: recommendations.length > 0 ? recommendations : ['Token appears to be valid'],
-    severity: severity
+    isValid,
+    severity,
+    issues,
+    recommendations
   };
 };
