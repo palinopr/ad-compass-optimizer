@@ -17,6 +17,8 @@ export function useCampaignsPage() {
   
   // Add a ref to prevent excessive syncs
   const syncInProgressRef = useRef(false);
+  // Ref to track initial auth check
+  const initialSyncDoneRef = useRef(false);
   
   // Force synchronize authentication state on mount and when component becomes visible
   const syncAuthState = useCallback(async () => {
@@ -56,10 +58,24 @@ export function useCampaignsPage() {
   }, [checkAuth, isAuthSyncing]);
   
   useEffect(() => {
-    // Perform initial sync with delay to prevent racing with other checks
-    const initialSyncTimeout = setTimeout(() => {
-      syncAuthState();
-    }, 500);
+    // Perform initial sync only once with delay to prevent racing with other checks
+    if (!initialSyncDoneRef.current) {
+      initialSyncDoneRef.current = true;
+      const initialSyncTimeout = setTimeout(() => {
+        syncAuthState();
+      }, 800);
+      
+      return () => clearTimeout(initialSyncTimeout);
+    }
+  }, [syncAuthState]);
+  
+  useEffect(() => {
+    // Listen for auth updates from SharedMetaConnectionProvider
+    const handleMetaAuthUpdated = (event: CustomEvent<any>) => {
+      console.log('Received meta-auth-updated event:', event.detail);
+      // No need to do additional check here as the event itself indicates 
+      // the auth state was already updated
+    };
     
     // Check if we should show the connection dialog (set by the ErrorState component)
     const shouldShowConnection = localStorage.getItem('show_meta_connection') === 'true';
@@ -69,8 +85,13 @@ export function useCampaignsPage() {
       localStorage.removeItem('show_meta_connection');
     }
     
-    return () => clearTimeout(initialSyncTimeout);
-  }, [syncAuthState]);
+    // Add event listener
+    window.addEventListener('meta-auth-updated', handleMetaAuthUpdated as EventListener);
+    
+    return () => {
+      window.removeEventListener('meta-auth-updated', handleMetaAuthUpdated as EventListener);
+    };
+  }, []);
   
   // Check if ad account is selected
   const hasAdAccount = () => {
@@ -82,7 +103,11 @@ export function useCampaignsPage() {
   
   const handleConnectionSuccess = (userData: any) => {
     console.log('Connection successful, user data:', userData);
-    syncAuthState(); // Fully sync auth state after successful connection
+    // Add delay before sync to prevent race conditions
+    setTimeout(() => {
+      syncAuthState(); // Fully sync auth state after successful connection
+    }, 1000);
+    
     setShowConnectionDialog(false);
     
     toast({
@@ -114,11 +139,12 @@ export function useCampaignsPage() {
     localStorage.removeItem('selected_ad_account');
     localStorage.removeItem('selected_ad_accounts');
     
-    // Force auth check
-    syncAuthState();
-    
-    // Show connection dialog
-    setShowConnectionDialog(true);
+    // Force auth check after clearing - add delay to ensure cleanup is complete
+    setTimeout(() => {
+      syncAuthState();
+      // Show connection dialog
+      setShowConnectionDialog(true);
+    }, 500);
     
     toast({
       title: "Connection Reset",

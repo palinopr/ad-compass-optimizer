@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { MetaConnectionContextType, initialMetaConnectionContext } from './types/metaConnection';
-import { useMetaConnectionState, MetaConnectionState } from '@/hooks/meta/useMetaConnectionState';
+import { useMetaConnectionState } from '@/hooks/meta/useMetaConnectionState';
 import { useMetaAuthRestoration } from '@/hooks/meta/useMetaAuthRestoration';
 import { useMetaConnectionListeners } from '@/hooks/meta/useMetaConnectionListeners';
 
@@ -36,6 +36,8 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
   
   // Ref to track if we've reported auth changes to avoid loops
   const reportedRef = useRef(false);
+  // Ref to track initial check to prevent multiple checks at startup
+  const initialCheckDoneRef = useRef(false);
 
   // Update local state when hook state changes
   useEffect(() => {
@@ -45,11 +47,30 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
       hasPermissions,
       lastCheckTime
     });
+    
+    // When authentication changes, ensure all components have the latest state
+    if (lastCheckTime > 0 && !initialCheckDoneRef.current) {
+      initialCheckDoneRef.current = true;
+      
+      // Broadcast auth change to notify other components
+      try {
+        window.dispatchEvent(new CustomEvent('meta-auth-updated', { 
+          detail: { isAuthenticated, hasPermissions } 
+        }));
+      } catch (e) {
+        console.error('Error dispatching meta-auth-updated event:', e);
+      }
+    }
   }, [isAuthenticated, userData, hasPermissions, lastCheckTime]);
 
-  // Use our hooks for auth restoration and event listeners
-  useMetaAuthRestoration({ checkAuth, setState });
-  useMetaConnectionListeners({ checkAuth });
+  // Use our hooks for auth restoration and event listeners - memoize the checkAuth callback
+  const stableCheckAuth = useCallback(() => {
+    console.log('SharedMetaConnectionProvider triggering checkAuth');
+    checkAuth();
+  }, [checkAuth]);
+  
+  useMetaAuthRestoration({ checkAuth: stableCheckAuth, setState });
+  useMetaConnectionListeners({ checkAuth: stableCheckAuth });
 
   // Report authentication changes - but throttle to prevent loops
   useEffect(() => {
@@ -77,7 +98,7 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
     isAuthenticated,
     userData,
     hasPermissions,
-    checkAuth,
+    checkAuth: stableCheckAuth,
     showConnectionDialog
   };
 

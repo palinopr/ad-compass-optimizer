@@ -7,8 +7,8 @@ export function useAuthCheck() {
   const { isAuthenticated, hasPermissions, showConnectionDialog, checkAuth } = useMetaConnection();
 
   const validateAuthentication = useCallback(() => {
-    // Force a check of authentication status
-    checkAuth();
+    // Force a check of authentication status - but don't call checkAuth directly
+    // as this may lead to refresh loops
     console.log('Auth check result:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
     
     // Check if user is authenticated

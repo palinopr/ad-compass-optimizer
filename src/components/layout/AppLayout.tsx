@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Sidebar } from './Sidebar';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
@@ -19,6 +20,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   
   // Use a ref to prevent multiple checks on mount
   const initialCheckDoneRef = useRef(false);
+  // Use a ref to prevent dialog auto-opening too often
+  const lastDialogTimeRef = useRef(0);
 
   // First effect: Initial load and connection check - ONCE only
   useEffect(() => {
@@ -59,6 +62,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     // Check if we need to show connection dialog based on localStorage flag
     const needsConnection = localStorage.getItem('show_meta_connection') === 'true';
     
+    // Rate limit showing the dialog
+    const now = Date.now();
+    const timeSinceLastDialog = now - lastDialogTimeRef.current;
+    const shouldRateLimit = timeSinceLastDialog < 10000; // Don't show dialog more than once every 10 seconds
+    
     // Check if we need to redirect based on auth status
     // Only redirect on certain pages that require authentication
     const authRequiredPages = ['/campaigns', '/messages'];
@@ -67,9 +75,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     // Only show the dialog if:
     // 1. We're not already authenticated, AND
     // 2. Either there's a flag set OR we're on an auth-required page
-    if (!isAuthenticated && (needsConnection || needsAuthForCurrentPage)) {
+    // 3. And we're not rate limiting
+    if (!isAuthenticated && (needsConnection || needsAuthForCurrentPage) && !shouldRateLimit) {
       console.log('Authentication required, showing dialog...');
       setShowConnectDialog(true);
+      lastDialogTimeRef.current = now;
       // Clear the flag once we've decided to show the dialog
       localStorage.removeItem('show_meta_connection');
       sessionStorage.removeItem('show_meta_connection');
@@ -88,7 +98,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       localStorage.setItem('meta_user_name', userData.name);
     }
     
-    checkAuth(); // Immediately check auth status after successful connection
+    // Add a delay before checking auth to ensure token is properly stored
+    setTimeout(() => {
+      console.log('Checking auth status after successful connection');
+      checkAuth();
+    }, 1000);
     
     // Don't automatically navigate - this was causing refreshing loops
   };

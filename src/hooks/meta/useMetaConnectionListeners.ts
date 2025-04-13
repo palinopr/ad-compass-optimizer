@@ -1,23 +1,42 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface UseMetaConnectionListenersProps {
   checkAuth: () => void;
 }
 
 export function useMetaConnectionListeners({ checkAuth }: UseMetaConnectionListenersProps) {
+  // Add a ref to prevent multiple simultaneous checks
+  const isCheckingRef = useRef(false);
+  
+  // Function to safely check auth with throttling
+  const safeCheckAuth = () => {
+    if (isCheckingRef.current) {
+      console.log('Auth check already in progress, skipping');
+      return;
+    }
+    
+    isCheckingRef.current = true;
+    checkAuth();
+    
+    // Release the lock after a delay
+    setTimeout(() => {
+      isCheckingRef.current = false;
+    }, 1500);
+  };
+  
   useEffect(() => {
     // Set up interval for periodic auth checks - but with longer interval to prevent excessive refreshes
     const checkInterval = setInterval(() => {
-      checkAuth();
-    }, 10 * 60 * 1000); // Check every 10 minutes instead of 5
+      safeCheckAuth();
+    }, 15 * 60 * 1000); // Check every 15 minutes instead of 10
     
     // Add visibility change listener to detect tab focus/return
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('Tab is now visible, checking auth status...');
         // Add a small delay to prevent immediate check on tab return
-        setTimeout(() => checkAuth(), 500);
+        setTimeout(() => safeCheckAuth(), 1000);
       }
     };
     
@@ -35,7 +54,7 @@ export function useMetaConnectionListeners({ checkAuth }: UseMetaConnectionListe
           event.key === 'selected_ad_accounts')) {
         console.log('Storage changed, checking auth status:', event.key);
         // Add small delay to prevent race conditions
-        setTimeout(() => checkAuth(), 300);
+        setTimeout(() => safeCheckAuth(), 800);
       }
     };
     
@@ -46,5 +65,5 @@ export function useMetaConnectionListeners({ checkAuth }: UseMetaConnectionListe
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [checkAuth]);
+  }, [safeCheckAuth]);
 }
