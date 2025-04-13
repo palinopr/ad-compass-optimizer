@@ -5,7 +5,6 @@ import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizar
 import MetaConnect from '@/components/meta/MetaConnect';
 import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
-// Remove CampaignDiagnostics import
 import DiagnosticButton from '@/components/campaigns/DiagnosticButton';
 
 // Import our components
@@ -41,8 +40,6 @@ const Campaigns = () => {
           onCreateCampaign={() => setShowCreateWizard(true)}
           disabled={showCreateWizard || !isAuthenticated || !hasAdAccount || !hasPermissions}
         />
-        
-        {/* Remove Lovable Campaign Diagnostics */}
         
         {showCreateWizard ? (
           <CampaignCreationWizard onCancel={() => setShowCreateWizard(false)} />
@@ -85,8 +82,11 @@ const Campaigns = () => {
             
             <CampaignTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             
-            {/* Add the diagnostic button at the bottom */}
-            <DiagnosticButton />
+            {/* Make the diagnostic button more visible with a border */}
+            <div className="border-t border-gray-200 pt-6 mt-8">
+              <h3 className="text-sm font-medium text-center mb-2">Campaign Connection Troubleshooter</h3>
+              <DiagnosticButton />
+            </div>
           </>
         )}
       </div>

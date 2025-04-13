@@ -15,17 +15,24 @@ const DiagnosticButton = () => {
   const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
 
   const runDiagnostics = async () => {
+    // Log the current state for debugging
+    console.log('Starting diagnostic run...');
+    console.log('Current token:', metaAuthService.getAccessToken()?.substring(0, 10) + '...' || 'No token');
+    
     setIsRunningDiagnostic(true);
     try {
       const results = await runComprehensiveDiagnostic();
       console.log("Diagnostic results:", results);
       setDiagnosticResults(results);
       setShowResults(true);
+      
+      // Persist diagnostic results in sessionStorage for debugging
+      sessionStorage.setItem('last_diagnostic_results', JSON.stringify(results));
     } catch (error) {
       console.error("Error running diagnostics:", error);
       toast({
         title: "Diagnostic Error",
-        description: "Failed to run connection diagnostics",
+        description: "Failed to run connection diagnostics, check console for details",
         variant: "destructive"
       });
     } finally {
@@ -75,7 +82,7 @@ const DiagnosticButton = () => {
       <div className="flex justify-center mt-10 mb-6">
         <Button 
           variant="outline" 
-          className="flex items-center gap-2" 
+          className="flex items-center gap-2 border-amber-300 hover:bg-amber-50" 
           onClick={runDiagnostics}
           disabled={isRunningDiagnostic}
         >
@@ -84,7 +91,7 @@ const DiagnosticButton = () => {
           ) : (
             <Bug className="h-4 w-4" />
           )}
-          {isRunningDiagnostic ? "Running Diagnostics..." : "Troubleshoot Campaign Issues"}
+          {isRunningDiagnostic ? "Running Diagnostics..." : "Troubleshoot Campaign Loading Issues"}
         </Button>
       </div>
 
@@ -166,11 +173,38 @@ const DiagnosticButton = () => {
                   </div>
                 )}
               </div>
+              
+              {/* Add token details section for debugging */}
+              <div className="mt-4 p-3 bg-gray-50 rounded border border-gray-200">
+                <h3 className="text-sm font-medium mb-2">Token Details:</h3>
+                <div className="text-xs space-y-1 font-mono">
+                  <p>Has Token: {diagnosticResults.token.hasToken ? 'Yes' : 'No'}</p>
+                  {diagnosticResults.token.tokenLength > 0 && (
+                    <p>Token Length: {diagnosticResults.token.tokenLength} characters</p>
+                  )}
+                  {diagnosticResults.token.tokenAge !== null && (
+                    <p>Token Age: {diagnosticResults.token.tokenAge} days</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
           
           <AlertDialogFooter>
             <Button onClick={() => setShowResults(false)}>Close</Button>
+            <Button 
+              variant="outline" 
+              onClick={runDiagnostics} 
+              className="ml-2"
+              disabled={isRunningDiagnostic}
+            >
+              {isRunningDiagnostic ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Run Again
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
