@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,11 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     return { from: thirtyDaysAgo, to: today };
   });
 
+  // Apply initial preset on first mount
+  useEffect(() => {
+    handlePresetChange(initialPreset);
+  }, [initialPreset]);
+
   const handlePresetChange = (preset: string) => {
     const today = new Date();
     today.setHours(23, 59, 59, 999); // End of today
@@ -93,6 +99,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         break;
     }
 
+    console.log(`Date preset selected: ${preset}`, newRange);
     setSelectedPreset(preset);
     setDateRange(newRange);
     onChange(newRange, preset);

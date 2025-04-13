@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useCampaigns } from '@/hooks/campaigns';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import CampaignTable from './CampaignTable';
@@ -44,16 +45,40 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     }
   }, [checkAuth, isAuthenticated, status]);
   
-  // Calculate metrics from campaigns
+  // Calculate metrics from filtered campaigns
   const metrics = {
-    impressions: filteredCampaigns.length > 0 ? '15,432' : '0', // placeholder value
-    clicks: filteredCampaigns.length > 0 ? '843' : '0', // placeholder value
+    impressions: filteredCampaigns.reduce((total, campaign) => {
+      const impressions = campaign.insights?.impressions || '0';
+      return total + parseInt(impressions, 10);
+    }, 0).toLocaleString(),
+    
+    clicks: filteredCampaigns.reduce((total, campaign) => {
+      const clicks = campaign.insights?.clicks || '0';
+      return total + parseInt(clicks, 10);
+    }, 0).toLocaleString(),
+    
     spend: filteredCampaigns.reduce((total, campaign) => {
       const spendStr = campaign.spend || '$0.00';
       const numericValue = parseFloat(spendStr.replace(/[^0-9.-]+/g, '')) || 0;
       return total + numericValue;
     }, 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
-    cpa: filteredCampaigns.length > 0 ? '$12.54' : '$0.00', // placeholder value
+    
+    cpa: (() => {
+      const totalSpend = filteredCampaigns.reduce((total, campaign) => {
+        const spendStr = campaign.spend || '$0.00';
+        const numericValue = parseFloat(spendStr.replace(/[^0-9.-]+/g, '')) || 0;
+        return total + numericValue;
+      }, 0);
+      
+      const totalClicks = filteredCampaigns.reduce((total, campaign) => {
+        const clicks = campaign.insights?.clicks || '0';
+        return total + parseInt(clicks, 10);
+      }, 0);
+      
+      if (totalClicks === 0) return '$0.00';
+      const cpa = totalSpend / totalClicks;
+      return cpa.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    })()
   };
   
   // Handle loading state
@@ -87,6 +112,9 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       </Card>
     );
   }
+
+  // Handle empty filtered results
+  const hasFilteredResults = filteredCampaigns.length > 0;
   
   // Handle data state
   return (
@@ -103,7 +131,23 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       <CampaignMetrics {...metrics} />
       
       <Card>
-        <CampaignTable campaigns={filteredCampaigns} status={status} />
+        {hasFilteredResults ? (
+          <CampaignTable campaigns={filteredCampaigns} status={status} />
+        ) : (
+          <div className="p-8 text-center">
+            <p className="text-muted-foreground">No campaigns match your current filters.</p>
+            <Button variant="outline" className="mt-4" onClick={() => {
+              setStatusFilter(null);
+              setSearchQuery('');
+              setDateRange(
+                { from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), to: new Date() }, 
+                'last30days'
+              );
+            }}>
+              Reset Filters
+            </Button>
+          </div>
+        )}
       </Card>
     </>
   );

@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { DateRange } from '@/components/meta/filters/DateRangeSelector';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 
@@ -19,7 +19,7 @@ export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   });
 
   // Initialize with default date range (last 30 days)
-  useState(() => {
+  useEffect(() => {
     const today = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(today.getDate() - 30);
@@ -27,7 +27,7 @@ export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
       ...prev,
       dateRange: { from: thirtyDaysAgo, to: today }
     }));
-  });
+  }, []);
 
   const setDateRange = useCallback((dateRange: DateRange, preset: string) => {
     setFilters(prev => ({ ...prev, dateRange, datePreset: preset }));
