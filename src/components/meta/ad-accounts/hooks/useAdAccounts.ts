@@ -17,7 +17,20 @@ export const useAdAccounts = () => {
   
   // Fetch ad accounts on initial load
   useEffect(() => {
+    console.log('Initializing ad accounts component');
     fetchAdAccounts();
+    
+    // Listen for refresh events
+    const handleRefresh = () => {
+      console.log('Ad account refresh event received');
+      fetchAdAccounts();
+    };
+    
+    window.addEventListener('refresh-ad-accounts', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('refresh-ad-accounts', handleRefresh);
+    };
   }, []);
   
   return {

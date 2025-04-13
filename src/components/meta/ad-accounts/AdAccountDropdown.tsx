@@ -43,9 +43,9 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
     return account ? `${account.name} (${account.id})` : 'Select an ad account';
   }, [adAccounts, selectedAccount]);
 
-  const handleSelect = React.useCallback((value: string) => {
-    // Prevent default to avoid any navigation
-    onChange(value);
+  // Prevent default event handling to avoid form submission
+  const handleSelect = React.useCallback((currentValue: string) => {
+    onChange(currentValue);
     setOpen(false);
   }, [onChange]);
 
@@ -59,6 +59,10 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
           className="w-full justify-between"
           disabled={isLoading}
           type="button" // Explicitly set button type to prevent form submission
+          onClick={(e) => {
+            e.preventDefault(); // Prevent any default action
+            e.stopPropagation(); // Stop event propagation
+          }}
         >
           {isLoading ? (
             <div className="flex items-center">
@@ -82,7 +86,10 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
               <CommandItem
                 key={account.id}
                 value={account.id}
-                onSelect={handleSelect.bind(null, account.id)}
+                onSelect={(value) => {
+                  console.log('Account selected:', account.id);
+                  handleSelect(account.id);
+                }}
               >
                 <Check
                   className={cn(

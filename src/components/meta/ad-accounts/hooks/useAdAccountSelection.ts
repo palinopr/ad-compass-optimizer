@@ -19,24 +19,39 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
   const handleAccountChange = (value: string) => {
     // Store without 'act_' prefix for consistency
     const accountId = value.replace(/^act_/, '');
+    
+    console.log('Changing ad account to:', accountId);
+    
+    // Update state
     setSelectedAccount(accountId);
+    
+    // Update localStorage
     localStorage.setItem('selected_ad_account', accountId);
     
     // Update selected_ad_accounts as well to maintain consistency
     localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
     
+    // Show toast notification
     toast({
       title: "Ad Account Selected",
       description: "Your ad account selection has been updated."
     });
     
-    // Dispatch a custom event instead of reloading the page
-    window.dispatchEvent(new CustomEvent('ad-account-changed', { 
-      detail: { accountId } 
-    }));
-    
-    // Force campaign data refresh without reloading the page
-    window.dispatchEvent(new CustomEvent('campaign-data-refresh'));
+    // Dispatch custom events for components to listen to
+    try {
+      console.log('Dispatching ad-account-changed event');
+      window.dispatchEvent(new CustomEvent('ad-account-changed', { 
+        detail: { accountId } 
+      }));
+      
+      // Short timeout to ensure first event is processed
+      setTimeout(() => {
+        console.log('Dispatching campaign-data-refresh event');
+        window.dispatchEvent(new CustomEvent('campaign-data-refresh'));
+      }, 100);
+    } catch (err) {
+      console.error('Error dispatching account change events:', err);
+    }
   };
   
   // Select first account if none selected but accounts are available
