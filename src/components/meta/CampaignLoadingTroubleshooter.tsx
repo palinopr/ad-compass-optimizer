@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw, Briefcase, Shield, Database, CheckCircle, ShieldAlert } from 'lucide-react';
-import AdAccountSelector from './AdAccountSelector';
+import AdAccountSelector from './ad-accounts/AdAccountSelector';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -47,6 +47,11 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
   // Run diagnostic on mount to provide immediate feedback
   useEffect(() => {
     runDiagnostic();
+    
+    // Always default to account tab when the component mounts
+    if (isAccountError) {
+      setActiveTab('account');
+    }
   }, []);
   
   const handleRefreshSession = () => {
@@ -123,7 +128,7 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
           </div>
         )}
         
-        <Tabs defaultValue="account" value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue={isAccountError ? "account" : activeTab} value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-white border">
             <TabsTrigger value="account" className="data-[state=active]:bg-blue-50">
               Ad Account

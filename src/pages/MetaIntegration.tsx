@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,7 +8,7 @@ import { metaAuthService } from '@/services/MetaAuthService';
 import MetaConnectCard from '@/components/meta/MetaConnectCard';
 import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info, ShieldAlert, RefreshCw } from 'lucide-react';
+import { Info, ShieldAlert, RefreshCw, Briefcase } from 'lucide-react';
 import MetaConnectionFlow from '@/components/meta/MetaConnectionFlow';
 import { useToast } from '@/hooks/use-toast';
 import TokenPermissionsList from '@/components/meta/TokenPermissionsList';
@@ -112,6 +113,24 @@ export default function MetaIntegration() {
         <div className="mb-4">
           <MetaConnectionStatus />
         </div>
+
+        {isAuthenticated && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-blue-800">
+                <Briefcase className="mr-2 h-5 w-5" />
+                Ad Account Selection
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-blue-700 mb-4">
+                Select an ad account to use with your Meta campaigns and ads. 
+                This account will be used for all campaign operations.
+              </p>
+              <AdAccountSelector />
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-4">

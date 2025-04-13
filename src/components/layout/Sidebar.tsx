@@ -28,15 +28,17 @@ interface SidebarItemProps {
   isActive?: boolean;
   isCollapsed?: boolean;
   badge?: number | string;
+  highlight?: boolean;
 }
 
-const SidebarItem = ({ icon, label, href, isActive, isCollapsed, badge }: SidebarItemProps) => {
+const SidebarItem = ({ icon, label, href, isActive, isCollapsed, badge, highlight }: SidebarItemProps) => {
   return (
     <Link to={href}>
       <div
         className={cn(
           "flex items-center rounded-lg px-3 py-2 text-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-800",
-          isActive ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-50" : "text-slate-500 dark:text-slate-400"
+          isActive ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-50" : "text-slate-500 dark:text-slate-400",
+          highlight && !isActive ? "bg-blue-50 text-blue-600 ring-1 ring-blue-200" : ""
         )}
       >
         <div className="mr-2 flex h-5 w-5 items-center justify-center">
@@ -74,7 +76,7 @@ export function Sidebar() {
 
   const items = [
     { href: "/", label: "Dashboard", icon: <Home className="h-4 w-4" /> },
-    { href: "/campaigns", label: "Campaigns", icon: <Tag className="h-4 w-4" /> },
+    { href: "/campaigns", label: "Campaigns", icon: <Tag className="h-4 w-4" />, highlight: true },
     { href: "/analytics", label: "Analytics", icon: <BarChart2 className="h-4 w-4" /> },
     { href: "/audiences", label: "Audiences", icon: <Users className="h-4 w-4" /> },
     { href: "/events", label: "Events", icon: <Calendar className="h-4 w-4" /> },
@@ -117,6 +119,7 @@ export function Sidebar() {
               badge={item.badge}
               isActive={location.pathname === item.href}
               isCollapsed={isCollapsed}
+              highlight={item.highlight}
             />
           ))}
         </div>
@@ -136,4 +139,4 @@ export function Sidebar() {
       </div>
     </div>
   );
-}
+};
