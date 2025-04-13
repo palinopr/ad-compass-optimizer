@@ -34,9 +34,20 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
   
   // Find the selected account label to display
   const selectedAccountLabel = React.useMemo(() => {
-    const account = adAccounts.find(account => account.id === selectedAccount);
+    const account = adAccounts.find(account => {
+      // Normalize account IDs for comparison by removing 'act_' prefix if present
+      const normalizedId = account.id.replace(/^act_/, '');
+      const normalizedSelected = selectedAccount.replace(/^act_/, '');
+      return normalizedId === normalizedSelected;
+    });
     return account ? `${account.name} (${account.id})` : 'Select an ad account';
   }, [adAccounts, selectedAccount]);
+
+  const handleSelect = React.useCallback((value: string) => {
+    // Prevent default to avoid any navigation
+    onChange(value);
+    setOpen(false);
+  }, [onChange]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -47,6 +58,7 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
           aria-expanded={open}
           className="w-full justify-between"
           disabled={isLoading}
+          type="button" // Explicitly set button type to prevent form submission
         >
           {isLoading ? (
             <div className="flex items-center">
@@ -70,15 +82,12 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
               <CommandItem
                 key={account.id}
                 value={account.id}
-                onSelect={() => {
-                  onChange(account.id);
-                  setOpen(false);
-                }}
+                onSelect={handleSelect.bind(null, account.id)}
               >
                 <Check
                   className={cn(
                     "mr-2 h-4 w-4",
-                    selectedAccount === account.id ? "opacity-100" : "opacity-0"
+                    selectedAccount.replace(/^act_/, '') === account.id.replace(/^act_/, '') ? "opacity-100" : "opacity-0"
                   )}
                 />
                 <div className="flex flex-col">

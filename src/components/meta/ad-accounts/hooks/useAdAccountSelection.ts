@@ -30,9 +30,13 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
       description: "Your ad account selection has been updated."
     });
     
-    // Reload campaign data by forcing a page refresh
-    // This ensures the campaigns component re-fetches data with the new account
-    window.location.reload();
+    // Dispatch a custom event instead of reloading the page
+    window.dispatchEvent(new CustomEvent('ad-account-changed', { 
+      detail: { accountId } 
+    }));
+    
+    // Force campaign data refresh without reloading the page
+    window.dispatchEvent(new CustomEvent('campaign-data-refresh'));
   };
   
   // Select first account if none selected but accounts are available

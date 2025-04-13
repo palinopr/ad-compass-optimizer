@@ -91,7 +91,20 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       fetchCampaigns();
     }, 300);
     
-    return () => clearTimeout(timer);
+    // Add event listener for ad account changes
+    const handleAdAccountChange = () => {
+      console.log("Ad account changed, refreshing campaigns...");
+      fetchCampaigns();
+    };
+    
+    window.addEventListener('ad-account-changed', handleAdAccountChange);
+    window.addEventListener('campaign-data-refresh', fetchCampaigns);
+    
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('ad-account-changed', handleAdAccountChange);
+      window.removeEventListener('campaign-data-refresh', fetchCampaigns);
+    };
   }, [fetchCampaigns]);
   
   return {
