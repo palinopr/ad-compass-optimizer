@@ -34,23 +34,22 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
   
   // Find the selected account label to display
   const selectedAccountLabel = React.useMemo(() => {
+    if (isLoading) return 'Loading accounts...';
+    
+    if (adAccounts.length === 0) return 'No accounts available';
+    
     const account = adAccounts.find(account => {
       // Normalize account IDs for comparison by removing 'act_' prefix if present
       const normalizedId = account.id.replace(/^act_/, '');
       const normalizedSelected = selectedAccount?.replace(/^act_/, '') || '';
       return normalizedId === normalizedSelected;
     });
+    
     return account ? `${account.name} (${account.id})` : 'Select an ad account';
-  }, [adAccounts, selectedAccount]);
+  }, [adAccounts, selectedAccount, isLoading]);
 
   // Handle selection with proper event management
-  const handleSelect = React.useCallback((accountId: string, e?: React.MouseEvent | React.KeyboardEvent) => {
-    // Prevent any default browser behavior
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
+  const handleSelect = React.useCallback((accountId: string) => {
     console.log('Account selection triggered:', accountId);
     
     // Close dropdown first to prevent UI freeze
@@ -62,6 +61,12 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
     }, 10);
   }, [onChange]);
 
+  // Prevent any click event from propagating up and potentially causing navigation
+  const stopPropagation = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -72,10 +77,7 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
           className="w-full justify-between bg-white"
           disabled={isLoading}
           type="button" // Explicitly set button type to prevent form submission
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
+          onClick={stopPropagation}
         >
           {isLoading ? (
             <div className="flex items-center">
@@ -90,7 +92,7 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-white">
+      <PopoverContent className="w-full p-0 bg-white z-50">
         <Command>
           <CommandInput placeholder="Search ad accounts..." />
           <CommandEmpty>No ad accounts found.</CommandEmpty>
@@ -99,11 +101,10 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
               <CommandItem
                 key={account.id}
                 value={account.id}
-                onSelect={(value) => {
-                  console.log('Account selected from dropdown:', account.id);
-                  handleSelect(account.id);
-                }}
+                onSelect={() => handleSelect(account.id)}
                 className="cursor-pointer"
+                onMouseDown={stopPropagation}
+                onClick={stopPropagation}
               >
                 <Check
                   className={cn(

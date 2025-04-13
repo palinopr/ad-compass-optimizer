@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { AdAccount } from '../types';
 
@@ -9,14 +9,32 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
 
   // Initialize selection from localStorage
   useEffect(() => {
-    const storedAccountId = localStorage.getItem('selected_ad_account');
-    if (storedAccountId) {
-      console.log('Using stored account selection:', storedAccountId);
-      setSelectedAccount(storedAccountId);
+    try {
+      const storedAccountId = localStorage.getItem('selected_ad_account');
+      if (storedAccountId) {
+        console.log('Using stored account selection:', storedAccountId);
+        setSelectedAccount(storedAccountId);
+      }
+    } catch (e) {
+      console.error('Error loading stored account:', e);
     }
   }, []);
   
-  const handleAccountChange = (value: string) => {
+  // Safe event dispatcher that won't freeze the UI
+  const safeDispatchEvent = useCallback((eventName: string, detail?: any) => {
+    console.log(`Dispatching ${eventName} event`);
+    try {
+      // Use requestAnimationFrame to ensure UI updates first
+      requestAnimationFrame(() => {
+        const event = new CustomEvent(eventName, { detail });
+        window.dispatchEvent(event);
+      });
+    } catch (err) {
+      console.error(`Error dispatching ${eventName} event:`, err);
+    }
+  }, []);
+  
+  const handleAccountChange = useCallback((value: string) => {
     try {
       // Prevent default event behavior to avoid page reloads
       console.log('Account selection change initiated:', value);
@@ -41,27 +59,18 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
         description: "Your ad account selection has been updated."
       });
       
-      // Safely dispatch events with error handling - use setTimeout to prevent UI freezing
+      // Use the safe event dispatcher with a slight delay
       setTimeout(() => {
-        console.log('Dispatching ad-account-changed event');
-        try {
-          const accountEvent = new CustomEvent('ad-account-changed', { 
-            detail: { accountId } 
-          });
-          window.dispatchEvent(accountEvent);
-        } catch (err) {
-          console.error('Error dispatching ad-account-changed event:', err);
-        }
+        safeDispatchEvent('ad-account-changed', { accountId });
         
-        // Allow a small delay between events to ensure proper processing
+        // Allow a small delay between events
         setTimeout(() => {
-          console.log('Dispatching campaign-data-refresh event');
-          try {
-            const refreshEvent = new CustomEvent('campaign-data-refresh');
-            window.dispatchEvent(refreshEvent);
-          } catch (err) {
-            console.error('Error dispatching campaign-data-refresh event:', err);
-          }
+          safeDispatchEvent('campaign-data-refresh');
+          
+          // Also dispatch refresh-ad-accounts event to ensure consistency
+          setTimeout(() => {
+            safeDispatchEvent('refresh-ad-accounts');
+          }, 100);
         }, 100);
       }, 50);
     } catch (err) {
@@ -72,17 +81,21 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
         variant: "destructive"
       });
     }
-  };
+  }, [toast, safeDispatchEvent]);
   
   // Select first account if none selected but accounts are available
   useEffect(() => {
     if (adAccounts.length > 0 && !selectedAccount) {
-      // Store without 'act_' prefix for consistency
-      const accountId = adAccounts[0].id.replace(/^act_/, '');
-      setSelectedAccount(accountId);
-      localStorage.setItem('selected_ad_account', accountId);
-      localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
-      console.log(`Selected first available account: ${accountId}`);
+      try {
+        // Store without 'act_' prefix for consistency
+        const accountId = adAccounts[0].id.replace(/^act_/, '');
+        console.log(`Selecting first available account: ${accountId}`);
+        setSelectedAccount(accountId);
+        localStorage.setItem('selected_ad_account', accountId);
+        localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
+      } catch (e) {
+        console.error('Error selecting first account:', e);
+      }
     }
   }, [adAccounts, selectedAccount]);
   

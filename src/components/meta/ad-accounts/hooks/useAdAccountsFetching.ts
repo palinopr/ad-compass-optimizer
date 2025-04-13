@@ -15,6 +15,7 @@ export function useAdAccountsFetching() {
     const accessToken = metaAuthService.getAccessToken();
     
     if (!accessToken) {
+      console.log('No access token available for fetching ad accounts');
       setError('Not authenticated with Meta');
       return;
     }
@@ -31,7 +32,7 @@ export function useAdAccountsFetching() {
       if (selectedAdAccounts) {
         try {
           selectedIds = JSON.parse(selectedAdAccounts);
-          console.log('Found selected ad accounts:', selectedIds);
+          console.log('Found selected ad accounts in storage:', selectedIds);
         } catch (e) {
           console.error('Error parsing selected ad accounts:', e);
           // Reset the corrupted storage
@@ -56,6 +57,7 @@ export function useAdAccountsFetching() {
         fetchedAccounts = await fetchAllAccounts();
       }
       
+      console.log('Successfully fetched accounts:', fetchedAccounts.length);
       setAdAccounts(fetchedAccounts);
       
     } catch (err) {
@@ -67,12 +69,16 @@ export function useAdAccountsFetching() {
   
   const fetchSelectedAccounts = async (selectedIds: string[]): Promise<AdAccount[]> => {
     const token = metaAuthService.getAccessToken();
-    if (!token) return [];
+    if (!token) {
+      console.log('No token available for fetching selected accounts');
+      return [];
+    }
     
     try {
       // First validate the token with a basic check
       const connectionTest = await MetaApiService.testConnection(token);
       if (!connectionTest.success) {
+        console.error('Token validation failed:', connectionTest.error);
         throw new Error(connectionTest.error || 'Invalid or expired token');
       }
       
@@ -95,26 +101,38 @@ export function useAdAccountsFetching() {
       console.log('Valid accounts retrieved:', validAccounts.length);
       return validAccounts;
     } catch (error) {
+      console.error('Error in fetchSelectedAccounts:', error);
       throw error;
     }
   };
   
   const fetchAllAccounts = async (): Promise<AdAccount[]> => {
     const token = metaAuthService.getAccessToken();
-    if (!token) return [];
-    
-    // Validate token first
-    const connectionTest = await MetaApiService.testConnection(token);
-    if (!connectionTest.success) {
-      throw new Error(connectionTest.error || 'Invalid or expired token');
+    if (!token) {
+      console.log('No token available for fetching all accounts');
+      return [];
     }
     
-    const accounts = await MetaApiService.fetchAdAccounts(token);
-    return accounts;
+    try {
+      // Validate token first
+      const connectionTest = await MetaApiService.testConnection(token);
+      if (!connectionTest.success) {
+        console.error('Token validation failed:', connectionTest.error);
+        throw new Error(connectionTest.error || 'Invalid or expired token');
+      }
+      
+      const accounts = await MetaApiService.fetchAdAccounts(token);
+      console.log('Fetched all accounts:', accounts.length);
+      return accounts;
+    } catch (error) {
+      console.error('Error in fetchAllAccounts:', error);
+      throw error;
+    }
   };
   
   const handleFetchError = (err: any) => {
     const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error('Ad account fetch error:', errorMessage);
     
     if (errorMessage.includes('token') || 
         errorMessage.includes('400') || 
@@ -132,7 +150,6 @@ export function useAdAccountsFetching() {
       description: "Failed to load Meta ad accounts",
       variant: "destructive"
     });
-    console.error(err);
   };
 
   return {
