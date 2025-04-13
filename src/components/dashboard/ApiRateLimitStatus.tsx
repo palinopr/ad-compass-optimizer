@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CheckCircle, Clock, Hourglass, Users, Database, Info } from 'lucide-react';
@@ -16,64 +15,36 @@ const ApiRateLimitStatus = () => {
   const [isOverridden, setIsOverridden] = useState<boolean>(MetaApiService.isRateLimitOverridden());
   
   useEffect(() => {
-    // Update the initial state
-    setIsRateLimited(MetaApiService.isRateLimited());
-    setRemainingTime(MetaApiService.getRateLimitTimeRemaining());
-    setIsOverridden(MetaApiService.isRateLimitOverridden());
-    
-    // Get the limit type
-    const rateLimitInfo = MetaApiService.getRateLimitInfo();
-    setLimitType(rateLimitInfo.limitType || 'unknown');
-    setErrorMessage(rateLimitInfo.errorMessage || null);
-    
-    // Function to update the timer
     const updateTimer = () => {
-      const remaining = MetaApiService.getRateLimitTimeRemaining();
-      setRemainingTime(remaining);
-      setIsRateLimited(MetaApiService.isRateLimited());
+      const rateLimitInfo = MetaApiService.getRateLimitInfo();
+      const isCurrentlyRateLimited = MetaApiService.isRateLimited();
+      
+      setIsRateLimited(isCurrentlyRateLimited);
+      setRemainingTime(MetaApiService.getRateLimitTimeRemaining());
+      setLimitType(rateLimitInfo.limitType || 'unknown');
+      setErrorMessage(rateLimitInfo.errorMessage || null);
       setIsOverridden(MetaApiService.isRateLimitOverridden());
       
-      // Calculate percentage if we know the original retry time
-      const rateLimitData = localStorage.getItem('meta_rate_limit_retry_after');
-      if (rateLimitData && remaining) {
-        const originalSeconds = parseInt(rateLimitData, 10);
-        const percentRemaining = (remaining / originalSeconds) * 100;
-        setRemainingPercent(100 - percentRemaining);
+      // Reset states if not rate limited
+      if (!isCurrentlyRateLimited) {
+        setRemainingTime(null);
+        setRemainingPercent(100);
+        setErrorMessage(null);
       }
     };
     
     // Update every second
     const timerId = setInterval(updateTimer, 1000);
     
-    // Listen for rate limit events
-    const handleRateLimit = (e: CustomEvent) => {
-      setIsRateLimited(true);
-      setRemainingTime(e.detail?.retryAfter || 300);
-      setRemainingPercent(0);
-      setLimitType(e.detail?.limitType || 'unknown');
-      setErrorMessage(e.detail?.errorMessage || null);
-    };
-    
-    const handleRateLimitCleared = () => {
-      setIsRateLimited(false);
-      setRemainingTime(null);
-      setRemainingPercent(100);
-      setLimitType('unknown');
-      setErrorMessage(null);
-    };
-    
-    window.addEventListener('meta-api-rate-limited', handleRateLimit as EventListener);
-    window.addEventListener('meta-api-rate-limit-cleared', handleRateLimitCleared);
+    // Initial update
+    updateTimer();
     
     // Cleanup
     return () => {
       clearInterval(timerId);
-      window.removeEventListener('meta-api-rate-limited', handleRateLimit as EventListener);
-      window.removeEventListener('meta-api-rate-limit-cleared', handleRateLimitCleared);
     };
   }, []);
   
-  // Format time remaining as MM:SS
   const formatTimeRemaining = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -82,6 +53,11 @@ const ApiRateLimitStatus = () => {
   
   const handleClearRateLimit = () => {
     MetaApiService.clearRateLimit();
+    setIsRateLimited(false);
+    setRemainingTime(null);
+    setRemainingPercent(100);
+    setLimitType('unknown');
+    setErrorMessage(null);
   };
   
   const handleToggleOverride = () => {
@@ -89,7 +65,6 @@ const ApiRateLimitStatus = () => {
     setIsOverridden(!isOverridden);
   };
   
-  // Get the appropriate icon based on limit type
   const getLimitIcon = () => {
     switch (limitType) {
       case 'app':
@@ -103,7 +78,6 @@ const ApiRateLimitStatus = () => {
     }
   };
   
-  // Get descriptive text for limit type
   const getLimitTypeText = () => {
     switch (limitType) {
       case 'app':

@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
@@ -20,6 +19,7 @@ interface UseMetaInsightsReturn {
   fetchAdSetInsights: (adSetId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
   fetchAdInsights: (adId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
   clearRateLimit: () => void;
+  resetErrorState: () => void;
 }
 
 export function useMetaInsights(): UseMetaInsightsReturn {
@@ -32,7 +32,6 @@ export function useMetaInsights(): UseMetaInsightsReturn {
     timeRemaining: MetaApiService.getRateLimitTimeRemaining()
   });
   
-  // Update rate limit status
   const updateRateLimitStatus = useCallback(() => {
     const rateLimitInfo = MetaApiService.getRateLimitInfo();
     setRateLimitStatus({
@@ -42,6 +41,16 @@ export function useMetaInsights(): UseMetaInsightsReturn {
     });
   }, []);
   
+  const resetErrorState = useCallback(() => {
+    setError(null);
+    setRateLimitStatus(prev => ({
+      ...prev,
+      isRateLimited: false,
+      limitType: undefined,
+      timeRemaining: null
+    }));
+  }, []);
+
   const handleInsightsFetch = useCallback(async (
     fetchFunction: (token: string, id: string, options: InsightFilterOptions) => Promise<InsightsResponse>,
     id: string, 
@@ -51,10 +60,8 @@ export function useMetaInsights(): UseMetaInsightsReturn {
     setError(null);
     
     try {
-      // Update the rate limit status
       updateRateLimitStatus();
       
-      // Check if we're rate limited
       if (MetaApiService.isRateLimited() && !MetaApiService.isRateLimitOverridden()) {
         const rateLimitInfo = MetaApiService.getRateLimitInfo();
         const remainingTime = MetaApiService.getRateLimitTimeRemaining();
@@ -75,7 +82,6 @@ export function useMetaInsights(): UseMetaInsightsReturn {
         return null;
       }
       
-      // Get the token
       const token = metaAuthService.getAccessToken();
       if (!token) {
         setError('Not authenticated with Meta. Please connect your account.');
@@ -83,11 +89,9 @@ export function useMetaInsights(): UseMetaInsightsReturn {
         return null;
       }
       
-      // Execute the fetch function
       const result = await fetchFunction(token, id, options);
       setInsights(result);
       
-      // Re-check rate limit status after fetch
       updateRateLimitStatus();
       
       return result;
@@ -95,13 +99,11 @@ export function useMetaInsights(): UseMetaInsightsReturn {
       console.error('Error fetching insights:', err);
       let errorMessage = err.message || 'An error occurred while fetching insights data';
       
-      // Check for rate limit error
       const isRateLimitError = errorMessage.includes('rate limit') || 
                              errorMessage.includes('request limit') || 
                              err.code === 17 || err.code === 4;
       
       if (isRateLimitError) {
-        // Re-check rate limit status 
         updateRateLimitStatus();
         
         const rateLimitInfo = MetaApiService.getRateLimitInfo();
@@ -114,7 +116,6 @@ export function useMetaInsights(): UseMetaInsightsReturn {
       
       setError(errorMessage);
       
-      // Show toast notification for errors
       toast({
         title: "Error Fetching Insights",
         description: errorMessage,
@@ -158,7 +159,8 @@ export function useMetaInsights(): UseMetaInsightsReturn {
   const clearRateLimit = useCallback(() => {
     MetaApiService.clearRateLimit();
     updateRateLimitStatus();
-  }, [updateRateLimitStatus]);
+    resetErrorState();
+  }, [updateRateLimitStatus, resetErrorState]);
   
   return {
     insights,
@@ -170,6 +172,7 @@ export function useMetaInsights(): UseMetaInsightsReturn {
     fetchAccountInsights,
     fetchAdSetInsights,
     fetchAdInsights,
-    clearRateLimit
+    clearRateLimit,
+    resetErrorState
   };
 }
