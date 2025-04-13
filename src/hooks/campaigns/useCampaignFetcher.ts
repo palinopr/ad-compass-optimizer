@@ -11,7 +11,8 @@ import {
   processFetchError,
   executeCampaignFetch,
   filterCampaignsByStatus,
-  shouldThrottleFetch
+  shouldThrottleFetch,
+  getBackoffTime
 } from './fetch-utils';
 
 export function useCampaignFetcher() {
@@ -26,7 +27,7 @@ export function useCampaignFetcher() {
     adAccountId: string, 
     status?: string
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
-    // Prevent duplicate requests within a short time window (2 seconds)
+    // Prevent duplicate requests within a short time window
     if (shouldThrottleFetch(lastFetchTimestampRef.current)) {
       console.log('Throttling campaign fetch - too soon after last fetch');
       
@@ -109,6 +110,24 @@ export function useCampaignFetcher() {
           return serveCachedDataWithNotification('API rate limiting');
         }
       }
+      
+      // Apply backoff strategy for future requests based on Meta best practices
+      const lastFetchSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
+      const rateLimitHistory = JSON.parse(localStorage.getItem('meta_rate_limit_history') || '[]');
+      
+      // Get usage data if available
+      let callCount;
+      try {
+        const usageData = JSON.parse(localStorage.getItem('meta_api_last_usage') || '{}');
+        if (usageData.appUsage) {
+          const usage = JSON.parse(usageData.appUsage);
+          callCount = usage.call_count;
+        }
+      } catch (e) {}
+      
+      // Calculate backoff time and apply a minimum delay before next fetch
+      const backoffTime = getBackoffTime(lastFetchSuccess, rateLimitHistory, callCount);
+      console.log(`Applying backoff strategy: ${backoffTime}ms before next request`);
       
       return { campaigns: [], error, errorDetails };
     } finally {

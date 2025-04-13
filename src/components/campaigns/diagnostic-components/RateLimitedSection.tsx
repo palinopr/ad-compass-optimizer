@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { Clock, AlertCircle, RefreshCw, TrendingDown, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { getCachedCampaigns } from '@/hooks/campaigns/fetch-utils';
+import { Separator } from '@/components/ui/separator';
 
 interface RateLimitedSectionProps {
   rateLimitTimestamp: string | null;
@@ -12,9 +13,14 @@ interface RateLimitedSectionProps {
 const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimestamp }) => {
   const [timeLeft, setTimeLeft] = React.useState<number>(0);
   const [showCachedData, setShowCachedData] = React.useState<boolean>(false);
+  const [rateHistory, setRateHistory] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     if (!rateLimitTimestamp) return;
+
+    // Get rate limit history
+    const history = JSON.parse(localStorage.getItem('meta_rate_limit_history') || '[]');
+    setRateHistory(history);
 
     const calculateTimeLeft = () => {
       const limitTime = new Date(rateLimitTimestamp).getTime();
@@ -22,8 +28,8 @@ const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimest
       const minutesSince = Math.floor((now - limitTime) / (1000 * 60));
       const secondsSince = Math.floor((now - limitTime) / 1000) % 60;
       
-      // Rate limits typically last 5 minutes
-      const minutesLeft = Math.max(0, 5 - minutesSince);
+      // Rate limits typically last 10 minutes (updated from 5)
+      const minutesLeft = Math.max(0, 10 - minutesSince);
       const secondsLeft = minutesLeft > 0 ? Math.max(0, 60 - secondsSince) % 60 : 0;
       
       return minutesLeft * 60 + secondsLeft;
@@ -72,6 +78,15 @@ const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimest
   
   // Format the time remaining
   const timeRemaining = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  
+  // Get the last rate limit usage data if available
+  let usageData = null;
+  try {
+    const usageStr = localStorage.getItem('meta_api_last_usage');
+    if (usageStr) {
+      usageData = JSON.parse(usageStr);
+    }
+  } catch (e) {}
 
   return (
     <Alert variant="destructive" className="mb-4">
@@ -80,9 +95,9 @@ const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimest
         <Clock className="h-4 w-4 mr-1" />
         Meta API Rate Limit Detected
       </AlertTitle>
-      <AlertDescription className="space-y-2">
+      <AlertDescription className="space-y-3">
         <p>
-          Facebook has temporarily limited API requests. This typically resolves within 5 minutes.
+          Facebook has temporarily limited API requests. This typically resolves within 10 minutes.
         </p>
         {timeLeft > 0 ? (
           <p className="font-medium">
@@ -94,8 +109,65 @@ const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimest
           </p>
         )}
         
+        {/* Show Meta API rate limit docs */}
+        <div className="text-xs">
+          <a 
+            href="https://developers.facebook.com/docs/graph-api/overview/rate-limiting" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center text-white underline"
+          >
+            <ExternalLink className="h-3 w-3 mr-1" /> 
+            Learn about Meta API rate limits
+          </a>
+        </div>
+        
+        {/* Show usage data if available */}
+        {usageData && (
+          <div className="bg-red-950 bg-opacity-30 p-2 rounded text-xs mt-2">
+            <div className="flex items-center mb-1">
+              <TrendingDown className="h-3 w-3 mr-1" />
+              <span className="font-medium">Last API usage data:</span>
+            </div>
+            {usageData.appUsage && (
+              <div className="ml-4">
+                App Usage: {usageData.appUsage}
+              </div>
+            )}
+            {usageData.businessUsage && (
+              <div className="ml-4">
+                Business Usage: {usageData.businessUsage}
+              </div>
+            )}
+            {usageData.timestamp && (
+              <div className="ml-4 text-gray-300 mt-1">
+                Recorded: {new Date(usageData.timestamp).toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Show rate limit history */}
+        {rateHistory.length > 1 && (
+          <div className="text-xs">
+            <p className="font-medium">Recent rate limit events: {rateHistory.length}</p>
+            <div className="text-gray-300 mt-1">
+              {rateHistory.slice(-3).map((timestamp, i) => (
+                <div key={i}>
+                  {new Date(timestamp).toLocaleString()}
+                </div>
+              ))}
+              {rateHistory.length > 3 && (
+                <div>...and {rateHistory.length - 3} more</div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        <Separator className="my-2" />
+        
         {showCachedData && timeLeft > 0 && (
-          <div className="mt-3">
+          <div>
             <Button 
               variant="outline" 
               size="sm" 
@@ -110,6 +182,17 @@ const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimest
             </p>
           </div>
         )}
+        
+        {/* Best practices section */}
+        <div className="text-xs mt-2">
+          <p className="font-medium mb-1">Meta API Rate Limit Best Practices:</p>
+          <ul className="list-disc pl-4 space-y-1">
+            <li>Avoid making repeated API calls during rate limit periods</li>
+            <li>Spread out requests evenly to avoid traffic spikes</li>
+            <li>Use filters to limit data response size</li>
+            <li>Consider implementing backoff strategies and caching</li>
+          </ul>
+        </div>
       </AlertDescription>
     </Alert>
   );

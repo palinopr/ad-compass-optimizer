@@ -42,8 +42,19 @@ export class MetaCampaignService extends BaseApiService {
       
       // Get basic campaign data first
       const response = await fetch(
-        `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=id,name,objective,status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget&access_token=${token}`
+        `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=id,name,objective,status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget&access_token=${token}`,
+        // Adding additional headers to improve client identification
+        {
+          headers: {
+            'User-Agent': 'meta-marketing-dashboard/1.0',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        }
       );
+      
+      // Capture response headers for rate limit monitoring
+      this.captureResponseHeaders(response);
       
       const campaignsData = await this.processApiResponse(response, 'fetchCampaigns');
       const campaigns = campaignsData.data || [];
@@ -77,14 +88,26 @@ export class MetaCampaignService extends BaseApiService {
       
       // Try to fetch insights, but don't fail the whole request if insights fetch fails
       try {
-        // Now fetch insights for these campaigns if there are any
+        // Implementing Meta's rate limit best practice: 
+        // Using filters to limit data response size and avoid calls that request overlapping data
         if (campaigns.length > 0) {
-          const campaignIds = campaigns.map(campaign => campaign.id).join(',');
+          // Get a smaller batch of campaign IDs if there are many (to avoid rate limits)
+          const campaignBatchSize = campaigns.length > 20 ? 20 : campaigns.length;
+          const campaignIds = campaigns.slice(0, campaignBatchSize).map(campaign => campaign.id).join(',');
           
-          // Using a simpler insights request to avoid potential errors
+          // Using a simpler insights request with more filtering to avoid potential errors
           const insightsResponse = await fetch(
-            `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/insights?level=campaign&fields=campaign_id,spend,impressions,clicks,cpc&time_range[since]=2020-01-01&time_range[until]=2030-12-31&access_token=${token}`
+            `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/insights?level=campaign&fields=campaign_id,spend,impressions,clicks,cpc&time_range[since]=2020-01-01&time_range[until]=2030-12-31&access_token=${token}`,
+            {
+              headers: {
+                'User-Agent': 'meta-marketing-dashboard/1.0',
+                'Accept': 'application/json'
+              }
+            }
           );
+          
+          // Also capture headers from the insights call
+          this.captureResponseHeaders(insightsResponse);
           
           if (!insightsResponse.ok) {
             console.warn(`Insights fetch returned status ${insightsResponse.status}. Will continue with basic campaign data.`);

@@ -28,16 +28,37 @@ export const handleApiError = async (apiErr: any): Promise<{
       // Store the complete error details
       errorDetails = responseData;
       
-      // Check for rate limit errors
+      // Check for rate limit errors - now checking more Meta rate limit error codes
+      // Meta error codes: 4 (app rate limit), 17 (user rate limit), 80000-80014 (BUC rate limits)
       if (responseData.error && 
           (responseData.error.code === 4 || 
+           responseData.error.code === 17 ||
+           (responseData.error.code >= 80000 && responseData.error.code <= 80014) ||
            responseData.error.message?.includes('rate limit') || 
-           responseData.error.message?.includes('request limit'))) {
+           responseData.error.message?.includes('request limit') ||
+           responseData.error.message?.includes('too many calls'))) {
         
-        console.log('Rate limit error detected');
+        console.log('Rate limit error detected - code:', responseData.error.code);
         markRateLimited();
         
-        apiErrorMessage = 'Meta API rate limit reached. Please wait 5-10 minutes before trying again.';
+        // Parse estimated time to regain access if available in headers
+        let waitTime = "5-10 minutes";
+        if (responseData.headers && 
+            responseData.headers['x-business-use-case-usage'] || 
+            responseData.headers['x-app-usage']) {
+          try {
+            // Try to extract estimated time from business use case header
+            const usageData = JSON.parse(responseData.headers['x-business-use-case-usage'] || '{}');
+            const businessId = Object.keys(usageData)[0];
+            if (businessId && usageData[businessId][0]?.estimated_time_to_regain_access) {
+              waitTime = `${usageData[businessId][0].estimated_time_to_regain_access} minutes`;
+            }
+          } catch (headerErr) {
+            console.error('Failed to parse rate limit headers:', headerErr);
+          }
+        }
+        
+        apiErrorMessage = `Meta API rate limit reached. Please wait ${waitTime} before trying again.`;
         isRateLimitDetected = true;
       }
       else if (responseData.error && responseData.error.message) {

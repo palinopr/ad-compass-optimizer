@@ -5,6 +5,9 @@
 export class BaseApiService {
   protected static readonly API_VERSION = 'v17.0';
   protected static readonly BASE_URL = 'https://graph.facebook.com';
+  
+  // Store the most recent response headers for rate limit monitoring
+  public static lastResponseHeaders: Record<string, string> = {};
 
   /**
    * Handle API errors consistently
@@ -20,6 +23,9 @@ export class BaseApiService {
    * Process API response and handle common error patterns
    */
   protected static async processApiResponse(response: Response, context: string) {
+    // Store headers for rate limit monitoring
+    this.captureResponseHeaders(response);
+    
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`${context} Error:`, errorText);
@@ -82,6 +88,10 @@ export class BaseApiService {
         throw new Error('Permission error: You need to be an admin of the ad account to perform this action.');
       } else if (data.error.code === 2601) {
         throw new Error('This app has not completed App Review for the requested permissions. During development, use a System User token instead.');
+      } else if (data.error.code === 4 || data.error.code === 17 || data.error.code === 32 ||
+                (data.error.code >= 80000 && data.error.code <= 80014)) {
+        // Rate limit errors
+        throw new Error(`Rate limit reached: ${data.error.message || 'Too many requests'}. Please wait and try again later.`);
       } else {
         throw new Error(data.error.message || `Failed to ${context}`);
       }
@@ -117,5 +127,35 @@ export class BaseApiService {
     
     // Log token length to help identify token issues (without exposing the token)
     console.log(`Token validation for ${context}: ${cleanedToken.length} characters, starts with ${cleanedToken.substring(0, 4)}...`);
+  }
+  
+  /**
+   * Capture response headers for rate limit monitoring
+   */
+  protected static captureResponseHeaders(response: Response): void {
+    // Store important headers for rate limit monitoring
+    const headersToCapture = [
+      'x-app-usage',
+      'x-business-use-case-usage',
+      'x-ad-account-usage',
+      'x-fb-debug',
+      'x-fb-trace-id'
+    ];
+    
+    this.lastResponseHeaders = {}; // Reset
+    
+    headersToCapture.forEach(header => {
+      const value = response.headers.get(header);
+      if (value) {
+        this.lastResponseHeaders[header] = value;
+      }
+    });
+    
+    // Check for rate limit headers and log them
+    if (this.lastResponseHeaders['x-app-usage'] || 
+        this.lastResponseHeaders['x-business-use-case-usage'] || 
+        this.lastResponseHeaders['x-ad-account-usage']) {
+      console.log('Meta API rate limit headers:', this.lastResponseHeaders);
+    }
   }
 }
