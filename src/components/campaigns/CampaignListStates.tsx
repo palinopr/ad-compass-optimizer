@@ -52,7 +52,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   
   // If we're authenticated with Facebook but still having campaign issues,
   // show the specialized troubleshooter component
-  if (isFacebookAuth && isAuthenticated && (isAccountError || isPermissionError)) {
+  if (isFacebookAuth && isAuthenticated && (isAccountError || isPermissionError || errorDetails)) {
     return (
       <CardContent>
         <CampaignLoadingTroubleshooter 
