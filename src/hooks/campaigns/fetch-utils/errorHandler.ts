@@ -17,7 +17,7 @@ export const handleApiError = async (apiErr: any): Promise<{
   
   let apiErrorMessage = apiErr?.message || 'Unknown API error';
   let errorDetails = null;
-  let isRateLimitError = false;
+  let isRateLimitDetected = false;
   
   // Extract Facebook API errors from response
   if (apiErr?.response) {
@@ -38,7 +38,7 @@ export const handleApiError = async (apiErr: any): Promise<{
         markRateLimited();
         
         apiErrorMessage = 'Meta API rate limit reached. Please wait 5-10 minutes before trying again.';
-        isRateLimitError = true;
+        isRateLimitDetected = true;
       }
       else if (responseData.error && responseData.error.message) {
         apiErrorMessage = responseData.error.message;
@@ -67,7 +67,7 @@ export const handleApiError = async (apiErr: any): Promise<{
   return { 
     message: apiErrorMessage, 
     details: errorDetails,
-    isRateLimit: isRateLimitError
+    isRateLimit: isRateLimitDetected
   };
 };
 
