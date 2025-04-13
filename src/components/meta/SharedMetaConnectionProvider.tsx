@@ -34,9 +34,7 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
     lastCheckTime
   });
   
-  // Ref to track if we've reported auth changes to avoid loops
-  const reportedRef = useRef(false);
-  // Ref to track initial check to prevent multiple checks at startup
+  // Ref to prevent multiple initial checks
   const initialCheckDoneRef = useRef(false);
 
   // Update local state when hook state changes
@@ -48,11 +46,13 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
       lastCheckTime
     });
     
-    // When authentication changes, ensure all components have the latest state
     if (lastCheckTime > 0 && !initialCheckDoneRef.current) {
       initialCheckDoneRef.current = true;
+      console.log('SharedMetaConnectionProvider: Initial auth check complete');
+      console.log('Auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+      console.log('Has permissions:', hasPermissions ? 'Yes' : 'No');
       
-      // Broadcast auth change to notify other components
+      // Broadcast auth state for cross-component consistency
       try {
         window.dispatchEvent(new CustomEvent('meta-auth-updated', { 
           detail: { isAuthenticated, hasPermissions } 
@@ -72,27 +72,13 @@ export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProvider
   useMetaAuthRestoration({ checkAuth: stableCheckAuth, setState });
   useMetaConnectionListeners({ checkAuth: stableCheckAuth });
 
-  // Report authentication changes - but throttle to prevent loops
+  // Run an initial auth check when provider mounts
   useEffect(() => {
-    // Only report changes, not initial setup and prevent loops
-    if (lastCheckTime > 0 && !reportedRef.current) {
-      reportedRef.current = true;
-      
-      if (isAuthenticated) {
-        console.log('Authentication state updated: User is authenticated');
-        if (!hasPermissions) {
-          console.warn('User is authenticated but lacks required permissions');
-        }
-      } else {
-        console.log('Authentication state updated: User is not authenticated');
-      }
-      
-      // Reset the reported ref after a delay
-      setTimeout(() => {
-        reportedRef.current = false;
-      }, 3000);
+    if (!initialCheckDoneRef.current) {
+      console.log('SharedMetaConnectionProvider: Running initial auth check');
+      stableCheckAuth();
     }
-  }, [isAuthenticated, hasPermissions, lastCheckTime]);
+  }, [stableCheckAuth]);
 
   const value = {
     isAuthenticated,

@@ -17,38 +17,38 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const { isAuthenticated, checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
   
-  // Get the most reliable auth check by running a full validation
+  // Always use direct token validation as the source of truth
   const authResult = validateAuthentication();
   const effectiveIsAuthenticated = authResult.isValid;
   
   // Force check auth status when component mounts
   useEffect(() => {
-    // Ensure our shared provider has the most accurate authentication state
-    const authState = validateAuthentication();
+    // Check token directly from localStorage for consistency
+    const token = metaAuthService.getAccessToken();
+    const directAuthCheck = token && token.length >= 50;
     
-    // If there's a state mismatch, trigger a refresh of the central auth state
-    if (authState.isValid && !isAuthenticated) {
-      console.log('Authentication state mismatch detected, refreshing auth state...');
+    console.log(`CampaignList (${status}): Direct auth check:`, 
+      directAuthCheck ? 'Valid token' : 'No valid token',
+      'Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated'
+    );
+    
+    // If there's a state mismatch, trigger a shared context refresh
+    if (directAuthCheck !== isAuthenticated) {
+      console.log('Authentication state mismatch detected in CampaignList, refreshing...');
       checkAuth();
     }
-  }, [checkAuth, isAuthenticated, validateAuthentication]);
+  }, [checkAuth, isAuthenticated, status]);
   
   // Log additional debug information if there's an error
   useEffect(() => {
     if (error) {
       console.log(`Campaign loading error (${status} campaigns):`, error);
-      console.log('Authentication status:', effectiveIsAuthenticated ? 'Authenticated' : 'Not authenticated');
-      console.log('Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
-      console.log('Auth check result:', authResult.isValid ? 'Valid' : 'Invalid');
+      console.log('Authentication status from direct check:', 
+        effectiveIsAuthenticated ? 'Authenticated' : 'Not authenticated');
+      console.log('Selected ad account:', localStorage.getItem('selected_ad_account'));
       console.log('Error details:', errorDetails || 'No additional details');
-      
-      // Check ad account selection
-      const selectedAdAccount = localStorage.getItem('selected_ad_account');
-      const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
-      console.log('Selected ad account:', selectedAdAccount);
-      console.log('Selected ad accounts array:', selectedAdAccounts);
     }
-  }, [error, isAuthenticated, effectiveIsAuthenticated, status, errorDetails, authResult]);
+  }, [error, effectiveIsAuthenticated, status, errorDetails]);
   
   // Handle loading state
   if (isLoading) {

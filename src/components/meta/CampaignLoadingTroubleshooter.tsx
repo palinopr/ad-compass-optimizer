@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,9 +38,12 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
   const { isAuthenticated, checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
   
-  // Run the full authentication check to get the most reliable state
+  // ALWAYS use direct token check as the source of truth
+  const token = metaAuthService.getAccessToken();
+  const effectiveIsAuthenticated = token && token.length >= 50;
+  
+  // Run the full authentication check to get permissions information
   const authResult = validateAuthentication();
-  const effectiveIsAuthenticated = authResult.isValid;
   
   // Check for specific error types
   const isPermissionError = errorDetails?.error?.message?.toLowerCase().includes('permission') || 
@@ -108,6 +110,24 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
     if (!diagnosticResults) return 'unknown';
     return diagnosticResults.api.success ? 'ok' : 'failed';
   };
+
+  // Log detailed authentication information
+  useEffect(() => {
+    console.log('CampaignLoadingTroubleshooter - Authentication status:');
+    console.log('  Direct token check:', effectiveIsAuthenticated ? 'Valid token' : 'No valid token');
+    console.log('  Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+    console.log('  Auth validation result:', authResult.isValid ? 'Valid' : 'Invalid');
+    
+    if (errorDetails) {
+      console.log('Error details in troubleshooter:', errorDetails);
+    }
+    
+    // Ensure authentication is fresh if there's a mismatch
+    if (effectiveIsAuthenticated && !isAuthenticated) {
+      console.log('Auth state mismatch in troubleshooter, refreshing context...');
+      checkAuth();
+    }
+  }, [effectiveIsAuthenticated, isAuthenticated, checkAuth, errorDetails, authResult]);
 
   // Use the more reliable authentication status
   return (

@@ -6,6 +6,7 @@ import { useAdAccountSelection } from './useAdAccountSelection';
 import { useCampaignFetcher } from './useCampaignFetcher';
 import { UseCampaignsResult } from './types';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 export function useCampaigns(status?: string): UseCampaignsResult {
   const [campaigns, setCampaigns] = useState<MetaCampaign[]>([]);
@@ -26,7 +27,19 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     try {
       console.log('Starting campaign fetch process...');
       
-      // Step 1: Validate authentication using the consolidated method
+      // Step 1: Always check token directly as the source of truth
+      const token = metaAuthService.getAccessToken();
+      
+      if (!token || token.length < 50) {
+        console.log('No valid token found during campaign fetch');
+        setError('Not authenticated with Meta. Please connect your account.');
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log('Valid token found, proceeding with campaign fetch');
+      
+      // Step 2: Validate authentication using the consolidated method
       const authResult = validateAuthentication();
       if (!authResult.isValid) {
         setError(authResult.error);
@@ -34,7 +47,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         return;
       }
       
-      // Step 2: Get selected ad account
+      // Step 3: Get selected ad account
       const accountResult = getSelectedAdAccount();
       if (!accountResult.hasAccount) {
         setError(accountResult.error);
@@ -43,9 +56,11 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         return;
       }
       
-      // Step 3: Fetch campaign data
+      console.log(`Fetching campaigns for ad account: ${accountResult.adAccountId}`);
+      
+      // Step 4: Fetch campaign data
       const { campaigns: fetchedCampaigns, error: fetchError, errorDetails: fetchErrorDetails } = 
-        await fetchCampaignData(authResult.token, accountResult.adAccountId, status);
+        await fetchCampaignData(token, accountResult.adAccountId, status);
       
       if (fetchError) {
         setError(fetchError);

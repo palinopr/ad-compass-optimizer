@@ -22,12 +22,17 @@ const ConnectionStatusAlerts: React.FC<ConnectionStatusAlertsProps> = ({
   hasPermissions,
   hasAdAccount
 }) => {
-  // Use the more reliable authentication check
+  // Use direct token validation as the most reliable method
   const { validateAuthentication } = useAuthCheck();
   const authResult = validateAuthentication();
   const effectiveIsAuthenticated = authResult.isValid;
+  
+  console.log('ConnectionStatusAlerts: Auth result:', 
+    effectiveIsAuthenticated ? 'Authenticated' : 'Not authenticated',
+    'Context state:', isAuthenticated ? 'Authenticated' : 'Not authenticated'
+  );
 
-  // Use the effective authentication state
+  // Use the effective authentication state for rendering decisions
   if (!effectiveIsAuthenticated) {
     return (
       <Alert>

@@ -7,50 +7,44 @@ export function useAuthCheck() {
   const { isAuthenticated, hasPermissions, showConnectionDialog, checkAuth } = useMetaConnection();
 
   const validateAuthentication = useCallback(() => {
-    // Force a fresh check of the token directly from localStorage for consistency
+    console.log('Performing thorough authentication validation...');
+    
+    // ALWAYS check token directly from localStorage for primary authentication status
     const token = metaAuthService.getAccessToken();
     const directAuthCheck = token && token.length >= 50;
     
-    // Perform a fresh auth check if we have a token but context says not authenticated
+    // Log detailed information about authentication status for debugging
+    console.log('Direct token check:', directAuthCheck ? 'Valid token found' : 'No valid token');
+    console.log('Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+    
+    // If there's a valid token but context says not authenticated, trigger an auth check
     if (directAuthCheck && !isAuthenticated) {
-      console.log('Token exists but context says not authenticated, triggering checkAuth');
+      console.log('Authentication state mismatch detected: token exists but context says not authenticated');
       // Don't wait for this to complete as it's just ensuring future consistency
       setTimeout(() => checkAuth(), 100);
     }
     
-    // Use the directly checked token status if it contradicts the context state
-    // This helps prevent false "not authenticated" errors when token exists
-    const effectiveIsAuthenticated = directAuthCheck || isAuthenticated;
+    // ALWAYS use the direct token check as the primary source of truth
+    // This prevents authentication race conditions
+    const effectiveIsAuthenticated = directAuthCheck;
     
-    console.log('Auth check result:', effectiveIsAuthenticated ? 'Authenticated' : 'Not authenticated');
-    console.log('Direct token check:', directAuthCheck ? 'Token exists' : 'No token');
-    console.log('Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
-    
-    // Check if user is authenticated
+    // Check if user is authenticated based on direct token check
     if (!effectiveIsAuthenticated) {
-      console.log('User is not authenticated');
+      console.log('Authentication validation failed: No valid token found');
       const error = 'Not authenticated with Meta. Please connect your account.';
       // Signal that connection dialog should be shown
       showConnectionDialog();
       return { isValid: false, error };
     }
     
-    // Check if user has the necessary permissions
+    // Now that we know authentication is valid, check permissions
     if (!hasPermissions) {
-      console.log('User lacks required permissions');
+      console.log('Authentication validation: Missing required permissions');
       const error = 'Missing required ads permissions. Please update your token permissions to include ads_read or ads_management.';
       return { isValid: false, error };
     }
     
-    // Double-check that we have a token
-    if (!token) {
-      console.log('No access token found even though isAuthenticated is true');
-      const error = 'Authentication error. Please reconnect your Meta account.';
-      // Signal that connection dialog should be shown
-      showConnectionDialog();
-      return { isValid: false, error, showDialog: true };
-    }
-    
+    console.log('Authentication validation successful: Valid token with required permissions');
     return { isValid: true, token };
   }, [isAuthenticated, hasPermissions, showConnectionDialog, checkAuth]);
 
