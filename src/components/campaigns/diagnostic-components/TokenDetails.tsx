@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield, Globe, Calendar, Database } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield, Globe, Calendar, Database, ExternalLink } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 interface TokenDetailsProps {
   tokenInfo: {
@@ -97,6 +98,37 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
   } catch (e) {
     fetchError = fetchErrorRaw || 'Error parsing error details';
   }
+
+  // Force reload function to clear cache and reload page
+  const handleForceReload = () => {
+    // Clear all relevant cache items
+    localStorage.removeItem('last_campaign_fetch_attempt');
+    localStorage.removeItem('last_campaign_fetch_success');
+    localStorage.removeItem('last_campaign_fetch_error');
+    localStorage.removeItem('last_campaign_count');
+    
+    // Force reload the page
+    window.location.reload();
+  };
+  
+  // Handle hard reset of auth
+  const handleHardReset = () => {
+    // Clear all auth-related items
+    localStorage.removeItem('meta_access_token');
+    localStorage.removeItem('meta_auth_valid');
+    localStorage.removeItem('meta_auth_checked');
+    localStorage.removeItem('meta_user_id');
+    localStorage.removeItem('meta_user_name');
+    localStorage.removeItem('selected_ad_account');
+    localStorage.removeItem('selected_ad_accounts');
+    localStorage.removeItem('last_campaign_fetch_attempt');
+    localStorage.removeItem('last_campaign_fetch_success');
+    localStorage.removeItem('last_campaign_fetch_error');
+    localStorage.removeItem('last_campaign_count');
+    
+    // Force reload the page
+    window.location.reload();
+  };
   
   return (
     <div className="mt-4 p-3 bg-gray-50 rounded border border-gray-200">
@@ -218,6 +250,75 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
               </p>
             </div>
           </div>
+        </div>
+        
+        {/* Advanced Troubleshooting Section */}
+        <Separator className="my-2" />
+        <div className="mt-2 space-y-3">
+          <p className="font-semibold text-sm">Advanced Troubleshooting:</p>
+          
+          {tokenAnalysis?.cors?.hasCorsIssues && (
+            <div className="bg-amber-50 border border-amber-200 p-2 rounded">
+              <p className="text-amber-700 font-medium">CORS Issues Detected</p>
+              <p className="text-xs text-amber-600 mt-1">
+                Browser security is preventing direct API calls. This can cause data loading issues even with valid authentication.
+              </p>
+              <ul className="text-xs list-disc pl-4 mt-1 space-y-1">
+                <li>Try using a different browser (Firefox often works better)</li>
+                <li>Disable browser extensions that might block requests</li>
+                <li>Use Facebook Login instead of token-based authentication</li>
+              </ul>
+            </div>
+          )}
+          
+          {parseInt(localStorage.getItem('last_campaign_count') || '0') === 0 && lastFetchSuccess && (
+            <div className="bg-blue-50 border border-blue-200 p-2 rounded">
+              <p className="text-blue-700 font-medium">No Campaigns Found</p>
+              <p className="text-xs text-blue-600 mt-1">
+                Your connection is working, but no campaigns were found in this ad account.
+              </p>
+              <ul className="text-xs list-disc pl-4 mt-1 space-y-1">
+                <li>Try selecting a different ad account</li>
+                <li>Verify campaigns exist in this account in Meta Ads Manager</li>
+                <li>Check if the account is active and not restricted</li>
+              </ul>
+            </div>
+          )}
+          
+          <div className="flex flex-col gap-2">
+            <a 
+              href="https://developers.facebook.com/tools/debug/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs text-blue-600 hover:underline flex items-center"
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Open Meta Debug Tools
+            </a>
+            
+            <div className="flex gap-2 mt-1">
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="text-xs h-7" 
+                onClick={handleForceReload}
+              >
+                Force Reload Page
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs h-7" 
+                onClick={handleHardReset}
+              >
+                Hard Reset Auth
+              </Button>
+            </div>
+          </div>
+          
+          <p className="text-xs text-gray-500 mt-2">
+            If you're still having issues, try opening your browser's developer console (F12) and check for network errors when loading campaigns.
+          </p>
         </div>
       </div>
     </div>
