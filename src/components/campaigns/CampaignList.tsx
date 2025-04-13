@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { useCampaigns } from '@/hooks/useCampaigns';
+import { useCampaigns } from '@/hooks/campaigns';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import CampaignTable from './CampaignTable';
 import { LoadingState, ErrorState, EmptyState } from './CampaignListStates';
