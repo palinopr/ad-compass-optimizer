@@ -16,15 +16,26 @@ export const generateDiagnosticSummary = (
   const issues: string[] = [];
   const recommendations: string[] = [];
   
-  // Add token issues to summary
-  if (tokenAnalysis.issues.length > 0 && tokenAnalysis.issues[0] !== 'No token issues detected') {
+  // Add token issues to summary based on token validity
+  if (!token.hasToken) {
+    issues.push('Not authenticated with Meta. Please connect your account.');
+    recommendations.push('Connect your Meta account or manually enter a valid token');
+    status = 'high';
+  } else if (tokenAnalysis.issues.length > 0 && !tokenAnalysis.issues.includes('No token issues detected')) {
     issues.push(...tokenAnalysis.issues);
     recommendations.push(...tokenAnalysis.recommendations);
     status = tokenAnalysis.severity;
   }
   
-  // Add API issues if any
-  if (token.hasToken && !api.success) {
+  // Add permission issues if token is valid but permissions are missing
+  if (token.hasToken && tokenAnalysis.isValid !== false && !token.hasAdsRead && !token.hasAdsManagement) {
+    issues.push('Missing required permissions for accessing campaign data.');
+    recommendations.push('Generate a token with ads_management and ads_read permissions');
+    if (status !== 'high') status = 'medium';
+  }
+  
+  // Add API issues if token is valid but API connection fails
+  if (token.hasToken && tokenAnalysis.isValid !== false && !api.success) {
     issues.push(`API connection failed: ${api.error?.message || JSON.stringify(api.error)}`);
     
     if (api.error?.code === 190) {
@@ -82,13 +93,31 @@ export const generateDiagnosticSummary = (
     if (status !== 'high') status = 'medium';
   }
   
-  // Check for campaign loading issues
-  if (isFacebookAuth && api.success && cors.hasCorsIssues) {
-    issues.push('Campaigns not loading despite successful Facebook authentication');
-    recommendations.push('Verify ad account selection is correct and accessible');
-    recommendations.push('Check browser console for specific API errors');
-    recommendations.push('Try reconnecting your Facebook account with fresh permissions');
-    status = 'high';
+  // Add ad account selection issue only if other issues are resolved
+  const hasAuthIssues = issues.some(issue => 
+    issue.includes('Not authenticated') || 
+    issue.includes('token')
+  );
+  
+  const hasPermissionIssues = issues.some(issue => 
+    issue.includes('permissions')
+  );
+  
+  const hasApiIssues = issues.some(issue => 
+    issue.includes('API connection')
+  );
+  
+  // Only show ad account issue if no authentication/permission/API issues
+  if (!hasAuthIssues && !hasPermissionIssues && !hasApiIssues && !localStorage.getItem('selected_ad_account')) {
+    issues.push('No ad account selected. Please select an ad account.');
+    recommendations.push('Select an ad account to view campaign data');
+    if (status === 'ok') status = 'medium';
+  }
+  
+  // If everything is good but campaigns aren't loading
+  if (token.hasToken && token.hasAdsRead && api.success && localStorage.getItem('selected_ad_account') && issues.length === 0) {
+    issues.push('No issues detected');
+    recommendations.push('Your Meta connection appears to be working correctly');
   }
   
   return {
