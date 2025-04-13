@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield, Globe, Calendar, Database, ExternalLink } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield, Globe, Calendar, Database, ExternalLink, LayoutDashboard, Rotate3D, RefreshCw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface TokenDetailsProps {
   tokenInfo: {
@@ -130,6 +131,20 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
     window.location.reload();
   };
   
+  // Handle full page refresh with cache clearing
+  const handleFullPageRefresh = () => {
+    // This will attempt to bypass browser cache entirely
+    window.location.href = window.location.href + '?nocache=' + new Date().getTime();
+  };
+  
+  // Check for the data inconsistency scenario (successful fetch but no UI display)
+  const hasDataInconsistency = lastFetchSuccess && 
+                              parseInt(localStorage.getItem('last_campaign_count') || '0') > 0 &&
+                              tokenAnalysis?.cors?.hasCorsIssues;
+  
+  // Check campaign count
+  const campaignCount = parseInt(localStorage.getItem('last_campaign_count') || '0');
+  
   return (
     <div className="mt-4 p-3 bg-gray-50 rounded border border-gray-200">
       <h3 className="text-sm font-medium mb-2 flex items-center gap-1">
@@ -235,7 +250,7 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
           <div>
             <p className="font-semibold">Data Loading:</p>
             <div className="space-y-1">
-              <p>Campaign count: {localStorage.getItem('last_campaign_count') || '0'}</p>
+              <p>Campaign count: {campaignCount}</p>
               <p>
                 CORS issues: 
                 {tokenAnalysis?.cors?.hasCorsIssues ? (
@@ -252,74 +267,149 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
           </div>
         </div>
         
+        {/* Data Display Section - NEW */}
+        {campaignCount > 0 && (
+          <>
+            <Separator className="my-2" />
+            <div className="flex items-start gap-1 mt-2">
+              <LayoutDashboard className="h-3 w-3 text-blue-500 mt-0.5" />
+              <div>
+                <p className="font-semibold">Data Display:</p>
+                <div className="space-y-1">
+                  <p>
+                    Status: 
+                    {hasDataInconsistency ? (
+                      <span className="text-amber-600 ml-1">Data loaded but may not be displaying</span>
+                    ) : (
+                      <span className="text-green-600 ml-1">Should be visible</span>
+                    )}
+                  </p>
+                  {hasDataInconsistency && (
+                    <div className="text-xs bg-amber-50 p-2 border border-amber-200 rounded mt-1">
+                      <p className="font-medium">Possible UI/Data Inconsistency</p>
+                      <p>Your data appears to be loading correctly (fetched {campaignCount} campaigns), but may not be displaying in the UI due to:</p>
+                      <ul className="list-disc pl-4 mt-1 space-y-1">
+                        <li>Browser rendering issues</li>
+                        <li>JavaScript errors preventing display</li>
+                        <li>CORS limitations affecting secondary requests</li>
+                        <li>Frontend component state issues</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+        
+        {/* CORS Specific Section - NEW */}
+        {tokenAnalysis?.cors?.hasCorsIssues && (
+          <>
+            <Separator className="my-2" />
+            <div className="flex items-start gap-1 mt-2">
+              <Rotate3D className="h-3 w-3 text-blue-500 mt-0.5" />
+              <div>
+                <p className="font-semibold">CORS Issues Detail:</p>
+                <div className="space-y-1">
+                  <div className="text-xs bg-amber-50 p-2 border border-amber-200 rounded mt-1">
+                    <p className="font-medium">CORS Issues Despite Facebook Authentication</p>
+                    <p>This is unusual and may indicate:</p>
+                    <ul className="list-disc pl-4 mt-1 space-y-1">
+                      <li>Corporate network restrictions or proxies</li>
+                      <li>Security browser extensions interfering with requests</li>
+                      <li>Mixed content blocking from your browser</li>
+                      <li>VPN or firewall restrictions</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+        
         {/* Advanced Troubleshooting Section */}
         <Separator className="my-2" />
-        <div className="mt-2 space-y-3">
-          <p className="font-semibold text-sm">Advanced Troubleshooting:</p>
-          
-          {tokenAnalysis?.cors?.hasCorsIssues && (
-            <div className="bg-amber-50 border border-amber-200 p-2 rounded">
-              <p className="text-amber-700 font-medium">CORS Issues Detected</p>
-              <p className="text-xs text-amber-600 mt-1">
-                Browser security is preventing direct API calls. This can cause data loading issues even with valid authentication.
+        <Collapsible>
+          <CollapsibleTrigger className="flex items-center w-full justify-between text-sm font-semibold py-1">
+            <span>Advanced Troubleshooting</span>
+            <RefreshCw className="h-3 w-3" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-2 space-y-3">
+              {tokenAnalysis?.cors?.hasCorsIssues && (
+                <div className="bg-amber-50 border border-amber-200 p-2 rounded">
+                  <p className="text-amber-700 font-medium">CORS Issues Detected</p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Browser security is preventing direct API calls. This can cause data loading issues even with valid authentication.
+                  </p>
+                  <ul className="text-xs list-disc pl-4 mt-1 space-y-1">
+                    <li>Try using a different browser (Firefox often works better)</li>
+                    <li>Disable browser extensions that might block requests</li>
+                    <li>Use Firefox or Edge instead of Chrome</li>
+                  </ul>
+                </div>
+              )}
+              
+              {hasDataInconsistency && (
+                <div className="bg-blue-50 border border-blue-200 p-2 rounded">
+                  <p className="text-blue-700 font-medium">UI/Data Inconsistency</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Data is loading from the API ({campaignCount} campaigns) but may not be displaying in the UI.
+                  </p>
+                  <ul className="text-xs list-disc pl-4 mt-1 space-y-1">
+                    <li>Try the "Force UI Refresh" option below</li>
+                    <li>Check your browser console (F12) for JavaScript errors</li>
+                    <li>Try with a different browser</li>
+                    <li>Clear your browser cache completely</li>
+                  </ul>
+                </div>
+              )}
+              
+              <div className="flex flex-col gap-2">
+                <a 
+                  href="https://developers.facebook.com/tools/debug/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:underline flex items-center"
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Open Meta Debug Tools
+                </a>
+                
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="text-xs h-7" 
+                    onClick={handleForceReload}
+                  >
+                    Force Reload Page
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs h-7" 
+                    onClick={handleHardReset}
+                  >
+                    Hard Reset Auth
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="text-xs h-7" 
+                    onClick={handleFullPageRefresh}
+                  >
+                    Force UI Refresh
+                  </Button>
+                </div>
+              </div>
+              
+              <p className="text-xs text-gray-500 mt-2">
+                If you're still having issues, try opening your browser's developer console (F12) and check for network errors when loading campaigns.
               </p>
-              <ul className="text-xs list-disc pl-4 mt-1 space-y-1">
-                <li>Try using a different browser (Firefox often works better)</li>
-                <li>Disable browser extensions that might block requests</li>
-                <li>Use Facebook Login instead of token-based authentication</li>
-              </ul>
             </div>
-          )}
-          
-          {parseInt(localStorage.getItem('last_campaign_count') || '0') === 0 && lastFetchSuccess && (
-            <div className="bg-blue-50 border border-blue-200 p-2 rounded">
-              <p className="text-blue-700 font-medium">No Campaigns Found</p>
-              <p className="text-xs text-blue-600 mt-1">
-                Your connection is working, but no campaigns were found in this ad account.
-              </p>
-              <ul className="text-xs list-disc pl-4 mt-1 space-y-1">
-                <li>Try selecting a different ad account</li>
-                <li>Verify campaigns exist in this account in Meta Ads Manager</li>
-                <li>Check if the account is active and not restricted</li>
-              </ul>
-            </div>
-          )}
-          
-          <div className="flex flex-col gap-2">
-            <a 
-              href="https://developers.facebook.com/tools/debug/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-xs text-blue-600 hover:underline flex items-center"
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              Open Meta Debug Tools
-            </a>
-            
-            <div className="flex gap-2 mt-1">
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                className="text-xs h-7" 
-                onClick={handleForceReload}
-              >
-                Force Reload Page
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs h-7" 
-                onClick={handleHardReset}
-              >
-                Hard Reset Auth
-              </Button>
-            </div>
-          </div>
-          
-          <p className="text-xs text-gray-500 mt-2">
-            If you're still having issues, try opening your browser's developer console (F12) and check for network errors when loading campaigns.
-          </p>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
