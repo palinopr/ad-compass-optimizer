@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { RefreshCw, ExternalLink, Shield, Globe, AlertCircle } from 'lucide-react';
+import { RefreshCw, ExternalLink, Shield, Globe, AlertCircle, Clock } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -10,6 +10,7 @@ interface TroubleshootingSectionProps {
   hasDataInconsistency: boolean;
   hasUIDisplayIssue: boolean;
   campaignCount: number;
+  fetchError: string | null;
   handleForceReload: () => void;
   handleHardReset: () => void;
   handleFullPageRefresh: () => void;
@@ -20,10 +21,18 @@ const TroubleshootingSection: React.FC<TroubleshootingSectionProps> = ({
   hasDataInconsistency,
   hasUIDisplayIssue,
   campaignCount,
+  fetchError,
   handleForceReload,
   handleHardReset,
   handleFullPageRefresh
 }) => {
+  // Check for rate limit error
+  const hasRateLimit = fetchError && 
+    (fetchError.includes('rate limit') || 
+     fetchError.includes('request limit') || 
+     fetchError.includes('code 4') ||
+     fetchError.includes('code:4'));
+
   return (
     <>
       <Separator className="my-2" />
@@ -34,6 +43,23 @@ const TroubleshootingSection: React.FC<TroubleshootingSectionProps> = ({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="mt-2 space-y-3">
+            {hasRateLimit && (
+              <div className="bg-amber-50 border border-amber-200 p-2 rounded">
+                <p className="text-amber-700 font-medium flex items-center">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Meta API Rate Limit Issue
+                </p>
+                <p className="text-xs text-amber-600 mt-1">
+                  The Facebook API is currently limiting requests from your application.
+                </p>
+                <ul className="text-xs list-disc pl-4 mt-1 space-y-1">
+                  <li>This is a temporary restriction that typically lasts 5-15 minutes</li>
+                  <li>Avoid repeated refresh attempts which can extend the limit</li>
+                  <li>Wait a few minutes before trying again</li>
+                </ul>
+              </div>
+            )}
+          
             {tokenAnalysis?.cors?.hasCorsIssues && (
               <div className="bg-amber-50 border border-amber-200 p-2 rounded">
                 <p className="text-amber-700 font-medium">CORS Issues Detected</p>
