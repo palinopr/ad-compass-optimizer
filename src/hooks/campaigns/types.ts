@@ -1,5 +1,4 @@
 
-// Campaign hook types
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 
 export interface UseCampaignsResult {
@@ -7,14 +6,22 @@ export interface UseCampaignsResult {
   isLoading: boolean;
   error: string | null;
   errorDetails?: any;
-  refetchCampaigns: () => void;
+  refetchCampaigns: (forceRefresh?: boolean) => void;
+  displayRefresh: number;
 }
 
-export interface CampaignErrorDetails {
-  error?: {
-    type?: string;
-    message?: string;
-    code?: number;
-    timestamp?: string;
+export interface CampaignFilterOptions {
+  status?: string | null;
+  search?: string;
+  dateRange?: {
+    from: Date;
+    to: Date;
   };
+  dateRangeType?: string;
+}
+
+export interface DatePreset {
+  label: string;
+  value: string;
+  days: number;
 }

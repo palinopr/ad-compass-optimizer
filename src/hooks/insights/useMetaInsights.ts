@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { MetaInsightsService, InsightFilterOptions, InsightsResponse } from '@/services/api/MetaInsightsService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useRateLimitStatus } from './useRateLimitStatus';
@@ -15,19 +15,19 @@ export function useMetaInsights() {
   const { insights: fetchedInsights, isLoading: isFetchLoading, error: fetchError, handleInsightsFetch } = useInsightsFetching();
   
   // Update local state when fetched insights change
-  useState(() => {
+  useEffect(() => {
     if (fetchedInsights) {
       setInsights(fetchedInsights);
     }
   }, [fetchedInsights]);
   
   // Combine loading states
-  useState(() => {
+  useEffect(() => {
     setIsLoading(isFetchLoading);
   }, [isFetchLoading]);
   
   // Combine error states
-  useState(() => {
+  useEffect(() => {
     if (fetchError) {
       setError(fetchError);
     }
@@ -61,7 +61,7 @@ export function useMetaInsights() {
       }
       
       const result = await handleInsightsFetch(
-        MetaInsightsService.fetchPageInsights,
+        MetaInsightsService.fetchInsights,
         pageId, 
         options
       );
@@ -105,7 +105,7 @@ export function useMetaInsights() {
       }
       
       const result = await handleInsightsFetch(
-        MetaInsightsService.fetchAdAccountInsights,
+        MetaInsightsService.fetchAccountInsights,
         adAccountId, 
         options
       );

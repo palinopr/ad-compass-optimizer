@@ -8,7 +8,7 @@ import { BarChart, Calendar, RefreshCcw } from 'lucide-react';
 import { InsightFilterOptions } from '@/services/api/MetaInsightsService';
 
 const InsightsDemoCard = () => {
-  const { insights, isLoading, error, fetchAccountInsights } = useMetaInsights();
+  const { insights, isLoading, error, fetchAdAccountInsights } = useMetaInsights();
   const { getSelectedAdAccount } = useAdAccountSelection();
   const [dateRange, setDateRange] = useState('last_30d');
   
@@ -25,7 +25,7 @@ const InsightsDemoCard = () => {
       level: 'account'
     };
     
-    await fetchAccountInsights(accountResult.adAccountId, options);
+    await fetchAdAccountInsights(accountResult.adAccountId, options);
   };
   
   return (

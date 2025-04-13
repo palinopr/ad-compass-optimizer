@@ -23,7 +23,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const { campaigns, isLoading, error, refetchCampaigns, errorDetails, displayRefresh } = useCampaigns(status);
   const { filters, setDateRange, setStatusFilter, setSearchQuery, filteredCampaigns } = 
     useCampaignFilters(campaigns);
-  const { isAuthenticated, checkAuth } = useMetaConnection();
+  const { isAuthenticated, hasPermissions, showConnectionDialog, checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
   
   // Always use direct token validation as the source of truth
@@ -37,7 +37,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     const directAuthCheck = token && token.length >= 50;
     
     console.log(`CampaignList (${status}): Direct auth check:`, 
-      directAuthCheck ? 'Valid token' : 'No valid token',
+      directAuthCheck ? 'Valid token found' : 'No valid token',
       'Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated'
     );
     
@@ -168,10 +168,10 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
             <Button variant="outline" className="mt-4" onClick={() => {
               setStatusFilter(null);
               setSearchQuery('');
-              setDateRange(
-                { from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), to: new Date() }, 
-                'last30days'
-              );
+              setDateRange({ 
+                from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 
+                to: new Date() 
+              });
             }}>
               Reset Filters
             </Button>
