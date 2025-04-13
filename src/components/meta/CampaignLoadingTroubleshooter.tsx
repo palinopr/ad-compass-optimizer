@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { runComprehensiveDiagnostic } from '@/utils/metaApiTest';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 
 interface CampaignLoadingTroubleshooterProps {
   errorDetails?: any;
@@ -34,6 +35,10 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
   const [activeTab, setActiveTab] = useState('account');
   const [runningDiagnostic, setRunningDiagnostic] = useState(false);
   const [diagnosticResults, setDiagnosticResults] = useState<DiagnosticResult | null>(null);
+  const { isAuthenticated, checkAuth } = useMetaConnection();
+  
+  // Get real-time authentication status directly from service
+  const directTokenExists = !!metaAuthService.getAccessToken();
   const tokenSource = metaAuthService.getTokenSource();
   
   // Check for specific error types
@@ -47,6 +52,12 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
   // Run diagnostic on mount to provide immediate feedback
   useEffect(() => {
     runDiagnostic();
+    
+    // Ensure authentication is fresh
+    if (directTokenExists && !isAuthenticated) {
+      console.log('Token exists but not reflected in auth state, refreshing auth...');
+      checkAuth();
+    }
     
     // Always default to account tab when the component mounts
     if (isAccountError) {
@@ -96,6 +107,9 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
     return diagnosticResults.api.success ? 'ok' : 'failed';
   };
 
+  // Use the most reliable authentication status
+  const effectiveIsAuthenticated = isAuthenticated || directTokenExists;
+
   return (
     <Card className="border-amber-200 bg-amber-50">
       <CardHeader className="pb-2">
@@ -107,7 +121,9 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
       <CardContent className="space-y-4">
         <div className="text-sm text-amber-800">
           <p className="mb-2">
-            You're successfully logged in with Facebook, but we're still having trouble loading your campaigns.
+            {effectiveIsAuthenticated ? 
+              "You're successfully logged in with Facebook, but we're still having trouble loading your campaigns." :
+              "We're having trouble with your Meta connection or permissions."}
             This typically happens due to one of these reasons:
           </p>
           
@@ -175,16 +191,18 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {/* Auth Status */}
-                    <div className={`border rounded p-3 ${tokenSource === 'facebook' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                    <div className={`border rounded p-3 ${effectiveIsAuthenticated ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-medium">Authentication</p>
-                        {tokenSource === 'facebook' ? (
+                        {effectiveIsAuthenticated ? (
                           <CheckCircle className="h-4 w-4 text-green-500" />
                         ) : (
                           <AlertCircle className="h-4 w-4 text-amber-500" />
                         )}
                       </div>
-                      <p className="text-sm mt-1 capitalize">Using {tokenSource} auth</p>
+                      <p className="text-sm mt-1 capitalize">
+                        {effectiveIsAuthenticated ? `Using ${tokenSource || 'facebook'} auth` : 'Not authenticated'}
+                      </p>
                     </div>
                     
                     {/* Permissions Status */}

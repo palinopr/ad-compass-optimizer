@@ -7,12 +7,20 @@ export function useAuthCheck() {
   const { isAuthenticated, hasPermissions, showConnectionDialog, checkAuth } = useMetaConnection();
 
   const validateAuthentication = useCallback(() => {
-    // Force a check of authentication status - but don't call checkAuth directly
-    // as this may lead to refresh loops
-    console.log('Auth check result:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+    // Force a fresh check of the token directly from localStorage for consistency
+    const token = metaAuthService.getAccessToken();
+    const directAuthCheck = token && token.length >= 50;
+    
+    // Use the directly checked token status if it contradicts the context state
+    // This helps prevent false "not authenticated" errors when token exists
+    const effectiveIsAuthenticated = directAuthCheck || isAuthenticated;
+    
+    console.log('Auth check result:', effectiveIsAuthenticated ? 'Authenticated' : 'Not authenticated');
+    console.log('Direct token check:', directAuthCheck ? 'Token exists' : 'No token');
+    console.log('Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
     
     // Check if user is authenticated
-    if (!isAuthenticated) {
+    if (!effectiveIsAuthenticated) {
       console.log('User is not authenticated');
       const error = 'Not authenticated with Meta. Please connect your account.';
       // Signal that connection dialog should be shown
@@ -27,8 +35,7 @@ export function useAuthCheck() {
       return { isValid: false, error };
     }
     
-    // Get authentication token
-    const token = metaAuthService.getAccessToken();
+    // Double-check that we have a token
     if (!token) {
       console.log('No access token found even though isAuthenticated is true');
       const error = 'Authentication error. Please reconnect your Meta account.';
@@ -38,7 +45,7 @@ export function useAuthCheck() {
     }
     
     return { isValid: true, token };
-  }, [isAuthenticated, hasPermissions, showConnectionDialog, checkAuth]);
+  }, [isAuthenticated, hasPermissions, showConnectionDialog]);
 
   return { validateAuthentication };
 }
