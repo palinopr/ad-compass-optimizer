@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
@@ -10,13 +10,35 @@ export function useMetaIntegration() {
   const { toast } = useToast();
   const { isAuthenticated, checkAuth } = useMetaConnection();
 
+  // Ensure we have the proper authentication state by checking the token directly
+  const ensureAuthState = useCallback(() => {
+    const token = metaAuthService.getAccessToken();
+    const directAuthCheck = token && token.length >= 50;
+    
+    console.log('useMetaIntegration - Auth check:', 
+      directAuthCheck ? 'Authenticated' : 'Not authenticated',
+      'Context state:', isAuthenticated ? 'Authenticated' : 'Not authenticated'
+    );
+    
+    // Force context refresh if there's a mismatch
+    if (directAuthCheck !== isAuthenticated) {
+      console.log('Auth state mismatch in useMetaIntegration, refreshing...');
+      checkAuth();
+    }
+    
+    return directAuthCheck;
+  }, [isAuthenticated, checkAuth]);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
     if (tab && ['accounts', 'flow', 'settings', 'diagnostics'].includes(tab)) {
       setActiveTab(tab);
     }
-  }, []);
+    
+    // Always verify authentication state on mount
+    ensureAuthState();
+  }, [ensureAuthState]);
 
   const handleDisconnect = () => {
     metaAuthService.logout();
@@ -49,9 +71,12 @@ export function useMetaIntegration() {
     window.history.pushState({}, '', url);
   };
 
+  // Use direct token check as the source of truth
+  const effectiveIsAuthenticated = ensureAuthState();
+
   return {
     activeTab,
-    isAuthenticated,
+    isAuthenticated: effectiveIsAuthenticated, // Use the direct check result
     isRefreshing,
     handleDisconnect,
     handleRefresh,

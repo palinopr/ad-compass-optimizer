@@ -1,138 +1,107 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import AdAccountsLoading from './AdAccountsLoading';
-import AdAccountsEmpty from './AdAccountsEmpty';
-import AdAccountDetails from './AdAccountDetails';
-import { useAdAccounts } from './useAdAccounts';
+import { Loader2, RefreshCw, Check } from 'lucide-react';
+import { useAdAccounts } from './hooks/useAdAccounts';
+import { useAdAccountSelection } from './hooks/useAdAccountSelection';
+import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import { metaAuthService } from '@/services/MetaAuthService';
-import { useToast } from '@/hooks/use-toast';
 
-const AdAccountSelector: React.FC = () => {
-  const { 
-    adAccounts, 
-    selectedAccount, 
-    isLoading, 
-    error, 
-    fetchAdAccounts, 
-    handleAccountChange 
-  } = useAdAccounts();
+const AdAccountSelector = () => {
+  const { adAccounts, isLoading, error, refetchAdAccounts } = useAdAccounts();
+  const { selectedAccount, handleAccountChange } = useAdAccountSelection(adAccounts);
+  const { isAuthenticated, checkAuth } = useMetaConnection();
   
-  const { toast } = useToast();
-  
-  // Function to handle refresh button click with token validation
-  const handleRefresh = async () => {
-    // Check if token is valid before refreshing
+  const [showSelector, setShowSelector] = useState(true);
+
+  // Always check if we have a real token on mount to ensure consistency
+  useEffect(() => {
     const token = metaAuthService.getAccessToken();
-    if (!token || token.length < 50) {
-      // Show detailed error message
-      toast({
-        title: "Token Error",
-        description: "You need a valid Meta token to refresh ad accounts. Please reconnect your account.",
-        variant: "destructive"
-      });
-      
-      // Force token refresh flow if token is invalid
-      localStorage.setItem('show_meta_connection', 'true');
-      localStorage.setItem('meta_connection_context', 'token');
-      
-      // Add a small delay before reload
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-      return;
-    }
+    const effectiveIsAuthenticated = token && token.length >= 50;
     
-    // Check token freshness
-    const freshness = metaAuthService.checkTokenFreshness();
-    if (freshness.age > 50) { // If token is older than 50 days
-      toast({
-        title: "Token Warning",
-        description: `Your token is ${freshness.age} days old and may expire soon. Consider generating a new token.`,
-        variant: "default"  // Fixed: using "default" instead of "warning"
-      });
-    }
+    console.log('AdAccountSelector mount - Auth check:', 
+                effectiveIsAuthenticated ? 'Authenticated' : 'Not authenticated',
+                'Context state:', isAuthenticated ? 'Authenticated' : 'Not authenticated'
+    );
     
-    fetchAdAccounts();
-  };
+    // Force context refresh if there's a mismatch to maintain consistency
+    if (effectiveIsAuthenticated !== isAuthenticated) {
+      console.log('Auth state mismatch in AdAccountSelector, refreshing...');
+      checkAuth();
+    }
+  }, [isAuthenticated, checkAuth]);
   
+  // This ensures the component remains visible regardless of account selection
+  useEffect(() => {
+    setShowSelector(true);
+  }, [selectedAccount]);
+
+  // Skip rendering if the token is missing - rely on direct check rather than context
+  const token = metaAuthService.getAccessToken();
+  if (!token) {
+    console.log('AdAccountSelector - No token found, not rendering selector');
+    return null;
+  }
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center text-lg font-medium">
-          <Building className="w-5 h-5 mr-2" />
-          Select Ad Account
-        </CardTitle>
+    <Card className={showSelector ? 'opacity-100' : 'opacity-0'}>
+      <CardHeader>
+        <CardTitle className="text-lg">Select Ad Account</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <AdAccountsLoading />
+          <div className="flex justify-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+          </div>
         ) : error ? (
-          <div className="space-y-4">
-            <div className="text-red-500 text-sm">{error}</div>
-            <Button
-              variant="outline"
+          <div className="space-y-2">
+            <p className="text-sm text-red-600">{error}</p>
+            <Button 
+              onClick={refetchAdAccounts} 
+              variant="outline" 
               size="sm"
-              onClick={handleRefresh}
-              className="flex items-center gap-1"
+              className="flex items-center"
             >
-              <RefreshCw className="h-3 w-3" />
-              Retry Connection
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
             </Button>
           </div>
-        ) : adAccounts.length === 0 ? (
-          <AdAccountsEmpty onRefresh={handleRefresh} />
-        ) : (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-500">
-              Select the ad account you want to use for creating and managing campaigns.
-            </p>
-            <Select 
-              value={selectedAccount || ''} 
-              onValueChange={handleAccountChange}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select an ad account" />
-              </SelectTrigger>
-              <SelectContent>
-                {adAccounts.map((account) => (
-                  <SelectItem 
-                    key={account.id} 
-                    value={account.id.replace(/^act_/, '')}
-                  >
-                    {account.name || account.business_name} ({account.account_id})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        ) : adAccounts.length > 0 ? (
+          <div className="space-y-2">
+            <div className="text-sm mb-2">Choose an ad account to view and manage campaigns:</div>
             
-            <div className="flex justify-end">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleRefresh}
-                className="flex items-center gap-1"
-              >
-                <RefreshCw className="h-3 w-3" />
-                Refresh
-              </Button>
+            <div className="grid gap-2">
+              {adAccounts.map((account) => (
+                <Button
+                  key={account.id}
+                  variant={selectedAccount === account.id.replace(/^act_/, '') ? "default" : "outline"}
+                  className={`justify-start w-full ${
+                    selectedAccount === account.id.replace(/^act_/, '') 
+                      ? "bg-blue-600 hover:bg-blue-700" 
+                      : "hover:bg-blue-50"
+                  }`}
+                  onClick={() => handleAccountChange(account.id.replace(/^act_/, ''))}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="truncate">{account.name}</span>
+                    {selectedAccount === account.id.replace(/^act_/, '') && (
+                      <Check className="h-4 w-4 ml-2 flex-shrink-0" />
+                    )}
+                  </div>
+                </Button>
+              ))}
             </div>
             
             {selectedAccount && (
-              <div className="mt-4 text-sm bg-slate-50 p-4 rounded-md border">
-                <p className="font-medium mb-2">Selected Account Details:</p>
-                {adAccounts
-                  .filter(account => account.id.replace(/^act_/, '') === selectedAccount || account.id === selectedAccount)
-                  .map(account => (
-                    <AdAccountDetails key={account.id} account={account} />
-                  ))
-                }
+              <div className="p-2 bg-green-50 border border-green-200 rounded text-green-700 text-sm mt-4 flex items-center">
+                <Check className="h-4 w-4 mr-2 text-green-600" />
+                Ad account selected successfully
               </div>
             )}
           </div>
+        ) : (
+          <p className="text-sm text-gray-500">No ad accounts available. Please make sure you have access to ad accounts in your Meta Business Manager.</p>
         )}
       </CardContent>
     </Card>
