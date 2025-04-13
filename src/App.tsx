@@ -5,6 +5,7 @@ import Dashboard from '@/pages/Dashboard';
 import MetaIntegration from '@/pages/MetaIntegration';
 import Campaigns from '@/pages/Campaigns';
 import Messages from '@/pages/Messages';
+import Profile from '@/pages/Profile';
 import { SharedMetaConnectionProvider } from '@/components/meta/SharedMetaConnectionProvider';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -17,6 +18,7 @@ function App() {
           <Route path="/meta-integration" element={<MetaIntegration />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/analytics" element={<Dashboard />} /> 
           <Route path="/audiences" element={<Dashboard />} />
           <Route path="/events" element={<Dashboard />} />

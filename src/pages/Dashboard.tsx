@@ -1,7 +1,9 @@
+
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CampaignsQuickAccess from '@/components/dashboard/CampaignsQuickAccess';
+import ProfileQuickAccess from '@/components/dashboard/ProfileQuickAccess';
 
 export default function Dashboard() {
   return (
@@ -14,6 +16,7 @@ export default function Dashboard() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <CampaignsQuickAccess />
+          <ProfileQuickAccess />
           {/* Add other quick access cards here */}
         </div>
         

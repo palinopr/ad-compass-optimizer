@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Share2
+  Share2,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -82,6 +83,7 @@ export function Sidebar() {
     { href: "/events", label: "Events", icon: <Calendar className="h-4 w-4" /> },
     { href: "/messages", label: "Messages", icon: <MessageSquare className="h-4 w-4" />, badge: 3 },
     { href: "/reports", label: "Reports", icon: <FileText className="h-4 w-4" /> },
+    { href: "/profile", label: "Account", icon: <User className="h-4 w-4" /> },
     { href: "/meta-integration", label: "Meta Integration", icon: <Share2 className="h-4 w-4" /> },
     { href: "/settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
   ];
