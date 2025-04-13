@@ -9,7 +9,7 @@ import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvide
 import { metaAuthService } from '@/services/MetaAuthService';
 
 const AdAccountSelector = () => {
-  const { adAccounts, isLoading, error, refetchAdAccounts } = useAdAccounts();
+  const { adAccounts, isLoading, error, fetchAdAccounts } = useAdAccounts();
   const { selectedAccount, handleAccountChange } = useAdAccountSelection(adAccounts);
   const { isAuthenticated, checkAuth } = useMetaConnection();
   
@@ -58,7 +58,7 @@ const AdAccountSelector = () => {
           <div className="space-y-2">
             <p className="text-sm text-red-600">{error}</p>
             <Button 
-              onClick={refetchAdAccounts} 
+              onClick={fetchAdAccounts} 
               variant="outline" 
               size="sm"
               className="flex items-center"
