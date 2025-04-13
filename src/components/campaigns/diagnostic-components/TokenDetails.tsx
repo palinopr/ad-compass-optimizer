@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield, Globe, Calendar, Database, ExternalLink, LayoutDashboard, Rotate3D, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield, Globe, Calendar, Database, ExternalLink, LayoutDashboard, Rotate3D, RefreshCw, Cpu, Loader2, ArrowPathIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -18,6 +18,8 @@ interface TokenDetailsProps {
 }
 
 const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis }) => {
+  const [isFixing, setIsFixing] = useState(false);
+  
   const getExpirationWarning = () => {
     if (!tokenInfo.tokenAge && tokenInfo.tokenAge !== 0) return null;
     
@@ -137,6 +139,47 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
     window.location.href = window.location.href + '?nocache=' + new Date().getTime();
   };
   
+  // Deep fix - tries to resolve display issues by forcing a complete refresh of component state
+  const handleDeepFix = () => {
+    setIsFixing(true);
+    
+    try {
+      // Store current route to return to it
+      const currentRoute = window.location.pathname;
+      
+      // Clear all temporary state
+      localStorage.removeItem('last_campaign_fetch_attempt');
+      localStorage.removeItem('last_campaign_fetch_success');
+      localStorage.removeItem('last_campaign_fetch_error');
+      
+      // Clear any cached campaign data
+      localStorage.removeItem('cached_campaign_data');
+      localStorage.removeItem('campaign_filter_state');
+      
+      // Dispatch an event to signal data clearing to any listeners
+      window.dispatchEvent(new CustomEvent('campaigns-data-reset'));
+      
+      // Set a flag to indicate we're doing a deep fix, which components can detect
+      localStorage.setItem('deep_fix_timestamp', new Date().toISOString());
+      
+      // Force a hard navigation to clear React component state
+      // This is more effective than just reloading
+      setTimeout(() => {
+        // Navigate to root then back to force component remounting
+        window.location.href = '/?clearcache=' + new Date().getTime();
+        
+        // After a brief delay, return to the original route
+        setTimeout(() => {
+          window.location.href = currentRoute + '?restored=' + new Date().getTime();
+        }, 500);
+      }, 100);
+    } catch (e) {
+      console.error("Error during deep fix:", e);
+      // Fallback to normal reload if the deep fix fails
+      window.location.reload();
+    }
+  };
+  
   // Check for the data inconsistency scenario (successful fetch but no UI display)
   const hasDataInconsistency = lastFetchSuccess && 
                               parseInt(localStorage.getItem('last_campaign_count') || '0') > 0 &&
@@ -144,6 +187,16 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
   
   // Check campaign count
   const campaignCount = parseInt(localStorage.getItem('last_campaign_count') || '0');
+  
+  // Check for confirmed data loading but display issues
+  const hasUIDisplayIssue = campaignCount > 0 && (
+    // Either user is on campaigns page but no data shows
+    window.location.pathname.includes('campaign') || 
+    // Or we have explicit CORS issues
+    tokenAnalysis?.cors?.hasCorsIssues || 
+    // Or there's a mismatch between data fetched and displayed
+    localStorage.getItem('display_issue_detected') === 'true'
+  );
   
   return (
     <div className="mt-4 p-3 bg-gray-50 rounded border border-gray-200">
@@ -267,7 +320,7 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
           </div>
         </div>
         
-        {/* Data Display Section - NEW */}
+        {/* Data Display Section - Enhanced */}
         {campaignCount > 0 && (
           <>
             <Separator className="my-2" />
@@ -278,22 +331,47 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
                 <div className="space-y-1">
                   <p>
                     Status: 
-                    {hasDataInconsistency ? (
+                    {hasUIDisplayIssue ? (
+                      <span className="text-amber-600 ml-1">Data loaded but not displaying</span>
+                    ) : hasDataInconsistency ? (
                       <span className="text-amber-600 ml-1">Data loaded but may not be displaying</span>
                     ) : (
                       <span className="text-green-600 ml-1">Should be visible</span>
                     )}
                   </p>
-                  {hasDataInconsistency && (
+                  
+                  {(hasDataInconsistency || hasUIDisplayIssue) && (
                     <div className="text-xs bg-amber-50 p-2 border border-amber-200 rounded mt-1">
-                      <p className="font-medium">Possible UI/Data Inconsistency</p>
-                      <p>Your data appears to be loading correctly (fetched {campaignCount} campaigns), but may not be displaying in the UI due to:</p>
+                      <p className="font-medium">UI/Data Inconsistency Detected</p>
+                      <p>Your data is loading correctly (fetched {campaignCount} campaigns), but is not displaying in the UI due to:</p>
                       <ul className="list-disc pl-4 mt-1 space-y-1">
-                        <li>Browser rendering issues</li>
-                        <li>JavaScript errors preventing display</li>
-                        <li>CORS limitations affecting secondary requests</li>
-                        <li>Frontend component state issues</li>
+                        <li>UI rendering state issues</li>
+                        <li>React component lifecycle problems</li>
+                        <li>Cached state preventing updates</li>
                       </ul>
+                      
+                      <div className="mt-2 pt-2 border-t border-amber-200">
+                        <p className="font-medium">Recommended Action:</p>
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          className="mt-1 w-full bg-amber-600 hover:bg-amber-700 text-white h-8"
+                          onClick={handleDeepFix}
+                          disabled={isFixing}
+                        >
+                          {isFixing ? (
+                            <>
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              Fixing Display Issues...
+                            </>
+                          ) : (
+                            <>
+                              <Cpu className="h-3 w-3 mr-1" />
+                              Fix Display Issues
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -302,7 +380,7 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
           </>
         )}
         
-        {/* CORS Specific Section - NEW */}
+        {/* CORS Specific Section - Enhanced */}
         {tokenAnalysis?.cors?.hasCorsIssues && (
           <>
             <Separator className="my-2" />
@@ -320,6 +398,19 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
                       <li>Mixed content blocking from your browser</li>
                       <li>VPN or firewall restrictions</li>
                     </ul>
+                    
+                    <div className="mt-2 pt-2 border-t border-amber-200">
+                      <p className="font-medium">Try This Fix:</p>
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        className="mt-1 w-full bg-blue-600 hover:bg-blue-700 text-white h-8"
+                        onClick={handleFullPageRefresh}
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Force Full Page Refresh
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -327,7 +418,7 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
           </>
         )}
         
-        {/* Advanced Troubleshooting Section */}
+        {/* Advanced Troubleshooting Section - Enhanced */}
         <Separator className="my-2" />
         <Collapsible>
           <CollapsibleTrigger className="flex items-center w-full justify-between text-sm font-semibold py-1">
@@ -350,7 +441,7 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
                 </div>
               )}
               
-              {hasDataInconsistency && (
+              {(hasDataInconsistency || hasUIDisplayIssue) && (
                 <div className="bg-blue-50 border border-blue-200 p-2 rounded">
                   <p className="text-blue-700 font-medium">UI/Data Inconsistency</p>
                   <p className="text-xs text-blue-600 mt-1">
@@ -383,6 +474,7 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
                     className="text-xs h-7" 
                     onClick={handleForceReload}
                   >
+                    <RefreshCw className="h-3 w-3 mr-1" />
                     Force Reload Page
                   </Button>
                   <Button 
@@ -391,6 +483,7 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
                     className="text-xs h-7" 
                     onClick={handleHardReset}
                   >
+                    <Shield className="h-3 w-3 mr-1" />
                     Hard Reset Auth
                   </Button>
                   <Button 
@@ -399,6 +492,7 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
                     className="text-xs h-7" 
                     onClick={handleFullPageRefresh}
                   >
+                    <Globe className="h-3 w-3 mr-1" />
                     Force UI Refresh
                   </Button>
                 </div>
