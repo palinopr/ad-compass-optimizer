@@ -6,59 +6,11 @@ import { CheckCircle, AlertCircle, RefreshCw, Loader2, ExternalLink } from 'luci
 import DiagnosticResults from './DiagnosticResults';
 import TokenDetails from './TokenDetails';
 
-interface ApiErrorDetailsProps {
-  apiError: any;
-}
-
-const ApiErrorDetails: React.FC<ApiErrorDetailsProps> = ({ apiError }) => {
-  if (!apiError || !apiError.error) return null;
-  
-  return (
-    <div className="mt-4 p-3 bg-red-50 rounded border border-red-200">
-      <h4 className="text-sm font-medium text-red-700 mb-1">API Error Details:</h4>
-      <div className="text-xs text-red-600">
-        <p><strong>Code:</strong> {apiError.error.code || 'N/A'}</p>
-        <p><strong>Message:</strong> {apiError.error.message || 'Unknown error'}</p>
-        {apiError.error.type && (
-          <p><strong>Type:</strong> {apiError.error.type}</p>
-        )}
-        {apiError.error.code === 190 && (
-          <div className="mt-1 pt-1 border-t border-red-200">
-            <p className="flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              This is an invalid/expired token error. Please generate a new token.
-            </p>
-          </div>
-        )}
-        {apiError.error.code === 200 && (
-          <div className="mt-1 pt-1 border-t border-red-200">
-            <p className="flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              This is a permission error. Ensure your token has the required permissions.
-            </p>
-          </div>
-        )}
-      </div>
-      <div className="mt-2">
-        <a 
-          href="https://developers.facebook.com/docs/marketing-api/error-reference" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-xs flex items-center gap-1 text-blue-600 hover:underline"
-        >
-          <ExternalLink className="h-3 w-3" />
-          Meta API Error Reference
-        </a>
-      </div>
-    </div>
-  );
-};
-
 interface DiagnosticResultsDialogProps {
   showResults: boolean;
   setShowResults: (show: boolean) => void;
   diagnosticResults: any;
-  hasIssues: () => boolean;
+  hasIssues: boolean;
   isRunningDiagnostic: boolean;
   runDiagnostics: () => void;
 }
@@ -73,60 +25,80 @@ const DiagnosticResultsDialog: React.FC<DiagnosticResultsDialogProps> = ({
 }) => {
   return (
     <AlertDialog open={showResults} onOpenChange={setShowResults}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            {hasIssues() ? (
-              <AlertCircle className="h-5 w-5 text-amber-500" />
+          <AlertDialogTitle className="flex items-center">
+            {hasIssues ? (
+              <AlertCircle className="h-5 w-5 text-amber-500 mr-2" />
             ) : (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
             )}
-            Campaign Diagnostic Results
+            Campaign Loading Diagnostic Results
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Here's what we found when analyzing your campaign connection:
+            {hasIssues
+              ? "We've found some issues that might be affecting your campaign data loading"
+              : "All systems look good, but here are some details about your connection"}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        
-        {diagnosticResults && (
-          <>
+
+        {isRunningDiagnostic ? (
+          <div className="flex flex-col items-center justify-center py-10">
+            <Loader2 className="h-10 w-10 text-blue-500 animate-spin mb-4" />
+            <p>Running comprehensive diagnostics...</p>
+          </div>
+        ) : diagnosticResults ? (
+          <div className="space-y-4">
             <DiagnosticResults 
               diagnosticResults={diagnosticResults} 
-              hasIssues={hasIssues()} 
+              hasIssues={hasIssues} 
             />
             
-            <TokenDetails 
-              tokenInfo={{
-                hasToken: diagnosticResults.token.hasToken,
-                tokenLength: diagnosticResults.token.tokenLength,
-                tokenAge: diagnosticResults.token.tokenAge,
-                source: diagnosticResults.token.source || localStorage.getItem('meta_token_source'),
-                isValid: diagnosticResults.tokenAnalysis?.isValid,
-                permissions: diagnosticResults.token.permissions
-              }} 
-            />
-            
-            {diagnosticResults.api && !diagnosticResults.api.success && (
-              <ApiErrorDetails apiError={diagnosticResults.api.data || diagnosticResults.api} />
+            {/* Show token details in a separate section */}
+            {diagnosticResults.token && (
+              <TokenDetails tokenInfo={diagnosticResults.token} tokenAnalysis={diagnosticResults.tokenAnalysis} />
             )}
-          </>
+          </div>
+        ) : (
+          <div className="py-4 text-center text-gray-500">
+            No diagnostic information available
+          </div>
         )}
-        
-        <AlertDialogFooter>
-          <Button onClick={() => setShowResults(false)}>Close</Button>
-          <Button 
-            variant="outline" 
-            onClick={runDiagnostics} 
-            className="ml-2"
+
+        <AlertDialogFooter className="flex flex-row justify-between items-center">
+          <Button
+            variant="outline"
+            onClick={runDiagnostics}
             disabled={isRunningDiagnostic}
+            className="flex items-center gap-2"
           >
             {isRunningDiagnostic ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4" />
             )}
-            Run Again
+            {isRunningDiagnostic ? "Running..." : "Run New Diagnostic"}
           </Button>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowResults(false)}
+            >
+              Close
+            </Button>
+            
+            <a 
+              href="https://developers.facebook.com/docs/marketing-api/overview"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="ghost" className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Meta API Docs
+              </Button>
+            </a>
+          </div>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

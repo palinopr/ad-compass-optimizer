@@ -1,7 +1,9 @@
 
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, XCircle, Database } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, Database, Search, ArrowDownToLine } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface DiagnosticResultsProps {
   diagnosticResults: any;
@@ -203,6 +205,138 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
             </div>
           </div>
         )}
+
+        {/* NEW: Advanced Troubleshooting Section */}
+        <Collapsible className="mt-4">
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" className="flex items-center gap-1 w-full justify-between">
+              <span className="flex items-center gap-1">
+                <Search className="h-3.5 w-3.5" />
+                Advanced Troubleshooting
+              </span>
+              <ArrowDownToLine className="h-3.5 w-3.5" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3 p-3 border rounded-md">
+            <div className="space-y-3">
+              <div>
+                <h4 className="text-sm font-medium">Diagnostic Information</h4>
+                <div className="mt-2 space-y-2 text-xs">
+                  <div className="bg-gray-50 p-2 rounded">
+                    <p className="font-medium">Network Requests:</p>
+                    <p>Check for any blocked API requests in your browser's developer tools (F12 → Network tab).</p>
+                    <p>Look for 401/403 errors which indicate permission issues.</p>
+                  </div>
+                  
+                  <div className="bg-gray-50 p-2 rounded">
+                    <p className="font-medium">Meta API Status:</p>
+                    <p>API status code: {diagnosticResults?.api?.statusCode || 'Not available'}</p>
+                    {diagnosticResults?.api?.error && (
+                      <p className="text-red-600">API error: {JSON.stringify(diagnosticResults.api.error)}</p>
+                    )}
+                    <p>Last API check: {diagnosticResults?.timestamp ? new Date(diagnosticResults.timestamp).toLocaleTimeString() : 'Not available'}</p>
+                  </div>
+                  
+                  <div className="bg-gray-50 p-2 rounded">
+                    <p className="font-medium">Token Information:</p>
+                    <p>Token age: {diagnosticResults?.tokenAnalysis?.age || 'Unknown'} days</p>
+                    <p>Token source: {diagnosticResults?.token?.tokenSource || localStorage.getItem('meta_token_source') || 'Unknown'}</p>
+                    <p>Has ads_read permission: {diagnosticResults?.token?.hasAdsRead ? 'Yes' : 'No'}</p>
+                    <p>Has ads_management permission: {diagnosticResults?.token?.hasAdsManagement ? 'Yes' : 'No'}</p>
+                  </div>
+                  
+                  <div className="bg-gray-50 p-2 rounded">
+                    <p className="font-medium">Data Loading Analysis:</p>
+                    <p>Last fetch attempt: {localStorage.getItem('last_campaign_fetch_attempt') || 'Unknown'}</p>
+                    <p>Browser: {diagnosticResults?.browser?.userAgent || navigator.userAgent}</p>
+                    <p>CORS issues detected: {diagnosticResults?.cors?.hasCorsIssues ? 'Yes' : 'No'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium">Common Causes for Data Not Loading</h4>
+                <ul className="list-disc pl-4 mt-2 space-y-1 text-xs">
+                  <li>
+                    <span className="font-medium">API Rate Limiting:</span> Meta may temporarily limit API calls. Wait a few minutes and try again.
+                  </li>
+                  <li>
+                    <span className="font-medium">Token Expiration:</span> Meta tokens expire after 60 days. Reconnect if your token is old.
+                  </li>
+                  <li>
+                    <span className="font-medium">Permission Changes:</span> Ad account permissions may have been revoked. Check your Business Manager.
+                  </li>
+                  <li>
+                    <span className="font-medium">Ad Account Limitations:</span> Some accounts may have restrictions imposed by Meta.
+                  </li>
+                  <li>
+                    <span className="font-medium">Browser Issues:</span> Try using a different browser or clearing your cache.
+                  </li>
+                  <li>
+                    <span className="font-medium">Network Issues:</span> Check your internet connection or try using a different network.
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium">Try These Solutions</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs" 
+                    onClick={() => window.location.reload()}
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Refresh Page
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs" 
+                    onClick={() => {
+                      localStorage.removeItem('selected_ad_account');
+                      window.location.reload();
+                    }}
+                  >
+                    <Database className="h-3 w-3 mr-1" />
+                    Reset Ad Account
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs" 
+                    onClick={() => {
+                      localStorage.setItem('show_meta_connection', 'true');
+                      window.location.reload();
+                    }}
+                  >
+                    Reconnect Facebook
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs" 
+                    onClick={() => {
+                      // Clear caches related to campaign data
+                      localStorage.removeItem('last_campaign_fetch_attempt');
+                      localStorage.removeItem('last_campaign_fetch_success');
+                      localStorage.removeItem('last_campaign_fetch_error');
+                      localStorage.removeItem('last_campaign_count');
+                      window.location.reload();
+                    }}
+                  >
+                    Clear Cache & Reload
+                  </Button>
+                </div>
+              </div>
+
+              <div className="text-xs text-gray-500 italic">
+                If problems persist, try selecting a different ad account or check if your Meta Business account has active campaigns.
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
