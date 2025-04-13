@@ -32,23 +32,24 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     console.log('Checking Meta auth status on AppLayout mount...');
     initialCheckDoneRef.current = true;
     
-    // Check if token exists but was not recognized yet
+    // Always use direct token check which is most reliable
     const token = metaAuthService.getAccessToken();
-    if (token && !isAuthenticated) {
-      console.log('Token exists but not authenticated yet, triggering check...');
+    const directAuthCheck = token && token.length >= 50;
+    
+    // If token exists but state doesn't match, trigger auth check
+    if (directAuthCheck !== isAuthenticated) {
+      console.log('Token exists but auth state mismatch, triggering check...');
       checkAuth();
     }
 
     // Track if we were already authenticated when the component mounted
-    if (isAuthenticated) {
-      setAlreadyAuthenticated(true);
-    }
+    setAlreadyAuthenticated(directAuthCheck);
 
     // Mark connection as checked
     setConnectionChecked(true);
     
     // Clear any stale connection flags after successful mount
-    if (isAuthenticated) {
+    if (directAuthCheck) {
       localStorage.removeItem('show_meta_connection');
       sessionStorage.removeItem('show_meta_connection');
     }
@@ -58,6 +59,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   useEffect(() => {
     // Only check for showing dialog if we've completed the initial check
     if (!connectionChecked) return;
+    
+    // Always check token directly for most reliable result
+    const token = metaAuthService.getAccessToken();
+    const effectiveIsAuthenticated = token && token.length >= 50;
     
     // Check if we need to show connection dialog based on localStorage flag
     const needsConnection = localStorage.getItem('show_meta_connection') === 'true';
@@ -73,17 +78,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     const needsAuthForCurrentPage = authRequiredPages.some(page => location.pathname.startsWith(page));
     
     // Only show the dialog if:
-    // 1. We're not already authenticated, AND
+    // 1. We're not already authenticated based on direct token check, AND
     // 2. Either there's a flag set OR we're on an auth-required page
     // 3. And we're not rate limiting
-    if (!isAuthenticated && (needsConnection || needsAuthForCurrentPage) && !shouldRateLimit) {
+    if (!effectiveIsAuthenticated && (needsConnection || needsAuthForCurrentPage) && !shouldRateLimit) {
       console.log('Authentication required, showing dialog...');
       setShowConnectDialog(true);
       lastDialogTimeRef.current = now;
       // Clear the flag once we've decided to show the dialog
       localStorage.removeItem('show_meta_connection');
       sessionStorage.removeItem('show_meta_connection');
-    } else if (isAuthenticated) {
+    } else if (effectiveIsAuthenticated) {
       // Make sure dialog is hidden if we're authenticated
       setShowConnectDialog(false);
     }
@@ -103,8 +108,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       console.log('Checking auth status after successful connection');
       checkAuth();
     }, 1000);
-    
-    // Don't automatically navigate - this was causing refreshing loops
   };
 
   const handleConnectionError = (errorMessage: string) => {

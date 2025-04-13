@@ -1,23 +1,55 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Facebook, Key } from 'lucide-react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import MetaConnectionDialog from './MetaConnectionDialog';
+import { useMetaConnection } from './SharedMetaConnectionProvider';
 
 const MetaConnectCard = () => {
-  const [isConnected, setIsConnected] = useState(false);
+  const { isAuthenticated, checkAuth } = useMetaConnection();
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
+  const [effectiveIsConnected, setEffectiveIsConnected] = useState(false);
 
+  // Use direct token check which is more reliable
   useEffect(() => {
-    // Check if already connected
-    setIsConnected(metaAuthService.isAuthenticated());
-  }, []);
+    const checkConnection = () => {
+      const token = metaAuthService.getAccessToken();
+      const directAuthCheck = token && token.length >= 50;
+      
+      console.log('MetaConnectCard - Auth state check:', 
+        directAuthCheck ? 'Connected' : 'Not connected',
+        'Context state:', isAuthenticated ? 'Connected' : 'Not connected'
+      );
+      
+      setEffectiveIsConnected(directAuthCheck);
+      
+      // If there's a mismatch, trigger a context refresh
+      if (directAuthCheck !== isAuthenticated) {
+        console.log('Auth state mismatch in MetaConnectCard, refreshing...');
+        checkAuth();
+      }
+    };
+    
+    checkConnection();
+    
+    // Set up a listener for storage changes (like token updates)
+    const handleStorageChange = () => {
+      checkConnection();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [isAuthenticated, checkAuth]);
 
   const handleConnectionSuccess = (userData: any) => {
     console.log('Connection successful, user data:', userData);
-    setIsConnected(true);
+    setEffectiveIsConnected(true);
     setShowConnectionDialog(false);
+    
+    // Force auth state refresh
+    setTimeout(() => checkAuth(), 500);
   };
 
   const handleConnectionError = () => {
@@ -34,7 +66,7 @@ const MetaConnectCard = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {isConnected ? (
+        {effectiveIsConnected ? (
           <div className="space-y-4">
             <div className="flex items-center space-x-2 text-green-600">
               <CheckCircle className="h-5 w-5" />

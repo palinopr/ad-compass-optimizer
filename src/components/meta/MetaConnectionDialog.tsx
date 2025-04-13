@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   Dialog,
   DialogContent,
@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import FacebookLoginTab from './FacebookLoginTab';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 interface MetaConnectionDialogProps {
   open: boolean;
@@ -22,6 +23,20 @@ const MetaConnectionDialog: React.FC<MetaConnectionDialogProps> = ({
   onSuccess,
   onError
 }) => {
+  // Check if already authenticated when dialog is opened
+  useEffect(() => {
+    if (open && metaAuthService.isAuthenticated()) {
+      console.log('User is already authenticated, closing dialog');
+      // Get user data if available
+      const userId = metaAuthService.getUserId();
+      const userName = localStorage.getItem('meta_user_name') || 'Meta User';
+      
+      // Close dialog and signal success with existing user data
+      onOpenChange(false);
+      onSuccess({ id: userId, name: userName });
+    }
+  }, [open, onOpenChange, onSuccess]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">

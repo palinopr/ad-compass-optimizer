@@ -5,6 +5,7 @@ import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 
 interface AccountsTabProps {
   isAuthenticated: boolean;
@@ -13,7 +14,9 @@ interface AccountsTabProps {
 const AccountsTab: React.FC<AccountsTabProps> = ({ isAuthenticated }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [effectiveIsAuthenticated, setEffectiveIsAuthenticated] = useState(false);
+  const { checkAuth } = useMetaConnection();
   
+  // Check authentication status whenever the component mounts or auth state changes
   useEffect(() => {
     // Always use direct token check as the most reliable method
     const token = metaAuthService.getAccessToken();
@@ -25,8 +28,21 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ isAuthenticated }) => {
     );
     
     setEffectiveIsAuthenticated(directAuthCheck);
+    
+    // If there's a mismatch, update the context
+    if (directAuthCheck !== isAuthenticated) {
+      console.log('Auth state mismatch in AccountsTab, refreshing...');
+      checkAuth();
+    }
+    
     setIsLoading(false);
-  }, [isAuthenticated]);
+    
+    // Clear any persistent connection prompts if authenticated
+    if (directAuthCheck) {
+      localStorage.removeItem('show_meta_connection');
+      sessionStorage.removeItem('show_meta_connection');
+    }
+  }, [isAuthenticated, checkAuth]);
   
   if (isLoading) {
     return (
