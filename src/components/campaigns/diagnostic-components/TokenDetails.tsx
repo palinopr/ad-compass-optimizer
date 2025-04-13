@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Info, XCircle, Shield, Globe, Calendar, Database } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 interface TokenDetailsProps {
@@ -11,7 +12,7 @@ interface TokenDetailsProps {
     isValid?: boolean;
     permissions?: string[];
   };
-  tokenAnalysis?: any; // Add tokenAnalysis prop to the interface
+  tokenAnalysis?: any; // Token analysis prop
 }
 
 const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis }) => {
@@ -78,6 +79,25 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
   
   const validityState = getTokenValidityState();
   
+  // Get the most recent fetch attempt timestamp from localStorage
+  const lastFetchAttempt = localStorage.getItem('last_campaign_fetch_attempt');
+  const lastFetchSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
+  
+  // Format the timestamp for display if it exists
+  const formattedFetchTime = lastFetchAttempt ? new Date(lastFetchAttempt).toLocaleTimeString() : 'Unknown';
+  
+  // Get any stored errors
+  const fetchErrorRaw = localStorage.getItem('last_campaign_fetch_error');
+  let fetchError = null;
+  try {
+    if (fetchErrorRaw) {
+      const errorObj = JSON.parse(fetchErrorRaw);
+      fetchError = errorObj.message || 'Unknown error';
+    }
+  } catch (e) {
+    fetchError = fetchErrorRaw || 'Error parsing error details';
+  }
+  
   return (
     <div className="mt-4 p-3 bg-gray-50 rounded border border-gray-200">
       <h3 className="text-sm font-medium mb-2 flex items-center gap-1">
@@ -131,6 +151,74 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
             </div>
           </>
         )}
+        
+        {/* API Status Section */}
+        <Separator className="my-2" />
+        <div className="flex items-start gap-1 mt-2">
+          <Globe className="h-3 w-3 text-blue-500 mt-0.5" />
+          <div>
+            <p className="font-semibold">API Status:</p>
+            <div className="space-y-1">
+              <div className="flex items-center">
+                <span className="mr-1">Last check:</span>
+                <span className="bg-gray-100 px-1 rounded">{formattedFetchTime}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="mr-1">Success:</span>
+                {lastFetchSuccess ? (
+                  <span className="text-green-600 flex items-center">
+                    <CheckCircle className="h-3 w-3 mr-1" /> Yes
+                  </span>
+                ) : (
+                  <span className="text-red-600 flex items-center">
+                    <XCircle className="h-3 w-3 mr-1" /> No
+                  </span>
+                )}
+              </div>
+              {!lastFetchSuccess && fetchError && (
+                <div className="text-red-600 text-xs break-all">
+                  <p className="font-medium">Error:</p>
+                  <p className="bg-red-50 p-1 rounded border border-red-100">{fetchError}</p>
+                </div>
+              )}
+              {tokenAnalysis && tokenAnalysis.issues && tokenAnalysis.issues.length > 0 && (
+                <div className="text-amber-600 text-xs mt-1">
+                  <p className="font-medium">Issues:</p>
+                  {tokenAnalysis.issues.map((issue: string, i: number) => (
+                    <p key={i} className="flex items-center">
+                      <AlertCircle className="h-3 w-3 mr-1 flex-shrink-0" />
+                      <span>{issue}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Data Loading Section */}
+        <Separator className="my-2" />
+        <div className="flex items-start gap-1 mt-2">
+          <Database className="h-3 w-3 text-blue-500 mt-0.5" />
+          <div>
+            <p className="font-semibold">Data Loading:</p>
+            <div className="space-y-1">
+              <p>Campaign count: {localStorage.getItem('last_campaign_count') || '0'}</p>
+              <p>
+                CORS issues: 
+                {tokenAnalysis?.cors?.hasCorsIssues ? (
+                  <span className="text-amber-600 ml-1">Detected</span>
+                ) : (
+                  <span className="text-green-600 ml-1">None</span>
+                )}
+              </p>
+              <p>
+                Selected ad account: 
+                <span className="ml-1">{localStorage.getItem('selected_ad_account') || 'None'}</span>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

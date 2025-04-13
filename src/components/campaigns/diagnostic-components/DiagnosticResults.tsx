@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, XCircle, Database, Search, ArrowDownToLine, RefreshCw, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, Database, Search, ArrowDownToLine, RefreshCw, Loader2, Info, Globe, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -88,7 +88,56 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
       issues.push("Your account is properly connected, but no campaigns were found in this ad account.");
     }
     
+    // Add specific CORS issue detection when Facebook login is used
+    if (isAuthenticated && diagnosticResults?.cors?.hasCorsIssues && 
+        diagnosticResults?.token?.source === 'facebook') {
+      issues.push("CORS issues detected even with Facebook authentication. This may indicate browser security settings or network restrictions.");
+    }
+    
     return issues.length > 0 ? issues : ["No issues detected. If you're still experiencing problems, try refreshing your connection or your browser."];
+  };
+
+  // Get recommended solutions based on detected issues
+  const getRecommendedSolutions = () => {
+    const solutions = [];
+    
+    if (!isAuthenticated) {
+      solutions.push("Reconnect your Meta account using the Facebook Login button");
+      solutions.push("Check that your browser isn't blocking third-party cookies");
+    }
+    
+    if (isAuthenticated && !hasRequiredPermissions) {
+      solutions.push("Generate a new token with ads_read and ads_management permissions");
+      solutions.push("Check your Business Manager permissions for this ad account");
+    }
+    
+    if (diagnosticResults?.cors?.hasCorsIssues) {
+      solutions.push("Use Facebook authentication which helps bypass CORS restrictions");
+      solutions.push("Try using a different browser or disabling any privacy extensions");
+      solutions.push("Check if your network is blocking Meta domains (corporate networks often do this)");
+    }
+    
+    if (isAuthenticated && apiConnectionSuccess && !hasAdAccount) {
+      solutions.push("Select an ad account from the dropdown in the troubleshooter");
+    }
+    
+    if (isAuthenticated && apiConnectionSuccess && hasAdAccount && !campaignLoadSuccess) {
+      solutions.push("Wait a few minutes and try again (Meta may have rate-limited your requests)");
+      solutions.push("Check network connectivity and any security software that might be blocking requests");
+      solutions.push("Try reconnecting your Meta account with fresh authentication");
+    }
+    
+    if (isAuthenticated && apiConnectionSuccess && hasAdAccount && campaignLoadSuccess && !hasCampaigns) {
+      solutions.push("Select a different ad account that contains campaigns");
+      solutions.push("Create a new campaign in this ad account");
+    }
+    
+    if (solutions.length === 0) {
+      solutions.push("Try refreshing the page and clearing your browser cache");
+      solutions.push("Reconnect your Meta account to get a fresh token");
+    }
+    
+    return solutions;
   };
 
   return (
@@ -144,7 +193,10 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
       <Separator />
       
       <div>
-        <h3 className="text-sm font-medium mb-2">Issues & Solutions:</h3>
+        <h3 className="text-sm font-medium mb-2 flex items-center">
+          <AlertCircle className="h-4 w-4 text-amber-500 mr-1" />
+          Issues Detected:
+        </h3>
         <ul className="space-y-2">
           {getIssuesList().map((issue, index) => (
             <li key={index} className="text-sm flex gap-2">
@@ -160,27 +212,24 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
           ))}
         </ul>
         
-        {/* Only show recommendations if there are actual issues */}
-        {diagnosticResults && getIssuesList()[0] !== "No issues detected. If you're still experiencing problems, try refreshing your connection or your browser." && (
-          <div className="mt-4">
-            <h3 className="text-sm font-medium mb-2">Recommended Actions:</h3>
-            {diagnosticResults.summary && diagnosticResults.summary.recommendations && diagnosticResults.summary.recommendations.length > 0 ? (
-              <ul className="list-decimal pl-4 text-sm">
-                {diagnosticResults.summary.recommendations.map((rec: string, i: number) => (
-                  <li key={i}>{rec}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">No specific recommendations available.</p>
-            )}
-          </div>
-        )}
+        {/* Recommended Solutions */}
+        <div className="mt-4">
+          <h3 className="text-sm font-medium mb-2 flex items-center">
+            <Info className="h-4 w-4 text-blue-500 mr-1" />
+            Recommended Solutions:
+          </h3>
+          <ul className="list-disc pl-5 text-sm space-y-1">
+            {getRecommendedSolutions().map((solution, index) => (
+              <li key={index}>{solution}</li>
+            ))}
+          </ul>
+        </div>
         
         {/* Campaign data details section */}
         {isAuthenticated && apiConnectionSuccess && hasAdAccount && (
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
-            <div className="flex items-start mb-2">
-              <Database className="h-4 w-4 text-blue-500 mr-2 mt-1" />
+            <div className="flex items-start gap-2 mb-2">
+              <Database className="h-4 w-4 text-blue-500 mt-0.5" />
               <h3 className="text-sm font-medium">Campaign Data Details:</h3>
             </div>
             <div className="text-sm pl-6 space-y-1">
@@ -206,57 +255,86 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
           </div>
         )}
 
-        {/* NEW: Advanced Troubleshooting Section */}
-        <Collapsible className="mt-4">
+        {/* NEW: Diagnostic Information Section */}
+        <Collapsible className="mt-4 border rounded-md overflow-hidden">
           <CollapsibleTrigger asChild>
-            <Button variant="outline" size="sm" className="flex items-center gap-1 w-full justify-between">
+            <Button variant="ghost" size="sm" className="flex items-center gap-1 w-full justify-between p-3">
               <span className="flex items-center gap-1">
                 <Search className="h-3.5 w-3.5" />
-                Advanced Troubleshooting
+                Detailed Diagnostic Information
               </span>
               <ArrowDownToLine className="h-3.5 w-3.5" />
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-3 p-3 border rounded-md">
-            <div className="space-y-3">
+          <CollapsibleContent className="p-3 bg-gray-50 border-t">
+            <div className="space-y-3 text-xs">
               <div>
-                <h4 className="text-sm font-medium">Diagnostic Information</h4>
-                <div className="mt-2 space-y-2 text-xs">
-                  <div className="bg-gray-50 p-2 rounded">
-                    <p className="font-medium">Network Requests:</p>
-                    <p>Check for any blocked API requests in your browser's developer tools (F12 → Network tab).</p>
-                    <p>Look for 401/403 errors which indicate permission issues.</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-2 rounded">
-                    <p className="font-medium">Meta API Status:</p>
-                    <p>API status code: {diagnosticResults?.api?.statusCode || 'Not available'}</p>
-                    {diagnosticResults?.api?.error && (
-                      <p className="text-red-600">API error: {JSON.stringify(diagnosticResults.api.error)}</p>
-                    )}
-                    <p>Last API check: {diagnosticResults?.timestamp ? new Date(diagnosticResults.timestamp).toLocaleTimeString() : 'Not available'}</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-2 rounded">
-                    <p className="font-medium">Token Information:</p>
-                    <p>Token age: {diagnosticResults?.tokenAnalysis?.age || 'Unknown'} days</p>
-                    <p>Token source: {diagnosticResults?.token?.tokenSource || localStorage.getItem('meta_token_source') || 'Unknown'}</p>
-                    <p>Has ads_read permission: {diagnosticResults?.token?.hasAdsRead ? 'Yes' : 'No'}</p>
-                    <p>Has ads_management permission: {diagnosticResults?.token?.hasAdsManagement ? 'Yes' : 'No'}</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-2 rounded">
-                    <p className="font-medium">Data Loading Analysis:</p>
-                    <p>Last fetch attempt: {localStorage.getItem('last_campaign_fetch_attempt') || 'Unknown'}</p>
-                    <p>Browser: {diagnosticResults?.browser?.userAgent || navigator.userAgent}</p>
-                    <p>CORS issues detected: {diagnosticResults?.cors?.hasCorsIssues ? 'Yes' : 'No'}</p>
-                  </div>
+                <h4 className="font-medium flex items-center gap-1">
+                  <Globe className="h-3.5 w-3.5 text-gray-500" />
+                  Network Requests
+                </h4>
+                <div className="mt-1 space-y-1">
+                  <p>• Check for any blocked API requests in your browser's developer tools (F12 → Network tab).</p>
+                  <p>• Look for 401/403 errors which indicate permission issues.</p>
+                  <p>• Filter for "graph.facebook.com" requests to see Meta API calls.</p>
                 </div>
               </div>
-
+              
               <div>
-                <h4 className="text-sm font-medium">Common Causes for Data Not Loading</h4>
-                <ul className="list-disc pl-4 mt-2 space-y-1 text-xs">
+                <h4 className="font-medium flex items-center gap-1">
+                  <Database className="h-3.5 w-3.5 text-gray-500" />
+                  Meta API Status
+                </h4>
+                <div className="mt-1 space-y-1">
+                  <p>API status code: {diagnosticResults?.api?.statusCode || 'Not available'}</p>
+                  <p>Last API check: {diagnosticResults?.timestamp ? 
+                    new Date(diagnosticResults.timestamp).toLocaleTimeString() : 
+                    'Not available'}</p>
+                  {diagnosticResults?.api?.error && (
+                    <div className="bg-red-50 p-1 rounded border border-red-100 break-all">
+                      {JSON.stringify(diagnosticResults.api.error)}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-medium flex items-center gap-1">
+                  <Shield className="h-3.5 w-3.5 text-gray-500" />
+                  Token Information
+                </h4>
+                <div className="mt-1 space-y-1">
+                  <p>Token age: {diagnosticResults?.tokenAnalysis?.age || 'Unknown'} days</p>
+                  <p>Token source: {diagnosticResults?.token?.tokenSource || localStorage.getItem('meta_token_source') || 'Unknown'}</p>
+                  <p>Has ads_read permission: {diagnosticResults?.token?.hasAdsRead ? 'Yes' : 'No'}</p>
+                  <p>Has ads_management permission: {diagnosticResults?.token?.hasAdsManagement ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-medium flex items-center gap-1">
+                  <Info className="h-3.5 w-3.5 text-gray-500" />
+                  Data Loading Analysis
+                </h4>
+                <div className="mt-1 space-y-1">
+                  <p>Last fetch attempt: {localStorage.getItem('last_campaign_fetch_attempt') || 'Unknown'}</p>
+                  <p>Browser: {diagnosticResults?.browser?.userAgent || navigator.userAgent}</p>
+                  <p>CORS issues detected: {diagnosticResults?.cors?.hasCorsIssues ? 'Yes' : 'No'}</p>
+                  {diagnosticResults?.cors?.hasCorsIssues && (
+                    <div className="bg-amber-50 p-1 rounded border border-amber-100">
+                      CORS issues can prevent API requests from completing. Using Facebook login helps bypass this issue.
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Common Causes Section - formatted better */}
+              <div className="mt-2">
+                <h4 className="font-medium flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                  Common Causes for Data Not Loading
+                </h4>
+                <ul className="list-disc pl-4 mt-1 space-y-1">
                   <li>
                     <span className="font-medium">API Rate Limiting:</span> Meta may temporarily limit API calls. Wait a few minutes and try again.
                   </li>
@@ -278,9 +356,10 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
                 </ul>
               </div>
 
-              <div>
-                <h4 className="text-sm font-medium">Try These Solutions</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              {/* Quick Fix Buttons */}
+              <div className="mt-3">
+                <h4 className="font-medium">Quick Fixes</h4>
+                <div className="grid grid-cols-2 gap-2 mt-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -329,10 +408,6 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
                     Clear Cache & Reload
                   </Button>
                 </div>
-              </div>
-
-              <div className="text-xs text-gray-500 italic">
-                If problems persist, try selecting a different ad account or check if your Meta Business account has active campaigns.
               </div>
             </div>
           </CollapsibleContent>
