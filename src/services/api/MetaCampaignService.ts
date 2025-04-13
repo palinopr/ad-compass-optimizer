@@ -53,90 +53,68 @@ export class MetaCampaignService extends BaseApiService {
       
       console.log(`Found ${campaigns.length} campaigns`);
       
-      // Now fetch insights for these campaigns
-      const campaignIds = campaigns.map(campaign => campaign.id).join(',');
-      const insightsResponse = await fetch(
-        `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/insights?level=campaign&fields=campaign_id,spend,actions,cost_per_action_type&time_range[since]=2020-01-01&time_range[until]=2030-12-31&filtering=[{"field":"campaign.id","operator":"IN","value":[${campaignIds}]}]&access_token=${token}`
-      );
-      
-      const insightsData = await this.processApiResponse(insightsResponse, 'fetchCampaignInsights');
-      const insights = insightsData.data || [];
-      
-      // Map insights data to campaigns
-      const campaignsWithInsights = campaigns.map(campaign => {
-        const campaignInsights = insights.find(insight => insight.campaign_id === campaign.id);
-        
-        let results = '0';
-        let cpa = '-';
-        let roas = '-';
-        
-        if (campaignInsights) {
-          // Parse spend from insights
-          const spend = campaignInsights.spend || '0';
-          
-          // Try to get purchase or lead actions
-          const actions = campaignInsights.actions || [];
-          const purchaseAction = actions.find(action => action.action_type === 'purchase' || action.action_type === 'offsite_conversion.fb_pixel_purchase');
-          const leadAction = actions.find(action => action.action_type === 'lead' || action.action_type === 'leadgen.other');
-          
-          // Get the value for results based on purchase or lead actions
-          if (purchaseAction) {
-            results = purchaseAction.value.toString();
-            
-            // Calculate ROAS
-            const purchaseValue = parseFloat(purchaseAction.value) * 50; // Assuming average order value of $50
-            const spendValue = parseFloat(spend);
-            if (spendValue > 0) {
-              roas = (purchaseValue / spendValue).toFixed(1) + 'x';
-            }
-          } else if (leadAction) {
-            results = leadAction.value.toString() + ' leads';
+      // Map basic campaign data (without insights)
+      const campaignsWithBasicInfo = campaigns.map(campaign => {
+        return {
+          ...campaign,
+          spend: '$0.00',
+          results: '0',
+          budget: campaign.daily_budget ? 
+            '$' + (parseInt(campaign.daily_budget) / 100).toFixed(2) + '/day' : 
+            (campaign.lifetime_budget ? 
+              '$' + (parseInt(campaign.lifetime_budget) / 100).toFixed(2) + ' total' : 
+              '-'),
+          insights: {
+            cpa: '-',
+            roas: '-'
           }
-          
-          // Get CPA from cost_per_action_type
-          const costPerActions = campaignInsights.cost_per_action_type || [];
-          const purchaseCPA = costPerActions.find(item => item.action_type === 'purchase' || item.action_type === 'offsite_conversion.fb_pixel_purchase');
-          const leadCPA = costPerActions.find(item => item.action_type === 'lead' || item.action_type === 'leadgen.other');
-          
-          if (purchaseCPA) {
-            cpa = '$' + parseFloat(purchaseCPA.value).toFixed(2);
-          } else if (leadCPA) {
-            cpa = '$' + parseFloat(leadCPA.value).toFixed(2);
-          }
-          
-          return {
-            ...campaign,
-            spend: '$' + parseFloat(spend).toFixed(2),
-            results: results + (purchaseAction ? ' sales' : ''),
-            budget: campaign.daily_budget ? 
-              '$' + (parseInt(campaign.daily_budget) / 100).toFixed(2) + '/day' : 
-              (campaign.lifetime_budget ? 
-                '$' + (parseInt(campaign.lifetime_budget) / 100).toFixed(2) + ' total' : 
-                '-'),
-            insights: {
-              cpa,
-              roas
-            }
-          };
-        } else {
-          return {
-            ...campaign,
-            spend: '$0.00',
-            results: '0',
-            budget: campaign.daily_budget ? 
-              '$' + (parseInt(campaign.daily_budget) / 100).toFixed(2) + '/day' : 
-              (campaign.lifetime_budget ? 
-                '$' + (parseInt(campaign.lifetime_budget) / 100).toFixed(2) + ' total' : 
-                '-'),
-            insights: {
-              cpa: '-',
-              roas: '-'
-            }
-          };
-        }
+        };
       });
       
-      return campaignsWithInsights;
+      // Try to fetch insights, but don't fail the whole request if insights fetch fails
+      try {
+        // Now fetch insights for these campaigns if there are any
+        if (campaigns.length > 0) {
+          const campaignIds = campaigns.map(campaign => campaign.id).join(',');
+          
+          // Using a simpler insights request to avoid potential errors
+          const insightsResponse = await fetch(
+            `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/insights?level=campaign&fields=campaign_id,spend&time_range[since]=2020-01-01&time_range[until]=2030-12-31&access_token=${token}`
+          );
+          
+          if (!insightsResponse.ok) {
+            console.warn(`Insights fetch returned status ${insightsResponse.status}. Will continue with basic campaign data.`);
+            // Return the campaigns without insights rather than failing
+            return campaignsWithBasicInfo;
+          }
+          
+          const insightsData = await this.processApiResponse(insightsResponse, 'fetchCampaignInsights');
+          const insights = insightsData.data || [];
+          
+          // Map insights data to campaigns
+          return campaignsWithBasicInfo.map(campaign => {
+            const campaignInsights = insights.find(insight => insight.campaign_id === campaign.id);
+            
+            if (campaignInsights) {
+              // Parse spend from insights
+              const spend = campaignInsights.spend || '0';
+              
+              return {
+                ...campaign,
+                spend: '$' + parseFloat(spend).toFixed(2)
+              };
+            }
+            
+            return campaign;
+          });
+        }
+      } catch (insightsError) {
+        console.error('Error fetching campaign insights:', insightsError);
+        console.log('Returning campaigns without insights data');
+        // Return the campaigns without insights rather than failing
+      }
+      
+      return campaignsWithBasicInfo;
     } catch (error) {
       console.error(`Error fetching campaigns for ad account ${adAccountId}:`, error);
       

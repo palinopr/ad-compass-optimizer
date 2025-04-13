@@ -25,15 +25,25 @@ const MetaConnectionDialog: React.FC<MetaConnectionDialogProps> = ({
 }) => {
   // Check if already authenticated when dialog is opened
   useEffect(() => {
-    if (open && metaAuthService.isAuthenticated()) {
-      console.log('User is already authenticated, closing dialog');
-      // Get user data if available
-      const userId = metaAuthService.getUserId();
-      const userName = localStorage.getItem('meta_user_name') || 'Meta User';
+    if (open) {
+      // Direct token check is most reliable
+      const token = metaAuthService.getAccessToken();
+      const isAuthenticated = token && token.length >= 50;
       
-      // Close dialog and signal success with existing user data
-      onOpenChange(false);
-      onSuccess({ id: userId, name: userName });
+      if (isAuthenticated) {
+        console.log('User is already authenticated, closing dialog');
+        // Get user data if available
+        const userId = metaAuthService.getUserId();
+        const userName = localStorage.getItem('meta_user_name') || 'Meta User';
+        
+        // Clear any persistent connection prompts
+        localStorage.removeItem('show_meta_connection');
+        sessionStorage.removeItem('show_meta_connection');
+        
+        // Close dialog and signal success with existing user data
+        onOpenChange(false);
+        onSuccess({ id: userId, name: userName });
+      }
     }
   }, [open, onOpenChange, onSuccess]);
 

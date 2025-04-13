@@ -2,13 +2,15 @@
 import { useState, useEffect } from 'react';
 import { useAdAccountsFetching } from './useAdAccountsFetching';
 import { useAdAccountSelection } from './useAdAccountSelection';
+import { AdAccount } from '../types';
 
 export const useAdAccounts = () => {
   const { 
     adAccounts, 
     isLoading, 
     error, 
-    fetchAdAccounts 
+    fetchAdAccounts,
+    setAdAccounts 
   } = useAdAccountsFetching();
   
   const { selectedAccount, handleAccountChange } = useAdAccountSelection(adAccounts);
