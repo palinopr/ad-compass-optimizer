@@ -112,6 +112,7 @@ const TokenDetails: React.FC<TokenDetailsProps> = ({ tokenInfo, tokenAnalysis })
         hasDataInconsistency={hasDataInconsistency}
         hasUIDisplayIssue={hasUIDisplayIssue}
         campaignCount={campaignCount}
+        fetchError={fetchError} // Added the missing prop
         handleForceReload={handleForceReload}
         handleHardReset={handleHardReset}
         handleFullPageRefresh={handleFullPageRefresh}
