@@ -7,12 +7,14 @@ import { useCampaignFetcher } from './useCampaignFetcher';
 import { UseCampaignsResult } from './types';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { toast } from '@/hooks/use-toast';
 
 export function useCampaigns(status?: string): UseCampaignsResult {
   const [campaigns, setCampaigns] = useState<MetaCampaign[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<any>(null);
+  const [displayRefresh, setDisplayRefresh] = useState<number>(0);
   
   // Use refs to prevent multiple concurrent fetches
   const isFetchingRef = useRef<boolean>(false);
@@ -23,15 +25,16 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const { getSelectedAdAccount } = useAdAccountSelection();
   const { fetchCampaignData } = useCampaignFetcher();
   
-  const fetchCampaigns = useCallback(async () => {
+  // Function to fetch campaigns with enhanced display refresh
+  const fetchCampaigns = useCallback(async (forceRefresh = false) => {
     // Prevent concurrent fetches and limit frequency to once every 5 seconds
     const now = Date.now();
-    if (isFetchingRef.current) {
+    if (isFetchingRef.current && !forceRefresh) {
       console.log('Fetch already in progress, skipping this request');
       return;
     }
     
-    if (now - lastFetchTimeRef.current < 5000) {
+    if (now - lastFetchTimeRef.current < 5000 && !forceRefresh) {
       console.log('Throttling fetch campaigns request - too soon after last fetch');
       return;
     }
@@ -88,6 +91,19 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         }
       } else {
         setCampaigns(fetchedCampaigns);
+        // Force UI refresh by triggering display refresh counter
+        setDisplayRefresh(prev => prev + 1);
+        
+        // If we have campaigns but previously had display issues, show success toast
+        const hadDisplayIssues = localStorage.getItem('had_display_issues') === 'true';
+        if (fetchedCampaigns.length > 0 && hadDisplayIssues) {
+          toast({
+            title: "Campaign Data Loaded Successfully",
+            description: `Found ${fetchedCampaigns.length} campaigns. Display issues have been fixed.`,
+            variant: "default",
+          });
+          localStorage.removeItem('had_display_issues');
+        }
       }
     } catch (err: any) {
       console.error('Unexpected error in campaign fetch:', err);
@@ -114,7 +130,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     const handleAdAccountChange = () => {
       console.log("Ad account changed, refreshing campaigns...");
       // Add a slight delay to let any other UI updates complete
-      setTimeout(fetchCampaigns, 100);
+      setTimeout(() => fetchCampaigns(), 100);
     };
     
     // Handle manual refresh requests
@@ -123,17 +139,28 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       // If force refresh is specified, reset the timer to allow immediate fetch
       if (e.detail?.force) {
         lastFetchTimeRef.current = 0;
+        fetchCampaigns(true);
+      } else {
+        fetchCampaigns();
       }
-      fetchCampaigns();
+    };
+    
+    // Handle display refresh requests (new)
+    const handleDisplayRefresh = () => {
+      console.log("Campaign display refresh requested");
+      setDisplayRefresh(prev => prev + 1);
+      localStorage.setItem('had_display_issues', 'true');
     };
     
     window.addEventListener('ad-account-changed', handleAdAccountChange);
     window.addEventListener('campaign-data-refresh', handleManualRefresh as EventListener);
+    window.addEventListener('campaign-display-refresh', handleDisplayRefresh);
     
     return () => {
       clearTimeout(timer);
       window.removeEventListener('ad-account-changed', handleAdAccountChange);
       window.removeEventListener('campaign-data-refresh', handleManualRefresh as EventListener);
+      window.removeEventListener('campaign-display-refresh', handleDisplayRefresh);
     };
   }, [fetchCampaigns]);
   
@@ -142,6 +169,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     isLoading,
     error,
     errorDetails,
-    refetchCampaigns: fetchCampaigns
+    refetchCampaigns: fetchCampaigns,
+    displayRefresh // Add this to help components know when to re-render
   };
 }

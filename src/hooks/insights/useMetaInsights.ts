@@ -1,72 +1,134 @@
 
-import { useCallback } from 'react';
-import { MetaApiService } from '@/services/MetaApiService';
-import { InsightFilterOptions, InsightsResponse } from '@/services/api/MetaInsightsService';
+import { useState, useCallback } from 'react';
+import { MetaInsightsService, InsightFilterOptions, InsightsResponse } from '@/services/api/MetaInsightsService';
+import { metaAuthService } from '@/services/MetaAuthService';
 import { useRateLimitStatus } from './useRateLimitStatus';
+import { useErrorHandling } from './useErrorHandling';
 import { useInsightsFetching } from './useInsightsFetching';
+import { toast } from '@/hooks/use-toast';
 
-interface UseMetaInsightsReturn {
-  insights: InsightsResponse | null;
-  isLoading: boolean;
-  error: string | null;
-  rateLimitStatus: {
-    isRateLimited: boolean;
-    limitType?: string;
-    timeRemaining?: number | null;
-  };
-  fetchInsights: (objectId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
-  fetchCampaignInsights: (campaignId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
-  fetchAccountInsights: (accountId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
-  fetchAdSetInsights: (adSetId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
-  fetchAdInsights: (adId: string, options?: InsightFilterOptions) => Promise<InsightsResponse | null>;
-  clearRateLimit: () => void;
-  resetErrorState: () => void;
-}
+export function useMetaInsights() {
+  const [insights, setInsights] = useState<InsightsResponse | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { rateLimitStatus, updateRateLimitStatus, clearRateLimit } = useRateLimitStatus();
+  const { error, setError, handleError, resetErrorState } = useErrorHandling();
+  const { insights: fetchedInsights, isLoading: isFetchLoading, error: fetchError, handleInsightsFetch } = useInsightsFetching();
+  
+  // Update local state when fetched insights change
+  useState(() => {
+    if (fetchedInsights) {
+      setInsights(fetchedInsights);
+    }
+  }, [fetchedInsights]);
+  
+  // Combine loading states
+  useState(() => {
+    setIsLoading(isFetchLoading);
+  }, [isFetchLoading]);
+  
+  // Combine error states
+  useState(() => {
+    if (fetchError) {
+      setError(fetchError);
+    }
+  }, [fetchError, setError]);
 
-export function useMetaInsights(): UseMetaInsightsReturn {
-  const { rateLimitStatus, clearRateLimit } = useRateLimitStatus();
-  const { insights, isLoading, error, handleInsightsFetch, resetErrorState } = useInsightsFetching();
+  const fetchPageInsights = useCallback(async (pageId: string, options: InsightFilterOptions = {}) => {
+    try {
+      resetErrorState();
+      setIsLoading(true);
+      
+      // First check if we're rate limited
+      updateRateLimitStatus();
+      
+      if (rateLimitStatus.isRateLimited) {
+        const errorMsg = `Meta API rate limit reached. Please wait approximately ${Math.ceil((rateLimitStatus.timeRemaining || 0) / 60000)} more minutes.`;
+        setError(errorMsg);
+        
+        toast({
+          title: "Rate Limited",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        
+        return null;
+      }
+      
+      const token = metaAuthService.getAccessToken();
+      if (!token) {
+        setError('Not authenticated with Meta. Please connect your account.');
+        return null;
+      }
+      
+      const result = await handleInsightsFetch(
+        MetaInsightsService.fetchPageInsights,
+        pageId, 
+        options
+      );
+      
+      // Force a display refresh to fix rendering issues
+      window.dispatchEvent(new CustomEvent('insights-display-refresh'));
+      
+      return result;
+    } catch (err: any) {
+      handleError(err, rateLimitStatus);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleInsightsFetch, rateLimitStatus, updateRateLimitStatus, handleError, resetErrorState, setError]);
   
-  // Individual fetch methods for different insight types
-  const fetchInsights = useCallback((objectId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(MetaApiService.fetchInsights, objectId, options || {});
-  }, [handleInsightsFetch]);
-  
-  const fetchCampaignInsights = useCallback((campaignId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(MetaApiService.fetchCampaignInsights, campaignId, options || {});
-  }, [handleInsightsFetch]);
-  
-  const fetchAccountInsights = useCallback((accountId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(MetaApiService.fetchAccountInsights, accountId, options || {});
-  }, [handleInsightsFetch]);
-  
-  const fetchAdSetInsights = useCallback((adSetId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(
-      (token, id, opts) => MetaApiService.fetchInsights(token, id, { ...opts, level: 'adset' }), 
-      adSetId,
-      options || {}
-    );
-  }, [handleInsightsFetch]);
-  
-  const fetchAdInsights = useCallback((adId: string, options?: InsightFilterOptions) => {
-    return handleInsightsFetch(
-      (token, id, opts) => MetaApiService.fetchInsights(token, id, { ...opts, level: 'ad' }), 
-      adId,
-      options || {}
-    );
-  }, [handleInsightsFetch]);
-  
+  const fetchAdAccountInsights = useCallback(async (adAccountId: string, options: InsightFilterOptions = {}) => {
+    try {
+      resetErrorState();
+      setIsLoading(true);
+      
+      updateRateLimitStatus();
+      
+      if (rateLimitStatus.isRateLimited) {
+        const errorMsg = `Meta API rate limit reached. Please wait approximately ${Math.ceil((rateLimitStatus.timeRemaining || 0) / 60000)} more minutes.`;
+        setError(errorMsg);
+        
+        toast({
+          title: "Rate Limited",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        
+        return null;
+      }
+      
+      const token = metaAuthService.getAccessToken();
+      if (!token) {
+        setError('Not authenticated with Meta. Please connect your account.');
+        return null;
+      }
+      
+      const result = await handleInsightsFetch(
+        MetaInsightsService.fetchAdAccountInsights,
+        adAccountId, 
+        options
+      );
+      
+      // Force a display refresh to fix rendering issues
+      window.dispatchEvent(new CustomEvent('insights-display-refresh'));
+      
+      return result;
+    } catch (err: any) {
+      handleError(err, rateLimitStatus);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleInsightsFetch, rateLimitStatus, updateRateLimitStatus, handleError, resetErrorState, setError]);
+
   return {
     insights,
     isLoading,
     error,
-    rateLimitStatus,
-    fetchInsights,
-    fetchCampaignInsights,
-    fetchAccountInsights,
-    fetchAdSetInsights,
-    fetchAdInsights,
+    fetchPageInsights,
+    fetchAdAccountInsights,
     clearRateLimit,
-    resetErrorState
+    rateLimitStatus
   };
 }

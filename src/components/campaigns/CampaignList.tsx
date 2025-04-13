@@ -11,13 +11,16 @@ import { useCampaignFilters } from '@/hooks/campaigns/useCampaignFilters';
 import { LoadingState, ErrorState, EmptyState } from './CampaignListStates';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useAuthCheck } from '@/hooks/campaigns/useAuthCheck'; 
+import { toast } from '@/hooks/use-toast';
+import { useEffect as useEffectKey } from 'react';
+import { RefreshCw } from 'lucide-react';
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
 }
 
 const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
-  const { campaigns, isLoading, error, refetchCampaigns, errorDetails } = useCampaigns(status);
+  const { campaigns, isLoading, error, refetchCampaigns, errorDetails, displayRefresh } = useCampaigns(status);
   const { filters, setDateRange, setStatusFilter, setSearchQuery, filteredCampaigns } = 
     useCampaignFilters(campaigns);
   const { isAuthenticated, checkAuth } = useMetaConnection();
@@ -44,6 +47,32 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       checkAuth();
     }
   }, [checkAuth, isAuthenticated, status]);
+  
+  // Add new effect to detect display inconsistencies
+  useEffectKey(() => {
+    // If we have campaigns but nothing is displayed, show a helpful message
+    const campaignCount = localStorage.getItem('last_campaign_count');
+    if (campaignCount && parseInt(campaignCount) > 0 && campaigns.length === 0) {
+      console.log('Display inconsistency detected - has campaigns in storage but not showing');
+      toast({
+        title: "Display Issue Detected",
+        description: "Campaign data was loaded but may not be displaying correctly. Try refreshing.",
+        action: (
+          <Button variant="outline" size="sm" onClick={() => refetchCampaigns(true)}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            Refresh
+          </Button>
+        )
+      });
+    }
+  }, []);
+  
+  // Add effect for display refresh
+  useEffectKey(() => {
+    if (displayRefresh > 0) {
+      console.log(`Display refresh triggered (${displayRefresh})`);
+    }
+  }, [displayRefresh]);
   
   // Calculate metrics from filtered campaigns
   const metrics = {
@@ -97,7 +126,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         <ErrorState 
           error={error} 
           isAuthenticated={effectiveIsAuthenticated}
-          onRetry={refetchCampaigns}
+          onRetry={() => refetchCampaigns(true)}
           errorDetails={errorDetails}
         />
       </Card>
@@ -124,7 +153,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         onDateRangeChange={setDateRange}
         onStatusChange={setStatusFilter}
         onSearchChange={setSearchQuery}
-        onRefresh={refetchCampaigns}
+        onRefresh={() => refetchCampaigns(true)}
         isLoading={isLoading}
       />
       

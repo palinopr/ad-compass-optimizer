@@ -7,6 +7,7 @@ import ProfileQuickAccess from '@/components/dashboard/ProfileQuickAccess';
 import InsightsDemoCard from '@/components/insights/InsightsDemoCard';
 import ApiRateLimitStatus from '@/components/dashboard/rate-limit/ApiRateLimitStatus';
 import { MetaApiService } from '@/services/MetaApiService';
+import CampaignDisplayFix from '@/components/dashboard/CampaignDisplayFix';
 
 export default function Dashboard() {
   useEffect(() => {
@@ -33,6 +34,9 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Welcome to your marketing dashboard.</p>
         </div>
+        
+        {/* Display Fix Alert - Added to help with campaign display issues */}
+        <CampaignDisplayFix />
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <CampaignsQuickAccess />
