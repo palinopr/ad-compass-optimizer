@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useAuthCheck } from './useAuthCheck';
 import { useAdAccountSelection } from './useAdAccountSelection';
@@ -14,12 +14,31 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<any>(null);
   
+  // Use refs to prevent multiple concurrent fetches
+  const isFetchingRef = useRef<boolean>(false);
+  const lastFetchTimeRef = useRef<number>(0);
+  
   const { checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
   const { getSelectedAdAccount } = useAdAccountSelection();
   const { fetchCampaignData } = useCampaignFetcher();
   
   const fetchCampaigns = useCallback(async () => {
+    // Prevent concurrent fetches and limit frequency to once every 5 seconds
+    const now = Date.now();
+    if (isFetchingRef.current) {
+      console.log('Fetch already in progress, skipping this request');
+      return;
+    }
+    
+    if (now - lastFetchTimeRef.current < 5000) {
+      console.log('Throttling fetch campaigns request - too soon after last fetch');
+      return;
+    }
+    
+    isFetchingRef.current = true;
+    lastFetchTimeRef.current = now;
+    
     setIsLoading(true);
     setError(null);
     setErrorDetails(null);
@@ -81,29 +100,40 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       });
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, [status, validateAuthentication, getSelectedAdAccount, fetchCampaignData]);
   
   useEffect(() => {
-    // Since we're on the campaigns page but using campaigns component, give a short delay
-    // to allow authentication to be checked properly
+    // Add delay between initial auth and data fetch to prevent race conditions
     const timer = setTimeout(() => {
       fetchCampaigns();
-    }, 300);
+    }, 500);
     
     // Add event listener for ad account changes
     const handleAdAccountChange = () => {
       console.log("Ad account changed, refreshing campaigns...");
+      // Add a slight delay to let any other UI updates complete
+      setTimeout(fetchCampaigns, 100);
+    };
+    
+    // Handle manual refresh requests
+    const handleManualRefresh = (e: CustomEvent) => {
+      console.log("Manual campaign refresh requested", e.detail);
+      // If force refresh is specified, reset the timer to allow immediate fetch
+      if (e.detail?.force) {
+        lastFetchTimeRef.current = 0;
+      }
       fetchCampaigns();
     };
     
     window.addEventListener('ad-account-changed', handleAdAccountChange);
-    window.addEventListener('campaign-data-refresh', fetchCampaigns);
+    window.addEventListener('campaign-data-refresh', handleManualRefresh as EventListener);
     
     return () => {
       clearTimeout(timer);
       window.removeEventListener('ad-account-changed', handleAdAccountChange);
-      window.removeEventListener('campaign-data-refresh', fetchCampaigns);
+      window.removeEventListener('campaign-data-refresh', handleManualRefresh as EventListener);
     };
   }, [fetchCampaigns]);
   

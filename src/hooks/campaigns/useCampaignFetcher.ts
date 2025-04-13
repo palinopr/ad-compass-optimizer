@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { MetaApiService } from '@/services/MetaApiService';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -7,12 +7,47 @@ import { useToast } from '@/hooks/use-toast';
 
 export function useCampaignFetcher() {
   const { toast } = useToast();
+  // Add a reference to track in-flight requests
+  const pendingRequestRef = useRef<boolean>(false);
+  // Add a timestamp for the last successful fetch to avoid duplicate requests
+  const lastFetchTimestampRef = useRef<number>(0);
 
   const fetchCampaignData = useCallback(async (
     token: string,
     adAccountId: string, 
     status?: string
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
+    // Prevent duplicate requests within a short time window (2 seconds)
+    const now = Date.now();
+    if (now - lastFetchTimestampRef.current < 2000) {
+      console.log('Throttling campaign fetch - too soon after last fetch');
+      
+      // Return cached campaigns if available
+      const cachedCampaignsJson = localStorage.getItem('cached_campaigns');
+      if (cachedCampaignsJson) {
+        try {
+          const cachedData = JSON.parse(cachedCampaignsJson);
+          console.log('Using cached campaign data');
+          return { 
+            campaigns: cachedData.campaigns || [], 
+            error: null,
+            errorDetails: { fromCache: true }
+          };
+        } catch (e) {
+          console.error('Error parsing cached campaigns:', e);
+          // Continue with fresh fetch if cache is corrupted
+        }
+      }
+    }
+    
+    // Prevent concurrent requests
+    if (pendingRequestRef.current) {
+      console.log('Campaign fetch already in progress, preventing duplicate request');
+      return { campaigns: [], error: 'A campaign fetch request is already in progress', errorDetails: { concurrent: true } };
+    }
+    
+    pendingRequestRef.current = true;
+    
     try {
       // Log the auth method being used
       const authMethod = metaAuthService.getTokenSource();
@@ -41,6 +76,26 @@ export function useCampaignFetcher() {
             duration: 7000,
           });
           
+          // Try to use cached data if available
+          const cachedCampaignsJson = localStorage.getItem('cached_campaigns');
+          if (cachedCampaignsJson) {
+            try {
+              const cachedData = JSON.parse(cachedCampaignsJson);
+              console.log('Using cached campaign data during rate limit');
+              return { 
+                campaigns: cachedData.campaigns || [], 
+                error: null,
+                errorDetails: { 
+                  fromCache: true,
+                  isRateLimit: true,
+                  timeRemaining: remainingTime
+                }
+              };
+            } catch (e) {
+              console.error('Error parsing cached campaigns during rate limit:', e);
+            }
+          }
+          
           return { 
             campaigns: [], 
             error: `Meta API rate limit reached. Please wait approximately ${remainingTime} more minutes and try again.`,
@@ -63,6 +118,16 @@ export function useCampaignFetcher() {
         // Record successful fetch for diagnostics
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.setItem('last_campaign_count', String(campaignsData?.length || 0));
+        
+        // Store in cache for future use
+        localStorage.setItem('cached_campaigns', JSON.stringify({
+          campaigns: campaignsData,
+          timestamp: new Date().toISOString(),
+          adAccountId
+        }));
+        
+        // Update last fetch timestamp
+        lastFetchTimestampRef.current = Date.now();
         
         // Filter by status if provided
         let filteredCampaigns = campaignsData;
@@ -107,6 +172,30 @@ export function useCampaignFetcher() {
               localStorage.setItem('meta_rate_limit_timestamp', new Date().toISOString());
               
               apiErrorMessage = 'Meta API rate limit reached. Please wait 5-10 minutes before trying again.';
+              
+              // Try to use cached data if available
+              const cachedCampaignsJson = localStorage.getItem('cached_campaigns');
+              if (cachedCampaignsJson) {
+                try {
+                  const cachedData = JSON.parse(cachedCampaignsJson);
+                  console.log('Serving cached campaign data due to rate limit');
+                  toast({
+                    title: "Using Cached Data",
+                    description: "Using previously cached campaign data due to API rate limits.",
+                    duration: 5000,
+                  });
+                  return { 
+                    campaigns: cachedData.campaigns || [], 
+                    error: null,
+                    errorDetails: { 
+                      fromCache: true,
+                      isRateLimit: true
+                    }
+                  };
+                } catch (e) {
+                  console.error('Error parsing cached campaigns during rate limit error:', e);
+                }
+              }
             }
             else if (responseData.error && responseData.error.message) {
               apiErrorMessage = responseData.error.message;
@@ -150,13 +239,39 @@ export function useCampaignFetcher() {
           localStorage.setItem('meta_rate_limit_timestamp', new Date().toISOString());
         }
         
-        // Show specific toast for rate limiting - Fixed to use "destructive" instead of "warning"
+        // Show specific toast for rate limiting - using "destructive" variant
         toast({
           title: "API Rate Limit",
           description: "Meta API is rate limited. Please wait 5-10 minutes before trying again.",
           variant: "destructive",
           duration: 10000
         });
+        
+        // Try to use cached data if available
+        const cachedCampaignsJson = localStorage.getItem('cached_campaigns');
+        if (cachedCampaignsJson) {
+          try {
+            const cachedData = JSON.parse(cachedCampaignsJson);
+            console.log('Serving cached campaign data due to rate limit in catch block');
+            return { 
+              campaigns: cachedData.campaigns || [], 
+              error: null,
+              errorDetails: { 
+                fromCache: true,
+                isRateLimit: true,
+                originalError: err?.details || {
+                  error: {
+                    code: 4,
+                    message: 'Application request limit reached',
+                    isRateLimit: true
+                  }
+                }
+              }
+            };
+          } catch (e) {
+            console.error('Error parsing cached campaigns during rate limit error handling:', e);
+          }
+        }
         
         return { 
           campaigns: [], 
@@ -207,6 +322,8 @@ export function useCampaignFetcher() {
       });
       
       return { campaigns: [], error: enhancedError, errorDetails };
+    } finally {
+      pendingRequestRef.current = false;
     }
   }, [toast]);
 

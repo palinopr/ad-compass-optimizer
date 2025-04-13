@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Clock, AlertCircle } from 'lucide-react';
+import { Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 interface RateLimitedSectionProps {
   rateLimitTimestamp: string | null;
@@ -9,6 +10,7 @@ interface RateLimitedSectionProps {
 
 const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimestamp }) => {
   const [timeLeft, setTimeLeft] = React.useState<number>(0);
+  const [showCachedData, setShowCachedData] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (!rateLimitTimestamp) return;
@@ -34,11 +36,32 @@ const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimest
       
       if (remaining <= 0) {
         clearInterval(timer);
+        
+        // Trigger a fresh data load when the rate limit expires
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('campaign-data-refresh', { 
+            detail: { force: true }
+          }));
+        }, 500);
       }
     }, 1000);
 
     return () => clearInterval(timer);
   }, [rateLimitTimestamp]);
+
+  // Check if we have cached data
+  React.useEffect(() => {
+    const cachedData = localStorage.getItem('cached_campaigns');
+    setShowCachedData(!!cachedData);
+  }, []);
+
+  const handleUseCachedData = () => {
+    setShowCachedData(true);
+    // Dispatch event to use cached data
+    window.dispatchEvent(new CustomEvent('campaign-data-refresh', { 
+      detail: { useCachedData: true }
+    }));
+  };
 
   if (!rateLimitTimestamp) return null;
 
@@ -68,6 +91,23 @@ const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimest
           <p className="font-medium">
             Rate limit should be reset. Try refreshing the page.
           </p>
+        )}
+        
+        {showCachedData && timeLeft > 0 && (
+          <div className="mt-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleUseCachedData}
+              className="flex items-center gap-2 text-xs"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Use Cached Campaign Data
+            </Button>
+            <p className="text-xs mt-1 text-gray-200">
+              Cached data may not reflect the most recent changes
+            </p>
+          </div>
         )}
       </AlertDescription>
     </Alert>
