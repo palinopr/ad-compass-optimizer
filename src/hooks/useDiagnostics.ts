@@ -38,18 +38,59 @@ export const useDiagnostics = () => {
       console.log("AuthService authentication state:", authState);
       console.log("Token validity from diagnostic:", results.tokenAnalysis?.isValid);
       
-      // Sync up the authenticated state with the token analysis
-      if (results.token.hasToken && results.tokenAnalysis && results.tokenAnalysis.isValid !== false) {
-        if (results.summary && results.summary.issues) {
-          // Remove any authentication issues if the token is valid
-          results.summary.issues = results.summary.issues.filter((issue: string) => 
-            !issue.toLowerCase().includes("not authenticated") &&
-            !issue.toLowerCase().includes("no token")
-          );
+      // Check if we're actually getting campaign data
+      const adAccountId = localStorage.getItem('selected_ad_account');
+      console.log("Selected ad account:", adAccountId);
+      
+      // Add a data loading check to diagnostics
+      results.dataCheck = {
+        adAccountSelected: !!adAccountId,
+        lastCampaignFetchAttempt: localStorage.getItem('last_campaign_fetch_attempt'),
+        lastCampaignFetchSuccess: localStorage.getItem('last_campaign_fetch_success'),
+        lastCampaignCount: localStorage.getItem('last_campaign_count') || '0'
+      };
+      
+      // Add campaign loading issue detection to summary
+      if (adAccountId && 
+          results.token.hasToken && 
+          results.tokenAnalysis && 
+          results.tokenAnalysis.isValid !== false &&
+          results.api.success) {
           
-          // If no issues left, add the "no issues" message
-          if (results.summary.issues.length === 0) {
-            results.summary.issues.push("No issues detected");
+        // If all checks pass but no campaigns are loading, add a specific issue
+        const lastCampaignCount = parseInt(localStorage.getItem('last_campaign_count') || '0');
+        const lastFetchSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
+        
+        if (lastFetchSuccess && lastCampaignCount === 0) {
+          if (results.summary && results.summary.issues) {
+            // Replace "No issues detected" with empty campaigns warning
+            if (results.summary.issues.includes('No issues detected')) {
+              results.summary.issues = ['Your account is properly connected, but no campaigns were found in this ad account.'];
+              
+              if (results.summary.recommendations) {
+                results.summary.recommendations.unshift(
+                  'Try selecting a different ad account that contains campaigns',
+                  'Or create a new campaign in this ad account'
+                );
+              }
+            }
+          }
+        } else if (!lastFetchSuccess) {
+          // Add data loading issue
+          if (results.summary && results.summary.issues) {
+            // Replace "No issues detected" with data loading issue
+            if (results.summary.issues.includes('No issues detected')) {
+              results.summary.issues = ['Campaign data failed to load despite valid authentication and permissions.'];
+              
+              if (results.summary.recommendations) {
+                results.summary.recommendations = [
+                  'Check browser console for specific API errors',
+                  'Try reconnecting your Facebook account',
+                  'Try selecting a different ad account',
+                  'Verify your ad account has active campaigns'
+                ];
+              }
+            }
           }
         }
       }
@@ -91,8 +132,16 @@ export const useDiagnostics = () => {
     const adAccountIssues = !tokenIssues && !permissionIssues && !apiIssues && 
                             !localStorage.getItem('selected_ad_account');
     
+    // Data loading issues - add detection for cases when all checks pass but data still doesn't load
+    const dataLoadingIssues = !tokenIssues && !permissionIssues && !apiIssues && !adAccountIssues &&
+                              localStorage.getItem('last_campaign_fetch_success') === 'false';
+                              
+    // Empty campaigns issue - when everything works but there are no campaigns
+    const emptyCampaignsIssue = !tokenIssues && !permissionIssues && !apiIssues && !adAccountIssues &&
+                                !dataLoadingIssues && parseInt(localStorage.getItem('last_campaign_count') || '0') === 0;
+    
     // Log issue details for debugging
-    if (tokenIssues || permissionIssues || apiIssues || adAccountIssues) {
+    if (tokenIssues || permissionIssues || apiIssues || adAccountIssues || dataLoadingIssues || emptyCampaignsIssue) {
       console.log("Diagnostic issues detected:");
       if (tokenIssues) console.log("- Token issues:", { 
         hasToken: diagnosticResults.token.hasToken, 
@@ -105,9 +154,11 @@ export const useDiagnostics = () => {
       });
       if (apiIssues) console.log("- API issues:", diagnosticResults.api.error || "API call failed");
       if (adAccountIssues) console.log("- Ad account issues: No ad account selected");
+      if (dataLoadingIssues) console.log("- Data loading issues: Campaign data fetch failed");
+      if (emptyCampaignsIssue) console.log("- Empty campaigns issue: No campaigns found in this account");
     }
     
-    return tokenIssues || permissionIssues || apiIssues || adAccountIssues;
+    return tokenIssues || permissionIssues || apiIssues || adAccountIssues || dataLoadingIssues || emptyCampaignsIssue;
   };
 
   return {

@@ -18,10 +18,17 @@ export function useCampaignFetcher() {
       const authMethod = metaAuthService.getTokenSource();
       console.log(`Using auth method: ${authMethod} for ad account: ${adAccountId}`);
       
+      // Track fetch attempt for diagnostics
+      localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
+      
       console.log(`Fetching campaigns for ad account: ${adAccountId}`);
       try {
         const campaignsData = await MetaApiService.fetchCampaigns(token, adAccountId);
         console.log('Campaigns data received:', campaignsData?.length || 0, 'campaigns');
+        
+        // Record successful fetch for diagnostics
+        localStorage.setItem('last_campaign_fetch_success', 'true');
+        localStorage.setItem('last_campaign_count', String(campaignsData?.length || 0));
         
         // Filter by status if provided
         let filteredCampaigns = campaignsData;
@@ -40,6 +47,14 @@ export function useCampaignFetcher() {
         return { campaigns: filteredCampaigns || [], error: null };
       } catch (apiErr: any) {
         console.error('API error during campaign fetch:', apiErr);
+        
+        // Record failed fetch for diagnostics
+        localStorage.setItem('last_campaign_fetch_success', 'false');
+        localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
+          message: apiErr?.message || 'Unknown API error',
+          timestamp: new Date().toISOString()
+        }));
+        
         let apiErrorMessage = apiErr?.message || 'Unknown API error';
         let errorDetails = null;
         
