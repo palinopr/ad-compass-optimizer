@@ -20,6 +20,7 @@ import { metaAuthService } from '@/services/MetaAuthService';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
+import CampaignDiagnostics from '@/components/campaigns/CampaignDiagnostics';
 
 const Campaigns = () => {
   const [activeTab, setActiveTab] = useState('campaigns');
@@ -74,6 +75,9 @@ const Campaigns = () => {
             Create Campaign
           </Button>
         </div>
+        
+        {/* Add Lovable Campaign Diagnostics */}
+        <CampaignDiagnostics />
         
         {showCreateWizard ? (
           <CampaignCreationWizard onCancel={() => setShowCreateWizard(false)} />
