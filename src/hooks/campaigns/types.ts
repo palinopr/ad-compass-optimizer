@@ -1,14 +1,14 @@
-
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 
 export interface UseCampaignsResult {
   campaigns: MetaCampaign[];
+  filteredCampaigns: MetaCampaign[];
   isLoading: boolean;
   error: string | null;
   errorDetails?: any;
   refetchCampaigns: (forceRefresh?: boolean) => void;
   displayRefresh: number;
-  forceRender: number; // Add this property to match the implementation
+  forceRender: number;
 }
 
 export interface CampaignFilterOptions {
