@@ -1,4 +1,3 @@
-
 import { MetaUserService } from './api/MetaUserService';
 import { MetaAdAccountService } from './api/MetaAdAccountService';
 import { MetaBusinessService } from './api/MetaBusinessService';
@@ -8,15 +7,32 @@ import MetaInsightsService from './api/MetaInsightsService';
 import { RateLimitManager } from './api/rate-limit/RateLimitManager';
 import { RequestQueueManager } from './api/queue/RequestQueueManager';
 import { ErrorUtils } from './api/errors/ErrorUtils';
+import { mockFunnelData } from './api/mock/mockCampaignData';
 
 export class MetaApiService {
   private static readonly API_VERSION = 'v17.0';
   private static readonly BASE_URL = 'https://graph.facebook.com';
 
+  private static isMockMode(): boolean {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mockEnabled = urlParams.get('mock') === 'true';
+    
+    if (mockEnabled) {
+      console.log('[MOCK MODE] API Service - Using simulated data');
+    }
+    
+    return mockEnabled;
+  }
+
   public static async executeWithRateLimiting<T>(
     requestFn: () => Promise<T>, 
     options: { bypassQueue?: boolean, skipRateLimitCheck?: boolean } = {}
   ): Promise<T> {
+    if (this.isMockMode()) {
+      console.log('🎭 Bypassing API call in mock mode');
+      return Promise.resolve({} as T);
+    }
+
     if (!options.skipRateLimitCheck && RateLimitManager.isRateLimited() && !RateLimitManager.isRateLimitOverridden()) {
       const remainingTime = RateLimitManager.getRateLimitTimeRemaining();
       console.log(`API is rate limited. Remaining time: ${remainingTime} seconds`);
@@ -46,32 +62,81 @@ export class MetaApiService {
     }
   }
 
-  // API Methods
+  private static getMockAdAccounts() {
+    return [{
+      id: 'act_123456789',
+      name: 'Mock Ad Account 1',
+      account_id: '123456789',
+      account_status: 1,
+      currency: 'USD'
+    }];
+  }
+
+  private static getMockUserData() {
+    return {
+      id: 'mock_user_123',
+      name: 'Mock User',
+      email: 'mock@example.com'
+    };
+  }
+
+  private static getMockConnectionTest() {
+    return {
+      success: true,
+      userId: 'mock_user_123',
+      userName: 'Mock User',
+      hasAdAccess: true
+    };
+  }
+
   public static async fetchUserData(token: string) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock user data');
+      return this.getMockUserData();
+    }
     return this.executeWithRateLimiting(() => 
       MetaUserService.fetchUserData(token)
     );
   }
 
   public static async fetchAdAccounts(token: string) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock ad accounts');
+      return this.getMockAdAccounts();
+    }
     return this.executeWithRateLimiting(() => 
       MetaAdAccountService.fetchAdAccounts(token)
     );
   }
 
   public static async fetchAdAccountDetails(token: string, accountId: string) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock ad account details');
+      return this.getMockAdAccounts()[0];
+    }
     return this.executeWithRateLimiting(() => 
       MetaAdAccountService.fetchAdAccountDetails(token, accountId)
     );
   }
 
   public static async testConnection(token: string) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock connection test');
+      return this.getMockConnectionTest();
+    }
     return this.executeWithRateLimiting(() => 
       MetaConnectionService.testConnection(token)
     , { bypassQueue: true });
   }
 
   public static async fetchBusinessManagers(token: string) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock business managers');
+      return [{
+        id: 'mock_business_123',
+        name: 'Mock Business'
+      }];
+    }
     return this.executeWithRateLimiting(() => 
       MetaBusinessService.fetchBusinessManagers(token)
     );
@@ -119,9 +184,8 @@ export class MetaApiService {
     );
   }
 
-  // Rate Limit Delegation Methods
   public static isRateLimited(): boolean {
-    return RateLimitManager.isRateLimited();
+    return this.isMockMode() ? false : RateLimitManager.isRateLimited();
   }
 
   public static getRateLimitTimeRemaining(): number | null {
@@ -145,5 +209,4 @@ export class MetaApiService {
   }
 }
 
-// Initialize rate limit state
 RateLimitManager.initRateLimitState();

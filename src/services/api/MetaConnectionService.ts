@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 
 export interface ConnectionTestResult {
@@ -13,12 +12,25 @@ export interface ConnectionTestResult {
 }
 
 export class MetaConnectionService extends BaseApiService {
-  /**
-   * Test Meta API connection with the provided token
-   */
+  private static isMockMode(): boolean {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('mock') === 'true';
+  }
+
   public static async testConnection(token: string): Promise<ConnectionTestResult> {
     try {
       console.log('Testing Meta API connection...');
+      
+      // Check for mock mode first
+      if (this.isMockMode()) {
+        console.log('🎭 Mock mode detected - returning simulated connection data');
+        return {
+          success: true,
+          userId: 'mock_user_123',
+          userName: 'Mock User',
+          hasAdAccess: true
+        };
+      }
       
       // Perform a basic validation check on the token format
       if (!token || token.length < 20) {
