@@ -55,6 +55,35 @@ export const cacheCampaigns = (campaigns) => {
 };
 
 /**
+ * Serves cached campaign data with a notification to the user
+ */
+export const serveCachedDataWithNotification = (reason) => {
+  const cachedData = getCachedCampaigns();
+  
+  if (!cachedData.campaigns) {
+    return {
+      campaigns: [],
+      error: null,
+      errorDetails: {
+        fromCache: false,
+        reason
+      }
+    };
+  }
+  
+  console.log(`Serving cached campaign data due to ${reason}`);
+  
+  return {
+    campaigns: cachedData.campaigns,
+    error: null,
+    errorDetails: {
+      fromCache: true,
+      reason
+    }
+  };
+};
+
+/**
  * Determines if a fetch request should be throttled based on time since last fetch
  * Following Meta's best practice to spread requests evenly
  */
