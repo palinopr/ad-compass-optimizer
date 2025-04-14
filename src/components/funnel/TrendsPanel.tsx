@@ -48,15 +48,15 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
   
   useEffect(() => {
     if (isOpen && itemId && itemData) {
-      trackBudget(
+      trackBudget({
         itemId,
         itemType,
-        itemData.start_time,
-        itemData.end_time,
-        itemData.budget,
-        itemData.daily_budget ? parseFloat(itemData.daily_budget) : undefined,
-        itemData.lifetime_budget ? parseFloat(itemData.lifetime_budget) : undefined
-      );
+        startTime: itemData.start_time,
+        endTime: itemData.end_time,
+        budget: itemData.budget,
+        dailyBudget: itemData.daily_budget ? parseFloat(itemData.daily_budget) : undefined,
+        lifetimeBudget: itemData.lifetime_budget ? parseFloat(itemData.lifetime_budget) : undefined
+      });
     }
   }, [isOpen, itemId, itemType, itemData, trackBudget]);
 
