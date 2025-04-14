@@ -6,10 +6,21 @@ import { Button } from '@/components/ui/button';
 import { useAdAccounts } from './hooks/useAdAccounts';
 import AdAccountDropdown from './AdAccountDropdown';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { getPermissionErrorMessage } from '@/services/api/meta-accounts/permissionErrors';
+import { getPermissionErrorMessage, isPermissionError } from '@/services/api/meta-accounts/permissionErrors';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 const AdAccountSelector = () => {
   const { adAccounts, selectedAccount, isLoading, error, fetchAdAccounts, handleAccountChange } = useAdAccounts();
+
+  const handleResetConnection = () => {
+    // Clear Meta-related data
+    metaAuthService.logout();
+    localStorage.removeItem('selected_ad_account');
+    localStorage.removeItem('selected_ad_accounts');
+    
+    // Force page refresh to reinitialize connection flow
+    window.location.reload();
+  };
 
   // Format the error message to be more user-friendly
   const getFormattedError = () => {
@@ -31,20 +42,25 @@ const AdAccountSelector = () => {
       if (parsedError?.error) {
         const formattedMessage = getPermissionErrorMessage(parsedError.error);
         console.log('[✅ AD ACCOUNT ERROR SHOWN] Message:', formattedMessage);
-        return formattedMessage;
+        return {
+          message: formattedMessage,
+          isPermissionError: isPermissionError(parsedError.error)
+        };
       }
 
       // If we have a string error that's not JSON, show it directly
       console.log('[✅ AD ACCOUNT ERROR SHOWN] Message:', error);
-      return error;
+      return { message: error, isPermissionError: false };
     } catch (e) {
       console.error('[❌ AD ACCOUNT ERROR] Error parsing:', e);
       // If parsing fails, return a fallback
       const fallbackMessage = error || 'Failed to fetch ad accounts. See console for details.';
       console.log('[✅ AD ACCOUNT ERROR SHOWN] Fallback Message:', fallbackMessage);
-      return fallbackMessage;
+      return { message: fallbackMessage, isPermissionError: false };
     }
   };
+
+  const formattedError = getFormattedError();
 
   return (
     <Card>
@@ -57,11 +73,24 @@ const AdAccountSelector = () => {
       <CardContent>
         <div className="space-y-4">
           {error && (
-            <Alert variant="destructive">
-              <AlertDescription className="text-sm whitespace-pre-wrap break-words">
-                {getFormattedError()}
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-3">
+              <Alert variant="destructive">
+                <AlertDescription className="text-sm whitespace-pre-wrap break-words">
+                  {formattedError?.message}
+                </AlertDescription>
+              </Alert>
+              
+              {formattedError?.isPermissionError && (
+                <Button 
+                  variant="secondary" 
+                  className="w-full"
+                  onClick={handleResetConnection}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Reconnect Meta Account
+                </Button>
+              )}
+            </div>
           )}
           
           <AdAccountDropdown
