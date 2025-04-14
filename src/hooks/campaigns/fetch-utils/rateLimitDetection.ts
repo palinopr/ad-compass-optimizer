@@ -1,4 +1,3 @@
-
 /**
  * Checks whether an error is related to API rate limiting
  */
@@ -26,30 +25,6 @@ export const isRateLimitError = (error: any): boolean => {
   // Check for subcode 2446079 which indicates rate limiting in v3.3 and older APIs
   if (error.details?.error?.error_subcode === 2446079) {
     return true;
-  }
-  
-  return false;
-};
-
-/**
- * Determines if a fetch request should be throttled based on time since last fetch
- * Following Meta's best practice to spread requests evenly
- */
-export const shouldThrottleFetch = (lastFetchTime: number): boolean => {
-  const now = Date.now();
-  
-  // Check if less than 2 seconds since last fetch
-  if (now - lastFetchTime < 2000) {
-    return true;
-  }
-  
-  // Check if we've had multiple rate limits recently
-  // If so, increase throttling time
-  const rateLimitHistory = JSON.parse(localStorage.getItem('meta_rate_limit_history') || '[]');
-  if (rateLimitHistory.length >= 3) {
-    // If we've had 3+ rate limits, enforce stricter throttling
-    // of 10 seconds between requests
-    return now - lastFetchTime < 10000;
   }
   
   return false;
