@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RefreshCw } from 'lucide-react';
 import { getPermissionErrorMessage, isPermissionError } from '@/services/api/meta-accounts/permissionErrors';
+import { getSubcodeDescription } from '@/services/api/meta-accounts/errorSubcodes';
 
 interface AdAccountErrorProps {
   error: string | null;
@@ -35,22 +36,34 @@ const AdAccountError: React.FC<AdAccountErrorProps> = ({ error, onReconnect }) =
         console.log('[🔍 AD ACCOUNT ERROR] Message:', parsedError.error.message);
 
         const formattedMessage = getPermissionErrorMessage(parsedError.error);
+        const subcodeDescription = parsedError.error.error_subcode ? 
+          getSubcodeDescription(parsedError.error.error_subcode) : undefined;
+
         console.log('[✅ AD ACCOUNT ERROR SHOWN] Message:', formattedMessage);
         return {
           message: formattedMessage,
-          isPermissionError: isPermissionError(parsedError.error)
+          isPermissionError: isPermissionError(parsedError.error),
+          hasKnownSubcode: !!subcodeDescription
         };
       }
 
       // If we have a string error that's not JSON, show it directly
       console.log('[✅ AD ACCOUNT ERROR SHOWN] Message:', error);
-      return { message: error, isPermissionError: false };
+      return { 
+        message: error, 
+        isPermissionError: false,
+        hasKnownSubcode: false
+      };
     } catch (e) {
       console.error('[❌ AD ACCOUNT ERROR] Error parsing:', e);
       // If parsing fails, return a fallback
       const fallbackMessage = error || 'Failed to fetch ad accounts. See console for details.';
       console.log('[✅ AD ACCOUNT ERROR SHOWN] Fallback Message:', fallbackMessage);
-      return { message: fallbackMessage, isPermissionError: false };
+      return { 
+        message: fallbackMessage, 
+        isPermissionError: false,
+        hasKnownSubcode: false
+      };
     }
   };
 
@@ -66,7 +79,8 @@ const AdAccountError: React.FC<AdAccountErrorProps> = ({ error, onReconnect }) =
         </AlertDescription>
       </Alert>
       
-      {formattedError.isPermissionError && (
+      {/* Show reconnect button for known subcodes or permission errors */}
+      {(formattedError.hasKnownSubcode || formattedError.isPermissionError) && (
         <Button 
           variant="secondary" 
           className="w-full"
