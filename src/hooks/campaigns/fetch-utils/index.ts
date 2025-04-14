@@ -1,16 +1,31 @@
 
-// Export all fetch utilities from a single entry point
-export * from './rateLimit';
-export * from './cacheManager';
-export * from './errorHandler';
-export * from './fetchHelpers';
-export * from './eventHandlers';
+/**
+ * Re-export all rate limit utilities for centralized access
+ */
 
-// Re-export specific functions from rateLimitStatus directly to maintain backward compatibility
+// Export rate limit detection functions
+export * from './rateLimitDetection';
+
+// Export status checking functions
 export { 
-  checkRateLimitStatus, 
-  markRateLimited, 
-  clearRateLimit, 
+  checkRateLimitStatus,
+  markRateLimited,
+  clearRateLimit,
   notifyRateLimit,
-  shouldThrottleFetch
+  shouldThrottleFetch,
+  getBackoffTime
 } from './rateLimitStatus';
+
+// Export any cached campaign functions
+export {
+  getCachedCampaigns,
+  serveCachedDataWithNotification,
+  storeCampaignsInCache
+} from './campaignCache';
+
+// Export API fetch related functions
+export {
+  processFetchError,
+  executeCampaignFetch,
+  filterCampaignsByStatus
+} from './campaignFetch';

@@ -1,45 +1,50 @@
 
 /**
- * Calculate backoff time based on recent API issues
+ * Rate limit configuration and utilities
  */
-export const getBackoffTime = (lastFetchSuccess: boolean, rateLimitHistory: string[], callCount?: number): number => {
-  // Base backoff time
-  let backoffTime = 2000; // 2 seconds minimum
-  
-  // If we've had failures, increase backoff
-  if (!lastFetchSuccess) {
-    backoffTime = 5000; // 5 seconds
-  }
-  
-  // If we've had rate limits, increase further
-  if (rateLimitHistory && rateLimitHistory.length > 0) {
-    // Exponential backoff based on number of recent rate limits
-    backoffTime = 5000 * Math.pow(1.5, Math.min(rateLimitHistory.length, 5));
-  }
-  
-  // If we're close to API limits, be more conservative
-  if (callCount && callCount > 80) {
-    backoffTime = Math.max(backoffTime, 10000); // At least 10 seconds
-  }
-  
-  // Cap at 60 seconds
-  return Math.min(backoffTime, 60000);
+
+// Default waiting period after rate limit in minutes
+export const DEFAULT_RATE_LIMIT_WAIT = 10;
+
+// Time between requests in milliseconds to avoid triggering rate limits
+export const MIN_REQUEST_INTERVAL = 2000;
+
+/**
+ * Check if rate limit override is enabled (for development purposes only)
+ */
+export const shouldBypassRateLimit = (): boolean => {
+  // Check for development override - NEVER use in production
+  return localStorage.getItem('meta_bypass_rate_limit') === 'true';
 };
 
-// Check if rate limit should be bypassed (for debugging)
-export const shouldBypassRateLimit = (): boolean => {
-  // Check URL parameters for override flag
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('bypass_rate_limit') === 'true') {
-    console.warn("⚠️ Rate limit bypass detected via URL parameter");
-    return true;
+/**
+ * Calculate adaptive backoff time based on failure history
+ */
+export const getBackoffTime = (
+  lastFetchSuccess: boolean, 
+  rateLimitHistory: string[], 
+  callCount?: number
+): number => {
+  // Start with base backoff of 2 seconds
+  let backoff = 2000;
+  
+  // If the last fetch failed, increase backoff
+  if (!lastFetchSuccess) {
+    backoff = 5000;
   }
   
-  // Check for override in localStorage (for developer testing)
-  if (localStorage.getItem('meta_api_bypass_rate_limit') === 'true') {
-    console.warn("⚠️ Rate limit bypass detected via localStorage flag");
-    return true;
+  // If we've had multiple rate limits recently, increase backoff
+  if (rateLimitHistory.length > 0) {
+    const multiplier = Math.min(rateLimitHistory.length, 5);
+    backoff = backoff * multiplier;
   }
   
-  return false;
+  // If we're approaching API limits (over 80% usage), add more backoff
+  if (callCount && callCount > 80) {
+    const usageMultiplier = (callCount - 80) / 10; // 0 to 2 for 80-100% usage
+    backoff = backoff * (1 + usageMultiplier);
+  }
+  
+  // Cap at 30 seconds max backoff
+  return Math.min(backoff, 30000);
 };

@@ -23,8 +23,15 @@ export const isRateLimitError = (error: any): boolean => {
     return true;
   }
   
+  // Check code property directly (common in Meta API responses)
+  if (error.code === 4 || error.code === 17 || error.code === 32 || 
+      (error.code >= 80000 && error.code <= 80014)) {
+    return true;
+  }
+  
   // Check for subcode 2446079 which indicates rate limiting in v3.3 and older APIs
-  if (error.details?.error?.error_subcode === 2446079) {
+  if (error.details?.error?.error_subcode === 2446079 || 
+      error.error_subcode === 2446079) {
     return true;
   }
   

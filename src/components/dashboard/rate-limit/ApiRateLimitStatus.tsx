@@ -1,96 +1,128 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { MetaApiService } from '@/services/MetaApiService';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Clock, RotateCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
+import { checkRateLimitStatus, clearRateLimit } from '@/hooks/campaigns/fetch-utils';
 
-// Import refactored components
-import RateLimitHeader from './RateLimitHeader';
-import RateLimitAlert from './RateLimitAlert';
-import RateLimitCountdown from './RateLimitCountdown';
-import RateLimitExplanation from './RateLimitExplanation';
-import RateLimitStatusInfo from './RateLimitStatusInfo';
-import RateLimitControls from './RateLimitControls';
-
-const ApiRateLimitStatus = () => {
-  const [isRateLimited, setIsRateLimited] = useState<boolean>(MetaApiService.isRateLimited());
-  const [remainingTime, setRemainingTime] = useState<number | null>(MetaApiService.getRateLimitTimeRemaining());
-  const [remainingPercent, setRemainingPercent] = useState<number>(0);
-  const [limitType, setLimitType] = useState<string>('unknown');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isOverridden, setIsOverridden] = useState<boolean>(MetaApiService.isRateLimitOverridden());
+const ApiRateLimitStatus: React.FC = () => {
+  const navigate = useNavigate();
+  const [isClearing, setIsClearing] = React.useState(false);
+  const [rateLimitInfo, setRateLimitInfo] = React.useState(() => checkRateLimitStatus());
   
-  useEffect(() => {
-    const updateTimer = () => {
-      const rateLimitInfo = MetaApiService.getRateLimitInfo();
-      const isCurrentlyRateLimited = MetaApiService.isRateLimited();
-      
-      setIsRateLimited(isCurrentlyRateLimited);
-      setRemainingTime(MetaApiService.getRateLimitTimeRemaining());
-      setLimitType(rateLimitInfo.limitType || 'unknown');
-      setErrorMessage(rateLimitInfo.errorMessage || null);
-      setIsOverridden(MetaApiService.isRateLimitOverridden());
-      
-      // Reset states if not rate limited
-      if (!isCurrentlyRateLimited) {
-        setRemainingTime(null);
-        setRemainingPercent(100);
-        setErrorMessage(null);
-      }
-    };
+  React.useEffect(() => {
+    // Update rate limit info every 30 seconds
+    const intervalId = setInterval(() => {
+      setRateLimitInfo(checkRateLimitStatus());
+    }, 30000);
     
-    // Update every second
-    const timerId = setInterval(updateTimer, 1000);
-    
-    // Initial update
-    updateTimer();
-    
-    // Cleanup
-    return () => {
-      clearInterval(timerId);
-    };
+    return () => clearInterval(intervalId);
   }, []);
   
-  const handleClearRateLimit = () => {
-    MetaApiService.clearRateLimit();
-    setIsRateLimited(false);
-    setRemainingTime(null);
-    setRemainingPercent(100);
-    setLimitType('unknown');
-    setErrorMessage(null);
+  // Calculate progress value (0-100) based on time remaining
+  const getProgressValue = () => {
+    if (!rateLimitInfo.isRateLimited || !rateLimitInfo.timeRemaining) return 100;
+    
+    // Assuming rate limit is typically 10 minutes
+    const totalMinutes = 10;
+    const minutesLeft = rateLimitInfo.timeRemaining;
+    
+    // Progress is how much time has passed
+    const timeElapsedPercent = ((totalMinutes - minutesLeft) / totalMinutes) * 100;
+    return Math.min(Math.max(timeElapsedPercent, 0), 100); // Ensure between 0-100
   };
   
-  const handleToggleOverride = () => {
-    MetaApiService.overrideRateLimit(!isOverridden);
-    setIsOverridden(!isOverridden);
+  const handleClearRateLimit = () => {
+    setIsClearing(true);
+    
+    try {
+      // Clear the rate limit flag
+      clearRateLimit();
+      
+      toast({
+        title: "Rate Limit Flag Cleared",
+        description: "The rate limit flag has been cleared. You can try fetching campaigns now.",
+      });
+      
+      // Refresh rate limit info
+      setRateLimitInfo(checkRateLimitStatus());
+      
+      // Wait a moment before allowing another click
+      setTimeout(() => setIsClearing(false), 1000);
+    } catch (e) {
+      console.error("Error clearing rate limit:", e);
+      setIsClearing(false);
+    }
   };
-
+  
+  const handleViewCampaigns = () => {
+    navigate('/campaigns');
+  };
+  
   return (
     <Card>
       <CardHeader className="pb-2">
-        <RateLimitHeader isRateLimited={isRateLimited} isOverridden={isOverridden} />
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          Meta API Status
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        {isRateLimited ? (
+        {rateLimitInfo.isRateLimited ? (
           <div className="space-y-3">
-            <RateLimitAlert limitType={limitType} errorMessage={errorMessage} />
-            <RateLimitCountdown remainingTime={remainingTime} remainingPercent={remainingPercent} />
-            <RateLimitExplanation />
-            <RateLimitControls 
-              isRateLimited={isRateLimited}
-              isOverridden={isOverridden}
-              onClearRateLimit={handleClearRateLimit}
-              onToggleOverride={handleToggleOverride}
-            />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <AlertCircle className="text-red-500 h-4 w-4 mr-2" />
+                <span className="text-sm font-medium text-red-500">Rate Limited</span>
+              </div>
+              <span className="text-xs text-gray-500">
+                ~{rateLimitInfo.timeRemaining} min remaining
+              </span>
+            </div>
+            
+            <div>
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Rate Limit Progress</span>
+                <span>{Math.round(getProgressValue())}%</span>
+              </div>
+              <Progress value={getProgressValue()} className="h-2" />
+            </div>
+            
+            <div className="pt-2 flex flex-col gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={handleClearRateLimit}
+                disabled={isClearing}
+              >
+                <RotateCcw className="h-3 w-3 mr-1.5" />
+                Clear Rate Limit Flag
+              </Button>
+              
+              <p className="text-xs text-gray-500">
+                Meta API rate limits typically last 5-10 minutes. Clearing the flag will only work if the actual limit has expired.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
-            <RateLimitStatusInfo isOverridden={isOverridden} onToggleOverride={handleToggleOverride} />
-            <RateLimitControls
-              isRateLimited={isRateLimited}
-              isOverridden={isOverridden}
-              onClearRateLimit={handleClearRateLimit}
-              onToggleOverride={handleToggleOverride}
-            />
+            <p className="text-sm flex items-center">
+              <span className="flex h-2 w-2 bg-green-500 rounded-full mr-2"></span>
+              API Available
+            </p>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs w-full"
+              onClick={handleViewCampaigns}
+            >
+              View Campaigns
+            </Button>
           </div>
         )}
       </CardContent>

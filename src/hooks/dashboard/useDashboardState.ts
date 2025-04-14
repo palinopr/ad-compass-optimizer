@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { MetaApiService } from '@/services/MetaApiService';
-import { checkRateLimitStatus } from '@/hooks/campaigns/fetch-utils/rateLimitStatus';
+import { checkRateLimitStatus } from '@/hooks/campaigns/fetch-utils';
 
 export function useDashboardState() {
   // Check if we need to show diagnostic info based on localStorage
@@ -21,7 +21,7 @@ export function useDashboardState() {
     MetaApiService.initRateLimitState();
     
     // Check for any override settings
-    const isOverridden = MetaApiService.isRateLimitOverridden();
+    const isOverridden = MetaApiService.isRateLimitOverridden?.();
     if (isOverridden) {
       console.warn('⚠️ Meta API rate limit override is active. This should only be used for development.');
     }
