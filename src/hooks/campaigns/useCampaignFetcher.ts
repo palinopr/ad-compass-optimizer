@@ -8,6 +8,7 @@ import { debounce } from 'lodash';
 import { getCachedCampaigns, storeCampaignsInCache } from './fetch-utils/campaignCache';
 import { BaseApiService } from '@/services/api/BaseApiService';
 import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
+import { runFinalDiagnosticCheck } from '@/utils/campaign-diagnostics/finalDiagnosticCheck';
 
 export function useCampaignFetcher() {
   const { error, errorDetails, handleError, clearErrors } = useErrorHandler();
