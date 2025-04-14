@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { AdAccount } from '../types';
 import { getMockAdAccount } from '../utils/mockAccountData';
@@ -10,6 +10,7 @@ export function useAdAccountsFetching() {
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const { handleFetchError } = useAdAccountsError();
   
   const isMockMode = () => localStorage.getItem("USE_MOCK_MODE") === "true";
@@ -86,6 +87,14 @@ export function useAdAccountsFetching() {
     } catch (err) {
       const { error: errorMessage, shouldReconnect } = handleFetchError(err);
       setError(errorMessage);
+      
+      // Auto-scroll to error when error is set
+      setTimeout(() => {
+        if (errorRef.current) {
+          errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      
       if (shouldReconnect) {
         localStorage.setItem('show_meta_connection', 'true');
         localStorage.setItem('meta_connection_context', 'token');
@@ -99,7 +108,9 @@ export function useAdAccountsFetching() {
     adAccounts,
     isLoading,
     error,
+    errorRef,
     fetchAdAccounts,
     setAdAccounts
   };
 }
+
