@@ -73,7 +73,7 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
     ] : []),
     {
       label: 'Campaign Flow',
-      status: (rawCampaignsCount === 0 ? 'error' : 'info') as 'error' | 'info',
+      status: rawCampaignsCount === 0 ? 'error' : 'info',
       details: `${mockSourceData} in funnel → ${rawCampaignsCount ?? 0} in state → ${verifiedCount} filtered`
     },
     {
@@ -83,38 +83,38 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
     },
     {
       label: 'Raw Campaigns',
-      status: (rawCampaignsCount === 0 ? 'error' : 'info') as 'error' | 'info',
+      status: rawCampaignsCount === 0 ? 'error' : 'info',
       details: `${rawCampaignsCount ?? 'unknown'} campaigns in state`
     },
     {
       label: 'Filtered Campaigns',
-      status: (verifiedCount > 0 ? 'success' : 'error') as 'success' | 'error',
+      status: verifiedCount > 0 ? 'success' : 'error',
       details: `${verifiedCount} campaigns displayed`
     },
     {
       label: 'Mock Data Sync',
-      status: (rawCampaignsCount === 0 ? 'error' : 'success') as 'error' | 'success',
+      status: rawCampaignsCount === 0 ? 'error' : 'success',
       details: rawCampaignsCount === 0 ? 'Not synced to state' : 'Successfully synced'
     },
     ...(filters ? [{
       label: 'Active Filters',
-      status: 'info' as const,
+      status: 'info',
       details: `Status: ${filters.status || 'none'}, Date: ${filters.datePreset || 'none'}, Search: ${filters.search ? 'yes' : 'no'}`
     }] : []),
     ...(adAccountId ? [{
       label: 'Ad Account',
-      status: 'info' as const,
+      status: 'info',
       details: adAccountId
     }] : []),
     ...(verifiedCount === 0 ? [
       {
         label: 'Possible Fix',
-        status: 'warning' as const,
+        status: 'warning',
         details: 'Try clicking "Force UI Refresh" or reload the page'
       },
       ...(rawCampaignsCount === 0 ? [{
         label: 'Data Flow Issue',
-        status: 'error' as const,
+        status: 'error',
         details: 'Mock data not reaching state - check console logs'
       }] : [])
     ] : [])
