@@ -1,8 +1,7 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCcw, Cpu } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 interface FixActionsProps {
   onStandardFix: () => void;
