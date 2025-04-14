@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -6,6 +5,7 @@ import { useFetchState } from './fetch-hooks/useFetchState';
 import { useTokenValidation } from './fetch-hooks/useTokenValidation';
 import { toast } from '@/hooks/use-toast';
 import { debounce } from 'lodash';
+import { getCachedCampaigns, storeCampaignsInCache } from './fetch-utils/campaignCache';
 
 export function useCampaignFetcher() {
   const { error, errorDetails, handleError, clearErrors } = useErrorHandler();
@@ -24,7 +24,8 @@ export function useCampaignFetcher() {
   const fetchCampaignData = useCallback(async (
     token: string,
     adAccountId: string, 
-    status?: string
+    status?: string,
+    forceRefresh: boolean = false
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
     if (!canFetch()) {
       return { 
@@ -32,6 +33,15 @@ export function useCampaignFetcher() {
         error: 'A campaign fetch request is already in progress or throttled',
         errorDetails: { concurrent: true, throttled: true }
       };
+    }
+
+    // Check cache first unless force refresh is requested
+    if (!forceRefresh) {
+      const { campaigns, isFresh } = getCachedCampaigns(adAccountId);
+      if (campaigns && isFresh) {
+        console.log(`Using cached campaigns for account ${adAccountId}`);
+        return { campaigns, error: null, fromCache: true };
+      }
     }
     
     startFetch();
@@ -52,6 +62,9 @@ export function useCampaignFetcher() {
       const campaigns = await MetaCampaignService.fetchCampaigns(token, adAccountId);
       
       if (mountedRef.current) {
+        // Store in cache
+        storeCampaignsInCache(campaigns, adAccountId);
+        
         localStorage.setItem('last_campaign_count', campaigns.length.toString());
         localStorage.setItem('last_campaign_fetch_success', 'true');
         
