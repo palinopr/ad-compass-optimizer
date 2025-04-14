@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import DiagnosticButton from '@/components/campaigns/DiagnosticButton';
 import { runLiveCampaignDiagnostic } from '@/utils/meta-diagnostics/liveCampaignDiagnostic';
+import MockModePanel from '@/components/campaigns/diagnostic-components/MockModePanel';
 
 const CampaignTroubleshooter = () => {
   const [debugResult, setDebugResult] = useState<string[]>([]);
@@ -26,25 +27,9 @@ const CampaignTroubleshooter = () => {
           >
             Run Live Campaign Debugger
           </Button>
-          {(localStorage.getItem('USE_MOCK_META_API') === 'true' || 
-            localStorage.getItem('mockMeta') === 'true') && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                localStorage.removeItem('USE_MOCK_META_API');
-                localStorage.removeItem('mockMeta');
-                toast({
-                  title: '🧹 Mock Mode Disabled',
-                  description: 'Meta API mock mode turned off. Refresh to reload campaigns.',
-                });
-                window.location.reload();
-              }}
-            >
-              Disable Meta API Mock Mode
-            </Button>
-          )}
         </div>
+        
+        <MockModePanel />
         
         {debugResult.length > 0 && (
           <div className="mt-4 bg-muted p-3 rounded-md text-sm font-mono space-y-1">
