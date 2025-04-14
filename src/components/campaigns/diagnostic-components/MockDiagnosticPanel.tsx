@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Check, X, Brain, Bug } from 'lucide-react';
+import { Check, X, Brain, Bug, RefreshCw } from 'lucide-react';
 import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
+import { Button } from '@/components/ui/button';
+import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 
 interface DiagnosticItem {
   label: string;
@@ -31,7 +32,6 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
   const [verifiedCount, setVerifiedCount] = useState(displayedCampaignsCount);
   const [mockSourceData, setMockSourceData] = useState(mockFunnelData.campaigns.length);
 
-  // Use effect to delay checking the count to allow UI to fully render
   useEffect(() => {
     console.log('MockDiagnosticPanel: Updating verified count', {
       displayedCampaignsCount,
@@ -49,11 +49,21 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
   
   if (!isMockMode) return null;
 
+  const handleRefresh = () => {
+    localStorage.setItem("FORCE_MOCK_REFRESH", "true");
+    triggerCampaignRefresh(true);
+  };
+
   const diagnosticItems: DiagnosticItem[] = [
     {
       label: 'Mock Mode',
       status: 'success',
       details: 'Active'
+    },
+    {
+      label: 'Campaign Flow',
+      status: rawCampaignsCount === 0 ? 'error' : 'info',
+      details: `${mockSourceData} in funnel → ${rawCampaignsCount ?? 0} in state → ${verifiedCount} filtered`
     },
     {
       label: 'Mock Source Data',
@@ -72,14 +82,12 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
     }
   ];
 
-  // Add sync status information
   diagnosticItems.push({
     label: 'Mock Data Sync',
     status: rawCampaignsCount === 0 ? 'error' : 'success',
     details: rawCampaignsCount === 0 ? 'Not synced to state' : 'Successfully synced'
   });
 
-  // Add filter details
   if (filters) {
     diagnosticItems.push({
       label: 'Active Filters',
@@ -88,7 +96,6 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
     });
   }
 
-  // Add ad account info
   if (adAccountId) {
     diagnosticItems.push({
       label: 'Ad Account',
@@ -97,7 +104,6 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
     });
   }
 
-  // Add diagnostic message if no campaigns are displayed
   if (verifiedCount === 0) {
     diagnosticItems.push({
       label: 'Possible Fix',
@@ -116,10 +122,22 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
 
   return (
     <Card className="mt-8 p-4">
-      <h3 className="text-sm font-medium mb-4 flex items-center">
-        <Bug className="w-4 h-4 mr-2 text-amber-500" />
-        Mock Diagnostic Panel
-      </h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-sm font-medium flex items-center">
+          <Bug className="w-4 h-4 mr-2 text-amber-500" />
+          Mock Diagnostic Panel
+        </h3>
+        <Button 
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="h-3 w-3" />
+          Refresh Mock Data
+        </Button>
+      </div>
+      
       <div className="space-y-2">
         {diagnosticItems.map((item, index) => (
           <div key={index} className="flex items-center space-x-2 text-sm">
