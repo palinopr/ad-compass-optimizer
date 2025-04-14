@@ -26,7 +26,9 @@ const ConnectionStatusSummary: React.FC<ConnectionStatusSummaryProps> = ({
           ) : (
             <X className="h-4 w-4 text-red-500" />
           )}
-          <span>Token: {token ? 'Present' : 'Missing'}</span>
+          <span className={token ? 'text-green-600' : 'text-red-600'}>
+            Token: {token ? 'Present' : 'Missing'}
+          </span>
         </div>
         
         <div className="flex items-center gap-2">
@@ -35,7 +37,7 @@ const ConnectionStatusSummary: React.FC<ConnectionStatusSummaryProps> = ({
           ) : (
             <X className="h-4 w-4 text-red-500" />
           )}
-          <span>
+          <span className={missingPermissions.length === 0 ? 'text-green-600' : 'text-red-600'}>
             Permissions: {missingPermissions.length === 0 ? 
               'Valid' : 
               `Missing: ${missingPermissions.join(', ')}`}
@@ -48,7 +50,7 @@ const ConnectionStatusSummary: React.FC<ConnectionStatusSummaryProps> = ({
           ) : (
             <X className="h-4 w-4 text-red-500" />
           )}
-          <span>
+          <span className={selectedAdAccount ? 'text-green-600' : 'text-red-600'}>
             Ad Account: {selectedAdAccount ? 
               selectedAdAccount : 
               'Not selected'}
@@ -60,3 +62,4 @@ const ConnectionStatusSummary: React.FC<ConnectionStatusSummaryProps> = ({
 };
 
 export default ConnectionStatusSummary;
+
