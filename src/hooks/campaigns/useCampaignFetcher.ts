@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -40,7 +41,11 @@ export function useCampaignFetcher() {
       const { campaigns, isFresh } = getCachedCampaigns(adAccountId);
       if (campaigns && isFresh) {
         console.log(`Using cached campaigns for account ${adAccountId}`);
-        return { campaigns, error: null, fromCache: true };
+        return { 
+          campaigns, 
+          error: null
+          // Removed the `fromCache: true` which was causing the error
+        };
       }
     }
     
