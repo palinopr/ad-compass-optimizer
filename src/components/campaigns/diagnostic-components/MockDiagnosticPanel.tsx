@@ -5,7 +5,7 @@ import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandl
 import { MockApiService } from '@/services/api/mock/MockApiService';
 import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
 import MockHeader from './mock-panel/MockHeader';
-import DiagnosticItems from './mock-panel/DiagnosticItems';
+import DiagnosticItems, { DiagnosticItem } from './mock-panel/DiagnosticItems';
 import MockApiCallsLog from './mock-panel/MockApiCallsLog';
 
 interface MockDiagnosticPanelProps {
@@ -17,15 +17,6 @@ interface MockDiagnosticPanelProps {
     search?: string;
   };
   adAccountId?: string;
-}
-
-// Define a type that matches the DiagnosticItem interface from DiagnosticItems.tsx
-type DiagnosticItemStatus = 'success' | 'error' | 'info' | 'warning';
-
-interface DiagnosticItem {
-  label: string;
-  status: DiagnosticItemStatus;
-  details?: string;
 }
 
 const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({ 
@@ -82,7 +73,7 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
     ] : []),
     {
       label: 'Campaign Flow',
-      status: (rawCampaignsCount === 0 ? 'error' : 'info'),
+      status: (rawCampaignsCount === 0 ? 'error' : 'info') as 'error' | 'info',
       details: `${mockSourceData} in funnel → ${rawCampaignsCount ?? 0} in state → ${verifiedCount} filtered`
     },
     {
@@ -92,38 +83,38 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
     },
     {
       label: 'Raw Campaigns',
-      status: (rawCampaignsCount === 0 ? 'error' : 'info'),
+      status: (rawCampaignsCount === 0 ? 'error' : 'info') as 'error' | 'info',
       details: `${rawCampaignsCount ?? 'unknown'} campaigns in state`
     },
     {
       label: 'Filtered Campaigns',
-      status: (verifiedCount > 0 ? 'success' : 'error'),
+      status: (verifiedCount > 0 ? 'success' : 'error') as 'success' | 'error',
       details: `${verifiedCount} campaigns displayed`
     },
     {
       label: 'Mock Data Sync',
-      status: (rawCampaignsCount === 0 ? 'error' : 'success'),
+      status: (rawCampaignsCount === 0 ? 'error' : 'success') as 'error' | 'success',
       details: rawCampaignsCount === 0 ? 'Not synced to state' : 'Successfully synced'
     },
     ...(filters ? [{
       label: 'Active Filters',
-      status: 'info',
+      status: 'info' as const,
       details: `Status: ${filters.status || 'none'}, Date: ${filters.datePreset || 'none'}, Search: ${filters.search ? 'yes' : 'no'}`
     }] : []),
     ...(adAccountId ? [{
       label: 'Ad Account',
-      status: 'info',
+      status: 'info' as const,
       details: adAccountId
     }] : []),
     ...(verifiedCount === 0 ? [
       {
         label: 'Possible Fix',
-        status: 'warning',
+        status: 'warning' as const,
         details: 'Try clicking "Force UI Refresh" or reload the page'
       },
       ...(rawCampaignsCount === 0 ? [{
         label: 'Data Flow Issue',
-        status: 'error',
+        status: 'error' as const,
         details: 'Mock data not reaching state - check console logs'
       }] : [])
     ] : [])
