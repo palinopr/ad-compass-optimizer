@@ -14,15 +14,9 @@ export class MetaApiService {
   private static readonly API_VERSION = 'v17.0';
   private static readonly BASE_URL = 'https://graph.facebook.com';
 
-  private static isMockMode(): boolean {
-    const urlParams = new URLSearchParams(window.location.search);
-    const mockEnabled = urlParams.get('mock') === 'true';
-    
-    if (mockEnabled) {
-      console.log('[MOCK MODE] API Service - Using simulated data');
-    }
-    
-    return mockEnabled;
+  public static isMockMode(): boolean {
+    // Use global mock mode detection from localStorage
+    return localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static async executeWithRateLimiting<T>(
@@ -63,6 +57,7 @@ export class MetaApiService {
     }
   }
 
+  // Enhanced mock data functions with consistent type signatures
   private static getMockAdAccounts() {
     return [{
       id: 'act_123456789',
@@ -77,8 +72,18 @@ export class MetaApiService {
     return {
       id: 'mock_user_123',
       name: 'Mock User',
-      email: 'mock@example.com'
+      email: 'mock@example.com',
+      picture: 'https://via.placeholder.com/50x50'
     };
+  }
+
+  private static getMockBusinessManagers() {
+    return [{
+      id: 'mock_business_123',
+      name: 'Mock Business',
+      verification_status: 'verified',
+      created_time: '2023-01-01T00:00:00Z'
+    }];
   }
 
   private static getMockConnectionTest(): ConnectionTestResult {
@@ -87,7 +92,8 @@ export class MetaApiService {
       userId: 'mock_user_123',
       userName: 'Mock User',
       hasAdAccess: true,
-      error: undefined,  // Add explicitly to match the interface
+      error: undefined,
+      details: undefined,
       permissionsWarning: undefined
     };
   }
@@ -135,10 +141,7 @@ export class MetaApiService {
   public static async fetchBusinessManagers(token: string) {
     if (this.isMockMode()) {
       console.log('🎭 Returning mock business managers');
-      return [{
-        id: 'mock_business_123',
-        name: 'Mock Business'
-      }];
+      return this.getMockBusinessManagers();
     }
     return this.executeWithRateLimiting(() => 
       MetaBusinessService.fetchBusinessManagers(token)
@@ -146,42 +149,70 @@ export class MetaApiService {
   }
 
   public static async fetchAdAccountsForBusiness(token: string, businessId: string) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock ad accounts for business');
+      return this.getMockAdAccounts();
+    }
     return this.executeWithRateLimiting(() => 
       MetaAdAccountService.fetchAdAccountsForBusiness(token, businessId)
     );
   }
   
   public static async fetchCampaigns(token: string, adAccountId: string) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock campaigns');
+      return mockFunnelData.campaigns;
+    }
     return this.executeWithRateLimiting(() => 
       MetaCampaignService.fetchCampaigns(token, adAccountId)
     );
   }
 
   public static async fetchInsights(token: string, objectId: string, options = {}) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock insights');
+      return { data: [] };
+    }
     return this.executeWithRateLimiting(() => 
       MetaInsightsService.fetchInsights(token, objectId, options)
     );
   }
 
   public static async fetchCampaignInsights(token: string, campaignId: string, options = {}) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock campaign insights');
+      return { data: [] };
+    }
     return this.executeWithRateLimiting(() => 
       MetaInsightsService.fetchCampaignInsights(token, campaignId, options)
     );
   }
 
   public static async fetchAccountInsights(token: string, accountId: string, options = {}) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock account insights');
+      return { data: [] };
+    }
     return this.executeWithRateLimiting(() => 
       MetaInsightsService.fetchAccountInsights(token, accountId, options)
     );
   }
 
   public static async fetchDemographicInsights(token: string, objectId: string, options = {}) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock demographic insights');
+      return { data: [] };
+    }
     return this.executeWithRateLimiting(() => 
       MetaInsightsService.fetchDemographicInsights(token, objectId, options)
     );
   }
 
   public static async fetchGeographicInsights(token: string, objectId: string, options = {}) {
+    if (this.isMockMode()) {
+      console.log('🎭 Returning mock geographic insights');
+      return { data: [] };
+    }
     return this.executeWithRateLimiting(() => 
       MetaInsightsService.fetchGeographicInsights(token, objectId, options)
     );

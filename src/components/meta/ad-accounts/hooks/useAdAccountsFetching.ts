@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MetaApiService } from '@/services/MetaApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
@@ -11,7 +11,37 @@ export function useAdAccountsFetching() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
+  // Check if we're in mock mode - prevent fetch errors in mock mode
+  const isMockMode = () => localStorage.getItem("USE_MOCK_MODE") === "true";
+  
+  useEffect(() => {
+    // If in mock mode, set mock ad accounts immediately to prevent loading state issues
+    if (isMockMode()) {
+      setAdAccounts([{
+        id: 'act_123456789',
+        name: 'Mock Ad Account 1',
+        account_id: '123456789',
+        account_status: 1,
+        currency: 'USD'
+      }]);
+    }
+  }, []);
+  
   const fetchAdAccounts = async () => {
+    // Short-circuit if in mock mode
+    if (isMockMode()) {
+      console.log('🎭 Mock mode: Using mock ad accounts');
+      setAdAccounts([{
+        id: 'act_123456789',
+        name: 'Mock Ad Account 1',
+        account_id: '123456789',
+        account_status: 1,
+        currency: 'USD'
+      }]);
+      setIsLoading(false);
+      return;
+    }
+    
     const accessToken = metaAuthService.getAccessToken();
     
     if (!accessToken) {
@@ -68,6 +98,17 @@ export function useAdAccountsFetching() {
   };
   
   const fetchSelectedAccounts = async (selectedIds: string[]): Promise<AdAccount[]> => {
+    // Short-circuit if in mock mode
+    if (isMockMode()) {
+      return [{
+        id: 'act_123456789',
+        name: 'Mock Ad Account 1',
+        account_id: '123456789',
+        account_status: 1,
+        currency: 'USD'
+      }];
+    }
+    
     const token = metaAuthService.getAccessToken();
     if (!token) {
       console.log('No token available for fetching selected accounts');
@@ -107,6 +148,17 @@ export function useAdAccountsFetching() {
   };
   
   const fetchAllAccounts = async (): Promise<AdAccount[]> => {
+    // Short-circuit if in mock mode
+    if (isMockMode()) {
+      return [{
+        id: 'act_123456789',
+        name: 'Mock Ad Account 1',
+        account_id: '123456789',
+        account_status: 1,
+        currency: 'USD'
+      }];
+    }
+    
     const token = metaAuthService.getAccessToken();
     if (!token) {
       console.log('No token available for fetching all accounts');

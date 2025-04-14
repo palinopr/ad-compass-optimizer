@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 
 export interface ConnectionTestResult {
@@ -13,9 +12,8 @@ export interface ConnectionTestResult {
 }
 
 export class MetaConnectionService extends BaseApiService {
-  private static isMockMode(): boolean {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('mock') === 'true';
+  public static isMockMode(): boolean {
+    return localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static async testConnection(token: string): Promise<ConnectionTestResult> {

@@ -6,10 +6,9 @@ export class CampaignThrottling {
   private static readonly THROTTLE_KEY = 'meta_campaign_fetch_timestamp';
   private static readonly MIN_INTERVAL_MS = 60000; // 1 minute cooldown
 
-  private static isMockMode(): boolean {
-    // Consistent mock detection
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('mock') === 'true';
+  public static isMockMode(): boolean {
+    // Use consistent mock detection from localStorage
+    return localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static checkThrottling(accountId?: string): void {

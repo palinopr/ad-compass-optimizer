@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useAuthCheck } from './useAuthCheck';
 import { useAdAccountSelection } from './useAdAccountSelection';
@@ -8,12 +8,18 @@ import { useCampaignEventListeners } from './useCampaignEventListeners';
 import { useCampaignFetcher } from './useCampaignFetcher';
 import { toast } from '@/hooks/use-toast';
 import { UseCampaignsResult } from './types';
+import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
 
 export function useCampaigns(status?: string): UseCampaignsResult {
   const { checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
   const { getSelectedAdAccount } = useAdAccountSelection();
   const { fetchCampaignData } = useCampaignFetcher();
+  const [mockInitialized, setMockInitialized] = useState(false);
+  
+  const isMockMode = useCallback(() => {
+    return localStorage.getItem("USE_MOCK_MODE") === "true";
+  }, []);
   
   const {
     campaigns, setCampaigns, updateCampaigns,
@@ -25,16 +31,64 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     isFetchingRef, lastFetchTimeRef, mountedRef, campaignCountRef
   } = useCampaignFetchState();
   
-  // Force a UI refresh when displayRefresh changes
+  useEffect(() => {
+    if (isMockMode() && !mockInitialized) {
+      console.log('🎭 Mock mode detected in useCampaigns - setting mock campaign data');
+      
+      let mockCampaigns = [...mockFunnelData.campaigns];
+      
+      if (status && status !== 'all') {
+        mockCampaigns = mockCampaigns.filter(campaign => 
+          campaign.status?.toLowerCase() === status.toLowerCase()
+        );
+      }
+      
+      updateCampaigns(mockCampaigns);
+      setIsLoading(false);
+      setMockInitialized(true);
+      
+      console.log(`🎭 Loaded ${mockCampaigns.length} mock campaigns for status: ${status || 'all'}`);
+    }
+  }, [isMockMode, mockInitialized, status, updateCampaigns, setIsLoading]);
+  
   useEffect(() => {
     if (displayRefresh > 0 && campaigns.length > 0) {
       console.log(`Display refresh triggered (${displayRefresh}), forcing UI update with ${campaigns.length} campaigns`);
     }
   }, [displayRefresh, campaigns.length]);
   
-  // Function to fetch campaigns with enhanced display refresh
   const fetchCampaigns = useCallback(async (forceRefresh = false) => {
-    // Prevent concurrent fetches and limit frequency to once every 5 seconds
+    if (isMockMode()) {
+      if (forceRefresh || !mockInitialized) {
+        console.log('🎭 Mock mode: Refreshing mock campaigns');
+        
+        let mockCampaigns = [...mockFunnelData.campaigns];
+        
+        if (status && status !== 'all') {
+          mockCampaigns = mockCampaigns.filter(campaign => 
+            campaign.status?.toLowerCase() === status.toLowerCase()
+          );
+        }
+        
+        setIsLoading(true);
+        
+        setTimeout(() => {
+          updateCampaigns(mockCampaigns);
+          setIsLoading(false);
+          setMockInitialized(true);
+          incrementDisplayRefresh();
+          
+          toast({
+            title: "Mock Campaign Data Loaded",
+            description: `Loaded ${mockCampaigns.length} simulated campaigns.`,
+          });
+          
+          console.log(`🎭 Loaded ${mockCampaigns.length} mock campaigns for status: ${status || 'all'}`);
+        }, 500);
+      }
+      return;
+    }
+    
     const now = Date.now();
     if (isFetchingRef.current && !forceRefresh) {
       console.log('Fetch already in progress, skipping this request');
@@ -56,7 +110,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     try {
       console.log('Starting campaign fetch process...', { status, forceRefresh });
       
-      // Step 1: Always check token directly as the source of truth
       const token = metaAuthService.getAccessToken();
       
       if (!token || token.length < 50) {
@@ -68,7 +121,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       
       console.log('Valid token found, proceeding with campaign fetch');
       
-      // Step 2: Validate authentication using the consolidated method
       const authResult = validateAuthentication();
       if (!authResult.isValid) {
         setError(authResult.error);
@@ -76,7 +128,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         return;
       }
       
-      // Step 3: Get selected ad account
       const accountResult = getSelectedAdAccount();
       if (!accountResult.hasAccount) {
         setError(accountResult.error);
@@ -85,13 +136,11 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         return;
       }
 
-      // Store the current ad account ID to track changes
       const currentAccountId = accountResult.adAccountId;
       localStorage.setItem('last_fetched_ad_account', currentAccountId);
       
       console.log(`Fetching campaigns for ad account: ${currentAccountId}`);
       
-      // Step 4: Fetch campaign data
       const { campaigns: fetchedCampaigns, error: fetchError, errorDetails: fetchErrorDetails } = 
         await fetchCampaignData(token, currentAccountId, status);
       
@@ -102,13 +151,11 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           setErrorDetails(fetchErrorDetails);
         }
       } else {
-        // Add a small delay before updating UI to smooth out rapid interactions
         return new Promise<void>((resolve) => {
           setTimeout(() => {
             if (mountedRef.current) {
               updateCampaigns(fetchedCampaigns);
               
-              // Existing toast and localStorage logging logic
               if (fetchedCampaigns.length > 0) {
                 const hadDisplayIssues = localStorage.getItem('had_display_issues') === 'true';
                 if (hadDisplayIssues) {
@@ -124,7 +171,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
               console.warn('Component unmounted before state update could complete');
             }
             resolve();
-          }, 300); // 300ms delay for smooth UI updates
+          }, 300);
         });
       }
     } catch (err: any) {
@@ -144,13 +191,13 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     }
   }, [status, validateAuthentication, getSelectedAdAccount, fetchCampaignData, 
       updateCampaigns, setCampaigns, setError, setErrorDetails, setIsLoading, incrementDisplayRefresh, 
-      isFetchingRef, lastFetchTimeRef, mountedRef]);
+      isFetchingRef, lastFetchTimeRef, mountedRef, isMockMode, mockInitialized]);
   
-  // Use the enhanced hook for event listeners
   useCampaignEventListeners(fetchCampaigns, incrementDisplayRefresh, forceUiRefresh, clearCampaigns, status);
   
-  // Add additional effect to check for ad account changes
   useEffect(() => {
+    if (isMockMode()) return;
+    
     const checkAdAccountChange = () => {
       const lastFetchedAccount = localStorage.getItem('last_fetched_ad_account');
       const currentAccount = localStorage.getItem('selected_ad_account');
@@ -162,12 +209,11 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       }
     };
     
-    // Check immediately and set up interval
     checkAdAccountChange();
     const intervalId = setInterval(checkAdAccountChange, 5000);
     
     return () => clearInterval(intervalId);
-  }, [clearCampaigns, fetchCampaigns]);
+  }, [clearCampaigns, fetchCampaigns, isMockMode]);
   
   return {
     campaigns,
@@ -176,6 +222,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     errorDetails,
     refetchCampaigns: fetchCampaigns,
     displayRefresh,
-    forceRender // Add forceRender to the return object
+    forceRender
   };
 }

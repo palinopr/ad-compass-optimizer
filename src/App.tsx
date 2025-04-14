@@ -11,6 +11,11 @@ import { Toaster } from '@/components/ui/toaster';
 import FunnelViewContainer from '@/components/funnel/FunnelViewContainer';
 import { toast } from './hooks/use-toast';
 
+// Global mock mode detection function
+export const isMockMode = (): boolean => {
+  return localStorage.getItem("USE_MOCK_MODE") === "true";
+};
+
 function App() {
   const [isMockMode, setIsMockMode] = useState(false);
 
@@ -18,6 +23,9 @@ function App() {
     // Check for mock mode on initial load
     const urlParams = new URLSearchParams(window.location.search);
     const mockEnabled = urlParams.get('mock') === 'true';
+    
+    // Store in localStorage for consistent global access
+    localStorage.setItem("USE_MOCK_MODE", mockEnabled ? "true" : "false");
     
     setIsMockMode(mockEnabled);
     
@@ -29,11 +37,19 @@ function App() {
         duration: 5000,
       });
       
-      // Store in localStorage for diagnostic purposes
+      // Store additional information for diagnostic purposes
       localStorage.setItem('mock_mode_enabled', 'true');
       localStorage.setItem('mock_mode_enabled_at', new Date().toISOString());
+      
+      // Pre-populate required states to ensure UI works correctly
+      localStorage.setItem('selected_ad_account', 'act_123456789');
+      localStorage.setItem('meta_auth_token', 'mock_token_123456789');
+      
+      // Dispatch event to notify components about mock mode
+      window.dispatchEvent(new CustomEvent('mock-mode-enabled'));
     } else {
       localStorage.removeItem('mock_mode_enabled');
+      localStorage.removeItem('USE_MOCK_MODE');
     }
   }, []);
 

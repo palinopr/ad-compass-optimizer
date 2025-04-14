@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import CampaignFilterToolbar from './CampaignFilterToolbar';
@@ -34,6 +34,17 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
 
   const metrics = useCampaignMetrics(filteredCampaigns);
   
+  // Check if mock mode is active
+  const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
+  
+  // Force a refresh when in mock mode if there are no campaigns showing
+  useEffect(() => {
+    if (isMockMode && campaigns.length === 0 && !isLoading) {
+      console.log('🎭 Mock mode: No campaigns showing, triggering refresh');
+      refetchCampaigns(true);
+    }
+  }, [isMockMode, campaigns.length, isLoading, refetchCampaigns]);
+  
   const handleRefresh = () => {
     localStorage.removeItem('campaign_filter_state');
     localStorage.removeItem('cached_campaign_data');
@@ -67,7 +78,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
   
-  if (error) {
+  if (error && !isMockMode) {
     return (
       <Card>
         <ErrorState 
@@ -80,13 +91,15 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
 
-  const hasLastFetchSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
+  // In mock mode, consider the user authenticated and with data
+  const hasLastFetchSuccess = isMockMode ? true : localStorage.getItem('last_campaign_fetch_success') === 'true';
   const hasEmptyResult = localStorage.getItem('last_empty_result') === 'true';
   
   if ((!campaigns || campaigns.length === 0) && 
-      effectiveIsAuthenticated && 
+      (effectiveIsAuthenticated || isMockMode) && 
       hasLastFetchSuccess &&
-      hasEmptyResult) {
+      hasEmptyResult && 
+      !isMockMode) { // Skip empty view in mock mode
     return (
       <>
         <CampaignFilterToolbar 
@@ -134,6 +147,12 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         hasFilteredResults={filteredCampaigns.length > 0}
         onClearFilters={handleClearFilters}
       />
+      
+      {isMockMode && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mt-4">
+          <p className="text-yellow-800">🎭 Mock Mode Active - Using simulated campaign data</p>
+        </div>
+      )}
       
       <CampaignDebugInfo campaigns={campaigns} />
     </div>

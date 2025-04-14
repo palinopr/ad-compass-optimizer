@@ -6,16 +6,9 @@ import { InsightsThrottling } from './insights/throttling';
 import { mockFunnelData } from './mock/mockCampaignData';
 
 export class MetaFunnelService {
-  private static isMockMode(): boolean {
-    // Enhanced mock detection - check URL params directly
-    const urlParams = new URLSearchParams(window.location.search);
-    const mockEnabled = urlParams.get('mock') === 'true';
-    
-    if (mockEnabled) {
-      console.log('[MOCK MODE] Activated - using fake campaign data');
-    }
-    
-    return mockEnabled;
+  public static isMockMode(): boolean {
+    // Use consistent mock detection from localStorage
+    return localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static async fetchFunnelData(token: string, adAccountId: string): Promise<FunnelData> {

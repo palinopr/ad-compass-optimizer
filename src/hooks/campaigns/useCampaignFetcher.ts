@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -7,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { debounce } from 'lodash';
 import { getCachedCampaigns, storeCampaignsInCache } from './fetch-utils/campaignCache';
 import { BaseApiService } from '@/services/api/BaseApiService';
+import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
 
 export function useCampaignFetcher() {
   const { error, errorDetails, handleError, clearErrors } = useErrorHandler();
@@ -20,6 +22,11 @@ export function useCampaignFetcher() {
     increaseCooldown
   } = useFetchState();
   const { validateToken } = useTokenValidation();
+  
+  // Function to check if mock mode is active
+  const isMockMode = () => {
+    return localStorage.getItem("USE_MOCK_MODE") === "true";
+  };
 
   const fetchCampaignData = useCallback(async (
     token: string,
@@ -27,6 +34,23 @@ export function useCampaignFetcher() {
     status?: string,
     forceRefresh: boolean = false
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
+    // Handle mock mode
+    if (isMockMode()) {
+      console.log('🎭 Mock mode: Returning mock campaign data');
+      
+      // Get campaigns from mock data
+      let campaigns = [...mockFunnelData.campaigns];
+      
+      // Apply status filter if provided
+      if (status && status !== 'all') {
+        campaigns = campaigns.filter(campaign => 
+          campaign.status?.toLowerCase() === status.toLowerCase()
+        );
+      }
+      
+      return { campaigns, error: null };
+    }
+    
     if (!canFetch()) {
       return { 
         campaigns: [], 
