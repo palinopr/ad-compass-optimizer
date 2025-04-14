@@ -86,6 +86,25 @@ export function useAdAccountsFetching() {
     } catch (err) {
       const { error: errorMessage, shouldReconnect } = handleFetchError(err);
       
+      // Store the error in localStorage for post-mortem debugging
+      try {
+        const errorToStore = {
+          timestamp: new Date().toISOString(),
+          error: err instanceof Error ? err.message : String(err),
+          rawError: err,
+          context: {
+            shouldReconnect,
+            tokenPresent: !!metaAuthService.getAccessToken(),
+            mockMode: isMockMode()
+          }
+        };
+        
+        localStorage.setItem('last_meta_error', JSON.stringify(errorToStore));
+        console.log('[META DEBUG] Last Meta API error saved to localStorage:', errorToStore);
+      } catch (storageErr) {
+        console.warn('[META DEBUG] Failed to store error in localStorage:', storageErr);
+      }
+      
       // Check for missing permissions
       try {
         const rawPermissions = localStorage.getItem(MetaAuthService.PERMISSIONS_KEY);
