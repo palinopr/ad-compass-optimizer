@@ -10,7 +10,16 @@ import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandl
 
 export class MetaFunnelService {
   public static isMockMode(): boolean {
-    return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+    try {
+      // Safely check both mock mode conditions
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+      }
+      return false;
+    } catch (e) {
+      console.error("Error checking mock mode:", e);
+      return false;
+    }
   }
 
   public static async fetchFunnelData(token: string, adAccountId: string): Promise<FunnelData> {
@@ -29,16 +38,21 @@ export class MetaFunnelService {
         // Update the mockData with the updated campaigns
         mockData.campaigns = mockCampaigns;
         
-        // ENHANCED SYNC: Explicitly sync the mock campaigns with global state 
-        // Ensure BaseMockService.syncMockCampaignsToState is called
-        console.log(`🎭 [Enhanced Sync] Syncing ${mockCampaigns.length} mock campaigns for account: ${adAccountId}`);
-        BaseMockService.syncMockCampaignsToState(mockCampaigns);
-        
-        // Also trigger a refresh event to ensure components update
-        setTimeout(() => {
-          console.log('🎭 Triggering campaign refresh to ensure UI state consistency');
-          triggerCampaignRefresh(false);
-        }, 300);
+        try {
+          // ENHANCED SYNC: Explicitly sync the mock campaigns with global state 
+          // Ensure BaseMockService.syncMockCampaignsToState is called
+          console.log(`🎭 [Enhanced Sync] Syncing ${mockCampaigns.length} mock campaigns for account: ${adAccountId}`);
+          BaseMockService.syncMockCampaignsToState(mockCampaigns);
+          
+          // Also trigger a refresh event to ensure components update
+          setTimeout(() => {
+            console.log('🎭 Triggering campaign refresh to ensure UI state consistency');
+            triggerCampaignRefresh(false);
+          }, 300);
+        } catch (syncError) {
+          console.error("Error during mock campaign sync:", syncError);
+          // Proceed even if sync fails - don't break the app
+        }
         
         return mockData;
       }

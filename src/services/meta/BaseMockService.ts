@@ -9,7 +9,15 @@ export abstract class BaseMockService {
   protected static readonly BASE_URL = 'https://graph.facebook.com';
 
   protected static isMockMode(): boolean {
-    return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+      }
+      return false;
+    } catch (e) {
+      console.error("Error checking mock mode in BaseMockService:", e);
+      return false;
+    }
   }
 
   protected static checkMockMode(operation: string): boolean {
@@ -20,20 +28,33 @@ export abstract class BaseMockService {
     return false;
   }
 
-  // Changed from protected to public to allow access from MetaFunnelService
+  // Public method to support synchronization from MetaFunnelService
   public static syncMockCampaignsToState(campaigns: any[]): void {
-    console.log(`🎭 [Mock Sync] Syncing ${campaigns.length} mock campaigns to global state`);
-    
-    // Create a custom event with the campaigns data
-    const syncEvent = new CustomEvent('sync-mock-campaigns', { 
-      detail: { campaigns } 
-    });
-    
-    // Dispatch the event to be caught by the campaign state hooks
-    window.dispatchEvent(syncEvent);
-    
-    // Also trigger a campaign refresh to ensure UI updates
-    triggerCampaignRefresh(false);
+    try {
+      if (!campaigns || !Array.isArray(campaigns) || campaigns.length === 0) {
+        console.log('🎭 [Mock Sync] No campaigns to sync');
+        return;
+      }
+      
+      console.log(`🎭 [Mock Sync] Syncing ${campaigns.length} mock campaigns to global state`);
+      
+      // Create a custom event with the campaigns data
+      const syncEvent = new CustomEvent('sync-mock-campaigns', { 
+        detail: { campaigns } 
+      });
+      
+      // Safely dispatch the event
+      if (typeof window !== 'undefined') {
+        // Dispatch the event to be caught by the campaign state hooks
+        window.dispatchEvent(syncEvent);
+        
+        // Also trigger a campaign refresh to ensure UI updates
+        triggerCampaignRefresh(false);
+      }
+    } catch (e) {
+      console.error("Error syncing mock campaigns to state:", e);
+      // Fail silently in production - don't break the app
+    }
   }
 
   protected static async executeWithRateLimiting<T>(
