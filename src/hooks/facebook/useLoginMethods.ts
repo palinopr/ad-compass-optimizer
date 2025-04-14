@@ -19,6 +19,8 @@ export function useLoginMethods(onSuccess: (userData: any) => void) {
   // Handle response from Facebook SDK
   const responseFacebook = (response: any) => {
     console.log('Facebook response:', response);
+    // Always clear any previous token from storage to ensure we get a fresh token
+    localStorage.removeItem('meta_access_token');
     handleFacebookResponse(response);
   };
 
@@ -68,6 +70,7 @@ export function useLoginMethods(onSuccess: (userData: any) => void) {
       
       console.log(`Requesting permissions: ${permissions.join(', ')}`);
       
+      // Force reauthorization to ensure we always get a fresh token
       window.FB.login(
         (response) => {
           if (response.status === 'connected') {
@@ -119,7 +122,7 @@ export function useLoginMethods(onSuccess: (userData: any) => void) {
             }
           }
         },
-        { scope: permissions.join(','), return_scopes: true }
+        { scope: permissions.join(','), return_scopes: true, auth_type: 'rerequest' }
       );
     } catch (error) {
       console.error('Error during Facebook login:', error);

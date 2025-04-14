@@ -1,3 +1,4 @@
+
 export class MetaAuthService {
   // Keys for localStorage
   public static readonly TOKEN_KEY = 'meta_access_token';
@@ -53,6 +54,12 @@ export class MetaAuthService {
     const tokenAge = Date.now() - parseInt(timestamp);
     const sixtyDaysInMs = 60 * 24 * 60 * 60 * 1000;
     
+    // Add warning log if token is older than 1 hour
+    const oneHourMs = 3600 * 1000;
+    if (tokenAge > oneHourMs) {
+      console.warn('⚠️ Meta token may be expired. Token age:', Math.floor(tokenAge / (60 * 60 * 1000)), 'hours');
+    }
+    
     return { 
       isFresh: tokenAge < sixtyDaysInMs, 
       age: Math.floor(tokenAge / (24 * 60 * 60 * 1000)) // Age in days
@@ -95,6 +102,9 @@ export class MetaAuthService {
   // Get the stored access token
   public getAccessToken(): string | null {
     const token = localStorage.getItem(MetaAuthService.TOKEN_KEY);
+    
+    // Add more detailed logging for token retrieval
+    console.log('[DEBUG] getAccessToken():', token ? token.substring(0, 10) + '...' : '❌ NOT FOUND');
     
     if (!token) {
       console.log('No token found in storage');

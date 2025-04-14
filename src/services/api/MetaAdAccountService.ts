@@ -14,6 +14,8 @@ export interface MetaAdAccount {
 export class MetaAdAccountService extends BaseApiService {
   public static async fetchAdAccounts(token: string): Promise<MetaAdAccount[]> {
     try {
+      // Verify token existence before proceeding
+      console.log('[AD ACCOUNT FETCH] Token:', token ? token.substring(0, 10) + '...' : '❌ NOT FOUND');
       console.log('[AD ACCOUNT FETCH] Starting fetch with token:', token?.substring(0, 8) + '...');
       console.log('[AD ACCOUNT FETCH] Endpoint:', `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts`);
       

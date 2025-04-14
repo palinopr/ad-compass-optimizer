@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { AdAccount } from '../types';
@@ -29,6 +30,17 @@ export function useAdAccountsFetching() {
     }
 
     const accessToken = metaAuthService.getAccessToken();
+    console.log('[AD ACCOUNT FETCH] Token retrieval result:', accessToken ? 'Token found' : '❌ NOT FOUND');
+    
+    // Check token timestamp and warn if potentially expired
+    const timestamp = localStorage.getItem('meta_token_timestamp');
+    if (timestamp) {
+      const tokenAge = Date.now() - parseInt(timestamp);
+      if (tokenAge > 3600 * 1000) {
+        console.warn('⚠️ Meta token may be expired. Consider re-authenticating.');
+        setError('Warning: Meta token may be expired. Please consider reconnecting.');
+      }
+    }
     
     if (!accessToken) {
       console.log('No access token available for fetching ad accounts');
