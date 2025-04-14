@@ -7,6 +7,7 @@ import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvide
 import CampaignTable from './CampaignTable';
 import CampaignFilterToolbar from './CampaignFilterToolbar';
 import CampaignMetrics from './CampaignMetrics';
+import NoCampaignsFoundPanel from './diagnostic-components/NoCampaignsFoundPanel';
 import { useCampaignFilters } from '@/hooks/campaigns/useCampaignFilters';
 import { LoadingState, ErrorState, EmptyState } from './CampaignListStates';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -103,56 +104,30 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     });
   }, [campaigns.length, error, filteredCampaigns.length, isLoading, status, displayRefresh]);
   
-  // Add manual refresh button for user debugging
-  const handleDebugRefresh = () => {
-    console.log('Manual debug refresh requested');
-    
-    // Clear any potential cached state
+  // Handle refreshing the campaign data
+  const handleRefresh = () => {
+    // Force cache invalidation
     localStorage.removeItem('campaign_filter_state');
     localStorage.removeItem('cached_campaign_data');
     
-    // Force a re-fetch with cleared caches
+    console.log('Manual refresh requested for', status, 'campaigns');
     refetchCampaigns(true);
     
     toast({
-      title: "Debug Refresh Triggered",
-      description: "Attempting to refresh campaign data with cleared caches",
+      title: "Refreshing Campaigns",
+      description: "Fetching latest campaign data from Meta...",
     });
   };
   
-  const metrics = {
-    impressions: filteredCampaigns.reduce((total, campaign) => {
-      const impressions = campaign.insights?.impressions || '0';
-      return total + parseInt(impressions, 10);
-    }, 0).toLocaleString(),
+  // Handle creating a new campaign
+  const handleCreateCampaign = () => {
+    // Navigate to campaign creation flow or show wizard
+    window.dispatchEvent(new CustomEvent('show-campaign-creation'));
     
-    clicks: filteredCampaigns.reduce((total, campaign) => {
-      const clicks = campaign.insights?.clicks || '0';
-      return total + parseInt(clicks, 10);
-    }, 0).toLocaleString(),
-    
-    spend: filteredCampaigns.reduce((total, campaign) => {
-      const spendStr = campaign.spend || '$0.00';
-      const numericValue = parseFloat(spendStr.replace(/[^0-9.-]+/g, '')) || 0;
-      return total + numericValue;
-    }, 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
-    
-    cpa: (() => {
-      const totalSpend = filteredCampaigns.reduce((total, campaign) => {
-        const spendStr = campaign.spend || '$0.00';
-        const numericValue = parseFloat(spendStr.replace(/[^0-9.-]+/g, '')) || 0;
-        return total + numericValue;
-      }, 0);
-      
-      const totalClicks = filteredCampaigns.reduce((total, campaign) => {
-        const clicks = campaign.insights?.clicks || '0';
-        return total + parseInt(clicks, 10);
-      }, 0);
-      
-      if (totalClicks === 0) return '$0.00';
-      const cpa = totalSpend / totalClicks;
-      return cpa.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-    })()
+    toast({
+      title: "Create Campaign",
+      description: "Opening campaign creation wizard...",
+    });
   };
   
   if (isLoading) {
@@ -176,6 +151,33 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
   
+  // If we're authenticated and have verified API access but found no campaigns,
+  // this means the account actually has no campaigns (instead of an error)
+  if ((!campaigns || campaigns.length === 0) && 
+      effectiveIsAuthenticated && 
+      localStorage.getItem('last_campaign_fetch_success') === 'true' &&
+      localStorage.getItem('last_empty_result') === 'true') {
+    return (
+      <>
+        <CampaignFilterToolbar 
+          filters={filters}
+          onDateRangeChange={setDateRange}
+          onStatusChange={setStatusFilter}
+          onSearchChange={setSearchQuery}
+          onRefresh={handleRefresh}
+          isLoading={isLoading}
+        />
+        
+        <NoCampaignsFoundPanel
+          onRefresh={handleRefresh}
+          onCreateCampaign={handleCreateCampaign}
+          isLoading={isLoading}
+        />
+      </>
+    );
+  }
+  
+  // Standard empty state (not the "verified empty" state above)
   if (!campaigns || campaigns.length === 0) {
     return (
       <Card>
@@ -187,7 +189,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
             variant="outline" 
             size="sm"
             className="flex gap-1 text-xs text-gray-500"
-            onClick={handleDebugRefresh}
+            onClick={handleRefresh}
           >
             <InfoIcon className="h-3 w-3" />
             Debug Refresh
@@ -206,46 +208,27 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         onDateRangeChange={setDateRange}
         onStatusChange={setStatusFilter}
         onSearchChange={setSearchQuery}
-        onRefresh={() => refetchCampaigns(true)}
+        onRefresh={handleRefresh}
         isLoading={isLoading}
       />
       
-      <CampaignMetrics {...metrics} />
-      
+      <CampaignMetrics metrics={metrics} />
+  
       <Card>
         {hasFilteredResults ? (
-          <CampaignTable campaigns={filteredCampaigns} status={status} />
+          <CampaignTable campaigns={filteredCampaigns} />
         ) : (
           <div className="p-8 text-center">
-            <p className="text-muted-foreground">No campaigns match your current filters.</p>
+            <p className="text-gray-500">No campaigns match the current filters.</p>
             <Button variant="outline" className="mt-4" onClick={() => {
-              setStatusFilter(null);
+              setStatusFilter('all');
+              setDateRange({ from: null, to: null });
               setSearchQuery('');
-              setDateRange(
-                { 
-                  from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 
-                  to: new Date() 
-                },
-                'last30days'
-              );
             }}>
-              Reset Filters
+              Clear Filters
             </Button>
           </div>
         )}
-        
-        {/* Add debug button even when campaigns are present */}
-        <div className="flex justify-center p-3 border-t border-gray-100">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="flex gap-1 text-xs text-gray-500"
-            onClick={handleDebugRefresh}
-          >
-            <InfoIcon className="h-3 w-3" />
-            Debug Refresh (Campaigns: {campaigns.length}, Filtered: {filteredCampaigns.length})
-          </Button>
-        </div>
       </Card>
     </>
   );

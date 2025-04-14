@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { Database, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import RateLimitedSection from '../RateLimitedSection';
+import ApiTestPanel from '../ApiTestPanel';
 
 interface DataTabProps {
   diagnosticResults: any;
@@ -89,6 +90,9 @@ const DataTab: React.FC<DataTabProps> = ({ diagnosticResults }) => {
 
   return (
     <div className="space-y-4">
+      {/* Direct API Test panel - for immediate verification */}
+      <ApiTestPanel />
+      
       {/* Rate limit warning section */}
       <RateLimitedSection rateLimitTimestamp={rateLimitTimestamp} />
       

@@ -6,6 +6,7 @@ import MetaConnect from '@/components/meta/MetaConnect';
 import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 import DiagnosticButton from '@/components/campaigns/DiagnosticButton';
+import CampaignCreationTrigger from '@/components/campaigns/CampaignCreationTrigger';
 
 // Import our components
 import CampaignHeader from '@/components/campaigns/CampaignHeader';
@@ -98,6 +99,9 @@ const Campaigns = () => {
         onSuccess={handleConnectionSuccess}
         onError={handleConnectionError}
       />
+      
+      {/* Campaign Creation Trigger */}
+      <CampaignCreationTrigger />
     </AppLayout>
   );
 };
