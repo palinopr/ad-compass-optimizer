@@ -1,11 +1,21 @@
-
 import { toast } from '@/hooks/use-toast';
+import { isPermissionError, getPermissionErrorMessage } from './permissionErrors';
 
 export const displayApiError = (errorMsg: string, errorDetails?: string) => {
-  // Show main error toast
+  // Parse error details if available
+  let parsedError;
+  try {
+    parsedError = errorDetails ? JSON.parse(errorDetails) : null;
+  } catch (e) {
+    console.error('Failed to parse error details:', e);
+  }
+
+  // Show main error toast with permission-specific message if applicable
   toast({
     title: "Meta API Error",
-    description: `${errorMsg}\n\nCheck console for details`,
+    description: parsedError?.error 
+      ? getPermissionErrorMessage(parsedError.error)
+      : `${errorMsg}\n\nCheck console for details`,
     variant: "destructive",
     duration: 10000,
     action: null
@@ -43,4 +53,3 @@ export const handleJsonParseError = (responseText: string) => {
     });
   }
 };
-

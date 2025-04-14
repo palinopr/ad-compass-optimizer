@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAdAccounts } from './hooks/useAdAccounts';
 import AdAccountDropdown from './AdAccountDropdown';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getPermissionErrorMessage } from '@/services/api/meta-accounts/permissionErrors';
 
 const AdAccountSelector = () => {
   const { adAccounts, selectedAccount, isLoading, error, fetchAdAccounts, handleAccountChange } = useAdAccounts();
@@ -28,7 +29,7 @@ const AdAccountSelector = () => {
       console.log('[🔍 AD ACCOUNT ERROR] Parsed Error:', parsedError);
 
       if (parsedError?.error) {
-        const formattedMessage = `Meta API Error ${parsedError.error.code || ''}: ${parsedError.error.message || 'Unknown error'}`;
+        const formattedMessage = getPermissionErrorMessage(parsedError.error);
         console.log('[✅ AD ACCOUNT ERROR SHOWN] Message:', formattedMessage);
         return formattedMessage;
       }
@@ -38,7 +39,7 @@ const AdAccountSelector = () => {
       return error;
     } catch (e) {
       console.error('[❌ AD ACCOUNT ERROR] Error parsing:', e);
-      // If parsing fails, return the original error or a fallback
+      // If parsing fails, return a fallback
       const fallbackMessage = error || 'Failed to fetch ad accounts. See console for details.';
       console.log('[✅ AD ACCOUNT ERROR SHOWN] Fallback Message:', fallbackMessage);
       return fallbackMessage;
