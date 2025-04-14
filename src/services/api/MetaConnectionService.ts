@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 
 export interface ConnectionTestResult {
@@ -24,11 +25,16 @@ export class MetaConnectionService extends BaseApiService {
       // Check for mock mode first
       if (this.isMockMode()) {
         console.log('🎭 Mock mode detected - returning simulated connection data');
+        // Return a complete mock object that matches ConnectionTestResult interface
+        // Including all properties that might be accessed in error scenarios
         return {
           success: true,
           userId: 'mock_user_123',
           userName: 'Mock User',
-          hasAdAccess: true
+          hasAdAccess: true,
+          error: undefined,  // Add this to avoid TypeScript errors
+          details: undefined, // Add this for completeness
+          permissionsWarning: undefined // Add this for completeness
         };
       }
       

@@ -1,7 +1,8 @@
+
 import { MetaUserService } from './api/MetaUserService';
 import { MetaAdAccountService } from './api/MetaAdAccountService';
 import { MetaBusinessService } from './api/MetaBusinessService';
-import { MetaConnectionService } from './api/MetaConnectionService';
+import { MetaConnectionService, ConnectionTestResult } from './api/MetaConnectionService';
 import MetaCampaignService from './api/MetaCampaignService';
 import MetaInsightsService from './api/MetaInsightsService';
 import { RateLimitManager } from './api/rate-limit/RateLimitManager';
@@ -80,12 +81,14 @@ export class MetaApiService {
     };
   }
 
-  private static getMockConnectionTest() {
+  private static getMockConnectionTest(): ConnectionTestResult {
     return {
       success: true,
       userId: 'mock_user_123',
       userName: 'Mock User',
-      hasAdAccess: true
+      hasAdAccess: true,
+      error: undefined,  // Add explicitly to match the interface
+      permissionsWarning: undefined
     };
   }
 
@@ -119,7 +122,7 @@ export class MetaApiService {
     );
   }
 
-  public static async testConnection(token: string) {
+  public static async testConnection(token: string): Promise<ConnectionTestResult> {
     if (this.isMockMode()) {
       console.log('🎭 Returning mock connection test');
       return this.getMockConnectionTest();
