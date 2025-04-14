@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCcw, AlertCircle, Cpu } from 'lucide-react';
+import { Loader2, RefreshCcw, AlertCircle, Cpu, Database, RotateCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -105,6 +105,43 @@ const CampaignResetButton = () => {
     }
   };
 
+  // New function to handle rate limit clearing
+  const handleClearRateLimit = () => {
+    setIsResetting(true);
+    
+    try {
+      // Clear rate limit related localStorage items
+      localStorage.removeItem('meta_rate_limit_timestamp');
+      localStorage.removeItem('meta_rate_limit_history');
+      localStorage.removeItem('meta_api_last_usage');
+      
+      toast({
+        title: "Rate Limit State Cleared",
+        description: "All rate limit flags have been reset. Trying to refresh data...",
+        duration: 3000,
+      });
+      
+      // Force data refresh event
+      window.dispatchEvent(new CustomEvent('campaign-data-refresh', { detail: { force: true, bypassRateLimit: true }}));
+      
+      // Reload after a brief delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (e) {
+      toast({
+        title: "Rate Limit Reset Failed",
+        description: "Unable to reset rate limit state: " + (e instanceof Error ? e.message : String(e)),
+        variant: "destructive"
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  // Check if we're currently rate limited
+  const isRateLimited = !!localStorage.getItem('meta_rate_limit_timestamp');
+
   return (
     <Alert className="mb-4 bg-amber-50 border-amber-200">
       <AlertCircle className="h-4 w-4 text-amber-600" />
@@ -115,6 +152,32 @@ const CampaignResetButton = () => {
             ? `Data has loaded successfully (${campaignCount} campaigns found) but is not displaying correctly in the UI.` 
             : "If your campaigns aren't displaying even though data has loaded successfully, you may need to reset the application state to fix UI rendering issues."}
         </p>
+        
+        {isRateLimited && (
+          <div className="bg-red-50 border border-red-200 p-2 rounded mt-2">
+            <p className="text-red-700 font-medium flex items-center">
+              <Database className="h-4 w-4 mr-1" />
+              Rate Limit Detected
+            </p>
+            <p className="text-xs text-red-600 mt-1">
+              Meta API rate limiting is active. Try clearing the rate limit flag or wait a few minutes.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full border-red-300 hover:bg-red-50 text-red-700"
+              onClick={handleClearRateLimit}
+              disabled={isResetting}
+            >
+              {isResetting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RotateCw className="mr-2 h-4 w-4" />
+              )}
+              Clear Rate Limit Flag & Retry
+            </Button>
+          </div>
+        )}
         
         <div className="flex flex-col sm:flex-row gap-3 mt-3">
           <Button 
