@@ -7,6 +7,7 @@ import { useAdAccounts } from './hooks/useAdAccounts';
 import AdAccountDropdown from './AdAccountDropdown';
 import AdAccountError from './AdAccountError';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { toast } from '@/hooks/use-toast';
 
 const AdAccountSelector = () => {
   const { 
@@ -21,6 +22,12 @@ const AdAccountSelector = () => {
   const handleResetConnection = () => {
     // Log reconnect attempt for diagnostics
     console.log('[META DEBUG] 🔁 Reconnect Meta Account triggered by user');
+    
+    // Show toast notification
+    toast({
+      title: "🔁 Reconnecting Meta Account",
+      description: "We're resetting your session. Please re-authenticate shortly."
+    });
 
     // Clear Meta-related data
     metaAuthService.logout();
