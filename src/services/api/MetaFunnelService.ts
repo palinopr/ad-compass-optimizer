@@ -1,4 +1,3 @@
-
 import { MetaBatchService } from './batch/MetaBatchService';
 import { MetaFunnelBatchService } from './funnel/MetaFunnelBatchService';
 import { FunnelData } from './types/funnelTypes';
@@ -7,16 +6,14 @@ import { mockFunnelData } from './mock/mockCampaignData';
 
 export class MetaFunnelService {
   public static isMockMode(): boolean {
-    // Use consistent mock detection from localStorage
     return localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static async fetchFunnelData(token: string, adAccountId: string): Promise<FunnelData> {
     try {
-      // Check if we should use mock data
       if (this.isMockMode()) {
         console.log('🎭 Using mock campaign data for funnel');
-        // Store in localStorage to help debug if mock mode was used
+        console.log("[MOCK DEBUG] campaigns from funnelData:", mockFunnelData.campaigns);
         localStorage.setItem('using_mock_data', 'true');
         localStorage.setItem('mock_mode_activated_at', new Date().toISOString());
         return mockFunnelData;

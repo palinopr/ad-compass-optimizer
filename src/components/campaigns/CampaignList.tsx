@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
@@ -45,6 +44,10 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     }
   }, [isMockMode, campaigns.length, isLoading, refetchCampaigns]);
   
+  useEffect(() => {
+    console.log("[MOCK DEBUG] campaigns in CampaignList state:", campaigns.length);
+  }, [campaigns.length]);
+
   const handleRefresh = () => {
     localStorage.removeItem('campaign_filter_state');
     localStorage.removeItem('cached_campaign_data');
