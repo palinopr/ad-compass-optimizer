@@ -11,12 +11,13 @@ import { Input } from '@/components/ui/input';
 import { ArrowUpDown, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// Update the prop types to match the types from useFunnelFilters
 interface FunnelControlsProps {
-  sortField: string;
-  sortDirection: string;
+  sortField: 'spend' | 'ctr' | 'impressions' | 'none';
+  sortDirection: 'asc' | 'desc';
   statusFilter: string | null;
   searchQuery: string;
-  onSortFieldChange: (value: string) => void;
+  onSortFieldChange: (value: 'spend' | 'ctr' | 'impressions' | 'none') => void;
   onSortDirectionChange: () => void;
   onStatusFilterChange: (value: string | null) => void;
   onSearchChange: (value: string) => void;
