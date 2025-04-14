@@ -2,6 +2,7 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface LastMetaErrorProps {
   lastMetaError: {
@@ -17,6 +18,12 @@ interface LastMetaErrorProps {
 }
 
 const LastMetaError: React.FC<LastMetaErrorProps> = ({ lastMetaError }) => {
+  const handleClearErrorLog = () => {
+    localStorage.removeItem('last_meta_error');
+    localStorage.removeItem('last_meta_error_at');
+    window.location.reload();
+  };
+
   if (!lastMetaError) return null;
 
   return (
@@ -51,6 +58,16 @@ const LastMetaError: React.FC<LastMetaErrorProps> = ({ lastMetaError }) => {
                 </pre>
               </>
             )}
+          </div>
+          
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearErrorLog}
+            >
+              Clear Error Log
+            </Button>
           </div>
         </div>
       </CardContent>
