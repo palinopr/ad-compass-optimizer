@@ -40,10 +40,10 @@ export class MetaAdAccountService extends BaseApiService {
         `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`
       );
       
-      console.log('[AD ACCOUNT FETCH] Raw Response:', response.status, response.statusText);
+      console.log('[AD ACCOUNT FETCH] Status:', response.status, response.statusText);
 
       const responseText = await response.text();
-      console.log('[AD ACCOUNT FETCH] Response Body:', responseText);
+      console.log('[AD ACCOUNT FETCH] Raw Body:', responseText);
 
       try {
         const json = JSON.parse(responseText);
@@ -56,17 +56,24 @@ export class MetaAdAccountService extends BaseApiService {
         return json?.data || [];
       } catch (err) {
         console.error('[AD ACCOUNT FETCH] ❌ Failed to parse JSON:', err);
+        
+        // Additional error logging for non-JSON responses
+        if (responseText) {
+          console.error('[AD ACCOUNT FETCH] Unparseable response body:', responseText);
+        }
+        
         throw err;
       }
     } catch (error) {
       console.error('Error fetching ad accounts:', error);
       
-      // Check if this is a permissions error and provide more helpful information
+      // More detailed error logging
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('permission') || errorMessage.includes('403')) {
-        console.error('This appears to be a permissions error. For ad account access, your token needs ads_read and ads_management permissions.');
-        console.error('Consider using a System User token with the right permissions. Regular user tokens require app review.');
-      }
+      console.error('[AD ACCOUNT FETCH] Detailed Error:', {
+        message: errorMessage,
+        type: typeof error,
+        stringRepresentation: String(error)
+      });
       
       return this.handleApiError(error, 'fetchAdAccounts');
     }
