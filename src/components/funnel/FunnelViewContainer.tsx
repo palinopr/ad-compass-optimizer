@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useCampaigns } from '@/hooks/campaigns';
 import FunnelView from './FunnelView';
@@ -13,7 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 
 const FunnelViewContainer = () => {
-  const { campaigns, isLoading, error } = useCampaigns();
+  const { campaigns, isLoading: campaignsLoading, refetchCampaigns } = useCampaigns();
   const [funnelData, setFunnelData] = useState<FunnelData>({ campaigns: [], adsets: [], ads: [] });
   const [isFetchingFunnel, setIsFetchingFunnel] = useState(false);
   const [funnelError, setFunnelError] = useState<string | null>(null);
@@ -56,6 +57,14 @@ const FunnelViewContainer = () => {
         
         console.log(`[MOCK DEBUG] FunnelViewContainer: Received funnel data with ${data.campaigns.length} campaigns`);
         setFunnelData(data);
+        
+        // If in mock mode and we have data but campaigns state is empty, trigger a refresh
+        const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
+        if (isMockMode && data.campaigns.length > 0 && campaigns.length === 0) {
+          console.log("[MOCK DEBUG] No campaigns in state but funnel has data, triggering campaign refresh");
+          refetchCampaigns(true);
+        }
+        
         setFunnelError(null);
       } catch (err) {
         console.error('[MOCK DEBUG] Error fetching funnel data:', err);
@@ -66,9 +75,9 @@ const FunnelViewContainer = () => {
     };
 
     fetchFunnelData();
-  }, [campaigns.length]);
+  }, [campaigns.length, refetchCampaigns]);
 
-  if (isLoading || isFetchingFunnel) {
+  if (campaignsLoading || isFetchingFunnel) {
     return (
       <Card>
         <div className="p-8 flex items-center justify-center">
@@ -78,11 +87,11 @@ const FunnelViewContainer = () => {
     );
   }
 
-  if (error || funnelError) {
+  if (funnelError) {
     return (
       <Card>
         <div className="p-8 text-center text-red-500">
-          {error || funnelError}
+          {funnelError}
         </div>
       </Card>
     );
