@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Check, X, Brain } from 'lucide-react';
 import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
@@ -16,6 +16,17 @@ interface MockDiagnosticPanelProps {
 
 const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({ displayedCampaignsCount }) => {
   const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
+  const [verifiedCount, setVerifiedCount] = useState(displayedCampaignsCount);
+
+  // Use effect to delay checking the count to allow UI to fully render
+  useEffect(() => {
+    // Wait for next render cycle to ensure campaign display has settled
+    const timer = setTimeout(() => {
+      setVerifiedCount(displayedCampaignsCount);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [displayedCampaignsCount]);
   
   if (!isMockMode) return null;
 
@@ -32,13 +43,13 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({ displayedCamp
     },
     {
       label: 'Campaigns Displayed',
-      status: displayedCampaignsCount > 0 ? 'success' : 'error',
-      details: `${displayedCampaignsCount} campaigns`
+      status: verifiedCount > 0 ? 'success' : 'error',
+      details: `${verifiedCount} campaigns`
     }
   ];
 
   // Add diagnostic message if no campaigns are displayed
-  if (displayedCampaignsCount === 0) {
+  if (verifiedCount === 0) {
     diagnosticItems.push({
       label: 'Possible Fix',
       status: 'info',
