@@ -41,17 +41,24 @@ export class MetaAdAccountService extends BaseApiService {
         `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`
       );
       
-      const text = await response.text();
-      console.log('[AD ACCOUNT FETCH] Response:', response.status, text);
+      console.log('[AD ACCOUNT FETCH] Raw Response:', response.status, response.statusText);
       
-      // Parse the response text as JSON
-      const data = text ? JSON.parse(text) : null;
+      const responseText = await response.text();
+      console.log('[AD ACCOUNT FETCH] Response Body:', responseText);
       
-      // Log successful response
-      console.log('Ad accounts fetched successfully:', data);
-      console.log(`Found ${data?.data?.length || 0} ad accounts`);
-      
-      return data?.data || [];
+      try {
+        const data = responseText ? JSON.parse(responseText) : null;
+        console.log('[AD ACCOUNT FETCH] Parsed JSON:', data);
+        
+        // Log successful response
+        console.log('Ad accounts fetched successfully:', data);
+        console.log(`Found ${data?.data?.length || 0} ad accounts`);
+        
+        return data?.data || [];
+      } catch (err) {
+        console.error('[AD ACCOUNT FETCH] ❌ Failed to parse JSON:', err);
+        throw err;
+      }
     } catch (error) {
       console.error('Error fetching ad accounts:', error);
       
