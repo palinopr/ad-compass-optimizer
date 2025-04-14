@@ -1,17 +1,10 @@
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, Filter } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-} from '@/components/ui/dropdown-menu';
-import DateRangeSelector from '@/components/meta/filters/DateRangeSelector';
-import CampaignSearch from './CampaignSearch';
 import { CampaignFilters } from '@/hooks/campaigns/useCampaignFilters';
+import DateRangeFilter from './filters/DateRangeFilter';
+import StatusFilter from './filters/StatusFilter';
+import RefreshButton from './filters/RefreshButton';
+import CampaignSearch from './CampaignSearch';
 
 interface CampaignFilterToolbarProps {
   filters: CampaignFilters;
@@ -30,55 +23,22 @@ const CampaignFilterToolbar: React.FC<CampaignFilterToolbarProps> = ({
   onRefresh,
   isLoading
 }) => {
-  const statusOptions = [
-    { label: 'All', value: null },
-    { label: 'Active', value: 'active' },
-    { label: 'Paused', value: 'paused' },
-    { label: 'Deleted', value: 'deleted' },
-    { label: 'Archived', value: 'archived' },
-  ];
-  
   return (
     <div className="mb-4 space-y-4">
       <div className="flex flex-col md:flex-row gap-4 justify-between">
-        <DateRangeSelector 
-          onChange={onDateRangeChange} 
-          initialPreset={filters.datePreset}
+        <DateRangeFilter 
+          datePreset={filters.datePreset}
+          onDateRangeChange={onDateRangeChange}
         />
         <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex gap-2">
-                <Filter className="h-4 w-4" />
-                Status
-                {filters.status && (
-                  <Badge variant="secondary" className="ml-1 capitalize">
-                    {filters.status}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {statusOptions.map((option) => (
-                <DropdownMenuCheckboxItem
-                  key={option.label}
-                  checked={filters.status === option.value}
-                  onCheckedChange={() => onStatusChange(option.value)}
-                >
-                  {option.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <Button
-            variant="outline"
-            size="icon"
+          <StatusFilter
+            currentStatus={filters.status}
+            onStatusChange={onStatusChange}
+          />
+          <RefreshButton
             onClick={onRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
+            isLoading={isLoading}
+          />
         </div>
       </div>
       <CampaignSearch value={filters.search} onChange={onSearchChange} />
