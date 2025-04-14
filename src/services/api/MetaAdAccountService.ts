@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { META_API_CONFIG } from '@/config/socialAuth';
@@ -42,19 +41,19 @@ export class MetaAdAccountService extends BaseApiService {
       );
       
       console.log('[AD ACCOUNT FETCH] Raw Response:', response.status, response.statusText);
-      
+
       const responseText = await response.text();
       console.log('[AD ACCOUNT FETCH] Response Body:', responseText);
-      
+
       try {
-        const data = responseText ? JSON.parse(responseText) : null;
-        console.log('[AD ACCOUNT FETCH] Parsed JSON:', data);
+        const json = JSON.parse(responseText);
+        console.log('[AD ACCOUNT FETCH] Parsed JSON:', json);
         
         // Log successful response
-        console.log('Ad accounts fetched successfully:', data);
-        console.log(`Found ${data?.data?.length || 0} ad accounts`);
+        console.log('Ad accounts fetched successfully:', json);
+        console.log(`Found ${json?.data?.length || 0} ad accounts`);
         
-        return data?.data || [];
+        return json?.data || [];
       } catch (err) {
         console.error('[AD ACCOUNT FETCH] ❌ Failed to parse JSON:', err);
         throw err;
