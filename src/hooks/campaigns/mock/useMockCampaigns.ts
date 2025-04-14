@@ -3,10 +3,22 @@ import { useCallback, useState, useEffect } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
 import { toast } from '@/hooks/use-toast';
+import { triggerCampaignRefresh } from '../fetch-utils/eventHandlers';
 
 export const useMockCampaigns = (status?: string) => {
   const [mockInitialized, setMockInitialized] = useState(false);
   const [mockCampaigns, setMockCampaigns] = useState<MetaCampaign[]>([]);
+
+  const syncMockCampaigns = useCallback((campaigns: MetaCampaign[]) => {
+    console.log('[MOCK DEBUG] Syncing mock campaigns to global state');
+    if (campaigns.length > 0) {
+      triggerCampaignRefresh(true);
+      toast({
+        title: "Mock Data Loaded",
+        description: `${campaigns.length} mock campaigns loaded from funnel data`,
+      });
+    }
+  }, []);
 
   // Improved fetch function that guarantees campaigns are returned
   const loadMockCampaigns = useCallback((forceRefresh = false) => {
@@ -30,18 +42,17 @@ export const useMockCampaigns = (status?: string) => {
     setMockCampaigns(campaigns);
     setMockInitialized(true);
     
-    toast({
-      title: "Mock Campaign Data Loaded",
-      description: `Loaded ${campaigns.length} simulated campaigns.`,
-    });
+    // Sync campaigns to global state
+    syncMockCampaigns(campaigns);
     
     console.log(`[MOCK DEBUG] Returning ${campaigns.length} mock campaigns for status: ${status || 'all'}`);
     return { campaigns };
-  }, [status, mockCampaigns, mockInitialized]);
+  }, [status, mockCampaigns, mockInitialized, syncMockCampaigns]);
 
   return {
     mockCampaigns,
     loadMockCampaigns,
-    mockInitialized
+    mockInitialized,
+    syncMockCampaigns
   };
 };

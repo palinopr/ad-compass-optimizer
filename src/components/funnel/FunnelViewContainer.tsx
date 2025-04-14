@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useCampaigns } from '@/hooks/campaigns';
 import FunnelView from './FunnelView';
@@ -58,18 +57,6 @@ const FunnelViewContainer = () => {
         console.log(`[MOCK DEBUG] FunnelViewContainer: Received funnel data with ${data.campaigns.length} campaigns`);
         setFunnelData(data);
         setFunnelError(null);
-        
-        // In mock mode, make sure campaigns are synchronized to global state
-        if (isMockMode && data.campaigns.length > 0 && campaigns.length === 0) {
-          console.log('[MOCK DEBUG] FunnelViewContainer: Mock mode detected with data, triggering campaign refresh');
-          // This will trigger useCampaigns to update its state with mock data
-          triggerCampaignRefresh(true);
-          
-          toast({
-            title: "Mock Data Loaded",
-            description: `${data.campaigns.length} mock campaigns loaded from funnel data`,
-          });
-        }
       } catch (err) {
         console.error('[MOCK DEBUG] Error fetching funnel data:', err);
         setFunnelError(err instanceof Error ? err.message : 'Failed to fetch funnel data');
