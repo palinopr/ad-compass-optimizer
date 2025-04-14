@@ -15,7 +15,7 @@ const MockApiCallsLog: React.FC<MockApiCallsLogProps> = ({ calls }) => {
       <div className="text-xs font-mono space-y-1 max-h-32 overflow-auto">
         {calls.map((call, index) => (
           <div key={index} className="text-gray-600">
-            {call.timestamp} - {call.endpoint} ({call.method})
+            {call.timestamp} - {call.endpoint} ({call.method || 'GET'})
           </div>
         ))}
       </div>

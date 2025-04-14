@@ -1,7 +1,9 @@
+
 export interface MockedRequest {
   endpoint: string;
   timestamp: string;
   response: any;
+  method: string; // Adding the missing method property
 }
 
 export class MockRequestLogger {
@@ -14,7 +16,8 @@ export class MockRequestLogger {
     this.recentMockCalls.unshift({
       endpoint,
       timestamp: new Date().toISOString(),
-      response
+      response,
+      method: 'GET' // Default to GET as the method since it wasn't provided before
     });
 
     // Keep only last 10 calls
