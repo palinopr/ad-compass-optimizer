@@ -5,4 +5,5 @@
 export * from './rateLimitStatus';
 export * from './rateLimitDetection';
 export * from './apiUsage';
-export * from './rateLimitConfig';
+// Export everything from rateLimitConfig except getBackoffTime to avoid duplicate exports
+export { shouldBypassRateLimit } from './rateLimitConfig';
