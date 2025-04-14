@@ -19,6 +19,15 @@ interface MockDiagnosticPanelProps {
   adAccountId?: string;
 }
 
+// Define a type that matches the DiagnosticItem interface from DiagnosticItems.tsx
+type DiagnosticItemStatus = 'success' | 'error' | 'info' | 'warning';
+
+interface DiagnosticItem {
+  label: string;
+  status: DiagnosticItemStatus;
+  details?: string;
+}
+
 const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({ 
   displayedCampaignsCount,
   rawCampaignsCount,
@@ -52,7 +61,8 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
     triggerCampaignRefresh(true);
   };
 
-  const diagnosticItems = [
+  // Explicitly typing the diagnosticItems as DiagnosticItem[] to ensure type safety
+  const diagnosticItems: DiagnosticItem[] = [
     {
       label: 'Mock Mode Type',
       status: 'info',

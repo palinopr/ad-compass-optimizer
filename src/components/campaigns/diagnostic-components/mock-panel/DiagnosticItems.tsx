@@ -2,7 +2,7 @@
 import React from 'react';
 import { Check, X, Brain, Bug } from 'lucide-react';
 
-interface DiagnosticItem {
+export interface DiagnosticItem {
   label: string;
   status: 'success' | 'error' | 'info' | 'warning';
   details?: string;
