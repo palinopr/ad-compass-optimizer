@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getPermissionErrorMessage, isPermissionError } from '@/services/api/meta-accounts/permissionErrors';
 import { getSubcodeDescription } from '@/services/api/meta-accounts/errorSubcodes';
@@ -75,13 +75,14 @@ const AdAccountError: React.FC<AdAccountErrorProps> = ({ error, onReconnect }) =
   return (
     <div className="space-y-3">
       <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4 mr-2" />
         <AlertDescription className="text-sm whitespace-pre-wrap break-words">
           {formattedError.message}
         </AlertDescription>
       </Alert>
       
-      {/* Show reconnect button for known subcodes or permission errors */}
-      {(formattedError.hasKnownSubcode || formattedError.isPermissionError) && (
+      {/* Show reconnect button for permission errors or known subcodes */}
+      {(formattedError.hasKnownSubcode || formattedError.isPermissionError || formattedError.message.includes('missing required permissions')) && (
         <div className="space-y-2">
           <Button 
             variant="secondary" 
@@ -107,4 +108,3 @@ const AdAccountError: React.FC<AdAccountErrorProps> = ({ error, onReconnect }) =
 };
 
 export default AdAccountError;
-

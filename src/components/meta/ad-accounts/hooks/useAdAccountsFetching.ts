@@ -86,15 +86,24 @@ export function useAdAccountsFetching() {
       
     } catch (err) {
       const { error: errorMessage, shouldReconnect } = handleFetchError(err);
-      setError(errorMessage);
       
-      // Log token permissions during fetch failure
+      // Check for missing permissions
       try {
         const rawPermissions = localStorage.getItem(MetaAuthService.PERMISSIONS_KEY);
         const permissions = rawPermissions ? JSON.parse(rawPermissions) : [];
         console.log('[META DEBUG] Token permissions at failure:', permissions);
+        
+        // Check for required permissions
+        const hasMissingPermissions = !permissions.includes("ads_management") || !permissions.includes("ads_read");
+        
+        if (hasMissingPermissions) {
+          setError("Your Meta token is missing required permissions (ads_read or ads_management). Please reconnect your Meta account with full ad access.");
+        } else {
+          setError(errorMessage);
+        }
       } catch (parseErr) {
         console.warn('[META DEBUG] Failed to parse token permissions:', parseErr);
+        setError(errorMessage); // Fallback to original error
       }
       
       // Auto-scroll to error when error is set
