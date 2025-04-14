@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { MetaApiService } from '@/services/MetaApiService';
-import { checkRateLimitStatus } from '@/hooks/campaigns/fetch-utils';
+import { checkRateLimitStatus } from '@/hooks/campaigns/fetch-utils/rateLimitStatus';
 
 export function useDashboardState() {
   // Check if we need to show diagnostic info based on localStorage
