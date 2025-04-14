@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
@@ -57,7 +56,6 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
       adAccountId
     });
     
-    // Update verified campaign count with delay to allow for filtering
     const timer = setTimeout(() => {
       setVerifiedCount(displayedCampaignsCount);
       setLastSyncAdAccount(localStorage.getItem('last_mock_sync_adaccount') || 'unknown');
@@ -76,18 +74,14 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
   
   const handleForceMockSync = () => {
     console.log("🎭 Manual force sync of mock campaigns to state requested");
-    // Dispatch custom event to trigger sync
     const mockCampaigns = MockApiService.getMockCampaigns();
     const syncEvent = new CustomEvent('sync-mock-campaigns', { 
       detail: { campaigns: mockCampaigns } 
     });
     window.dispatchEvent(syncEvent);
-    
-    // Also trigger a campaign refresh
     setTimeout(() => triggerCampaignRefresh(false), 300);
   };
 
-  // Explicitly typing the diagnosticItems as DiagnosticItem[] to ensure type safety
   const diagnosticItems: DiagnosticItem[] = [
     {
       label: 'Mock Mode Type',
@@ -174,7 +168,6 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
       <div className="space-y-4">
         <DiagnosticItems items={diagnosticItems} />
         
-        {/* New section for action buttons */}
         {syncStatus !== 'synced' && (
           <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
             <div className="flex items-start gap-2 mb-2">

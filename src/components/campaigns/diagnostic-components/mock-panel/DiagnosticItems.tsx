@@ -1,13 +1,12 @@
 
 import React from 'react';
-import { Check, X, Brain, Bug } from 'lucide-react';
 
-export type DiagnosticItemStatus = 'success' | 'error' | 'info' | 'warning';
+export type DiagnosticItemStatus = 'success' | 'warning' | 'error' | 'info';
 
 export interface DiagnosticItem {
   label: string;
   status: DiagnosticItemStatus;
-  details?: string;
+  details: string;
 }
 
 interface DiagnosticItemsProps {
@@ -16,15 +15,17 @@ interface DiagnosticItemsProps {
 
 const DiagnosticItems: React.FC<DiagnosticItemsProps> = ({ items }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {items.map((item, index) => (
-        <div key={index} className="flex items-center space-x-2 text-sm">
-          {item.status === 'success' && <Check className="w-4 h-4 text-green-500" />}
-          {item.status === 'error' && <X className="w-4 h-4 text-red-500" />}
-          {item.status === 'warning' && <Bug className="w-4 h-4 text-amber-500" />}
-          {item.status === 'info' && <Brain className="w-4 h-4 text-blue-500" />}
-          <span className="font-medium">{item.label}:</span>
-          <span className={item.status === 'error' ? 'text-red-600' : 'text-gray-600'}>
+        <div key={index} className="flex justify-between items-start text-sm">
+          <span className="text-gray-600">{item.label}:</span>
+          <span className={`
+            flex-1 text-right
+            ${item.status === 'success' ? 'text-green-600' : ''}
+            ${item.status === 'warning' ? 'text-amber-600' : ''}
+            ${item.status === 'error' ? 'text-red-600' : ''}
+            ${item.status === 'info' ? 'text-blue-600' : ''}
+          `}>
             {item.details}
           </span>
         </div>
