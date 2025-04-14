@@ -3,7 +3,7 @@ import { MetaBatchService } from './batch/MetaBatchService';
 import { MetaFunnelBatchService } from './funnel/MetaFunnelBatchService';
 import { FunnelData } from './types/funnelTypes';
 import { InsightsThrottling } from './insights/throttling';
-import { mockFunnelData } from './api/mock/mockCampaignData';
+import { mockFunnelData } from './mock/mockCampaignData';
 
 export class MetaFunnelService {
   public static isMockMode(): boolean {
