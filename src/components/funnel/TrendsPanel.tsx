@@ -7,7 +7,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, TooltipProps } from 'recharts';
 import { Loader2 } from 'lucide-react';
 import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
@@ -44,6 +44,48 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
 
   if (!isOpen) return null;
 
+  // Custom tooltip function for spend data
+  const renderSpendTooltip = (props: TooltipProps<ValueType, NameType>) => {
+    const { active, payload } = props;
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border rounded-lg shadow-lg p-2">
+          <div className="font-medium">Spend</div>
+          <div>{formatValue(Number(payload[0].value))}</div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Custom tooltip function for CTR data
+  const renderCTRTooltip = (props: TooltipProps<ValueType, NameType>) => {
+    const { active, payload } = props;
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border rounded-lg shadow-lg p-2">
+          <div className="font-medium">CTR</div>
+          <div>{formatPercentage(Number(payload[0].value))}</div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Custom tooltip function for impressions data
+  const renderImpressionsTooltip = (props: TooltipProps<ValueType, NameType>) => {
+    const { active, payload } = props;
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border rounded-lg shadow-lg p-2">
+          <div className="font-medium">Impressions</div>
+          <div>{Number(payload[0].value).toLocaleString()}</div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto">
@@ -63,25 +105,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
               <ChartContainer className="h-64" config={{}}>
                 <LineChart data={insights.spend}>
                   <XAxis dataKey="date" />
-                  <YAxis tickFormatter={(value: number) => formatValue(value)} />
-                  <ChartTooltip
-                    content={({ active, payload }: TooltipProps<ValueType, NameType>) => {
-                      if (active && payload?.length) {
-                        return (
-                          <ChartTooltipContent
-                            className="bg-background border rounded-lg shadow-lg p-2"
-                            content={
-                              <div>
-                                <div className="font-medium">Spend</div>
-                                <div>{formatValue(payload[0].value as number)}</div>
-                              </div>
-                            }
-                          />
-                        );
-                      }
-                      return null;
-                    }}
-                  />
+                  <YAxis tickFormatter={(value) => formatValue(Number(value))} />
+                  <ChartTooltip content={renderSpendTooltip} />
                   <Line
                     type="monotone"
                     dataKey="value"
@@ -99,25 +124,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
               <ChartContainer className="h-64" config={{}}>
                 <LineChart data={insights.ctr}>
                   <XAxis dataKey="date" />
-                  <YAxis tickFormatter={(value: number) => formatPercentage(value)} />
-                  <ChartTooltip
-                    content={({ active, payload }: TooltipProps<ValueType, NameType>) => {
-                      if (active && payload?.length) {
-                        return (
-                          <ChartTooltipContent
-                            className="bg-background border rounded-lg shadow-lg p-2"
-                            content={
-                              <div>
-                                <div className="font-medium">CTR</div>
-                                <div>{formatPercentage(payload[0].value as number)}</div>
-                              </div>
-                            }
-                          />
-                        );
-                      }
-                      return null;
-                    }}
-                  />
+                  <YAxis tickFormatter={(value) => formatPercentage(Number(value))} />
+                  <ChartTooltip content={renderCTRTooltip} />
                   <Line
                     type="monotone"
                     dataKey="value"
@@ -136,24 +144,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
                 <LineChart data={insights.impressions}>
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <ChartTooltip
-                    content={({ active, payload }: TooltipProps<ValueType, NameType>) => {
-                      if (active && payload?.length) {
-                        return (
-                          <ChartTooltipContent
-                            className="bg-background border rounded-lg shadow-lg p-2"
-                            content={
-                              <div>
-                                <div className="font-medium">Impressions</div>
-                                <div>{(payload[0].value as number).toLocaleString()}</div>
-                              </div>
-                            }
-                          />
-                        );
-                      }
-                      return null;
-                    }}
-                  />
+                  <ChartTooltip content={renderImpressionsTooltip} />
                   <Line
                     type="monotone"
                     dataKey="value"

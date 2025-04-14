@@ -19,7 +19,7 @@ export const useItemInsights = () => {
       }
 
       const options: InsightFilterOptions = {
-        datePreset: 'last_30d',
+        datePreset: 'last_30d', // Now correctly typed as a literal
         fields: ['spend', 'ctr', 'impressions'],
       };
 
