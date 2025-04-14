@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { getPermissionErrorMessage, isPermissionError } from '@/services/api/meta-accounts/permissionErrors';
 import { getSubcodeDescription } from '@/services/api/meta-accounts/errorSubcodes';
 
@@ -81,17 +82,29 @@ const AdAccountError: React.FC<AdAccountErrorProps> = ({ error, onReconnect }) =
       
       {/* Show reconnect button for known subcodes or permission errors */}
       {(formattedError.hasKnownSubcode || formattedError.isPermissionError) && (
-        <Button 
-          variant="secondary" 
-          className="w-full"
-          onClick={onReconnect}
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Reconnect Meta Account
-        </Button>
+        <div className="space-y-2">
+          <Button 
+            variant="secondary" 
+            className="w-full"
+            onClick={onReconnect}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reconnect Meta Account
+          </Button>
+          
+          <div className="mt-2 text-sm text-muted-foreground text-center">
+            Still not working? <Link 
+              to="/meta-integration#diagnostics" 
+              className="underline hover:text-primary"
+            >
+              Run Meta Diagnostics
+            </Link>
+          </div>
+        </div>
       )}
     </div>
   );
 };
 
 export default AdAccountError;
+
