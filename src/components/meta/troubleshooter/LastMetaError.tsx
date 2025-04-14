@@ -26,12 +26,12 @@ const LastMetaError: React.FC<LastMetaErrorProps> = ({ lastMetaError }) => {
           <AlertTriangle className="h-4 w-4 mr-2" />
           Last Meta API Error
         </CardTitle>
+        <div className="text-sm text-amber-700">
+          {new Date(lastMetaError.timestamp).toLocaleString()}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <div className="text-sm text-gray-600">
-            Timestamp: {new Date(lastMetaError.timestamp).toLocaleString()}
-          </div>
           <div className="bg-white rounded-md p-3 overflow-auto border text-sm">
             <div className="font-medium mb-2">Error Message:</div>
             <div className="text-red-600">{lastMetaError.error}</div>
