@@ -60,18 +60,20 @@ export class MetaAdAccountService extends BaseApiService {
           // Show error toast without using JSX in description
           toast({
             title: "Meta API Error",
-            description: `${errorMsg}\n\nClick for details`,
+            description: `${errorMsg}\n\nCheck console for details`,
             variant: "destructive",
             duration: 10000,
-            // Use null for action instead of a function
             action: null
           });
           
+          // Log full error details to console
+          console.error("[AD ACCOUNT FETCH] Error details:", errorDetails);
+          console.error("[AD ACCOUNT FETCH] Full error object:", json?.error);
+          
           // Show error details in separate toast when needed
-          console.log("Error details:", errorDetails);
           toast({
             title: "Error Details",
-            description: errorDetails,
+            description: errorDetails.substring(0, 500) + (errorDetails.length > 500 ? '...' : ''),
             variant: "destructive",
             duration: 15000
           });
@@ -91,10 +93,9 @@ export class MetaAdAccountService extends BaseApiService {
           console.error('[AD ACCOUNT FETCH] Unparseable response body:', responseText);
           toast({
             title: "Meta API Error",
-            description: "Failed to parse API response",
+            description: "Failed to parse API response. Check console for details.",
             variant: "destructive",
             duration: 10000,
-            // Use null for action instead of a function
             action: null
           });
           
@@ -116,7 +117,9 @@ export class MetaAdAccountService extends BaseApiService {
       const errorDetails = {
         message: errorMessage,
         type: typeof error,
-        stringRepresentation: String(error)
+        stringRepresentation: String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        fullError: error
       };
       
       console.error('[AD ACCOUNT FETCH] Detailed Error:', errorDetails);
@@ -126,7 +129,6 @@ export class MetaAdAccountService extends BaseApiService {
         description: errorMessage,
         variant: "destructive",
         duration: 10000,
-        // Use null for action instead of a function
         action: null
       });
       
