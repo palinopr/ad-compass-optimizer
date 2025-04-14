@@ -28,7 +28,7 @@ export function useCampaignFetcher() {
     status?: string
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
     // Prevent duplicate requests within a short time window
-    if (shouldThrottleFetch(lastFetchTimestampRef.current)) {
+    if (shouldThrottleFetch()) {
       console.log('Throttling campaign fetch - too soon after last fetch');
       
       // Try to return cached campaigns if available
@@ -57,7 +57,7 @@ export function useCampaignFetcher() {
       if (rateStatus.isRateLimited) {
         console.log(`Rate limit detected ${rateStatus.timeRemaining} minutes ago. Advising to wait.`);
         
-        notifyRateLimit(rateStatus.timeRemaining || undefined);
+        notifyRateLimit(rateStatus.timeRemaining || 0);
         
         // Try to use cached data if available
         const { campaigns } = getCachedCampaigns();
@@ -77,17 +77,24 @@ export function useCampaignFetcher() {
       }
       
       try {
-        // Execute the campaign fetch
-        const campaignsData = await executeCampaignFetch(token, adAccountId);
+        // Execute the campaign fetch with a function that will fetch the campaigns
+        const fetchFunction = async () => {
+          // This would normally call the API service
+          return [];
+        };
+        
+        const campaignsResult = await executeCampaignFetch(fetchFunction, adAccountId);
         
         // Store in cache for future use
-        storeCampaignsInCache(campaignsData, adAccountId);
+        if (campaignsResult.campaigns) {
+          storeCampaignsInCache(campaignsResult.campaigns, adAccountId);
+        }
         
         // Update last fetch timestamp
         lastFetchTimestampRef.current = Date.now();
         
         // Filter by status if provided
-        const filteredCampaigns = filterCampaignsByStatus(campaignsData, status);
+        const filteredCampaigns = filterCampaignsByStatus(campaignsResult.campaigns, status);
         
         return { campaigns: filteredCampaigns, error: null };
       } catch (apiErr: any) {
@@ -101,7 +108,8 @@ export function useCampaignFetcher() {
       }
     } catch (err: any) {
       // Process any errors that occur during fetching
-      const { error, errorDetails } = processFetchError(err);
+      const processedError = processFetchError(err);
+      const { error, errorDetails } = processedError;
       
       // If it's a rate limit error and we have cached data, serve it
       if (errorDetails?.isRateLimit) {

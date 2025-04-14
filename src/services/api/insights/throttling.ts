@@ -15,7 +15,7 @@ export class InsightsThrottling {
   public static checkThrottling(): void {
     // Apply throttling based on previous fetch time
     const now = Date.now();
-    if (shouldThrottleFetch(this.lastFetchTime)) {
+    if (shouldThrottleFetch()) {
       console.log('Throttling insights fetch - too soon after last fetch');
       throw new Error('Rate limiting: Please wait before making another request');
     }

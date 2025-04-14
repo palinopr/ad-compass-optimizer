@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ReloadIcon, RefreshCcw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface SystemDiagnosticStatusProps {
@@ -90,7 +90,7 @@ const SystemDiagnosticStatus: React.FC<SystemDiagnosticStatusProps> = ({
             className="h-8 text-xs flex-1" 
             onClick={handleForceRefresh}
           >
-            <RefreshCcw className="mr-1 h-3 w-3" />
+            <RefreshCw className="mr-1 h-3 w-3" />
             Force Refresh
           </Button>
           
@@ -101,7 +101,7 @@ const SystemDiagnosticStatus: React.FC<SystemDiagnosticStatusProps> = ({
               className="h-8 text-xs flex-1 border-red-300 text-red-600" 
               onClick={handleClearRateLimit}
             >
-              <ReloadIcon className="mr-1 h-3 w-3" />
+              <RefreshCw className="mr-1 h-3 w-3" />
               Clear Rate Limit
             </Button>
           )}

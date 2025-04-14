@@ -1,83 +1,95 @@
 
-import { toast } from "@/hooks/use-toast";
+/**
+ * Campaign caching utilities
+ */
+
+import { toast } from '@/hooks/use-toast';
+
+const CACHE_KEY = 'cached_campaign_data';
+const CACHE_TIMESTAMP_KEY = 'campaign_cache_timestamp';
+const CACHE_ACCOUNT_KEY = 'campaign_cache_account';
 
 /**
- * Get cached campaign data from localStorage
+ * Get cached campaigns if available
  */
 export const getCachedCampaigns = () => {
   try {
-    const cachedData = localStorage.getItem('cached_campaigns');
-    if (cachedData) {
-      const parsed = JSON.parse(cachedData);
-      if (parsed.campaigns && Array.isArray(parsed.campaigns) && parsed.campaigns.length > 0) {
-        return {
-          campaigns: parsed.campaigns,
-          adAccountId: parsed.adAccountId,
-          timestamp: parsed.timestamp
-        };
-      }
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    const cacheTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    const cacheAccount = localStorage.getItem(CACHE_ACCOUNT_KEY);
+    
+    if (!cachedData || !cacheTimestamp || !cacheAccount) {
+      return { campaigns: null, timestamp: null, adAccountId: null };
     }
+    
+    const campaigns = JSON.parse(cachedData);
+    
+    // Check cache freshness - consider cache valid for 30 minutes
+    const cacheDateMs = new Date(cacheTimestamp).getTime();
+    const now = new Date().getTime();
+    const cacheAge = (now - cacheDateMs) / (1000 * 60); // age in minutes
+    
+    if (cacheAge > 30) {
+      console.log(`Cache is stale (${Math.round(cacheAge)} minutes old)`);
+      return { campaigns: null, timestamp: null, adAccountId: null };
+    }
+    
+    console.log(`Using cached campaign data from ${new Date(cacheTimestamp).toLocaleTimeString()}`);
+    
+    return { 
+      campaigns, 
+      timestamp: cacheTimestamp,
+      adAccountId: cacheAccount
+    };
   } catch (e) {
-    console.error('Error retrieving cached campaigns:', e);
+    console.error('Error reading campaign cache:', e);
+    return { campaigns: null, timestamp: null, adAccountId: null };
   }
-  
-  return { campaigns: null, adAccountId: null, timestamp: null };
 };
 
 /**
- * Store campaign data in cache
+ * Store campaigns in cache for future use
  */
 export const storeCampaignsInCache = (campaigns: any[], adAccountId: string) => {
-  if (!campaigns || !Array.isArray(campaigns) || campaigns.length === 0) {
-    return;
-  }
-  
   try {
-    const cacheData = {
-      campaigns,
-      adAccountId,
-      timestamp: new Date().toISOString()
-    };
-    
-    localStorage.setItem('cached_campaigns', JSON.stringify(cacheData));
-    console.log(`Cached ${campaigns.length} campaigns for account ${adAccountId}`);
+    localStorage.setItem(CACHE_KEY, JSON.stringify(campaigns));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, new Date().toISOString());
+    localStorage.setItem(CACHE_ACCOUNT_KEY, adAccountId);
+    console.log(`Cached ${campaigns.length} campaigns for ad account ${adAccountId}`);
   } catch (e) {
-    console.error('Error caching campaigns:', e);
+    console.error('Error caching campaign data:', e);
   }
 };
 
 /**
- * Return cached data with a notification
+ * Serve cached data with notification to user
  */
 export const serveCachedDataWithNotification = (reason: string) => {
   const { campaigns, timestamp } = getCachedCampaigns();
   
-  if (campaigns) {
-    let timeAgo = 'unknown time';
-    if (timestamp) {
-      try {
-        const cachedTime = new Date(timestamp);
-        const now = new Date();
-        const diffMinutes = Math.floor((now.getTime() - cachedTime.getTime()) / (1000 * 60));
-        
-        if (diffMinutes < 60) {
-          timeAgo = `${diffMinutes} minutes ago`;
-        } else if (diffMinutes < 1440) {
-          timeAgo = `${Math.floor(diffMinutes / 60)} hours ago`;
-        } else {
-          timeAgo = `${Math.floor(diffMinutes / 1440)} days ago`;
-        }
-      } catch (e) {}
-    }
-    
-    toast({
-      title: "Using Cached Campaign Data",
-      description: `Due to ${reason}. Data from ${timeAgo}.`,
-      duration: 5000,
-    });
-    
-    return { campaigns, error: null };
+  if (!campaigns || !timestamp) {
+    return { 
+      campaigns: [], 
+      error: 'No cached campaign data available during ' + reason,
+      errorDetails: { 
+        noCachedData: true, 
+        reason 
+      }
+    };
   }
   
-  return { campaigns: [], error: `No cached data available during ${reason}` };
+  // Notify the user we're using cached data
+  toast({
+    title: "Using cached campaign data",
+    description: `Due to ${reason}, showing data from ${new Date(timestamp).toLocaleTimeString()}`,
+    variant: "default",
+    duration: 5000,
+  });
+  
+  return { 
+    campaigns, 
+    error: null, 
+    fromCache: true, 
+    cacheTimestamp: timestamp 
+  };
 };
