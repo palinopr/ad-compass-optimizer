@@ -4,8 +4,9 @@ import { toast } from '@/hooks/use-toast';
 /**
  * Utility function to run diagnostic checks on campaign setup
  */
-export const runLiveCampaignDiagnostic = () => {
-  console.log('=== LIVE CAMPAIGN DIAGNOSTIC START ===');
+export const runLiveCampaignDiagnostic = (onResult?: (lines: string[]) => void) => {
+  const results: string[] = [];
+  results.push("=== 🎯 LIVE CAMPAIGN DIAGNOSTIC START ===");
   
   // Only run checks in browser environment
   if (typeof window === 'undefined') {
@@ -14,20 +15,20 @@ export const runLiveCampaignDiagnostic = () => {
   }
 
   // Check Meta token
-  const metaToken = localStorage.getItem('meta_access_token');
-  if (metaToken) {
-    console.log('✅ Meta Token Exists');
-    console.log(`Token Length: ${metaToken.length} characters`);
+  const token = localStorage.getItem('meta_access_token');
+  if (token) {
+    results.push('✅ Meta Token Exists');
+    results.push(`Token Length: ${token.length} characters`);
   } else {
-    console.error('❌ Meta Token Missing');
+    results.push('❌ Meta Token Missing');
   }
 
   // Check Ad Account
   const adAccount = localStorage.getItem('selected_ad_account');
   if (adAccount) {
-    console.log(`✅ Ad Account Selected: ${adAccount}`);
+    results.push(`✅ Ad Account Selected: ${adAccount}`);
   } else {
-    console.warn('⚠️ No Ad Account Selected');
+    results.push('⚠️ No Ad Account Selected');
   }
 
   // Check Mock Mode Status
@@ -35,19 +36,22 @@ export const runLiveCampaignDiagnostic = () => {
   const isMockMode = localStorage.getItem('USE_MOCK_MODE') === 'true';
   
   if (isMockMetaMode || isMockMode) {
-    console.warn('⚠️ Mock Mode Active:', {
-      metaApiMock: isMockMetaMode,
-      generalMock: isMockMode
-    });
+    results.push(`⚠️ Mock Mode Active: Meta API: ${isMockMetaMode}, General: ${isMockMode}`);
   } else {
-    console.log('✅ Production Mode Active (No Mock)');
+    results.push('✅ Production Mode Active (No Mock)');
   }
 
-  console.log('=== ✅ LIVE CAMPAIGN DIAGNOSTIC END ===');
+  results.push("=== ✅ LIVE CAMPAIGN DIAGNOSTIC END ===");
+
+  // Log to console
+  console.log(results.join('\n'));
+
+  // Send results to callback if provided
+  if (onResult) onResult(results);
 
   // Add toast notification
   toast({
     title: '✅ Diagnostic Complete',
-    description: 'Check the browser console for results.',
+    description: 'Check results below or in browser console.',
   });
 };

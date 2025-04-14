@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
 import MetaConnect from '@/components/meta/MetaConnect';
@@ -41,7 +41,8 @@ const Campaigns = () => {
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
   
   const [mockDataLoaded, setMockDataLoaded] = React.useState(false);
-  
+  const [debugResult, setDebugResult] = useState<string[]>([]);
+
   useEffect(() => {
     const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
     if (isMockMode && campaigns?.length > 0 && !mockDataLoaded) {
@@ -160,11 +161,19 @@ const Campaigns = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={runLiveCampaignDiagnostic}
+                  onClick={() => runLiveCampaignDiagnostic(setDebugResult)}
                   className="w-full"
                 >
                   Run Live Campaign Debugger
                 </Button>
+                
+                {debugResult.length > 0 && (
+                  <div className="mt-4 bg-muted p-3 rounded-md text-sm font-mono space-y-1">
+                    {debugResult.map((line, i) => (
+                      <div key={i}>{line}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </>
