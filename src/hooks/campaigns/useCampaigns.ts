@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useState } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useAuthCheck } from './useAuthCheck';
@@ -31,6 +32,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     isFetchingRef, lastFetchTimeRef, mountedRef, campaignCountRef
   } = useCampaignFetchState();
   
+  // Load mock campaigns immediately when in mock mode
   useEffect(() => {
     if (isMockMode() && !mockInitialized) {
       console.log('🎭 Mock mode detected in useCampaigns - setting mock campaign data');
@@ -43,13 +45,19 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         );
       }
       
+      console.log(`🎭 Setting ${mockCampaigns.length} mock campaigns for status: ${status || 'all'}`);
       updateCampaigns(mockCampaigns);
       setIsLoading(false);
       setMockInitialized(true);
+      incrementDisplayRefresh();
       
-      console.log(`🎭 Loaded ${mockCampaigns.length} mock campaigns for status: ${status || 'all'}`);
+      // Force update UI
+      setTimeout(() => {
+        forceUiRefresh();
+        console.log('🎭 Forced UI refresh after setting mock campaigns');
+      }, 100);
     }
-  }, [isMockMode, mockInitialized, status, updateCampaigns, setIsLoading]);
+  }, [isMockMode, mockInitialized, status, updateCampaigns, setIsLoading, incrementDisplayRefresh, forceUiRefresh]);
   
   useEffect(() => {
     if (displayRefresh > 0 && campaigns.length > 0) {
@@ -73,10 +81,12 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         setIsLoading(true);
         
         setTimeout(() => {
+          console.log(`🎭 Updating campaigns with ${mockCampaigns.length} mock campaigns`);
           updateCampaigns(mockCampaigns);
           setIsLoading(false);
           setMockInitialized(true);
           incrementDisplayRefresh();
+          forceUiRefresh();
           
           toast({
             title: "Mock Campaign Data Loaded",
@@ -191,10 +201,11 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     }
   }, [status, validateAuthentication, getSelectedAdAccount, fetchCampaignData, 
       updateCampaigns, setCampaigns, setError, setErrorDetails, setIsLoading, incrementDisplayRefresh, 
-      isFetchingRef, lastFetchTimeRef, mountedRef, isMockMode, mockInitialized]);
+      isFetchingRef, lastFetchTimeRef, mountedRef, isMockMode, mockInitialized, forceUiRefresh]);
   
   useCampaignEventListeners(fetchCampaigns, incrementDisplayRefresh, forceUiRefresh, clearCampaigns, status);
   
+  // Skip ad account change check in mock mode
   useEffect(() => {
     if (isMockMode()) return;
     

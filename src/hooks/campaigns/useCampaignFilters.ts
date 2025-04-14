@@ -42,19 +42,25 @@ export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   }, []);
 
   const filteredCampaigns = useMemo(() => {
+    // Check if we're in mock mode
+    const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
+    
     return campaigns.filter(campaign => {
       // Filter by status if specified
-      if (filters.status && campaign.status.toLowerCase() !== filters.status.toLowerCase()) {
+      if (filters.status && filters.status !== 'all' && 
+          campaign.status && campaign.status.toLowerCase() !== filters.status.toLowerCase()) {
         return false;
       }
 
       // Filter by search query
-      if (filters.search && !campaign.name.toLowerCase().includes(filters.search.toLowerCase())) {
+      if (filters.search && campaign.name && 
+          !campaign.name.toLowerCase().includes(filters.search.toLowerCase())) {
         return false;
       }
 
-      // Filter by date range if set
-      if (filters.dateRange?.from && filters.dateRange?.to) {
+      // Filter by date range if set and not in mock mode
+      // For mock data, we don't filter by date since the dates are simulated
+      if (!isMockMode && filters.dateRange?.from && filters.dateRange?.to && campaign.created_time) {
         const campaignDate = campaign.created_time ? new Date(campaign.created_time) : null;
         if (campaignDate) {
           return campaignDate >= filters.dateRange.from && campaignDate <= filters.dateRange.to;

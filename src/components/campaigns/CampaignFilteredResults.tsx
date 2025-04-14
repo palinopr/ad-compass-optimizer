@@ -21,54 +21,64 @@ const CampaignFilteredResults = ({
 }: CampaignFilteredResultsProps) => {
   // Cast status to the correct type for CampaignTable
   const campaignStatus = status as 'active' | 'draft' | 'archived';
+  
+  // Check if mock mode is active
+  const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
+
+  console.log('CampaignFilteredResults render:', {
+    campaignsCount: campaigns.length,
+    hasFilteredResults,
+    mockMode: isMockMode
+  });
 
   // Handle empty state with no filters
-  if (campaigns.length === 0 && !hasFilteredResults) {
+  if (campaigns.length === 0) {
+    // In mock mode, this shouldn't typically happen since we load mock data
     return (
       <Card>
         <div className="p-8 text-center space-y-4">
-          <p className="text-gray-500">No campaigns found in this ad account.</p>
+          <p className="text-gray-500">
+            {isMockMode 
+              ? "No mock campaigns match the current filter settings."
+              : "No campaigns found in this ad account."}
+          </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              asChild
-            >
-              <a 
-                href="https://business.facebook.com/adsmanager/create"
-                target="_blank" 
-                rel="noopener noreferrer"
+            {!isMockMode && (
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                asChild
               >
-                <ExternalLink className="h-4 w-4" />
-                Create Campaign in Meta
-              </a>
-            </Button>
+                <a 
+                  href="https://business.facebook.com/adsmanager/create"
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Create Campaign in Meta
+                </a>
+              </Button>
+            )}
+            {!hasFilteredResults && campaigns.length === 0 && (
+              <Button 
+                variant="outline" 
+                onClick={onClearFilters}
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         </div>
       </Card>
     );
   }
 
-  // Handle filtered results
-  if (hasFilteredResults) {
-    return (
-      <Card>
-        <CampaignTable campaigns={campaigns} status={campaignStatus} />
-      </Card>
-    );
-  }
-
-  // Handle when filters are applied but no results found
+  // When we have campaigns to show
   return (
     <Card>
-      <div className="p-8 text-center">
-        <p className="text-gray-500">No campaigns match the current filters.</p>
-        <Button variant="outline" className="mt-4" onClick={onClearFilters}>
-          Clear Filters
-        </Button>
-      </div>
+      <CampaignTable campaigns={campaigns} status={campaignStatus} />
     </Card>
   );
-};
+}
 
 export default CampaignFilteredResults;

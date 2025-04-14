@@ -91,36 +91,14 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
 
-  // In mock mode, consider the user authenticated and with data
-  const hasLastFetchSuccess = isMockMode ? true : localStorage.getItem('last_campaign_fetch_success') === 'true';
-  const hasEmptyResult = localStorage.getItem('last_empty_result') === 'true';
-  
-  if ((!campaigns || campaigns.length === 0) && 
-      (effectiveIsAuthenticated || isMockMode) && 
-      hasLastFetchSuccess &&
-      hasEmptyResult && 
-      !isMockMode) { // Skip empty view in mock mode
-    return (
-      <>
-        <CampaignFilterToolbar 
-          filters={filters}
-          onDateRangeChange={setDateRange}
-          onStatusChange={setStatusFilter}
-          onSearchChange={setSearchQuery}
-          onRefresh={handleRefresh}
-          isLoading={isLoading}
-        />
-        <NoCampaignsFoundPanel
-          onRefresh={handleRefresh}
-          onCreateCampaign={handleCreateCampaign}
-          isLoading={isLoading}
-        />
-      </>
-    );
-  }
-  
-  if (!campaigns || campaigns.length === 0) {
-    return <EmptyCampaignState onRefresh={handleRefresh} hasLastFetchSuccess={hasLastFetchSuccess} />;
+  // In mock mode, always proceed to showing campaigns if we have them
+  const shouldShowCampaigns = isMockMode ? 
+    filteredCampaigns.length > 0 : 
+    filteredCampaigns.length > 0 || (effectiveIsAuthenticated && localStorage.getItem('last_campaign_fetch_success') === 'true');
+
+  // Skip empty view checks in mock mode
+  if (!shouldShowCampaigns && !isMockMode) {
+    return <EmptyCampaignState onRefresh={handleRefresh} hasLastFetchSuccess={localStorage.getItem('last_campaign_fetch_success') === 'true'} />;
   }
 
   return (
@@ -134,12 +112,14 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         isLoading={isLoading}
       />
       
-      <CampaignMetrics 
-        impressions={metrics.impressions}
-        clicks={metrics.clicks}
-        spend={metrics.spend}
-        cpa={metrics.cpa}
-      />
+      {filteredCampaigns.length > 0 && (
+        <CampaignMetrics 
+          impressions={metrics.impressions}
+          clicks={metrics.clicks}
+          spend={metrics.spend}
+          cpa={metrics.cpa}
+        />
+      )}
 
       <CampaignFilteredResults
         campaigns={filteredCampaigns}
