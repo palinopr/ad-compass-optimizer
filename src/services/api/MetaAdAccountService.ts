@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { META_API_CONFIG } from '@/config/socialAuth';
@@ -53,11 +52,23 @@ export class MetaAdAccountService extends BaseApiService {
         
         if (!response.ok) {
           const errorMsg = json?.error?.message || responseText || 'Unknown error while fetching ad accounts';
+          const errorDetails = JSON.stringify(json?.error || json, null, 2);
+          
           toast({
             title: "Meta API Error",
-            description: errorMsg,
-            variant: "destructive"
+            description: (
+              <div className="space-y-2">
+                <p>{errorMsg}</p>
+                <details className="bg-destructive/10 p-2 rounded text-xs font-mono whitespace-pre-wrap">
+                  <summary className="cursor-pointer">Show Error Details</summary>
+                  {errorDetails}
+                </details>
+              </div>
+            ),
+            variant: "destructive",
+            duration: 10000
           });
+          
           throw new Error(errorMsg);
         }
         
@@ -73,8 +84,17 @@ export class MetaAdAccountService extends BaseApiService {
           console.error('[AD ACCOUNT FETCH] Unparseable response body:', responseText);
           toast({
             title: "Meta API Error",
-            description: "Failed to parse API response. Please try again.",
-            variant: "destructive"
+            description: (
+              <div className="space-y-2">
+                <p>Failed to parse API response</p>
+                <details className="bg-destructive/10 p-2 rounded text-xs font-mono">
+                  <summary className="cursor-pointer">Show Raw Response</summary>
+                  {responseText}
+                </details>
+              </div>
+            ),
+            variant: "destructive",
+            duration: 10000
           });
         }
         
@@ -84,17 +104,27 @@ export class MetaAdAccountService extends BaseApiService {
       console.error('Error fetching ad accounts:', error);
       
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[AD ACCOUNT FETCH] Detailed Error:', {
+      const errorDetails = {
         message: errorMessage,
         type: typeof error,
         stringRepresentation: String(error)
-      });
+      };
       
-      // Show error in UI
+      console.error('[AD ACCOUNT FETCH] Detailed Error:', errorDetails);
+      
       toast({
         title: "Ad Account Error",
-        description: errorMessage,
-        variant: "destructive"
+        description: (
+          <div className="space-y-2">
+            <p>{errorMessage}</p>
+            <details className="bg-destructive/10 p-2 rounded text-xs font-mono">
+              <summary className="cursor-pointer">Show Error Details</summary>
+              {JSON.stringify(errorDetails, null, 2)}
+            </details>
+          </div>
+        ),
+        variant: "destructive",
+        duration: 10000
       });
       
       return this.handleApiError(error, 'fetchAdAccounts');
