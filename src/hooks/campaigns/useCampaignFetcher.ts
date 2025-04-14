@@ -83,7 +83,7 @@ export function useCampaignFetcher() {
               toast({
                 title: "⚠️ Approaching Meta Rate Limit",
                 description: "Please refresh less frequently to avoid rate limiting.",
-                variant: "warning",
+                variant: "destructive",
                 duration: 10000,
               });
               
