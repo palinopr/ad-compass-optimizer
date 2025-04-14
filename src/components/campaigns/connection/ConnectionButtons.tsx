@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, Power } from 'lucide-react';
 
 interface ConnectionButtonsProps {
+  isAuthenticated: boolean;
   isAuthSyncing: boolean;
   refreshConnection: () => void;
   resetConnection: () => void;
 }
 
 const ConnectionButtons: React.FC<ConnectionButtonsProps> = ({
+  isAuthenticated,
   isAuthSyncing,
   refreshConnection,
   resetConnection
@@ -20,7 +22,7 @@ const ConnectionButtons: React.FC<ConnectionButtonsProps> = ({
         variant="outline" 
         size="sm" 
         onClick={refreshConnection}
-        disabled={isAuthSyncing}
+        disabled={isAuthSyncing || !isAuthenticated}
         className="flex-1"
       >
         <RefreshCw className={`w-4 h-4 mr-2 ${isAuthSyncing ? 'animate-spin' : ''}`} />
