@@ -1,12 +1,22 @@
-
 import { MetaBatchService } from './batch/MetaBatchService';
 import { MetaFunnelBatchService } from './funnel/MetaFunnelBatchService';
 import { FunnelData } from './types/funnelTypes';
 import { InsightsThrottling } from './insights/throttling';
+import { mockFunnelData } from './mock/mockCampaignData';
 
 export class MetaFunnelService {
+  private static isMockMode(): boolean {
+    return window.location.search.includes('mock=true');
+  }
+
   public static async fetchFunnelData(token: string, adAccountId: string): Promise<FunnelData> {
     try {
+      // Check if we should use mock data
+      if (this.isMockMode()) {
+        console.log('🎭 Using mock campaign data');
+        return mockFunnelData;
+      }
+
       InsightsThrottling.checkThrottling(adAccountId);
       
       console.log('Fetching funnel data via batch request for account:', adAccountId);

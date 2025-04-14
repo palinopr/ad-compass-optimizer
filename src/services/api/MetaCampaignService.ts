@@ -27,6 +27,10 @@ export interface MetaCampaign {
 }
 
 export class MetaCampaignService extends BaseApiService {
+  private static isMockMode(): boolean {
+    return window.location.search.includes('mock=true');
+  }
+
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
     try {
       console.log(`Fetching campaigns for ad account ${adAccountId}...`);
@@ -36,8 +40,10 @@ export class MetaCampaignService extends BaseApiService {
         throw new Error('Ad Account ID is required');
       }
 
-      // Check rate limit throttling before proceeding
-      CampaignThrottling.checkThrottling(adAccountId);
+      // Skip throttling check in mock mode
+      if (!this.isMockMode()) {
+        CampaignThrottling.checkThrottling(adAccountId);
+      }
       
       // Track the fetch attempt for diagnostics
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
