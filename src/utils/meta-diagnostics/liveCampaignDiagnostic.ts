@@ -1,4 +1,6 @@
 
+import { toast } from '@/hooks/use-toast';
+
 /**
  * Utility function to run diagnostic checks on campaign setup
  */
@@ -42,4 +44,10 @@ export const runLiveCampaignDiagnostic = () => {
   }
 
   console.log('=== ✅ LIVE CAMPAIGN DIAGNOSTIC END ===');
+
+  // Add toast notification
+  toast({
+    title: '✅ Diagnostic Complete',
+    description: 'Check the browser console for results.',
+  });
 };
