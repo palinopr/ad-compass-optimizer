@@ -8,16 +8,21 @@ export const useMockCampaigns = (status?: string) => {
   const [mockInitialized, setMockInitialized] = useState(false);
   const [mockCampaigns, setMockCampaigns] = useState<MetaCampaign[]>([]);
 
+  // Improved fetch function that guarantees campaigns are returned
   const loadMockCampaigns = useCallback((forceRefresh = false) => {
-    if (!forceRefresh && mockInitialized) return;
+    if (!forceRefresh && mockInitialized) {
+      console.log('🎭 Mock mode: Using cached mock campaigns');
+      return { campaigns: mockCampaigns };
+    }
 
-    console.log('🎭 Mock mode: Loading mock campaigns');
-    let campaigns = [...mockFunnelData.campaigns];
+    console.log('🎭 Mock mode: Loading mock campaigns from source data');
+    let campaigns = [...mockFunnelData.campaigns]; // Get a fresh copy
     
     if (status && status !== 'all') {
       campaigns = campaigns.filter(campaign => 
         campaign.status?.toLowerCase() === status.toLowerCase()
       );
+      console.log(`🎭 Filtered ${campaigns.length} campaigns matching status: ${status}`);
     }
     
     setMockCampaigns(campaigns);
@@ -28,8 +33,9 @@ export const useMockCampaigns = (status?: string) => {
       description: `Loaded ${campaigns.length} simulated campaigns.`,
     });
     
-    console.log(`🎭 Loaded ${campaigns.length} mock campaigns for status: ${status || 'all'}`);
-  }, [status]);
+    console.log(`🎭 Returning ${campaigns.length} mock campaigns for status: ${status || 'all'}`);
+    return { campaigns };
+  }, [status, mockCampaigns, mockInitialized]);
 
   return {
     mockCampaigns,

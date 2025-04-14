@@ -29,7 +29,13 @@ export function useCampaigns(status?: string): UseCampaignsResult {
 
   const handleFetchCampaigns = useCallback(async (forceRefresh = false) => {
     if (isMockMode()) {
-      loadMockCampaigns(forceRefresh);
+      console.log(`🎭 Mock mode fetch triggered, forceRefresh: ${forceRefresh}`);
+      const result = loadMockCampaigns(forceRefresh);
+      if (result && result.campaigns) {
+        console.log(`🎭 Mock fetch returned ${result.campaigns.length} campaigns`);
+        updateCampaigns(result.campaigns);
+      }
+      setIsLoading(false);
       return;
     }
 
@@ -51,12 +57,26 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   }, [isMockMode, loadMockCampaigns, fetchCampaigns, mountedRef, 
       setIsLoading, setError, setErrorDetails, updateCampaigns]);
 
-  // Update campaigns when mock data changes
+  // Update campaigns when mock data changes (this is now a backup mechanism)
   useEffect(() => {
-    if (isMockMode() && mockCampaigns.length > 0) {
+    if (isMockMode() && mockCampaigns.length > 0 && campaigns.length === 0) {
+      console.log(`🎭 Mock campaigns sync: found ${mockCampaigns.length} mock campaigns but state has ${campaigns.length}. Syncing...`);
       updateCampaigns(mockCampaigns);
     }
-  }, [isMockMode, mockCampaigns, updateCampaigns]);
+  }, [isMockMode, mockCampaigns, updateCampaigns, campaigns.length]);
+
+  // Add an additional effect to detect and fix empty campaign state in mock mode
+  useEffect(() => {
+    if (isMockMode() && campaigns.length === 0 && !isLoading) {
+      // This is a safety mechanism to ensure we always have data in mock mode
+      console.log('🎭 Mock mode safety check: No campaigns in state, triggering refresh');
+      const timer = setTimeout(() => {
+        handleFetchCampaigns(true);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMockMode, campaigns.length, isLoading, handleFetchCampaigns]);
 
   useCampaignEventListeners(
     handleFetchCampaigns,
