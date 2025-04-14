@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -7,6 +6,7 @@ import { useTokenValidation } from './fetch-hooks/useTokenValidation';
 import { toast } from '@/hooks/use-toast';
 import { debounce } from 'lodash';
 import { getCachedCampaigns, storeCampaignsInCache } from './fetch-utils/campaignCache';
+import { BaseApiService } from '@/services/api/BaseApiService';
 
 export function useCampaignFetcher() {
   const { error, errorDetails, handleError, clearErrors } = useErrorHandler();
@@ -21,7 +21,6 @@ export function useCampaignFetcher() {
   } = useFetchState();
   const { validateToken } = useTokenValidation();
 
-  // Create a debounced fetch implementation
   const fetchCampaignData = useCallback(async (
     token: string,
     adAccountId: string, 
@@ -36,7 +35,6 @@ export function useCampaignFetcher() {
       };
     }
 
-    // Check cache first unless force refresh is requested
     if (!forceRefresh) {
       const { campaigns, isFresh } = getCachedCampaigns(adAccountId);
       if (campaigns && isFresh) {
@@ -44,7 +42,6 @@ export function useCampaignFetcher() {
         return { 
           campaigns, 
           error: null
-          // Removed the `fromCache: true` which was causing the error
         };
       }
     }
@@ -58,16 +55,13 @@ export function useCampaignFetcher() {
         return { campaigns: [], error: tokenValidation.error };
       }
 
-      // Save to localStorage for troubleshooting
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
 
-      // Execute the campaign fetch with API service
       const MetaCampaignService = (await import('@/services/api/MetaCampaignService')).default;
       const campaigns = await MetaCampaignService.fetchCampaigns(token, adAccountId);
       
       if (mountedRef.current) {
-        // Store in cache
         storeCampaignsInCache(campaigns, adAccountId);
         
         localStorage.setItem('last_campaign_count', campaigns.length.toString());
@@ -80,15 +74,33 @@ export function useCampaignFetcher() {
             variant: "default",
           });
         }
+
+        const appUsage = BaseApiService.lastResponseHeaders['x-app-usage'];
+        if (appUsage) {
+          try {
+            const usage = JSON.parse(appUsage);
+            if (usage.call_count > 80 || usage.total_cputime > 80 || usage.total_time > 80) {
+              toast({
+                title: "⚠️ Approaching Meta Rate Limit",
+                description: "Please refresh less frequently to avoid rate limiting.",
+                variant: "warning",
+                duration: 10000,
+              });
+              
+              localStorage.setItem('last_rate_limit_warning', new Date().toISOString());
+              increaseCooldown();
+            }
+          } catch (e) {
+            console.error('Error parsing Meta API usage headers:', e);
+          }
+        }
       }
 
       return { campaigns, error: null };
     } catch (err: any) {
-      // Check for rate limit errors (status 429)
       if (err?.status === 429 || 
           (err?.message && err.message.toLowerCase().includes('rate limit')) ||
           (err?.code === 4 || err?.code === 17)) {
-        // Increase cooldown time when rate limits are hit
         increaseCooldown();
         
         toast({
@@ -99,7 +111,6 @@ export function useCampaignFetcher() {
         });
       }
       
-      // Fix: Include the empty campaigns array in the error response
       const { error, errorDetails } = handleError(err, adAccountId);
       return { campaigns: [], error, errorDetails };
     } finally {
@@ -107,9 +118,8 @@ export function useCampaignFetcher() {
     }
   }, [canFetch, startFetch, endFetch, clearErrors, handleError, validateToken, mountedRef, increaseCooldown]);
 
-  // Create a debounced version of the function
   const debouncedFetchCampaignData = useCallback(
-    debounce(fetchCampaignData, 1000), // 1 second debounce
+    debounce(fetchCampaignData, 1000),
     [fetchCampaignData]
   );
 

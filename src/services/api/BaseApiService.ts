@@ -1,4 +1,3 @@
-
 /**
  * Base service with common API functionality
  */
