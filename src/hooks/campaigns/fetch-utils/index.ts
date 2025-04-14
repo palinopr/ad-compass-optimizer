@@ -12,9 +12,11 @@ export {
   markRateLimited,
   clearRateLimit,
   notifyRateLimit,
-  shouldThrottleFetch,
-  getBackoffTime
+  shouldThrottleFetch
 } from './rateLimitStatus';
+
+// Export the getBackoffTime function from the correct file
+export { getBackoffTime } from './rateLimitConfig';
 
 // Export any cached campaign functions
 export {
@@ -29,3 +31,4 @@ export {
   executeCampaignFetch,
   filterCampaignsByStatus
 } from './campaignFetch';
+
