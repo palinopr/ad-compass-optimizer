@@ -4,8 +4,9 @@
  */
 export * from './rateLimitDetection';
 export * from './apiUsage';
-// Export everything from rateLimitConfig except shouldThrottleFetch to avoid duplicate exports
-export { shouldBypassRateLimit } from './rateLimitConfig';
+
+// We'll remove the non-existent export
+// export { shouldBypassRateLimit } from './rateLimitConfig';
 
 // Re-export rateLimitStatus but exclude shouldThrottleFetch since it's exported directly in index.ts
 export { 
