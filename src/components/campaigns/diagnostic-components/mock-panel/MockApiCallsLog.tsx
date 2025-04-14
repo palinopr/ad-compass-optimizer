@@ -16,6 +16,15 @@ const MockApiCallsLog: React.FC<MockApiCallsLogProps> = ({ calls }) => {
         {calls.map((call, index) => (
           <div key={index} className="text-gray-600">
             {call.timestamp} - {call.endpoint} ({call.method || 'GET'})
+            {call.endpoint.includes('campaign') && (
+              <div className="text-xs text-blue-500 ml-4">
+                → Response: {call.response ? 
+                  (typeof call.response === 'object' ? 
+                    `${JSON.stringify(call.response).substring(0, 50)}...` : 
+                    call.response.toString().substring(0, 50)
+                  ) : 'No data'}
+              </div>
+            )}
           </div>
         ))}
       </div>

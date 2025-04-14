@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -73,8 +74,12 @@ export function useCampaignFetcher() {
     clearErrors();
     
     try {
+      console.log('[CAMPAIGN DEBUG] Starting fetch for account:', adAccountId);
+      console.log('[CAMPAIGN DEBUG] Token starts with:', token ? token.substring(0, 5) + '...' : 'null');
+
       const tokenValidation = validateToken();
       if (!tokenValidation.isValid) {
+        console.error('[CAMPAIGN DEBUG] Token validation failed:', tokenValidation.error);
         return { campaigns: [], error: tokenValidation.error };
       }
 
@@ -82,7 +87,10 @@ export function useCampaignFetcher() {
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
 
       const MetaCampaignService = (await import('@/services/api/MetaCampaignService')).default;
+      console.log('[CAMPAIGN DEBUG] Calling MetaCampaignService.fetchCampaigns...');
       const campaigns = await MetaCampaignService.fetchCampaigns(token, adAccountId);
+      
+      console.log('[CAMPAIGN DEBUG] Fetch successful:', campaigns.length, 'campaigns returned');
       
       if (mountedRef.current) {
         storeCampaignsInCache(campaigns, adAccountId);
@@ -121,6 +129,12 @@ export function useCampaignFetcher() {
 
       return { campaigns, error: null };
     } catch (err: any) {
+      console.error('[CAMPAIGN DEBUG] Fetch error:', err);
+      
+      // Log error details
+      console.error('[CAMPAIGN DEBUG] Error type:', typeof err);
+      console.error('[CAMPAIGN DEBUG] Error properties:', Object.keys(err));
+      
       if (err?.status === 429 || 
           (err?.message && err.message.toLowerCase().includes('rate limit')) ||
           (err?.code === 4 || err?.code === 17)) {

@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { isRateLimitError, markRateLimited } from './rateLimit';
 
@@ -10,7 +9,9 @@ export const handleApiError = async (apiErr: any): Promise<{
   details: any;
   isRateLimit: boolean;
 }> => {
-  console.error('API error during campaign fetch:', apiErr);
+  console.error('[API ERROR DEBUG] API error during campaign fetch:', apiErr);
+  console.error('[API ERROR DEBUG] Error type:', typeof apiErr);
+  console.error('[API ERROR DEBUG] Error properties:', Object.keys(apiErr));
   
   // Record failed fetch for diagnostics
   localStorage.setItem('last_campaign_fetch_success', 'false');
@@ -22,8 +23,9 @@ export const handleApiError = async (apiErr: any): Promise<{
   // Extract Facebook API errors from response
   if (apiErr?.response) {
     try {
+      console.log('[API ERROR DEBUG] Found response object, attempting to parse');
       const responseData = await apiErr.response.json();
-      console.error('API error response data:', responseData);
+      console.error('[API ERROR DEBUG] API error response data:', responseData);
       
       // Store the complete error details
       errorDetails = responseData;
@@ -38,7 +40,7 @@ export const handleApiError = async (apiErr: any): Promise<{
            responseData.error.message?.includes('request limit') ||
            responseData.error.message?.includes('too many calls'))) {
         
-        console.log('Rate limit error detected - code:', responseData.error.code);
+        console.log('[API ERROR DEBUG] Rate limit error detected - code:', responseData.error.code);
         markRateLimited();
         
         // Parse estimated time to regain access if available in headers
@@ -54,7 +56,7 @@ export const handleApiError = async (apiErr: any): Promise<{
               waitTime = `${usageData[businessId][0].estimated_time_to_regain_access} minutes`;
             }
           } catch (headerErr) {
-            console.error('Failed to parse rate limit headers:', headerErr);
+            console.error('[API ERROR DEBUG] Failed to parse rate limit headers:', headerErr);
           }
         }
         
@@ -71,11 +73,35 @@ export const handleApiError = async (apiErr: any): Promise<{
           apiErrorMessage += " (Invalid parameter)";
         } else if (responseData.error.code === 190) {
           apiErrorMessage += " (Invalid/expired access token)";
-        } 
+        } else if (responseData.error.code === 294) {
+          apiErrorMessage += " (Ad account access denied)";
+        } else if (responseData.error.code === 2601) {
+          apiErrorMessage += " (App Review required)";
+        }
       }
     } catch (jsonErr) {
-      console.error('Failed to parse API error response:', jsonErr);
+      console.error('[API ERROR DEBUG] Failed to parse API error response:', jsonErr);
+      
+      // Try to get raw text
+      try {
+        const responseText = await apiErr.response.text();
+        console.error('[API ERROR DEBUG] Raw error response text:', responseText);
+        errorDetails = { rawResponse: responseText };
+      } catch (textErr) {
+        console.error('[API ERROR DEBUG] Failed to get response text:', textErr);
+      }
     }
+  } else {
+    console.error('[API ERROR DEBUG] No response object found in error');
+    // Store whatever error data we have
+    errorDetails = {
+      errorType: typeof apiErr,
+      errorObject: apiErr instanceof Error ? { 
+        name: apiErr.name, 
+        message: apiErr.message, 
+        stack: apiErr.stack 
+      } : apiErr
+    };
   }
   
   // Store error details for diagnostics

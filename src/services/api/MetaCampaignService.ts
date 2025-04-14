@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -39,7 +40,9 @@ export class MetaCampaignService extends BaseApiService {
     }
 
     try {
-      console.log(`Fetching campaigns for ad account ${adAccountId}...`);
+      console.log(`[CAMPAIGN FETCH] Starting campaign fetch for ad account: ${adAccountId}...`);
+      console.log(`[CAMPAIGN FETCH] Token: ${token.substring(0, 8)}...`);
+      
       this.validateToken(token, 'fetchCampaigns');
       
       if (!adAccountId) {
@@ -59,7 +62,10 @@ export class MetaCampaignService extends BaseApiService {
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
       
       // Use the funnel service to get campaign data via batch API
+      console.log('[CAMPAIGN FETCH] Making API call via MetaFunnelService...');
       const { campaigns } = await MetaFunnelService.fetchFunnelData(token, adAccountId);
+      
+      console.log(`[CAMPAIGN FETCH] Success! Received ${campaigns.length} campaigns`);
       
       // Store metadata for diagnostics
       localStorage.setItem('last_campaign_count', campaigns.length.toString());
@@ -68,7 +74,21 @@ export class MetaCampaignService extends BaseApiService {
       
       return campaigns;
     } catch (error: any) {
-      console.error(`Error fetching campaigns for ad account ${adAccountId}:`, error);
+      console.error(`[CAMPAIGN FETCH] Error fetching campaigns for ad account ${adAccountId}:`, error);
+      console.error(`[CAMPAIGN FETCH] Error details:`, error?.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        headers: Object.fromEntries([...error.response.headers.entries()]),
+      } : 'No response details available');
+      
+      if (error?.response) {
+        try {
+          const responseText = await error.response.text();
+          console.error(`[CAMPAIGN FETCH] Error response body:`, responseText);
+        } catch (e) {
+          console.error(`[CAMPAIGN FETCH] Could not read error response text:`, e);
+        }
+      }
       
       localStorage.setItem('last_campaign_fetch_success', 'false');
       localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
