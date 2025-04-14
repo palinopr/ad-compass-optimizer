@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAdAccountsFetching } from './useAdAccountsFetching';
 import { useAdAccountSelection } from './useAdAccountSelection';
@@ -17,13 +16,13 @@ export const useAdAccounts = () => {
   
   const [retryCount, setRetryCount] = useState(0);
   
-  // Handler for refresh events with debouncing
+  // Update error handling in fetchAdAccounts 
   const handleRefreshEvent = useCallback(() => {
     console.log('Ad account refresh event received');
     fetchAdAccounts();
   }, [fetchAdAccounts]);
   
-  // Fetch ad accounts on initial load and set up event listeners
+  // Effect for initial fetch and event listeners setup
   useEffect(() => {
     console.log('Initializing useAdAccounts hook');
     
@@ -35,10 +34,16 @@ export const useAdAccounts = () => {
         await fetchAdAccounts();
       } catch (err) {
         console.error('Failed to fetch ad accounts on initial load:', err);
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : typeof err === 'string' 
+            ? err 
+            : 'Unknown error occurred';
+            
         if (isMounted && retryCount < 2) {
           console.log(`Retrying fetch (attempt ${retryCount + 1})...`);
           setRetryCount(prev => prev + 1);
-          setTimeout(performInitialFetch, 1000); // Retry after 1 second
+          setTimeout(performInitialFetch, 1000);
         }
       }
     };
@@ -67,7 +72,7 @@ export const useAdAccounts = () => {
       window.removeEventListener('ad-account-changed', debouncedRefresh);
     };
   }, [fetchAdAccounts, handleRefreshEvent, retryCount]);
-  
+
   return {
     adAccounts,
     selectedAccount,
