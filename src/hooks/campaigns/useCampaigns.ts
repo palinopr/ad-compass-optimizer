@@ -70,34 +70,49 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     }
   }, [isMockMode, mockCampaigns, updateCampaigns, campaigns.length]);
 
-  // Listen for the sync-mock-campaigns event
+  // ENHANCED: Explicitly handle the sync-mock-campaigns event
   useEffect(() => {
     const handleSyncMockCampaigns = (event: CustomEvent) => {
       if (event.detail?.campaigns && Array.isArray(event.detail.campaigns)) {
-        console.log(`[MOCK META SYNC] Received ${event.detail.campaigns.length} campaigns to update`);
-        updateCampaigns(event.detail.campaigns);
+        const incomingCampaigns = event.detail.campaigns;
+        console.log(`[MOCK META SYNC] Received ${incomingCampaigns.length} campaigns to update`);
+        
+        // Save current ad account context to storage for diagnostic purposes
+        const selectedAdAccount = localStorage.getItem('selected_ad_account') || 'unknown';
+        localStorage.setItem('last_mock_sync_adaccount', selectedAdAccount);
+        
+        // Get current campaign count for logging
+        const prevCount = campaigns.length;
+        
+        // Update campaigns state with incoming data
+        updateCampaigns(incomingCampaigns);
+        
+        // Log detailed information for debugging
+        console.log(`[MOCK META SYNC] Updated campaigns: ${prevCount} → ${incomingCampaigns.length}`, {
+          firstCampaignId: incomingCampaigns[0]?.id || 'none',
+          adAccountContext: selectedAdAccount,
+          timestamp: new Date().toISOString()
+        });
       }
     };
     
+    // Add event listener for sync events
     window.addEventListener('sync-mock-campaigns', handleSyncMockCampaigns as EventListener);
     
     return () => {
       window.removeEventListener('sync-mock-campaigns', handleSyncMockCampaigns as EventListener);
     };
-  }, [updateCampaigns]);
+  }, [campaigns.length, updateCampaigns]);
 
-  // Add an additional effect to detect and fix empty campaign state in mock mode
-  useEffect(() => {
-    if (isMockMode() && campaigns.length === 0 && !isLoading) {
-      // This is a safety mechanism to ensure we always have data in mock mode
-      console.log('🎭 Mock mode safety check: No campaigns in state, triggering refresh');
-      const timer = setTimeout(() => {
-        handleFetchCampaigns(true);
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isMockMode, campaigns.length, isLoading, handleFetchCampaigns]);
+  // Export forceUiRefresh to be used by other components
+  const exposedForceUiRefresh = useCallback(() => {
+    console.log('🎭 [MOCK DEBUG] External component called forceUiRefresh');
+    forceUiRefresh();
+    // Small delay and then force render again to ensure UI updates
+    setTimeout(() => {
+      setForceRender(prev => prev + 1);
+    }, 200);
+  }, [forceUiRefresh]);
 
   useCampaignEventListeners(
     handleFetchCampaigns,
@@ -115,6 +130,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     errorDetails,
     refetchCampaigns: handleFetchCampaigns,
     displayRefresh,
-    forceRender
+    forceRender,
+    forceUiRefresh: exposedForceUiRefresh
   };
 }

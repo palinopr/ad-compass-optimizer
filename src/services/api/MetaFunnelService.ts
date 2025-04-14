@@ -6,6 +6,7 @@ import { InsightsThrottling } from './insights/throttling';
 import { mockFunnelData } from './mock/mockCampaignData';
 import { MockApiService } from './mock/MockApiService';
 import { BaseMockService } from '../meta/BaseMockService';
+import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 
 export class MetaFunnelService {
   public static isMockMode(): boolean {
@@ -18,9 +19,26 @@ export class MetaFunnelService {
         console.log('🎭 Using mock funnel data');
         const mockData = MockApiService.getMockFunnelData();
         
-        // Sync the mock campaigns with global state 
-        // Use BaseMockService's static sync function
-        BaseMockService.syncMockCampaignsToState(mockData.campaigns);
+        // Ensure we're using the correct ad account ID in the event data
+        const mockCampaigns = mockData.campaigns.map(campaign => ({
+          ...campaign,
+          // Add the selected ad account ID to ensure proper syncing
+          ad_account_id: adAccountId || 'act_mock_account'
+        }));
+        
+        // Update the mockData with the updated campaigns
+        mockData.campaigns = mockCampaigns;
+        
+        // ENHANCED SYNC: Explicitly sync the mock campaigns with global state 
+        // Ensure BaseMockService.syncMockCampaignsToState is called
+        console.log(`🎭 [Enhanced Sync] Syncing ${mockCampaigns.length} mock campaigns for account: ${adAccountId}`);
+        BaseMockService.syncMockCampaignsToState(mockCampaigns);
+        
+        // Also trigger a refresh event to ensure components update
+        setTimeout(() => {
+          console.log('🎭 Triggering campaign refresh to ensure UI state consistency');
+          triggerCampaignRefresh(false);
+        }, 300);
         
         return mockData;
       }
