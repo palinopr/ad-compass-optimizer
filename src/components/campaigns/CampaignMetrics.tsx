@@ -34,10 +34,10 @@ const MetricItem: React.FC<MetricItemProps> = ({ label, value, icon, change, pos
 };
 
 interface CampaignMetricsProps {
-  impressions: string;
-  clicks: string;
-  spend: string;
-  cpa: string;
+  impressions?: string;
+  clicks?: string;
+  spend?: string;
+  cpa?: string;
 }
 
 const CampaignMetrics: React.FC<CampaignMetricsProps> = ({

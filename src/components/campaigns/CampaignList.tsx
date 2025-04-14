@@ -201,6 +201,62 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
 
   const hasFilteredResults = filteredCampaigns.length > 0;
   
+  // Calculate metrics summaries from campaign data
+  const calculateMetrics = () => {
+    let totalImpressions = 0;
+    let totalClicks = 0;
+    let totalSpend = 0;
+    let totalCPA = 0;
+    let validCPACount = 0;
+    
+    filteredCampaigns.forEach(campaign => {
+      if (campaign.insights) {
+        // Handle impressions
+        if (campaign.insights.impressions) {
+          totalImpressions += parseInt(campaign.insights.impressions.replace(/,/g, '')) || 0;
+        }
+        
+        // Handle clicks
+        if (campaign.insights.clicks) {
+          totalClicks += parseInt(campaign.insights.clicks.replace(/,/g, '')) || 0;
+        }
+        
+        // Handle spend (removing $ and converting to number)
+        if (campaign.spend) {
+          const spendValue = parseFloat(campaign.spend.replace(/[$,]/g, '')) || 0;
+          totalSpend += spendValue;
+        }
+        
+        // Handle CPA
+        if (campaign.insights.cpa && campaign.insights.cpa !== '-') {
+          const cpaValue = parseFloat(campaign.insights.cpa.replace(/[$,]/g, '')) || 0;
+          if (cpaValue > 0) {
+            totalCPA += cpaValue;
+            validCPACount++;
+          }
+        }
+      }
+    });
+    
+    // Format numbers for display
+    const formatter = new Intl.NumberFormat('en-US');
+    const currencyFormatter = new Intl.NumberFormat('en-US', { 
+      style: 'currency', 
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    return {
+      impressions: formatter.format(totalImpressions),
+      clicks: formatter.format(totalClicks),
+      spend: currencyFormatter.format(totalSpend),
+      cpa: validCPACount > 0 ? currencyFormatter.format(totalCPA / validCPACount) : '$0.00'
+    };
+  };
+  
+  const metrics = calculateMetrics();
+  
   return (
     <>
       <CampaignFilterToolbar 
@@ -212,11 +268,19 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         isLoading={isLoading}
       />
       
-      <CampaignMetrics metrics={metrics} />
+      <CampaignMetrics 
+        impressions={metrics.impressions}
+        clicks={metrics.clicks}
+        spend={metrics.spend}
+        cpa={metrics.cpa}
+      />
   
       <Card>
         {hasFilteredResults ? (
-          <CampaignTable campaigns={filteredCampaigns} />
+          <CampaignTable 
+            campaigns={filteredCampaigns}
+            status={status} 
+          />
         ) : (
           <div className="p-8 text-center">
             <p className="text-gray-500">No campaigns match the current filters.</p>

@@ -13,10 +13,10 @@ import { MetaCampaign } from '@/services/api/MetaCampaignService';
 
 interface CampaignTableProps {
   campaigns: MetaCampaign[];
-  status: 'active' | 'draft' | 'archived';
+  status?: 'active' | 'draft' | 'archived';
 }
 
-const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status }) => {
+const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'active' }) => {
   return (
     <CardContent className="p-0">
       <Table>

@@ -35,7 +35,7 @@ const NoCampaignsFoundPanel: React.FC<NoCampaignsFoundPanelProps> = ({
       </CardHeader>
       
       <CardContent className="space-y-4">
-        <Alert variant="warning">
+        <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Ad Account Information</AlertTitle>
           <AlertDescription>
