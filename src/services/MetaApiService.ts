@@ -118,6 +118,31 @@ export class MetaApiService {
       MetaInsightsService.fetchGeographicInsights(token, objectId, options)
     );
   }
+
+  // Rate Limit Delegation Methods
+  public static isRateLimited(): boolean {
+    return RateLimitManager.isRateLimited();
+  }
+
+  public static getRateLimitTimeRemaining(): number | null {
+    return RateLimitManager.getRateLimitTimeRemaining();
+  }
+
+  public static getRateLimitInfo(): any {
+    return RateLimitManager.getRateLimitInfo();
+  }
+
+  public static clearRateLimit(): void {
+    RateLimitManager.clearRateLimit();
+  }
+
+  public static overrideRateLimit(override: boolean = true): void {
+    RateLimitManager.overrideRateLimit(override);
+  }
+
+  public static isRateLimitOverridden(): boolean {
+    return RateLimitManager.isRateLimitOverridden();
+  }
 }
 
 // Initialize rate limit state
