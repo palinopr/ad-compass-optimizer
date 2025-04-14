@@ -1,5 +1,12 @@
 
-// Add or update the `ComprehensiveDiagnosticResult` interface to include `dataCheck`
+export interface TokenAnalysisResult {
+  isValid: boolean;
+  message: string;
+  severity: 'high' | 'medium' | 'low';
+  issues: string[];
+  recommendations: string[];
+}
+
 export interface ComprehensiveDiagnosticResult {
   timestamp: string;
   browser: {
@@ -9,9 +16,7 @@ export interface ComprehensiveDiagnosticResult {
   };
   token: {
     hasToken: boolean;
-    tokenLength: number;
-    hasAdsRead: boolean;
-    hasAdsManagement: boolean;
+    tokenLength?: number;
   };
   tokenAnalysis: TokenAnalysisResult;
   api: {
@@ -36,22 +41,4 @@ export interface ComprehensiveDiagnosticResult {
     issues: string[];
     recommendations: string[];
   };
-  dataCheck?: {
-    adAccountSelected: boolean;
-    lastCampaignFetchAttempt?: string;
-    lastCampaignFetchSuccess?: string;
-    lastCampaignCount?: string;
-  };
-}
-
-export interface TokenAnalysisResult {
-  isValid: boolean;
-  message: string;
-  likelyIssue?: string;
-  ageInDays?: number;
-  daysUntilExpiry?: number;
-  // Add these properties to fix the type errors
-  severity?: 'high' | 'medium' | 'low';
-  issues: string[];
-  recommendations: string[];
 }
