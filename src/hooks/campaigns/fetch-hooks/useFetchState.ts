@@ -1,13 +1,14 @@
-
 import { useState, useRef, useCallback } from 'react';
 import { debounce } from 'lodash';
+import { toast } from '@/hooks/use-toast';
 
 export const useFetchState = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const isFetchingRef = useRef(false);
   const lastFetchTimeRef = useRef(0);
   const mountedRef = useRef(true);
-  const cooldownTimeRef = useRef(5000); // Default cooldown of 5 seconds
+  const cooldownTimeRef = useRef(5000);
 
   const startFetch = useCallback(() => {
     if (mountedRef.current) {
@@ -31,7 +32,6 @@ export const useFetchState = () => {
     }
 
     const now = Date.now();
-    // Use dynamic cooldown time that increases if rate limits are hit
     const minWaitTime = cooldownTimeRef.current;
     
     if (now - lastFetchTimeRef.current < minWaitTime && !forceRefresh) {
@@ -42,12 +42,30 @@ export const useFetchState = () => {
     return true;
   }, []);
 
-  // Create debounced versions of key functions
+  const handleFetchSuccess = useCallback(() => {
+    setConsecutiveFailures(0);
+    endFetch();
+  }, [endFetch]);
+
+  const handleFetchFailure = useCallback(() => {
+    setConsecutiveFailures(prev => {
+      const newCount = prev + 1;
+      if (newCount >= 3) {
+        toast({
+          title: "⚠️ Multiple Fetch Failures",
+          description: "Campaigns failed to load 3 times in a row. Try refreshing your connection or switching ad accounts.",
+          variant: "destructive",
+          duration: 10000,
+        });
+      }
+      return newCount;
+    });
+    endFetch();
+  }, [endFetch]);
+
   const debouncedStartFetch = debounce(startFetch, 300);
   
-  // Function to increase cooldown time when rate limits are hit
   const increaseCooldown = useCallback(() => {
-    // Double the cooldown time when rate limit issues occur, up to 60 seconds
     cooldownTimeRef.current = Math.min(cooldownTimeRef.current * 2, 60000);
     console.log(`Increased fetch cooldown to ${cooldownTimeRef.current}ms due to potential rate limiting`);
   }, []);
@@ -58,10 +76,13 @@ export const useFetchState = () => {
     lastFetchTimeRef,
     mountedRef,
     cooldownTimeRef,
+    consecutiveFailures,
     startFetch,
     debouncedStartFetch,
     endFetch,
     canFetch,
-    increaseCooldown
+    increaseCooldown,
+    handleFetchSuccess,
+    handleFetchFailure
   };
 };

@@ -118,10 +118,13 @@ export const handleApiError = async (apiErr: any): Promise<{
   };
 };
 
-export const processFetchError = (err: any): {
+export const processFetchError = (err: any, onFetchFailure?: () => void): {
   error: string;
   errorDetails: any;
 } => {
+  // Notify of fetch failure
+  onFetchFailure?.();
+
   // Check for rate limit messages in the error
   if (isRateLimitError(err)) {
     console.log('Rate limit error detected in catch block');

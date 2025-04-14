@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -19,11 +18,13 @@ export function useCampaignFetcher() {
     endFetch, 
     canFetch, 
     mountedRef, 
-    increaseCooldown
+    increaseCooldown,
+    handleFetchSuccess,
+    handleFetchFailure,
+    consecutiveFailures
   } = useFetchState();
   const { validateToken } = useTokenValidation();
   
-  // Function to check if mock mode is active
   const isMockMode = () => {
     return localStorage.getItem("USE_MOCK_MODE") === "true";
   };
@@ -34,14 +35,11 @@ export function useCampaignFetcher() {
     status?: string,
     forceRefresh: boolean = false
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
-    // Handle mock mode
     if (isMockMode()) {
       console.log('🎭 Mock mode: Returning mock campaign data');
       
-      // Get campaigns from mock data
       let campaigns = [...mockFunnelData.campaigns];
       
-      // Apply status filter if provided
       if (status && status !== 'all') {
         campaigns = campaigns.filter(campaign => 
           campaign.status?.toLowerCase() === status.toLowerCase()
@@ -127,11 +125,11 @@ export function useCampaignFetcher() {
         }
       }
 
+      handleFetchSuccess();
       return { campaigns, error: null };
     } catch (err: any) {
       console.error('[CAMPAIGN DEBUG] Fetch error:', err);
       
-      // Log error details
       console.error('[CAMPAIGN DEBUG] Error type:', typeof err);
       console.error('[CAMPAIGN DEBUG] Error properties:', Object.keys(err));
       
@@ -149,11 +147,12 @@ export function useCampaignFetcher() {
       }
       
       const { error, errorDetails } = handleError(err, adAccountId);
+      handleFetchFailure();
       return { campaigns: [], error, errorDetails };
     } finally {
       endFetch();
     }
-  }, [canFetch, startFetch, endFetch, clearErrors, handleError, validateToken, mountedRef, increaseCooldown]);
+  }, [canFetch, startFetch, endFetch, clearErrors, handleError, validateToken, mountedRef, increaseCooldown, handleFetchSuccess, handleFetchFailure]);
 
   const debouncedFetchCampaignData = useCallback(
     debounce(fetchCampaignData, 1000),
@@ -165,6 +164,7 @@ export function useCampaignFetcher() {
     debouncedFetchCampaignData,
     isLoading,
     error,
-    errorDetails
+    errorDetails,
+    consecutiveFailures
   };
 }
