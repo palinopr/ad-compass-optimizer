@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from '@/pages/Dashboard';
@@ -8,6 +7,7 @@ import Messages from '@/pages/Messages';
 import Profile from '@/pages/Profile';
 import { SharedMetaConnectionProvider } from '@/components/meta/SharedMetaConnectionProvider';
 import { Toaster } from '@/components/ui/toaster';
+import FunnelViewContainer from '@/components/funnel/FunnelViewContainer';
 
 function App() {
   return (
@@ -17,6 +17,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/meta-integration" element={<MetaIntegration />} />
           <Route path="/campaigns" element={<Campaigns />} />
+          <Route path="/funnel" element={<FunnelViewContainer />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/analytics" element={<Dashboard />} /> 
