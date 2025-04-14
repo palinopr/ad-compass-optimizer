@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface LastMetaErrorProps {
   lastMetaError: {
@@ -18,9 +18,17 @@ interface LastMetaErrorProps {
 }
 
 const LastMetaError: React.FC<LastMetaErrorProps> = ({ lastMetaError }) => {
+  const { toast } = useToast();
+
   const handleClearErrorLog = () => {
     localStorage.removeItem('last_meta_error');
     localStorage.removeItem('last_meta_error_at');
+    
+    toast({
+      title: "🧹 Error Log Cleared",
+      description: "Last Meta API error has been removed from diagnostics.",
+    });
+
     window.location.reload();
   };
 
