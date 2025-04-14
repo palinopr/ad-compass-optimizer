@@ -8,27 +8,38 @@ import { shouldThrottleFetch } from '@/hooks/campaigns/fetch-utils/rateLimitStat
 
 export class InsightsThrottling {
   private static lastFetchTime: number = 0;
+  private static currentAccountId: string | undefined;
   
   /**
    * Check and apply throttling as needed
    */
-  public static checkThrottling(): void {
+  public static checkThrottling(accountId?: string): void {
+    // Set current account ID for this request
+    this.currentAccountId = accountId;
+    
     // Apply throttling based on previous fetch time
     const now = Date.now();
-    if (shouldThrottleFetch()) {
-      console.log('Throttling insights fetch - too soon after last fetch');
+    if (shouldThrottleFetch(accountId)) {
+      console.log(`Throttling insights fetch for account ${accountId} - too soon after last fetch`);
       throw new Error('Rate limiting: Please wait before making another request');
     }
     
     // Check if we've recently hit a rate limit
-    const rateStatus = checkRateLimitStatus();
+    const rateStatus = checkRateLimitStatus(accountId);
     if (rateStatus.isRateLimited) {
-      console.log(`Rate limit active, remaining time: ${rateStatus.timeRemaining} minutes`);
+      console.log(`Rate limit active for account ${accountId}, remaining time: ${rateStatus.timeRemaining} minutes`);
       throw new Error(`Meta API rate limit reached. Please wait approximately ${rateStatus.timeRemaining} more minutes.`);
     }
     
     // Update last fetch time
     this.lastFetchTime = now;
+    
+    // Store fetch time per account
+    if (accountId) {
+      localStorage.setItem(`last_api_fetch_time_${accountId}`, new Date().toISOString());
+    } else {
+      localStorage.setItem('last_api_fetch_time', new Date().toISOString());
+    }
   }
   
   /**
@@ -46,7 +57,7 @@ export class InsightsThrottling {
         
         // If we're at 100%, mark as rate limited
         if (usage.call_count >= 100 || usage.total_cputime >= 100 || usage.total_time >= 100) {
-          markRateLimited();
+          markRateLimited(15, this.currentAccountId);
         }
       } catch (e) {
         console.error('Error parsing API usage data:', e);
@@ -63,7 +74,7 @@ export class InsightsThrottling {
       error.message.includes('request limit') ||
       error.message.includes('too many calls')
     )) {
-      markRateLimited();
+      markRateLimited(15, this.currentAccountId);
       return true;
     }
     return false;

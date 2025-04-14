@@ -7,19 +7,30 @@ import { toast } from "@/hooks/use-toast";
 import { getBackoffTime } from "./rateLimitConfig";
 
 // Rate limit state tracking
-const RATE_LIMIT_KEY = 'meta_rate_limit_timestamp';
-const RATE_LIMIT_HISTORY_KEY = 'meta_rate_limit_history';
+const RATE_LIMIT_KEY_PREFIX = 'meta_rate_limit_timestamp_';
+const RATE_LIMIT_HISTORY_KEY_PREFIX = 'meta_rate_limit_history_';
+
+/**
+ * Get account-specific storage key
+ */
+const getAccountSpecificKey = (key: string, accountId?: string) => {
+  if (!accountId) return key;
+  return `${key}${accountId}`;
+};
 
 /**
  * Check if the app is currently rate limited
  */
-export const checkRateLimitStatus = () => {
-  const timestamp = localStorage.getItem(RATE_LIMIT_KEY);
+export const checkRateLimitStatus = (accountId?: string) => {
+  const key = getAccountSpecificKey(RATE_LIMIT_KEY_PREFIX, accountId);
+  const timestamp = localStorage.getItem(key);
+  
   if (!timestamp) {
     return {
       isRateLimited: false,
       timeRemaining: null,
-      rateLimitTimestamp: null
+      rateLimitTimestamp: null,
+      accountId
     };
   }
 
@@ -29,53 +40,61 @@ export const checkRateLimitStatus = () => {
   
   // If more than 10 minutes have passed, clear the rate limit
   if (diffMinutes <= 0) {
-    clearRateLimit();
+    clearRateLimit(accountId);
     return {
       isRateLimited: false,
       timeRemaining: null,
-      rateLimitTimestamp: null
+      rateLimitTimestamp: null,
+      accountId
     };
   }
 
   return {
     isRateLimited: true,
     timeRemaining: Math.ceil(diffMinutes),
-    rateLimitTimestamp: timestamp
+    rateLimitTimestamp: timestamp,
+    accountId
   };
 };
 
 /**
  * Mark the app as rate limited for a period of time
  */
-export const markRateLimited = (minutes = 10) => {
+export const markRateLimited = (minutes = 10, accountId?: string) => {
   const futureTime = new Date();
   futureTime.setMinutes(futureTime.getMinutes() + minutes);
-  localStorage.setItem(RATE_LIMIT_KEY, futureTime.toISOString());
+  
+  const key = getAccountSpecificKey(RATE_LIMIT_KEY_PREFIX, accountId);
+  localStorage.setItem(key, futureTime.toISOString());
   
   // Add to rate limit history for adaptive backoff
-  const history = JSON.parse(localStorage.getItem(RATE_LIMIT_HISTORY_KEY) || '[]');
+  const historyKey = getAccountSpecificKey(RATE_LIMIT_HISTORY_KEY_PREFIX, accountId);
+  const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
   history.push(new Date().toISOString());
   if (history.length > 10) {
     history.shift(); // Keep only the 10 most recent entries
   }
-  localStorage.setItem(RATE_LIMIT_HISTORY_KEY, JSON.stringify(history));
+  localStorage.setItem(historyKey, JSON.stringify(history));
   
   return {
     isRateLimited: true,
     timeRemaining: minutes,
-    rateLimitTimestamp: futureTime.toISOString()
+    rateLimitTimestamp: futureTime.toISOString(),
+    accountId
   };
 };
 
 /**
  * Clear the rate limit status
  */
-export const clearRateLimit = () => {
-  localStorage.removeItem(RATE_LIMIT_KEY);
+export const clearRateLimit = (accountId?: string) => {
+  const key = getAccountSpecificKey(RATE_LIMIT_KEY_PREFIX, accountId);
+  localStorage.removeItem(key);
   return {
     isRateLimited: false,
     timeRemaining: null,
-    rateLimitTimestamp: null
+    rateLimitTimestamp: null,
+    accountId
   };
 };
 
@@ -94,9 +113,10 @@ export const notifyRateLimit = (timeRemaining: number) => {
 /**
  * Check if we should throttle fetches to prevent rate limits
  */
-export const shouldThrottleFetch = () => {
+export const shouldThrottleFetch = (accountId?: string) => {
   // Get rate limit history
-  const history = JSON.parse(localStorage.getItem(RATE_LIMIT_HISTORY_KEY) || '[]');
+  const historyKey = getAccountSpecificKey(RATE_LIMIT_HISTORY_KEY_PREFIX, accountId);
+  const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
   const recentRateLimits = history.filter((timestamp: string) => {
     const rateTime = new Date(timestamp).getTime();
     const currentTime = new Date().getTime();
@@ -105,7 +125,7 @@ export const shouldThrottleFetch = () => {
   }).length;
   
   // If we've had multiple rate limits recently, throttle more aggressively
-  const lastFetchTime = localStorage.getItem('last_api_fetch_time');
+  const lastFetchTime = localStorage.getItem('last_api_fetch_time' + (accountId ? `_${accountId}` : ''));
   if (!lastFetchTime) return false;
   
   const currentTime = new Date().getTime();

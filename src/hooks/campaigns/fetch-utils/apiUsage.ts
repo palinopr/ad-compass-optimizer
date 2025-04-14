@@ -1,64 +1,94 @@
 
 /**
- * Save API usage data for diagnostics
+ * API usage tracking utilities
  */
-export const saveApiUsageData = (headers: Headers): void => {
+
+// Storage keys
+const API_USAGE_KEY_PREFIX = 'meta_api_usage_';
+
+/**
+ * Get account-specific usage key
+ */
+const getAccountUsageKey = (accountId?: string) => {
+  if (!accountId) return API_USAGE_KEY_PREFIX;
+  return `${API_USAGE_KEY_PREFIX}${accountId}`;
+};
+
+/**
+ * Store API usage data
+ */
+export const storeApiUsage = (usageData: any, accountId?: string) => {
   try {
-    const usageData: {
-      appUsage?: string;
-      businessUsage?: string;
-      timestamp: string;
-    } = {
+    const key = getAccountUsageKey(accountId);
+    
+    // Store with timestamp
+    const storedData = {
+      usage: usageData,
       timestamp: new Date().toISOString()
     };
     
-    // Extract usage data from headers
-    const appUsage = headers.get('x-app-usage') || headers.get('x-app-usage-batch');
-    const businessUsage = headers.get('x-business-use-case-usage');
-    
-    if (appUsage) {
-      usageData.appUsage = appUsage;
-    }
-    
-    if (businessUsage) {
-      usageData.businessUsage = businessUsage;
-    }
-    
-    if (appUsage || businessUsage) {
-      localStorage.setItem('meta_api_last_usage', JSON.stringify(usageData));
-      console.log('Saved API usage data:', usageData);
-    }
+    localStorage.setItem(key, JSON.stringify(storedData));
+    console.log(`Stored API usage for account ${accountId || 'default'}`);
   } catch (e) {
-    console.error('Error saving API usage data:', e);
+    console.error('Error storing API usage:', e);
   }
 };
 
 /**
- * Check for rate limit based on API usage headers
+ * Get stored API usage data
  */
-export const checkUsageHeaders = (headers: Headers): boolean => {
+export const getApiUsage = (accountId?: string) => {
   try {
-    // Check x-app-usage header
-    const appUsageHeader = headers.get('x-app-usage') || headers.get('x-app-usage-batch');
-    if (appUsageHeader) {
-      try {
-        const appUsage = JSON.parse(appUsageHeader);
-        // If call_count or total_cputime is over 95%, we're nearing rate limit
-        if ((appUsage.call_count && appUsage.call_count > 95) || 
-            (appUsage.total_cputime && appUsage.total_cputime > 95) ||
-            (appUsage.total_time && appUsage.total_time > 95)) {
-          
-          console.warn('Rate limit threshold approaching:', appUsage);
-          return true;
-        }
-      } catch (e) {
-        console.error('Error parsing x-app-usage header:', e);
-      }
+    const key = getAccountUsageKey(accountId);
+    const storedData = localStorage.getItem(key);
+    
+    if (!storedData) {
+      return null;
     }
     
-    return false;
+    return JSON.parse(storedData);
   } catch (e) {
-    console.error('Error checking usage headers:', e);
+    console.error('Error getting API usage:', e);
+    return null;
+  }
+};
+
+/**
+ * Check if we're approaching API usage limits
+ */
+export const isApproachingUsageLimit = (accountId?: string) => {
+  const usageData = getApiUsage(accountId);
+  
+  if (!usageData || !usageData.usage) {
     return false;
   }
+  
+  const { usage } = usageData;
+  
+  // Check if any usage metrics are over 80%
+  return (
+    usage.call_count > 80 || 
+    usage.total_cputime > 80 || 
+    usage.total_time > 80
+  );
+};
+
+/**
+ * Get usage percentage (highest of all metrics)
+ */
+export const getUsagePercentage = (accountId?: string) => {
+  const usageData = getApiUsage(accountId);
+  
+  if (!usageData || !usageData.usage) {
+    return 0;
+  }
+  
+  const { usage } = usageData;
+  
+  // Return the highest percentage from all metrics
+  return Math.max(
+    usage.call_count || 0,
+    usage.total_cputime || 0,
+    usage.total_time || 0
+  );
 };

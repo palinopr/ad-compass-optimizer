@@ -3,93 +3,131 @@
  * Campaign caching utilities
  */
 
-import { toast } from '@/hooks/use-toast';
+import { toast } from "@/hooks/use-toast";
 
-const CACHE_KEY = 'cached_campaign_data';
-const CACHE_TIMESTAMP_KEY = 'campaign_cache_timestamp';
-const CACHE_ACCOUNT_KEY = 'campaign_cache_account';
+const CAMPAIGN_CACHE_KEY_PREFIX = 'meta_campaign_cache_';
+const CAMPAIGN_CACHE_TIMESTAMP_PREFIX = 'meta_campaign_cache_timestamp_';
 
 /**
- * Get cached campaigns if available
+ * Get account-specific cache key
  */
-export const getCachedCampaigns = () => {
+const getAccountCacheKey = (accountId?: string) => {
+  if (!accountId) return CAMPAIGN_CACHE_KEY_PREFIX;
+  return `${CAMPAIGN_CACHE_KEY_PREFIX}${accountId}`;
+};
+
+/**
+ * Get account-specific timestamp key
+ */
+const getAccountTimestampKey = (accountId?: string) => {
+  if (!accountId) return CAMPAIGN_CACHE_TIMESTAMP_PREFIX;
+  return `${CAMPAIGN_CACHE_TIMESTAMP_PREFIX}${accountId}`;
+};
+
+/**
+ * Store campaigns in cache
+ */
+export const storeCampaignsInCache = (campaigns: any[], accountId?: string) => {
   try {
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    const cacheTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-    const cacheAccount = localStorage.getItem(CACHE_ACCOUNT_KEY);
+    // Store campaigns
+    const cacheKey = getAccountCacheKey(accountId);
+    localStorage.setItem(cacheKey, JSON.stringify(campaigns));
     
-    if (!cachedData || !cacheTimestamp || !cacheAccount) {
-      return { campaigns: null, timestamp: null, adAccountId: null };
+    // Store timestamp
+    const timestampKey = getAccountTimestampKey(accountId);
+    localStorage.setItem(timestampKey, new Date().toISOString());
+    
+    console.log(`Cached ${campaigns.length} campaigns for account ${accountId || 'default'}`);
+  } catch (e) {
+    console.error('Error caching campaigns:', e);
+  }
+};
+
+/**
+ * Get cached campaigns
+ */
+export const getCachedCampaigns = (accountId?: string) => {
+  try {
+    // Get campaigns
+    const cacheKey = getAccountCacheKey(accountId);
+    const cachedData = localStorage.getItem(cacheKey);
+    
+    if (!cachedData) {
+      return { campaigns: null, timestamp: null };
     }
     
-    const campaigns = JSON.parse(cachedData);
+    // Get timestamp
+    const timestampKey = getAccountTimestampKey(accountId);
+    const timestamp = localStorage.getItem(timestampKey);
     
-    // Check cache freshness - consider cache valid for 30 minutes
-    const cacheDateMs = new Date(cacheTimestamp).getTime();
-    const now = new Date().getTime();
-    const cacheAge = (now - cacheDateMs) / (1000 * 60); // age in minutes
-    
-    if (cacheAge > 30) {
-      console.log(`Cache is stale (${Math.round(cacheAge)} minutes old)`);
-      return { campaigns: null, timestamp: null, adAccountId: null };
-    }
-    
-    console.log(`Using cached campaign data from ${new Date(cacheTimestamp).toLocaleTimeString()}`);
-    
-    return { 
-      campaigns, 
-      timestamp: cacheTimestamp,
-      adAccountId: cacheAccount
+    return {
+      campaigns: JSON.parse(cachedData),
+      timestamp
     };
   } catch (e) {
-    console.error('Error reading campaign cache:', e);
-    return { campaigns: null, timestamp: null, adAccountId: null };
+    console.error('Error getting cached campaigns:', e);
+    return { campaigns: null, timestamp: null };
   }
 };
 
 /**
- * Store campaigns in cache for future use
+ * Serve cached data with a notification
  */
-export const storeCampaignsInCache = (campaigns: any[], adAccountId: string) => {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(campaigns));
-    localStorage.setItem(CACHE_TIMESTAMP_KEY, new Date().toISOString());
-    localStorage.setItem(CACHE_ACCOUNT_KEY, adAccountId);
-    console.log(`Cached ${campaigns.length} campaigns for ad account ${adAccountId}`);
-  } catch (e) {
-    console.error('Error caching campaign data:', e);
-  }
-};
-
-/**
- * Serve cached data with notification to user
- */
-export const serveCachedDataWithNotification = (reason: string) => {
-  const { campaigns, timestamp } = getCachedCampaigns();
+export const serveCachedDataWithNotification = (reason: string, accountId?: string) => {
+  const { campaigns, timestamp } = getCachedCampaigns(accountId);
   
-  if (!campaigns || !timestamp) {
-    return { 
-      campaigns: [], 
-      error: 'No cached campaign data available during ' + reason,
-      errorDetails: { 
-        noCachedData: true, 
-        reason 
+  if (!campaigns) {
+    return { campaigns: [], error: `No cached data available (${reason})` };
+  }
+  
+  // Calculate how old the cache is
+  let cacheAge = 'unknown';
+  if (timestamp) {
+    try {
+      const cacheTime = new Date(timestamp).getTime();
+      const currentTime = new Date().getTime();
+      const diffMinutes = Math.floor((currentTime - cacheTime) / (1000 * 60));
+      
+      if (diffMinutes < 60) {
+        cacheAge = `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''}`;
+      } else {
+        const diffHours = Math.floor(diffMinutes / 60);
+        cacheAge = `${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
       }
-    };
+    } catch (e) {
+      console.error('Error calculating cache age:', e);
+    }
   }
   
-  // Notify the user we're using cached data
+  // Show toast notification
   toast({
-    title: "Using cached campaign data",
-    description: `Due to ${reason}, showing data from ${new Date(timestamp).toLocaleTimeString()}`,
-    variant: "default",
+    title: "Using Cached Data",
+    description: `Due to ${reason}, showing cached data from ${cacheAge} ago.`,
     duration: 5000,
   });
   
   return { 
-    campaigns, 
-    error: null, 
-    fromCache: true, 
-    cacheTimestamp: timestamp 
+    campaigns,
+    error: null,
+    fromCache: true,
+    cacheAge,
+    reason
   };
+};
+
+/**
+ * Clear cached campaigns
+ */
+export const clearCachedCampaigns = (accountId?: string) => {
+  try {
+    const cacheKey = getAccountCacheKey(accountId);
+    const timestampKey = getAccountTimestampKey(accountId);
+    
+    localStorage.removeItem(cacheKey);
+    localStorage.removeItem(timestampKey);
+    
+    console.log(`Cleared cached campaigns for account ${accountId || 'default'}`);
+  } catch (e) {
+    console.error('Error clearing cached campaigns:', e);
+  }
 };

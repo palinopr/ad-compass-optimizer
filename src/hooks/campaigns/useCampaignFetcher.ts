@@ -28,13 +28,13 @@ export function useCampaignFetcher() {
     status?: string
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
     // Prevent duplicate requests within a short time window
-    if (shouldThrottleFetch()) {
-      console.log('Throttling campaign fetch - too soon after last fetch');
+    if (shouldThrottleFetch(adAccountId)) {
+      console.log(`Throttling campaign fetch for account ${adAccountId} - too soon after last fetch`);
       
       // Try to return cached campaigns if available
-      const { campaigns } = getCachedCampaigns();
+      const { campaigns } = getCachedCampaigns(adAccountId);
       if (campaigns) {
-        return serveCachedDataWithNotification('throttling protection');
+        return serveCachedDataWithNotification('throttling protection', adAccountId);
       }
     }
     
@@ -52,17 +52,17 @@ export function useCampaignFetcher() {
     
     try {
       // Check if we've recently hit a rate limit
-      const rateStatus = checkRateLimitStatus();
+      const rateStatus = checkRateLimitStatus(adAccountId);
       
       if (rateStatus.isRateLimited) {
-        console.log(`Rate limit detected ${rateStatus.timeRemaining} minutes ago. Advising to wait.`);
+        console.log(`Rate limit detected for account ${adAccountId}, ${rateStatus.timeRemaining} minutes ago. Advising to wait.`);
         
         notifyRateLimit(rateStatus.timeRemaining || 0);
         
         // Try to use cached data if available
-        const { campaigns } = getCachedCampaigns();
+        const { campaigns } = getCachedCampaigns(adAccountId);
         if (campaigns) {
-          return serveCachedDataWithNotification('API rate limiting');
+          return serveCachedDataWithNotification('API rate limiting', adAccountId);
         }
         
         return { 
@@ -71,7 +71,8 @@ export function useCampaignFetcher() {
           errorDetails: { 
             code: 4,
             isRateLimit: true,
-            timeRemaining: rateStatus.timeRemaining
+            timeRemaining: rateStatus.timeRemaining,
+            accountId: adAccountId
           }
         };
       }
@@ -86,7 +87,7 @@ export function useCampaignFetcher() {
         const campaignsResult = await executeCampaignFetch(fetchFunction, adAccountId);
         
         // Store in cache for future use
-        if (campaignsResult.campaigns) {
+        if (campaignsResult?.campaigns) {
           storeCampaignsInCache(campaignsResult.campaigns, adAccountId);
         }
         
@@ -94,34 +95,34 @@ export function useCampaignFetcher() {
         lastFetchTimestampRef.current = Date.now();
         
         // Filter by status if provided
-        const filteredCampaigns = filterCampaignsByStatus(campaignsResult.campaigns, status);
+        const filteredCampaigns = filterCampaignsByStatus(campaignsResult?.campaigns || [], status);
         
         return { campaigns: filteredCampaigns, error: null };
       } catch (apiErr: any) {
         // Handle API errors
-        const { campaigns } = getCachedCampaigns();
+        const { campaigns } = getCachedCampaigns(adAccountId);
         if (campaigns && apiErr.isRateLimit) {
-          return serveCachedDataWithNotification('API rate limiting');
+          return serveCachedDataWithNotification('API rate limiting', adAccountId);
         }
         
         throw apiErr;
       }
     } catch (err: any) {
       // Process any errors that occur during fetching
-      const processedError = processFetchError(err);
+      const processedError = processFetchError(err, adAccountId);
       const { error, errorDetails } = processedError;
       
       // If it's a rate limit error and we have cached data, serve it
       if (errorDetails?.isRateLimit) {
-        const { campaigns } = getCachedCampaigns();
+        const { campaigns } = getCachedCampaigns(adAccountId);
         if (campaigns) {
-          return serveCachedDataWithNotification('API rate limiting');
+          return serveCachedDataWithNotification('API rate limiting', adAccountId);
         }
       }
       
       // Apply backoff strategy for future requests based on Meta best practices
       const lastFetchSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
-      const rateLimitHistory = JSON.parse(localStorage.getItem('meta_rate_limit_history') || '[]');
+      const rateLimitHistory = JSON.parse(localStorage.getItem(`meta_rate_limit_history_${adAccountId}`) || '[]');
       
       // Get usage data if available
       let callCount;
@@ -135,7 +136,7 @@ export function useCampaignFetcher() {
       
       // Calculate backoff time and apply a minimum delay before next fetch
       const backoffTime = getBackoffTime(lastFetchSuccess, rateLimitHistory, callCount);
-      console.log(`Applying backoff strategy: ${backoffTime}ms before next request`);
+      console.log(`Applying backoff strategy for account ${adAccountId}: ${backoffTime}ms before next request`);
       
       return { campaigns: [], error, errorDetails };
     } finally {

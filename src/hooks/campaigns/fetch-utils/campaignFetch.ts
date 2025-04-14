@@ -18,15 +18,16 @@ import {
 /**
  * Process fetch errors and handle rate limits
  */
-export const processFetchError = (error: any) => {
-  console.error('Campaign fetch error:', error);
+export const processFetchError = (error: any, accountId?: string) => {
+  console.error(`Campaign fetch error for account ${accountId}:`, error);
   
   // Save the error for diagnostic purposes
   try {
     localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
       message: error?.message || String(error),
       code: error?.code || error?.details?.error?.code,
-      time: new Date().toISOString()
+      time: new Date().toISOString(),
+      accountId
     }));
   } catch (e) {
     console.error('Error saving campaign fetch error:', e);
@@ -34,21 +35,27 @@ export const processFetchError = (error: any) => {
   
   // Handle rate limit errors specifically
   if (isRateLimitError(error)) {
-    console.log('Rate limit error detected:', error);
+    console.log(`Rate limit error detected for account ${accountId}:`, error);
     
     // Mark as rate limited for 10 minutes
-    const { timeRemaining } = markRateLimited(10);
+    const { timeRemaining } = markRateLimited(10, accountId);
     
     // Show notification
     notifyRateLimit(timeRemaining);
     
-    // Return cached data if available
-    return serveCachedDataWithNotification('rate limiting');
+    // Return error info
+    return { 
+      error: `Rate limit reached for account ${accountId}. Please try again later.`,
+      errorDetails: { 
+        isRateLimit: true, 
+        message: error?.message || 'Rate limit error',
+        accountId
+      }
+    };
   }
   
   // For other errors, return empty data with error
   return { 
-    campaigns: [],
     error: error?.message || 'Error fetching campaigns',
     errorDetails: error
   };
@@ -60,14 +67,17 @@ export const processFetchError = (error: any) => {
 export const executeCampaignFetch = async (fetchFunction: Function, adAccountId: string) => {
   try {
     // Check if rate limited
-    const rateStatus = checkRateLimitStatus();
+    const rateStatus = checkRateLimitStatus(adAccountId);
     if (rateStatus.isRateLimited) {
-      console.log(`Currently rate limited. ${rateStatus.timeRemaining} minutes remaining.`);
-      return serveCachedDataWithNotification(`rate limiting (${rateStatus.timeRemaining} min remaining)`);
+      console.log(`Currently rate limited for account ${adAccountId}. ${rateStatus.timeRemaining} minutes remaining.`);
+      return { 
+        campaigns: [], 
+        error: `Rate limited for account ${adAccountId}. ${rateStatus.timeRemaining} minutes remaining.` 
+      };
     }
     
     // Record API fetch time for throttling
-    localStorage.setItem('last_api_fetch_time', new Date().toISOString());
+    localStorage.setItem(`last_api_fetch_time_${adAccountId}`, new Date().toISOString());
     
     // Execute the fetch
     localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
@@ -83,7 +93,7 @@ export const executeCampaignFetch = async (fetchFunction: Function, adAccountId:
     return { campaigns, error: null, errorDetails: null };
   } catch (error: any) {
     localStorage.setItem('last_campaign_fetch_success', 'false');
-    return processFetchError(error);
+    return { campaigns: [], ...processFetchError(error, adAccountId) };
   }
 };
 
