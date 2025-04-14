@@ -1,78 +1,132 @@
 
 import { useState, useEffect } from 'react';
-import { MetaApiService } from '@/services/MetaApiService';
-import { checkRateLimitStatus } from '@/hooks/campaigns/fetch-utils';
 
-export function useDashboardState() {
-  // Check if we need to show diagnostic info based on localStorage
-  const campaignCount = parseInt(localStorage.getItem('last_campaign_count') || '0');
-  const fetchSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
-  const hasDataButNotShowing = campaignCount > 0 && fetchSuccess;
-  
-  // Check rate limit status
-  const [rateLimitStatus, setRateLimitStatus] = useState<{
+interface DashboardState {
+  campaignCount: number;
+  fetchSuccess: boolean;
+  hasDataButNotShowing: boolean;
+  rateLimitStatus: {
     isRateLimited: boolean;
     timeRemaining: number | null;
     rateLimitTimestamp: string | null;
-  }>({ isRateLimited: false, timeRemaining: null, rateLimitTimestamp: null });
+  };
+}
+
+export function useDashboardState(): DashboardState {
+  const [state, setState] = useState<DashboardState>({
+    campaignCount: 0,
+    fetchSuccess: false,
+    hasDataButNotShowing: false,
+    rateLimitStatus: {
+      isRateLimited: false,
+      timeRemaining: null,
+      rateLimitTimestamp: null
+    }
+  });
   
   useEffect(() => {
-    // Initialize rate limit handling
-    MetaApiService.initRateLimitState();
+    // Load initial state
+    updateState();
     
-    // Check for any override settings
-    const isOverridden = MetaApiService.isRateLimitOverridden?.();
-    if (isOverridden) {
-      console.warn('⚠️ Meta API rate limit override is active. This should only be used for development.');
-    }
+    // Set up interval to check rate limit status
+    const interval = setInterval(() => {
+      const rateLimitTimestamp = localStorage.getItem('meta_rate_limit_timestamp');
+      if (rateLimitTimestamp) {
+        updateRateLimitStatus();
+      }
+    }, 60000); // Check every minute
     
-    // Get current rate limit status
-    const rateLimitInfo = checkRateLimitStatus();
-    setRateLimitStatus(rateLimitInfo);
-    console.log('Current rate limit status:', rateLimitInfo);
+    // Listen for data changes
+    const handleStorageChange = () => {
+      updateState();
+    };
     
-    // Check rate limit state every minute
-    const intervalId = setInterval(() => {
-      const updatedStatus = checkRateLimitStatus();
-      setRateLimitStatus(updatedStatus);
-      console.log('Updated rate limit status:', updatedStatus);
-    }, 60000);
+    // Listen for data refresh events
+    const handleDataRefresh = () => {
+      setTimeout(updateState, 500); // Wait for data to update
+    };
     
-    // Log the current rate limit state for debugging
-    if (rateLimitInfo.isRateLimited) {
-      console.log('Current rate limit status:', rateLimitInfo);
-    }
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('campaign-data-refresh', handleDataRefresh);
+    window.addEventListener('campaign-display-refresh', handleDataRefresh);
     
-    // Log campaign data state for debugging
-    const campaignCount = localStorage.getItem('last_campaign_count');
-    const fetchSuccess = localStorage.getItem('last_campaign_fetch_success');
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('campaign-data-refresh', handleDataRefresh);
+      window.removeEventListener('campaign-display-refresh', handleDataRefresh);
+    };
+  }, []);
+  
+  // Update all dashboard state from localStorage
+  const updateState = () => {
+    // Get campaign data state
+    const campaignCount = parseInt(localStorage.getItem('last_campaign_count') || '0');
+    const fetchSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
+    const displayIssueDetected = localStorage.getItem('display_issue_detected') === 'true';
+    
+    // Check for data/UI inconsistency
+    const hasDataButNotShowing = campaignCount > 0 && fetchSuccess && displayIssueDetected;
+    
+    // Update rate limit status
+    const rateLimitStatus = updateRateLimitStatus();
+    
+    // Log the current state for debugging
     console.log('Campaign data state on dashboard load:', {
-      storedCount: campaignCount ? parseInt(campaignCount) : 0,
-      fetchStatus: fetchSuccess,
-      displayIssueDetected: localStorage.getItem('display_issue_detected') === 'true',
-      hasDataButNotShowing: parseInt(campaignCount || '0') > 0 && fetchSuccess === 'true',
-      rateLimitActive: rateLimitInfo.isRateLimited,
-      rateLimitRemaining: rateLimitInfo.timeRemaining
+      storedCount: campaignCount,
+      fetchStatus: fetchSuccess ? 'success' : fetchSuccess === false ? 'failed' : null,
+      displayIssueDetected,
+      hasDataButNotShowing,
+      rateLimitActive: rateLimitStatus.isRateLimited,
+      rateLimitRemaining: rateLimitStatus.timeRemaining
     });
     
-    // Check for diagnostic data in session storage
-    const diagnosticResults = sessionStorage.getItem('last_diagnostic_results');
-    if (diagnosticResults) {
-      try {
-        const results = JSON.parse(diagnosticResults);
-        console.log('Last diagnostic results:', results);
-      } catch (e) {
-        console.error('Error parsing diagnostic results:', e);
-      }
+    setState({
+      campaignCount,
+      fetchSuccess,
+      hasDataButNotShowing,
+      rateLimitStatus
+    });
+  };
+  
+  // Check current rate limit status
+  const updateRateLimitStatus = () => {
+    const timestamp = localStorage.getItem('meta_rate_limit_timestamp');
+    
+    if (!timestamp) {
+      const status = {
+        isRateLimited: false,
+        timeRemaining: null,
+        rateLimitTimestamp: null
+      };
+      console.log('Updated rate limit status:', status);
+      return status;
     }
     
-    return () => clearInterval(intervalId);
-  }, []);
-
-  return {
-    campaignCount,
-    fetchSuccess,
-    hasDataButNotShowing,
-    rateLimitStatus
+    const rateLimitTime = new Date(timestamp).getTime();
+    const currentTime = new Date().getTime();
+    const diffMinutes = (rateLimitTime - currentTime) / (1000 * 60);
+    
+    // If more than 10 minutes have passed, clear the rate limit
+    if (diffMinutes <= 0) {
+      localStorage.removeItem('meta_rate_limit_timestamp');
+      const status = {
+        isRateLimited: false,
+        timeRemaining: null,
+        rateLimitTimestamp: null
+      };
+      console.log('Updated rate limit status:', status);
+      return status;
+    }
+    
+    const status = {
+      isRateLimited: true,
+      timeRemaining: Math.ceil(diffMinutes),
+      rateLimitTimestamp: timestamp
+    };
+    console.log('Updated rate limit status:', status);
+    return status;
   };
+  
+  return state;
 }

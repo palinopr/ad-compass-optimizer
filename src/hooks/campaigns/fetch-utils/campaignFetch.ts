@@ -1,118 +1,101 @@
 
-import { MetaCampaign } from '@/services/api/MetaCampaignService';
+/**
+ * Campaign fetch utilities
+ */
+
 import { isRateLimitError } from './rateLimitDetection';
-import { markRateLimited } from './rateLimitStatus';
+import { 
+  checkRateLimitStatus,
+  markRateLimited,
+  notifyRateLimit
+} from './rateLimitStatus';
+import {
+  getCachedCampaigns,
+  serveCachedDataWithNotification,
+  storeCampaignsInCache
+} from './campaignCache';
 
 /**
- * Process API fetch errors
+ * Process fetch errors and handle rate limits
  */
-export const processFetchError = (err: any) => {
-  console.error('Campaign fetch error:', err);
+export const processFetchError = (error: any) => {
+  console.error('Campaign fetch error:', error);
   
-  // Save error info for troubleshooting
+  // Save the error for diagnostic purposes
   try {
     localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
-      message: err.message || String(err),
-      code: err.code || null,
-      type: err.type || null,
-      stack: err.stack || null
+      message: error?.message || String(error),
+      code: error?.code || error?.details?.error?.code,
+      time: new Date().toISOString()
     }));
-    localStorage.setItem('last_campaign_fetch_success', 'false');
-    localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
   } catch (e) {
-    console.error('Error saving fetch error data:', e);
+    console.error('Error saving campaign fetch error:', e);
   }
   
-  // Check for rate limit errors
-  const isRateLimit = isRateLimitError(err);
-  if (isRateLimit) {
-    markRateLimited();
+  // Handle rate limit errors specifically
+  if (isRateLimitError(error)) {
+    console.log('Rate limit error detected:', error);
     
-    return {
-      error: `Meta API rate limit reached. Please wait approximately 10 minutes and try again.`,
-      errorDetails: { 
-        isRateLimit: true,
-        code: err.code || null,
-        message: err.message || String(err)
-      }
-    };
+    // Mark as rate limited for 10 minutes
+    const { timeRemaining } = markRateLimited(10);
+    
+    // Show notification
+    notifyRateLimit(timeRemaining);
+    
+    // Return cached data if available
+    return serveCachedDataWithNotification('rate limiting');
   }
   
-  return {
-    error: err.message || String(err),
-    errorDetails: {
-      error: err,
-      isRateLimit: false
-    }
+  // For other errors, return empty data with error
+  return { 
+    campaigns: [],
+    error: error?.message || 'Error fetching campaigns',
+    errorDetails: error
   };
 };
 
 /**
- * Execute campaign fetch through Meta API
+ * Execute campaign fetch with rate limit handling and caching
  */
-export const executeCampaignFetch = async (token: string, adAccountId: string): Promise<MetaCampaign[]> => {
-  // Format the ad account ID if needed
-  const formattedId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
-  
-  // Set up API endpoint
-  const apiUrl = `https://graph.facebook.com/v17.0/${formattedId}/campaigns`;
-  const params = new URLSearchParams({
-    access_token: token,
-    fields: 'id,name,status,objective,created_time,updated_time,daily_budget,lifetime_budget,spend_cap',
-    limit: '500'
-  });
-  
-  console.log(`Fetching campaigns for account: ${formattedId}`);
-  
+export const executeCampaignFetch = async (fetchFunction: Function, adAccountId: string) => {
   try {
-    // Save attempt timestamp
+    // Check if rate limited
+    const rateStatus = checkRateLimitStatus();
+    if (rateStatus.isRateLimited) {
+      console.log(`Currently rate limited. ${rateStatus.timeRemaining} minutes remaining.`);
+      return serveCachedDataWithNotification(`rate limiting (${rateStatus.timeRemaining} min remaining)`);
+    }
+    
+    // Record API fetch time for throttling
+    localStorage.setItem('last_api_fetch_time', new Date().toISOString());
+    
+    // Execute the fetch
     localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
+    const campaigns = await fetchFunction();
     
-    // Make the API request
-    const response = await fetch(`${apiUrl}?${params.toString()}`);
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw {
-        message: errorData.error?.message || `API error: ${response.status}`,
-        code: errorData.error?.code || response.status,
-        type: errorData.error?.type || 'ApiError',
-        details: errorData
-      };
-    }
-    
-    const data = await response.json();
-    
-    if (!data.data || !Array.isArray(data.data)) {
-      throw new Error('Invalid API response format');
-    }
-    
-    // Save success status to localStorage
+    // Store success info and cache the result
     localStorage.setItem('last_campaign_fetch_success', 'true');
-    localStorage.setItem('last_campaign_count', data.data.length.toString());
+    localStorage.setItem('last_campaign_count', String(campaigns.length));
     
-    return data.data as MetaCampaign[];
-  } catch (err) {
-    throw err; // Let calling code handle the error
+    // Cache the campaigns for use during rate limiting
+    storeCampaignsInCache(campaigns, adAccountId);
+    
+    return { campaigns, error: null, errorDetails: null };
+  } catch (error: any) {
+    localStorage.setItem('last_campaign_fetch_success', 'false');
+    return processFetchError(error);
   }
 };
 
 /**
  * Filter campaigns by status
  */
-export const filterCampaignsByStatus = (campaigns: MetaCampaign[], status?: string): MetaCampaign[] => {
-  if (!status) return campaigns;
+export const filterCampaignsByStatus = (campaigns: any[], status?: string) => {
+  if (!status || status === 'all') {
+    return campaigns;
+  }
   
-  return campaigns.filter(campaign => {
-    if (status === 'active' && campaign.status === 'ACTIVE') {
-      return true;
-    }
-    if (status === 'draft' && campaign.status === 'PAUSED') {
-      return true;
-    }
-    if (status === 'archived' && campaign.status === 'ARCHIVED') {
-      return true;
-    }
-    return false;
-  });
+  return campaigns.filter(campaign => 
+    campaign.status && campaign.status.toLowerCase() === status.toLowerCase()
+  );
 };
