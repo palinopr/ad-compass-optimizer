@@ -3,6 +3,8 @@ import { BaseApiService } from './BaseApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { META_API_CONFIG } from '@/config/socialAuth';
 import { toast } from '@/hooks/use-toast';
+import { ToastActionElement } from '@/components/ui/toast';
+import { Button } from '@/components/ui/button';
 
 export interface MetaAdAccount {
   name: string;
@@ -55,20 +57,23 @@ export class MetaAdAccountService extends BaseApiService {
           const errorMsg = json?.error?.message || responseText || 'Unknown error while fetching ad accounts';
           const errorDetails = JSON.stringify(json?.error || json, null, 2);
           
+          // Show error toast without using JSX in description
           toast({
             title: "Meta API Error",
             description: `${errorMsg}\n\nClick for details`,
             variant: "destructive",
             duration: 10000,
-            action: () => {
-              console.log("Showing error details:", errorDetails);
-              toast({
-                title: "Error Details",
-                description: errorDetails,
-                variant: "destructive",
-                duration: 15000
-              });
-            }
+            // Use null for action instead of a function
+            action: null
+          });
+          
+          // Show error details in separate toast when needed
+          console.log("Error details:", errorDetails);
+          toast({
+            title: "Error Details",
+            description: errorDetails,
+            variant: "destructive",
+            duration: 15000
           });
           
           throw new Error(errorMsg);
@@ -89,15 +94,16 @@ export class MetaAdAccountService extends BaseApiService {
             description: "Failed to parse API response",
             variant: "destructive",
             duration: 10000,
-            action: () => {
-              console.log("Showing raw response:", responseText);
-              toast({
-                title: "Raw Response",
-                description: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''),
-                variant: "destructive",
-                duration: 15000
-              });
-            }
+            // Use null for action instead of a function
+            action: null
+          });
+          
+          // Show raw response in separate toast immediately
+          toast({
+            title: "Raw Response",
+            description: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''),
+            variant: "destructive",
+            duration: 15000
           });
         }
         
@@ -120,15 +126,16 @@ export class MetaAdAccountService extends BaseApiService {
         description: errorMessage,
         variant: "destructive",
         duration: 10000,
-        action: () => {
-          console.log("Showing error details:", JSON.stringify(errorDetails, null, 2));
-          toast({
-            title: "Error Details",
-            description: JSON.stringify(errorDetails, null, 2).substring(0, 500),
-            variant: "destructive",
-            duration: 15000
-          });
-        }
+        // Use null for action instead of a function
+        action: null
+      });
+      
+      // Show error details in separate toast immediately
+      toast({
+        title: "Error Details",
+        description: JSON.stringify(errorDetails, null, 2).substring(0, 500),
+        variant: "destructive",
+        duration: 15000
       });
       
       return this.handleApiError(error, 'fetchAdAccounts');
