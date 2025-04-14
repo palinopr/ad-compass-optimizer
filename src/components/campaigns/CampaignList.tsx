@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
@@ -12,6 +11,9 @@ import EmptyCampaignState from './EmptyCampaignState';
 import { useCampaignListState } from '@/hooks/campaigns/useCampaignListState';
 import { useCampaignMetrics } from '@/hooks/campaigns/useCampaignMetrics';
 import MockApiControls from './diagnostic-components/MockApiControls';
+import NoCampaignsFoundWarning from './NoCampaignsFoundWarning';
+import { metaAuthService } from '@/services/MetaAuthService';
+import { META_API_CONFIG } from '@/config/socialAuth';
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
@@ -73,6 +75,15 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     setDateRange({ from: null, to: null }, 'custom');
     setSearchQuery('');
   };
+
+  const hasValidConnection = React.useMemo(() => {
+    const token = metaAuthService.getAccessToken();
+    const selectedAdAccount = localStorage.getItem('selected_ad_account');
+    const missingPermissions = JSON.parse(localStorage.getItem('meta_permissions') || '[]')
+      .filter((perm: string) => !META_API_CONFIG.adPermissions.includes(perm));
+    
+    return !!token && !!selectedAdAccount && missingPermissions.length === 0;
+  }, []);
   
   if (isLoading) {
     return (
@@ -120,7 +131,15 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     filteredCampaigns.length > 0 || (effectiveIsAuthenticated && localStorage.getItem('last_campaign_fetch_success') === 'true');
 
   if (!shouldShowCampaigns && !isMockMode && !isMockApiMode) {
-    return <EmptyCampaignState onRefresh={handleRefresh} hasLastFetchSuccess={localStorage.getItem('last_campaign_fetch_success') === 'true'} />;
+    return (
+      <>
+        <EmptyCampaignState 
+          onRefresh={handleRefresh} 
+          hasLastFetchSuccess={localStorage.getItem('last_campaign_fetch_success') === 'true'} 
+        />
+        <NoCampaignsFoundWarning hasValidConnection={hasValidConnection} />
+      </>
+    );
   }
 
   return (
