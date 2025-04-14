@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Check } from 'lucide-react';
+import { Check, Terminal } from 'lucide-react';
 import { MockedRequest } from '@/services/api/mock/logger/MockRequestLogger';
 
 interface MockApiCallsLogProps {

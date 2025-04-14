@@ -55,65 +55,65 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
   const diagnosticItems = [
     {
       label: 'Mock Mode Type',
-      status: 'info' as const,
+      status: 'info',
       details: isMetaMockMode ? 'Meta API Simulation' : 'Basic Mock Data'
     },
     ...(isMetaMockMode ? [
       {
         label: 'Mocked Services',
-        status: 'success' as const,
+        status: 'success',
         details: 'Campaigns, Ad Sets, Ads, Insights'
       },
       {
         label: 'Meta API Status',
-        status: 'info' as const,
+        status: 'info',
         details: 'Using simulated responses'
       }
     ] : []),
     {
       label: 'Campaign Flow',
-      status: (rawCampaignsCount === 0 ? 'error' : 'info') as const,
+      status: (rawCampaignsCount === 0 ? 'error' : 'info'),
       details: `${mockSourceData} in funnel → ${rawCampaignsCount ?? 0} in state → ${verifiedCount} filtered`
     },
     {
       label: 'Mock Source Data',
-      status: 'info' as const,
+      status: 'info',
       details: `${mockSourceData} campaigns in mockFunnelData`
     },
     {
       label: 'Raw Campaigns',
-      status: (rawCampaignsCount === 0 ? 'error' : 'info') as const,
+      status: (rawCampaignsCount === 0 ? 'error' : 'info'),
       details: `${rawCampaignsCount ?? 'unknown'} campaigns in state`
     },
     {
       label: 'Filtered Campaigns',
-      status: (verifiedCount > 0 ? 'success' : 'error') as const,
+      status: (verifiedCount > 0 ? 'success' : 'error'),
       details: `${verifiedCount} campaigns displayed`
     },
     {
       label: 'Mock Data Sync',
-      status: (rawCampaignsCount === 0 ? 'error' : 'success') as const,
+      status: (rawCampaignsCount === 0 ? 'error' : 'success'),
       details: rawCampaignsCount === 0 ? 'Not synced to state' : 'Successfully synced'
     },
     ...(filters ? [{
       label: 'Active Filters',
-      status: 'info' as const,
+      status: 'info',
       details: `Status: ${filters.status || 'none'}, Date: ${filters.datePreset || 'none'}, Search: ${filters.search ? 'yes' : 'no'}`
     }] : []),
     ...(adAccountId ? [{
       label: 'Ad Account',
-      status: 'info' as const,
+      status: 'info',
       details: adAccountId
     }] : []),
     ...(verifiedCount === 0 ? [
       {
         label: 'Possible Fix',
-        status: 'warning' as const,
+        status: 'warning',
         details: 'Try clicking "Force UI Refresh" or reload the page'
       },
       ...(rawCampaignsCount === 0 ? [{
         label: 'Data Flow Issue',
-        status: 'error' as const,
+        status: 'error',
         details: 'Mock data not reaching state - check console logs'
       }] : [])
     ] : [])
