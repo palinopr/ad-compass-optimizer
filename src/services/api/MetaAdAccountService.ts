@@ -1,6 +1,8 @@
+
 import { BaseApiService } from './BaseApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { META_API_CONFIG } from '@/config/socialAuth';
+import { toast } from '@/hooks/use-toast';
 
 export interface MetaAdAccount {
   name: string;
@@ -49,6 +51,16 @@ export class MetaAdAccountService extends BaseApiService {
         const json = JSON.parse(responseText);
         console.log('[AD ACCOUNT FETCH] Parsed JSON:', json);
         
+        if (!response.ok) {
+          const errorMsg = json?.error?.message || responseText || 'Unknown error while fetching ad accounts';
+          toast({
+            title: "Meta API Error",
+            description: errorMsg,
+            variant: "destructive"
+          });
+          throw new Error(errorMsg);
+        }
+        
         // Log successful response
         console.log('Ad accounts fetched successfully:', json);
         console.log(`Found ${json?.data?.length || 0} ad accounts`);
@@ -57,9 +69,13 @@ export class MetaAdAccountService extends BaseApiService {
       } catch (err) {
         console.error('[AD ACCOUNT FETCH] ❌ Failed to parse JSON:', err);
         
-        // Additional error logging for non-JSON responses
         if (responseText) {
           console.error('[AD ACCOUNT FETCH] Unparseable response body:', responseText);
+          toast({
+            title: "Meta API Error",
+            description: "Failed to parse API response. Please try again.",
+            variant: "destructive"
+          });
         }
         
         throw err;
@@ -67,12 +83,18 @@ export class MetaAdAccountService extends BaseApiService {
     } catch (error) {
       console.error('Error fetching ad accounts:', error);
       
-      // More detailed error logging
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('[AD ACCOUNT FETCH] Detailed Error:', {
         message: errorMessage,
         type: typeof error,
         stringRepresentation: String(error)
+      });
+      
+      // Show error in UI
+      toast({
+        title: "Ad Account Error",
+        description: errorMessage,
+        variant: "destructive"
       });
       
       return this.handleApiError(error, 'fetchAdAccounts');
