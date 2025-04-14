@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useAuthCheck } from './useAuthCheck';
@@ -16,7 +15,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const { getSelectedAdAccount } = useAdAccountSelection();
   const { fetchCampaignData } = useCampaignFetcher();
   
-  // Use the enhanced hook for state management
   const {
     campaigns, setCampaigns, updateCampaigns,
     isLoading, setIsLoading,
@@ -104,36 +102,30 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           setErrorDetails(fetchErrorDetails);
         }
       } else {
-        console.log(`Successfully fetched ${fetchedCampaigns.length} campaigns`, {
-          status,
-          firstCampaign: fetchedCampaigns[0] ? fetchedCampaigns[0].id : 'none',
-          mounted: mountedRef.current
+        // Add a small delay before updating UI to smooth out rapid interactions
+        return new Promise<void>((resolve) => {
+          setTimeout(() => {
+            if (mountedRef.current) {
+              updateCampaigns(fetchedCampaigns);
+              
+              // Existing toast and localStorage logging logic
+              if (fetchedCampaigns.length > 0) {
+                const hadDisplayIssues = localStorage.getItem('had_display_issues') === 'true';
+                if (hadDisplayIssues) {
+                  toast({
+                    title: "Campaign Data Loaded Successfully",
+                    description: `Found ${fetchedCampaigns.length} campaigns. Display issues have been fixed.`,
+                    variant: "default",
+                  });
+                  localStorage.removeItem('had_display_issues');
+                }
+              }
+            } else {
+              console.warn('Component unmounted before state update could complete');
+            }
+            resolve();
+          }, 300); // 300ms delay for smooth UI updates
         });
-        
-        // Save to localStorage for troubleshooting
-        localStorage.setItem('last_campaign_count', fetchedCampaigns.length.toString());
-        localStorage.setItem('last_campaign_fetch_success', 'true');
-        localStorage.setItem('last_campaign_list_status', status || 'all');
-        localStorage.setItem('last_empty_result', fetchedCampaigns.length === 0 ? 'true' : 'false');
-        
-        // Update state only if the component is still mounted
-        if (mountedRef.current) {
-          // Use the enhanced update method to guarantee UI refresh
-          updateCampaigns(fetchedCampaigns);
-          
-          // If we have campaigns but previously had display issues, show success toast
-          const hadDisplayIssues = localStorage.getItem('had_display_issues') === 'true';
-          if (fetchedCampaigns.length > 0 && hadDisplayIssues) {
-            toast({
-              title: "Campaign Data Loaded Successfully",
-              description: `Found ${fetchedCampaigns.length} campaigns. Display issues have been fixed.`,
-              variant: "default",
-            });
-            localStorage.removeItem('had_display_issues');
-          }
-        } else {
-          console.warn('Component unmounted before state update could complete');
-        }
       }
     } catch (err: any) {
       console.error('Unexpected error in campaign fetch:', err);
