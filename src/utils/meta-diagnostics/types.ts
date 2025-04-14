@@ -17,6 +17,10 @@ export interface ComprehensiveDiagnosticResult {
   token: {
     hasToken: boolean;
     tokenLength?: number;
+    hasAdsRead?: boolean;
+    hasAdsManagement?: boolean;
+    permissions?: string[];
+    source?: string;
   };
   tokenAnalysis: TokenAnalysisResult;
   api: {
@@ -42,4 +46,3 @@ export interface ComprehensiveDiagnosticResult {
     recommendations: string[];
   };
 }
-

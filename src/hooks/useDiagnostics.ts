@@ -48,8 +48,8 @@ export const useDiagnostics = () => {
                         diagnosticResults.token.tokenLength < 50;
     
     // Check for permission issues - must have at least one of these permissions
-    const permissionIssues = !diagnosticResults.token.hasAdsRead && 
-                             !diagnosticResults.token.hasAdsManagement;
+    const permissionIssues = !(diagnosticResults.token.hasAdsRead === true || 
+                             diagnosticResults.token.hasAdsManagement === true);
     
     // Check for API connection issues
     const apiIssues = diagnosticResults.api && !diagnosticResults.api.success;
@@ -96,4 +96,3 @@ export const useDiagnostics = () => {
     runDiagnostics
   };
 };
-
