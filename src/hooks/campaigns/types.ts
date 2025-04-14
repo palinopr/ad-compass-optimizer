@@ -8,6 +8,7 @@ export interface UseCampaignsResult {
   errorDetails?: any;
   refetchCampaigns: (forceRefresh?: boolean) => void;
   displayRefresh: number;
+  forceRender: number; // Add this property to match the implementation
 }
 
 export interface CampaignFilterOptions {
