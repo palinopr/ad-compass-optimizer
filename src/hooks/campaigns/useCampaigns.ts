@@ -18,11 +18,11 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   
   // Use the enhanced hook for state management
   const {
-    campaigns, setCampaigns,
+    campaigns, setCampaigns, updateCampaigns,
     isLoading, setIsLoading,
     error, setError,
     errorDetails, setErrorDetails,
-    displayRefresh, incrementDisplayRefresh,
+    displayRefresh, forceRender, incrementDisplayRefresh,
     clearCampaigns, forceUiRefresh,
     isFetchingRef, lastFetchTimeRef, mountedRef, campaignCountRef
   } = useCampaignFetchState();
@@ -86,12 +86,16 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         setIsLoading(false);
         return;
       }
+
+      // Store the current ad account ID to track changes
+      const currentAccountId = accountResult.adAccountId;
+      localStorage.setItem('last_fetched_ad_account', currentAccountId);
       
-      console.log(`Fetching campaigns for ad account: ${accountResult.adAccountId}`);
+      console.log(`Fetching campaigns for ad account: ${currentAccountId}`);
       
       // Step 4: Fetch campaign data
       const { campaigns: fetchedCampaigns, error: fetchError, errorDetails: fetchErrorDetails } = 
-        await fetchCampaignData(token, accountResult.adAccountId, status);
+        await fetchCampaignData(token, currentAccountId, status);
       
       if (fetchError) {
         console.error('Campaign fetch error:', fetchError, fetchErrorDetails);
@@ -114,11 +118,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         
         // Update state only if the component is still mounted
         if (mountedRef.current) {
-          // First set campaigns
-          setCampaigns(fetchedCampaigns);
-          
-          // Force UI refresh by triggering display refresh counter
-          incrementDisplayRefresh();
+          // Use the enhanced update method to guarantee UI refresh
+          updateCampaigns(fetchedCampaigns);
           
           // If we have campaigns but previously had display issues, show success toast
           const hadDisplayIssues = localStorage.getItem('had_display_issues') === 'true';
@@ -150,11 +151,31 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       isFetchingRef.current = false;
     }
   }, [status, validateAuthentication, getSelectedAdAccount, fetchCampaignData, 
-      setCampaigns, setError, setErrorDetails, setIsLoading, incrementDisplayRefresh, 
+      updateCampaigns, setCampaigns, setError, setErrorDetails, setIsLoading, incrementDisplayRefresh, 
       isFetchingRef, lastFetchTimeRef, mountedRef]);
   
   // Use the enhanced hook for event listeners
   useCampaignEventListeners(fetchCampaigns, incrementDisplayRefresh, forceUiRefresh, clearCampaigns, status);
+  
+  // Add additional effect to check for ad account changes
+  useEffect(() => {
+    const checkAdAccountChange = () => {
+      const lastFetchedAccount = localStorage.getItem('last_fetched_ad_account');
+      const currentAccount = localStorage.getItem('selected_ad_account');
+      
+      if (lastFetchedAccount && currentAccount && lastFetchedAccount !== currentAccount) {
+        console.log('Ad account changed, triggering campaign refresh');
+        clearCampaigns();
+        fetchCampaigns(true);
+      }
+    };
+    
+    // Check immediately and set up interval
+    checkAdAccountChange();
+    const intervalId = setInterval(checkAdAccountChange, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, [clearCampaigns, fetchCampaigns]);
   
   return {
     campaigns,
@@ -162,6 +183,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     error,
     errorDetails,
     refetchCampaigns: fetchCampaigns,
-    displayRefresh
+    displayRefresh,
+    forceRender // Add forceRender to the return object
   };
 }

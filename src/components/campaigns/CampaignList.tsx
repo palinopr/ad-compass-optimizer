@@ -21,7 +21,7 @@ interface CampaignListProps {
 }
 
 const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
-  const { campaigns, isLoading, error, refetchCampaigns, errorDetails, displayRefresh } = useCampaigns(status);
+  const { campaigns, isLoading, error, refetchCampaigns, errorDetails, displayRefresh, forceRender } = useCampaigns(status);
   const { filters, setDateRange, setStatusFilter, setSearchQuery, filteredCampaigns } = 
     useCampaignFilters(campaigns);
   const { isAuthenticated, checkAuth } = useMetaConnection();
@@ -29,8 +29,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const campaignsRef = useRef<typeof campaigns>([]);
   const renderCountRef = useRef(0);
   const metrics = useCampaignMetrics(filteredCampaigns);
-  // Add forceRender state to help with UI updates
-  const [forceRender, setForceRender] = useState(0);
+  // Add internal counter for local UI updates
+  const [localRenderKey, setLocalRenderKey] = useState(0);
   
   const authResult = validateAuthentication();
   const effectiveIsAuthenticated = authResult.isValid;
@@ -42,21 +42,23 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       campaignsLength: campaigns.length,
       filteredLength: filteredCampaigns.length,
       campaignsChanged: campaigns !== campaignsRef.current,
-      displayRefresh
+      displayRefresh,
+      forceRender,
+      localRenderKey
     });
     campaignsRef.current = campaigns;
     
     // Force a re-render when campaigns change to ensure UI updates
     if (campaigns.length > 0) {
-      setForceRender(prev => prev + 1);
+      setLocalRenderKey(prev => prev + 1);
     }
-  }, [campaigns, filteredCampaigns.length, status, displayRefresh]);
+  }, [campaigns, filteredCampaigns.length, status, displayRefresh, forceRender]);
   
   // Force UI refresh when ad account changes
   useEffect(() => {
     const handleAdAccountChange = () => {
       console.log('Ad account changed, forcing UI refresh in CampaignList');
-      setForceRender(prev => prev + 1);
+      setLocalRenderKey(prev => prev + 1);
     };
     
     window.addEventListener('ad-account-changed', handleAdAccountChange);
@@ -65,6 +67,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     };
   }, []);
   
+  // Check authentication status on mount and when it changes
   useEffect(() => {
     const token = metaAuthService.getAccessToken();
     const directAuthCheck = token && token.length >= 50;
@@ -88,6 +91,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       title: "Refreshing Campaigns",
       description: "Fetching latest campaign data from Meta...",
     });
+    // Force local render key update
+    setLocalRenderKey(prev => prev + 1);
   };
   
   // Handle creating a new campaign
@@ -103,6 +108,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     setStatusFilter('all');
     setDateRange({ from: null, to: null }, 'custom');
     setSearchQuery('');
+    // Force UI update when filters are cleared
+    setLocalRenderKey(prev => prev + 1);
   };
   
   if (isLoading) {
@@ -170,9 +177,12 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
 
-  // Use forceRender as a key to force component re-rendering
+  // Use multiple keys to ensure component re-renders when any related state changes
+  const renderKey = `campaign-list-${forceRender}-${displayRefresh}-${localRenderKey}-${status}`;
+  console.log(`CampaignList rendering with key: ${renderKey}, campaigns: ${campaigns.length}`);
+  
   return (
-    <div key={`campaign-list-${forceRender}`}>
+    <div key={renderKey}>
       <CampaignFilterToolbar 
         filters={filters}
         onDateRangeChange={setDateRange}
@@ -195,6 +205,13 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         hasFilteredResults={filteredCampaigns.length > 0}
         onClearFilters={handleClearFilters}
       />
+      
+      {/* Debug info that shows data is actually available */}
+      {campaigns.length > 0 && process.env.NODE_ENV !== 'production' && (
+        <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+          <p>Debug: {campaigns.length} campaigns loaded. First campaign ID: {campaigns[0]?.id || 'unknown'}</p>
+        </div>
+      )}
     </div>
   );
 };

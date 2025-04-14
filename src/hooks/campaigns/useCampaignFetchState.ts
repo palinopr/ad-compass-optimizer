@@ -11,6 +11,7 @@ export function useCampaignFetchState() {
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<any>(null);
   const [displayRefresh, setDisplayRefresh] = useState<number>(0);
+  const [forceRender, setForceRender] = useState<number>(0); // New state for forcing renders
   
   // Use refs to prevent multiple concurrent fetches
   const isFetchingRef = useRef<boolean>(false);
@@ -21,7 +22,9 @@ export function useCampaignFetchState() {
   // Set mounted flag on component mount/unmount
   useEffect(() => {
     mountedRef.current = true;
+    console.log('useCampaignFetchState mounted');
     return () => {
+      console.log('useCampaignFetchState unmounted');
       mountedRef.current = false;
     };
   }, []);
@@ -30,8 +33,17 @@ export function useCampaignFetchState() {
   useEffect(() => {
     campaignCountRef.current = campaigns.length;
     // Log for debugging
-    console.log(`Campaign count updated: ${campaignCountRef.current}`);
-  }, [campaigns]);
+    console.log(`Campaign count updated: ${campaignCountRef.current}`, {
+      firstCampaign: campaigns[0] ? campaigns[0].id : 'none',
+      displayRefresh,
+      forceRender
+    });
+    
+    // Force a re-render when campaigns update
+    if (campaigns.length > 0) {
+      setForceRender(prev => prev + 1);
+    }
+  }, [campaigns, displayRefresh]);
 
   const incrementDisplayRefresh = () => {
     setDisplayRefresh(prev => {
@@ -46,22 +58,35 @@ export function useCampaignFetchState() {
     console.log('Clearing campaign state');
     setCampaigns([]);
     campaignCountRef.current = 0;
+    // Also increment force render to ensure UI updates
+    setForceRender(prev => prev + 1);
   };
 
-  // Function to force a UI refresh
+  // Enhanced function to force a UI refresh
   const forceUiRefresh = () => {
     console.log('Forcing UI refresh');
     incrementDisplayRefresh();
+    setForceRender(prev => prev + 1);
     // Trigger React to re-render by cloning the campaigns array
     if (campaigns.length > 0) {
+      console.log('Cloning campaigns array to force update');
       setCampaigns([...campaigns]);
     }
+  };
+
+  // New function to update campaigns with guaranteed UI refresh
+  const updateCampaigns = (newCampaigns: MetaCampaign[]) => {
+    console.log(`Updating campaigns with ${newCampaigns.length} items`);
+    setCampaigns(newCampaigns);
+    incrementDisplayRefresh();
+    setForceRender(prev => prev + 1);
   };
 
   return {
     // State
     campaigns,
     setCampaigns,
+    updateCampaigns, // New method for guaranteed update
     isLoading,
     setIsLoading,
     error,
@@ -69,6 +94,7 @@ export function useCampaignFetchState() {
     errorDetails,
     setErrorDetails,
     displayRefresh,
+    forceRender, // Expose forceRender for components to use as key
     incrementDisplayRefresh,
     clearCampaigns,
     forceUiRefresh,

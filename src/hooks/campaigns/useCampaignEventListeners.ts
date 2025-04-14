@@ -15,6 +15,7 @@ export function useCampaignEventListeners(
   status?: string
 ) {
   const mountedRef = useRef<boolean>(true);
+  const lastFetchTimeRef = useRef<number>(0);
   
   // Handle manual refresh requests
   const handleManualRefresh = useCallback((e: CampaignRefreshEvent) => {
@@ -39,9 +40,17 @@ export function useCampaignEventListeners(
     // Clear campaigns first to reset UI
     clearCampaigns();
     // Add a slight delay to let any other UI updates complete
-    setTimeout(() => fetchCampaigns(true), 100);
+    setTimeout(() => {
+      // Only fetch if we haven't fetched recently
+      const now = Date.now();
+      if (now - lastFetchTimeRef.current > 2000) {
+        lastFetchTimeRef.current = now;
+        fetchCampaigns(true);
+      }
+    }, 100);
   }, [fetchCampaigns, clearCampaigns]);
 
+  // Set up initial fetch and event listeners
   useEffect(() => {
     mountedRef.current = true;
     
@@ -49,8 +58,9 @@ export function useCampaignEventListeners(
     
     // Add delay between initial auth and data fetch to prevent race conditions
     const timer = setTimeout(() => {
+      console.log(`Initial campaign fetch for status: ${status}`);
       fetchCampaigns();
-    }, 500);
+    }, 800);
     
     // Register all event listeners
     window.addEventListener('ad-account-changed', handleAdAccountChange);
@@ -66,6 +76,23 @@ export function useCampaignEventListeners(
       window.removeEventListener('campaign-display-refresh', handleDisplayRefresh);
     };
   }, [fetchCampaigns, handleAdAccountChange, handleDisplayRefresh, handleManualRefresh, status]);
+
+  // Add an effect to force refresh on visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && mountedRef.current) {
+        console.log('Page became visible, checking if campaigns need refresh');
+        // Force a display refresh but don't refetch data
+        forceUiRefresh();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [forceUiRefresh]);
 
   return { mountedRef };
 }

@@ -14,7 +14,9 @@ import ConnectionStatusAlerts from '@/components/campaigns/ConnectionStatusAlert
 import CampaignTabs from '@/components/campaigns/CampaignTabs';
 import { useCampaignsPage } from '@/hooks/campaigns/useCampaignsPage';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Power } from 'lucide-react';
+import { RefreshCw, Power, RotateCcw } from 'lucide-react';
+import { triggerCampaignRefresh, triggerDisplayRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
+import { toast } from '@/hooks/use-toast';
 
 const Campaigns = () => {
   const {
@@ -33,6 +35,24 @@ const Campaigns = () => {
     resetConnection,
     isAuthSyncing
   } = useCampaignsPage();
+
+  const handleForceRefresh = () => {
+    // Force refresh of campaign data
+    triggerCampaignRefresh(true);
+    toast({
+      title: "Forcing Campaign Refresh",
+      description: "Clearing cache and fetching fresh data from Meta...",
+    });
+  };
+
+  const handleForceDisplayRefresh = () => {
+    // Force refresh of UI display
+    triggerDisplayRefresh();
+    toast({
+      title: "UI Refresh Triggered",
+      description: "Forcing component re-render without fetching new data...",
+    });
+  };
 
   return (
     <AppLayout>
@@ -80,6 +100,27 @@ const Campaigns = () => {
               </div>
               {isAuthenticated && <AdAccountSelector />}
             </div>
+            
+            {isAuthenticated && hasAdAccount && (
+              <div className="flex gap-2 justify-end mb-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleForceRefresh}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Refresh Campaign Data
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleForceDisplayRefresh}
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Force UI Refresh
+                </Button>
+              </div>
+            )}
             
             <CampaignTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             
