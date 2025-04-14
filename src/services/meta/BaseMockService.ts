@@ -20,8 +20,8 @@ export abstract class BaseMockService {
     return false;
   }
 
-  // New function to sync mock campaign data with global state
-  protected static syncMockCampaignsToState(campaigns: any[]): void {
+  // Changed from protected to public to allow access from MetaFunnelService
+  public static syncMockCampaignsToState(campaigns: any[]): void {
     console.log(`🎭 [Mock Sync] Syncing ${campaigns.length} mock campaigns to global state`);
     
     // Create a custom event with the campaigns data
