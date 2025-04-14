@@ -1,4 +1,5 @@
-import { useCallback, useEffect } from 'react';
+
+import { useCallback, useEffect, useState } from 'react';
 import { useMockCampaigns } from './mock/useMockCampaigns';
 import { useRefreshLogic } from './refresh/useRefreshLogic';
 import { useCampaignFetchState } from './useCampaignFetchState';
@@ -8,7 +9,17 @@ import { UseCampaignsResult } from './types';
 
 export function useCampaigns(status?: string): UseCampaignsResult {
   const isMockMode = useCallback(() => {
-    return localStorage.getItem("USE_MOCK_MODE") === "true";
+    // Safe check for browser environment
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return false;
+    }
+    
+    try {
+      return localStorage.getItem("USE_MOCK_MODE") === "true";
+    } catch (e) {
+      console.error("Error checking mock mode:", e);
+      return false;
+    }
   }, []);
 
   const {
@@ -20,8 +31,9 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     incrementDisplayRefresh,
     clearCampaigns,
     forceUiRefresh,
-    setForceRender,
   } = useCampaignFetchState();
+
+  const [localForceRender, setLocalForceRender] = useState(0);
 
   const { mockCampaigns, loadMockCampaigns } = useMockCampaigns(status);
   const { fetchCampaigns, mountedRef } = useRefreshLogic(status);
@@ -70,13 +82,25 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   }, [isMockMode, mockCampaigns, updateCampaigns, campaigns.length]);
 
   useEffect(() => {
+    // Only run in browser environment
+    if (typeof window === 'undefined') return;
+    
     const handleSyncMockCampaigns = (event: CustomEvent) => {
       if (event.detail?.campaigns && Array.isArray(event.detail.campaigns)) {
         const incomingCampaigns = event.detail.campaigns;
         console.log(`[MOCK META SYNC] Received ${incomingCampaigns.length} campaigns to update`);
         
-        const selectedAdAccount = localStorage.getItem('selected_ad_account') || 'unknown';
-        localStorage.setItem('last_mock_sync_adaccount', selectedAdAccount);
+        let selectedAdAccount = 'unknown';
+        
+        // Safely access localStorage
+        try {
+          if (typeof localStorage !== 'undefined') {
+            selectedAdAccount = localStorage.getItem('selected_ad_account') || 'unknown';
+            localStorage.setItem('last_mock_sync_adaccount', selectedAdAccount);
+          }
+        } catch (e) {
+          console.error("Error accessing localStorage in event handler:", e);
+        }
         
         const prevCount = campaigns.length;
         
@@ -101,9 +125,9 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     console.log('🎭 [MOCK DEBUG] External component called forceUiRefresh');
     forceUiRefresh();
     setTimeout(() => {
-      setForceRender(prev => prev + 1);
+      setLocalForceRender(prev => prev + 1);
     }, 200);
-  }, [forceUiRefresh, setForceRender]);
+  }, [forceUiRefresh]);
 
   useCampaignEventListeners(
     handleFetchCampaigns,
@@ -121,7 +145,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     errorDetails,
     refetchCampaigns: handleFetchCampaigns,
     displayRefresh,
-    forceRender,
+    forceRender: forceRender || localForceRender,
     forceUiRefresh: exposedForceUiRefresh
   };
 }

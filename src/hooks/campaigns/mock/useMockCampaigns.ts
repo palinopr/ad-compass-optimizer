@@ -14,10 +14,14 @@ export const useMockCampaigns = (status?: string) => {
       console.log('[MOCK DEBUG] Syncing mock campaigns to global state');
       if (campaigns.length > 0) {
         triggerCampaignRefresh(true);
-        toast({
-          title: "Mock Data Loaded",
-          description: `${campaigns.length} mock campaigns loaded from funnel data`,
-        });
+        
+        // Only show toast in browser environment
+        if (typeof window !== 'undefined') {
+          toast({
+            title: "Mock Data Loaded",
+            description: `${campaigns.length} mock campaigns loaded from funnel data`,
+          });
+        }
       }
     } catch (e) {
       console.error("Error syncing mock campaigns:", e);
@@ -72,7 +76,7 @@ export const useMockCampaigns = (status?: string) => {
   // Add an effect to detect FORCE_MOCK_REFRESH flag
   useEffect(() => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
         const forceRefresh = localStorage.getItem("FORCE_MOCK_REFRESH") === "true";
         if (forceRefresh) {
           console.log('[MOCK DEBUG] Force mock refresh detected, reloading mock data');

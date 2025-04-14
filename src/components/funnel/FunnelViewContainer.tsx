@@ -14,7 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 
 const FunnelViewContainer = () => {
-  const { campaigns, isLoading: campaignsLoading, refetchCampaigns, forceUiRefresh } = useCampaigns();
+  const { campaigns, isLoading: campaignsLoading, refetchCampaigns } = useCampaigns();
   const [funnelData, setFunnelData] = useState<FunnelData>({ campaigns: [], adsets: [], ads: [] });
   const [isFetchingFunnel, setIsFetchingFunnel] = useState(false);
   const [funnelError, setFunnelError] = useState<string | null>(null);
@@ -34,10 +34,25 @@ const FunnelViewContainer = () => {
 
   useEffect(() => {
     const fetchFunnelData = async () => {
-      const token = metaAuthService.getAccessToken();
-      const selectedAdAccount = localStorage.getItem('selected_ad_account');
-      const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true" || 
-                         MetaFunnelService.isMockMode();
+      // Safely get token and ad account ID
+      let token: string | null = null;
+      let selectedAdAccount: string | null = null;
+      let isMockMode = false;
+      
+      // Safe environment check
+      if (typeof window !== 'undefined') {
+        token = metaAuthService.getAccessToken();
+        
+        try {
+          if (typeof localStorage !== 'undefined') {
+            selectedAdAccount = localStorage.getItem('selected_ad_account');
+            isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true" || 
+                       MetaFunnelService.isMockMode();
+          }
+        } catch (e) {
+          console.error("Error accessing localStorage in FunnelViewContainer:", e);
+        }
+      }
       
       if (!token && !isMockMode) {
         setFunnelError('Missing access token or ad account');
@@ -75,7 +90,7 @@ const FunnelViewContainer = () => {
           // Small delay to ensure state updates happen after render
           setTimeout(() => {
             // Force UI refresh for the campaign components
-            forceUiRefresh();
+            triggerCampaignRefresh(true);
           }, 500);
         }
         
@@ -89,7 +104,7 @@ const FunnelViewContainer = () => {
     };
 
     fetchFunnelData();
-  }, [campaigns.length, refetchCampaigns, forceUiRefresh, lastFetchedAdAccount, funnelData.campaigns.length]);
+  }, [campaigns.length, refetchCampaigns, lastFetchedAdAccount, funnelData.campaigns.length]);
 
   return (
     <Card>

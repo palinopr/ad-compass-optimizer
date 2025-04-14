@@ -10,9 +10,18 @@ export abstract class BaseMockService {
 
   protected static isMockMode(): boolean {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+      if (typeof window === 'undefined') {
+        return false;
       }
+      
+      if (typeof localStorage !== 'undefined') {
+        try {
+          return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+        } catch (e) {
+          console.error("Error accessing localStorage in BaseMockService:", e);
+        }
+      }
+      
       return false;
     } catch (e) {
       console.error("Error checking mock mode in BaseMockService:", e);
@@ -39,18 +48,21 @@ export abstract class BaseMockService {
       console.log(`🎭 [Mock Sync] Syncing ${campaigns.length} mock campaigns to global state`);
       
       // Create a custom event with the campaigns data
+      if (typeof window === 'undefined') {
+        console.log('🎭 [Mock Sync] Cannot sync campaigns - not in browser environment');
+        return;
+      }
+      
       const syncEvent = new CustomEvent('sync-mock-campaigns', { 
         detail: { campaigns } 
       });
       
       // Safely dispatch the event
-      if (typeof window !== 'undefined') {
-        // Dispatch the event to be caught by the campaign state hooks
-        window.dispatchEvent(syncEvent);
-        
-        // Also trigger a campaign refresh to ensure UI updates
-        triggerCampaignRefresh(false);
-      }
+      // Dispatch the event to be caught by the campaign state hooks
+      window.dispatchEvent(syncEvent);
+      
+      // Also trigger a campaign refresh to ensure UI updates
+      triggerCampaignRefresh(false);
     } catch (e) {
       console.error("Error syncing mock campaigns to state:", e);
       // Fail silently in production - don't break the app
