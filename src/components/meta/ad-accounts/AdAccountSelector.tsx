@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Briefcase } from 'lucide-react';
+import { Briefcase, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAdAccounts } from './hooks/useAdAccounts';
 import AdAccountDropdown from './AdAccountDropdown';
