@@ -29,11 +29,15 @@ export interface MetaCampaign {
 
 export class MetaCampaignService extends BaseApiService {
   private static isMockMode(): boolean {
-    // Enhanced mock detection to be consistent with MetaFunnelService
     return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
+    if (this.isMockMode()) {
+      console.warn('🎭 Direct MetaCampaignService.fetchCampaigns call attempted in mock mode');
+      throw new Error('Cannot make direct API calls in mock mode. Use MetaApiService instead.');
+    }
+
     try {
       console.log(`Fetching campaigns for ad account ${adAccountId}...`);
       this.validateToken(token, 'fetchCampaigns');
@@ -63,7 +67,7 @@ export class MetaCampaignService extends BaseApiService {
       localStorage.removeItem('last_empty_result');
       
       return campaigns;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error fetching campaigns for ad account ${adAccountId}:`, error);
       
       localStorage.setItem('last_campaign_fetch_success', 'false');
@@ -72,7 +76,7 @@ export class MetaCampaignService extends BaseApiService {
         timestamp: new Date().toISOString()
       }));
       
-      return this.handleApiError(error, 'fetchCampaigns');
+      throw error;
     }
   }
   

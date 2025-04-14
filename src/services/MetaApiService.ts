@@ -15,8 +15,15 @@ export class MetaApiService {
   private static readonly BASE_URL = 'https://graph.facebook.com';
 
   public static isMockMode(): boolean {
-    // Use global mock mode detection from MockApiService
     return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+  }
+
+  private static checkMockMode(operation: string): boolean {
+    if (this.isMockMode()) {
+      console.warn(`🎭 [Mock Mode] Attempted to call real ${operation} while in mock mode. Using mock data instead.`);
+      return true;
+    }
+    return false;
   }
 
   public static async executeWithRateLimiting<T>(
@@ -158,8 +165,7 @@ export class MetaApiService {
   }
   
   public static async fetchCampaigns(token: string, adAccountId: string) {
-    if (this.isMockMode()) {
-      console.log('🎭 Returning mock campaigns');
+    if (this.checkMockMode('campaign fetch')) {
       return MockApiService.getMockCampaigns();
     }
     return this.executeWithRateLimiting(() => 
@@ -168,8 +174,7 @@ export class MetaApiService {
   }
 
   public static async fetchInsights(token: string, objectId: string, options = {}) {
-    if (this.isMockMode()) {
-      console.log('🎭 Returning mock insights');
+    if (this.checkMockMode('insights fetch')) {
       return MockApiService.getMockInsights(objectId);
     }
     return this.executeWithRateLimiting(() => 
