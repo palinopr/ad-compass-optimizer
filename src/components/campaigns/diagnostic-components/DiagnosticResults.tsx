@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, XCircle, Database, Search, ArrowDownToLine, RefreshCw, Loader2, Info, Globe, Shield } from 'lucide-react';
+import { Shield, Database, AlertCircle, RefreshCw, Loader2, Info, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -22,25 +21,19 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
     );
   };
 
-  // Verify authentication status based on token validity
   const isAuthenticated = diagnosticResults?.token?.hasToken && 
                           diagnosticResults?.tokenAnalysis?.isValid !== false &&
                           diagnosticResults?.token?.tokenLength > 50;
 
-  // Check permissions based on token data
   const hasRequiredPermissions = diagnosticResults?.token?.hasAdsRead || 
                                 diagnosticResults?.token?.hasAdsManagement;
                               
-  // Check API connection
   const apiConnectionSuccess = diagnosticResults?.api?.success === true;
   
-  // Check ad account selection
   const hasAdAccount = !!localStorage.getItem('selected_ad_account');
   
-  // Check campaign data loading
   const campaignLoadSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
   
-  // Check if campaigns exist
   const hasCampaigns = parseInt(localStorage.getItem('last_campaign_count') || '0') > 0;
 
   const getIssuesList = () => {
@@ -88,7 +81,6 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
       issues.push("Your account is properly connected, but no campaigns were found in this ad account.");
     }
     
-    // Add specific CORS issue detection when Facebook login is used
     if (isAuthenticated && diagnosticResults?.cors?.hasCorsIssues && 
         diagnosticResults?.token?.source === 'facebook') {
       issues.push("CORS issues detected even with Facebook authentication. This may indicate browser security settings or network restrictions.");
@@ -97,7 +89,6 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
     return issues.length > 0 ? issues : ["No issues detected. If you're still experiencing problems, try refreshing your connection or your browser."];
   };
 
-  // Get recommended solutions based on detected issues
   const getRecommendedSolutions = () => {
     const solutions = [];
     
@@ -138,6 +129,28 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
     }
     
     return solutions;
+  };
+
+  const getObfuscatedToken = () => {
+    const token = localStorage.getItem('meta_access_token') || '';
+    if (token.length < 10) return 'Invalid token';
+    return `${token.slice(0, 5)}...${token.slice(-5)} (${token.length} chars)`;
+  };
+
+  const lastEndpoint = localStorage.getItem('last_campaign_fetch_url') || 
+    'https://graph.facebook.com/v19.0/';
+
+  const formatTimestamp = (timestamp: string | null) => {
+    if (!timestamp) return 'Never';
+    return new Date(timestamp).toLocaleString('en-US', {
+      timeZoneName: 'short',
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
@@ -192,6 +205,39 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
       
       <Separator />
       
+      <div className="bg-gray-50 p-3 rounded-md text-xs space-y-2 font-mono">
+        <h4 className="font-medium flex items-center gap-1 text-gray-700 mb-2">
+          <Globe className="h-3.5 w-3.5" />
+          API Request Details
+        </h4>
+        
+        <p className="text-gray-600">
+          <span className="text-gray-500">🔍 Last API Call:</span>{' '}
+          <span className="break-all">{lastEndpoint}</span>
+        </p>
+        
+        <p className="text-gray-600">
+          <span className="text-gray-500">🔐 Token:</span>{' '}
+          {getObfuscatedToken()}
+        </p>
+        
+        <p className="text-gray-600">
+          <span className="text-gray-500">🕒 Last Attempt:</span>{' '}
+          {formatTimestamp(localStorage.getItem('last_campaign_fetch_attempt'))}
+        </p>
+
+        {diagnosticResults?.api?.headers && (
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <p className="text-gray-500 mb-1">Response Headers:</p>
+            <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+              {JSON.stringify(diagnosticResults.api.headers, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+      
+      <Separator />
+      
       <div>
         <h3 className="text-sm font-medium mb-2 flex items-center">
           <AlertCircle className="h-4 w-4 text-amber-500 mr-1" />
@@ -212,7 +258,6 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
           ))}
         </ul>
         
-        {/* Recommended Solutions */}
         <div className="mt-4">
           <h3 className="text-sm font-medium mb-2 flex items-center">
             <Info className="h-4 w-4 text-blue-500 mr-1" />
@@ -225,7 +270,6 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
           </ul>
         </div>
         
-        {/* Campaign data details section */}
         {isAuthenticated && apiConnectionSuccess && hasAdAccount && (
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
             <div className="flex items-start gap-2 mb-2">
@@ -255,7 +299,6 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
           </div>
         )}
 
-        {/* NEW: Diagnostic Information Section */}
         <Collapsible className="mt-4 border rounded-md overflow-hidden">
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="flex items-center gap-1 w-full justify-between p-3">
@@ -328,7 +371,6 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
                 </div>
               </div>
               
-              {/* Common Causes Section - formatted better */}
               <div className="mt-2">
                 <h4 className="font-medium flex items-center gap-1">
                   <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
@@ -356,7 +398,6 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
                 </ul>
               </div>
 
-              {/* Quick Fix Buttons */}
               <div className="mt-3">
                 <h4 className="font-medium">Quick Fixes</h4>
                 <div className="grid grid-cols-2 gap-2 mt-2">
@@ -397,7 +438,6 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
                     size="sm" 
                     className="text-xs" 
                     onClick={() => {
-                      // Clear caches related to campaign data
                       localStorage.removeItem('last_campaign_fetch_attempt');
                       localStorage.removeItem('last_campaign_fetch_success');
                       localStorage.removeItem('last_campaign_fetch_error');

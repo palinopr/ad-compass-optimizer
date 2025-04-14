@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 
 /**
@@ -14,13 +13,23 @@ export const runLiveCampaignDiagnostic = (onResult?: (lines: string[]) => void) 
     return;
   }
 
-  // Check Meta token
+  // Check Meta token with more details
   const token = localStorage.getItem('meta_access_token');
   if (token) {
     results.push('✅ Meta Token Exists');
     results.push(`Token Length: ${token.length} characters`);
+    results.push(`Token Preview: ${token.slice(0, 5)}...${token.slice(-5)}`);
   } else {
     results.push('❌ Meta Token Missing');
+  }
+
+  // Enhanced API call information
+  const lastFetchAttempt = localStorage.getItem('last_campaign_fetch_attempt');
+  const lastEndpoint = localStorage.getItem('last_campaign_fetch_url');
+  
+  if (lastFetchAttempt && lastEndpoint) {
+    results.push(`Last API Call: ${lastEndpoint}`);
+    results.push(`Timestamp: ${new Date(lastFetchAttempt).toISOString()}`);
   }
 
   // Check Ad Account
@@ -52,7 +61,6 @@ export const runLiveCampaignDiagnostic = (onResult?: (lines: string[]) => void) 
   // Add toast notification
   toast({
     title: '✅ Diagnostic Complete',
-    description: 'Check results below or in browser console.',
+    description: 'API details and diagnostics updated.',
   });
 };
-
