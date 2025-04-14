@@ -1,7 +1,6 @@
-
 import { BaseApiService } from './BaseApiService';
-import { checkRateLimitStatus, markRateLimited } from '@/hooks/campaigns/fetch-utils/rateLimit';
-import { shouldThrottleFetch } from '@/hooks/campaigns/fetch-utils/rateLimit';
+import { checkRateLimitStatus, markRateLimited } from '@/hooks/campaigns/fetch-utils';
+import { shouldThrottleFetch } from '@/hooks/campaigns/fetch-utils';
 
 /**
  * Represents filtering options for insights requests

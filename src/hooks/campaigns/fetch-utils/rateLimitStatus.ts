@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 
 /**
@@ -70,4 +71,25 @@ export const notifyRateLimit = (remainingTime?: number): void => {
     description: `Facebook's API is rate limited. Please wait approximately ${remainingTime || 10} more minutes.`,
     duration: 7000,
   });
+};
+
+// Add shouldThrottleFetch since it's being imported by MetaInsightsService
+export const shouldThrottleFetch = (lastFetchTime: number): boolean => {
+  const now = Date.now();
+  
+  // Check if less than 2 seconds since last fetch
+  if (now - lastFetchTime < 2000) {
+    return true;
+  }
+  
+  // Check if we've had multiple rate limits recently
+  // If so, increase throttling time
+  const rateLimitHistory = JSON.parse(localStorage.getItem('meta_rate_limit_history') || '[]');
+  if (rateLimitHistory.length >= 3) {
+    // If we've had 3+ rate limits, enforce stricter throttling
+    // of 10 seconds between requests
+    return now - lastFetchTime < 10000;
+  }
+  
+  return false;
 };
