@@ -1,13 +1,19 @@
 
 import React from 'react';
-import { Key, Shield } from 'lucide-react';
+import { Key, Shield, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { META_API_CONFIG } from '@/config/socialAuth';
 
 const CurrentMetaTokenInfo = () => {
   const token = metaAuthService.getAccessToken();
   const permissions = metaAuthService.getPermissions();
   const tokenAge = metaAuthService.checkTokenFreshness();
+  
+  // Check for missing required permissions
+  const missingPermissions = META_API_CONFIG.adPermissions.filter(
+    perm => !permissions.includes(perm)
+  );
 
   return (
     <Card className="mt-4 border-blue-200 bg-blue-50">
@@ -41,7 +47,7 @@ const CurrentMetaTokenInfo = () => {
               <Shield className="h-3 w-3 mr-1" />
               <span className="font-medium text-sm">Permissions</span>
             </div>
-            <div className="bg-white rounded-md p-2 text-sm">
+            <div className="bg-white rounded-md p-2 text-sm space-y-2">
               {permissions.length > 0 ? (
                 <ul className="list-disc pl-4 space-y-1">
                   {permissions.map((perm: string) => (
@@ -50,6 +56,25 @@ const CurrentMetaTokenInfo = () => {
                 </ul>
               ) : (
                 <p className="text-gray-500">No permissions found</p>
+              )}
+              
+              {/* Permission Status */}
+              {missingPermissions.length > 0 ? (
+                <div className="flex items-start gap-1.5 text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium">Missing Required Permissions:</div>
+                    <ul className="list-disc pl-4 mt-1">
+                      {missingPermissions.map(perm => (
+                        <li key={perm}>{perm}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                  ✅ All required permissions are present
+                </div>
               )}
             </div>
           </div>
