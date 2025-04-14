@@ -153,6 +153,10 @@ const Campaigns = () => {
               <h3 className="text-sm font-medium text-center mb-2">Campaign Connection Troubleshooter</h3>
               <div className="flex flex-col gap-2">
                 <DiagnosticButton />
+                
+                <p className="text-sm text-muted-foreground mb-2 text-center">
+                  🛠 Need help? Click "Run Live Campaign Debugger" to verify token and ad account status.
+                </p>
                 <Button 
                   variant="outline" 
                   size="sm"
