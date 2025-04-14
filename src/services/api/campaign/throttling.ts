@@ -6,7 +6,19 @@ export class CampaignThrottling {
   private static readonly THROTTLE_KEY = 'meta_campaign_fetch_timestamp';
   private static readonly MIN_INTERVAL_MS = 60000; // 1 minute cooldown
 
+  private static isMockMode(): boolean {
+    // Consistent mock detection
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('mock') === 'true';
+  }
+
   public static checkThrottling(accountId?: string): void {
+    // Skip throttling checks entirely in mock mode
+    if (this.isMockMode()) {
+      console.log('✅ Throttling bypassed - mock mode active');
+      return;
+    }
+    
     const now = Date.now();
     const lastFetchStr = localStorage.getItem(this.THROTTLE_KEY);
     const lastFetch = lastFetchStr ? Number(lastFetchStr) : 0;

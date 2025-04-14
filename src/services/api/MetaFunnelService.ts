@@ -1,3 +1,4 @@
+
 import { MetaBatchService } from './batch/MetaBatchService';
 import { MetaFunnelBatchService } from './funnel/MetaFunnelBatchService';
 import { FunnelData } from './types/funnelTypes';
@@ -6,14 +7,25 @@ import { mockFunnelData } from './mock/mockCampaignData';
 
 export class MetaFunnelService {
   private static isMockMode(): boolean {
-    return window.location.search.includes('mock=true');
+    // Enhanced mock detection - check URL params directly
+    const urlParams = new URLSearchParams(window.location.search);
+    const mockEnabled = urlParams.get('mock') === 'true';
+    
+    if (mockEnabled) {
+      console.log('[MOCK MODE] Activated - using fake campaign data');
+    }
+    
+    return mockEnabled;
   }
 
   public static async fetchFunnelData(token: string, adAccountId: string): Promise<FunnelData> {
     try {
       // Check if we should use mock data
       if (this.isMockMode()) {
-        console.log('🎭 Using mock campaign data');
+        console.log('🎭 Using mock campaign data for funnel');
+        // Store in localStorage to help debug if mock mode was used
+        localStorage.setItem('using_mock_data', 'true');
+        localStorage.setItem('mock_mode_activated_at', new Date().toISOString());
         return mockFunnelData;
       }
 

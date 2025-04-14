@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -28,7 +29,15 @@ export interface MetaCampaign {
 
 export class MetaCampaignService extends BaseApiService {
   private static isMockMode(): boolean {
-    return window.location.search.includes('mock=true');
+    // Enhanced mock detection to be consistent with MetaFunnelService
+    const urlParams = new URLSearchParams(window.location.search);
+    const mockEnabled = urlParams.get('mock') === 'true';
+    
+    if (mockEnabled) {
+      console.log('[MOCK MODE] Activated in Campaign Service - bypassing API calls');
+    }
+    
+    return mockEnabled;
   }
 
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
@@ -40,8 +49,11 @@ export class MetaCampaignService extends BaseApiService {
         throw new Error('Ad Account ID is required');
       }
 
-      // Skip throttling check in mock mode
-      if (!this.isMockMode()) {
+      // Skip throttling check in mock mode and log it clearly
+      if (this.isMockMode()) {
+        console.log('🎭 Mock mode active - bypassing throttling checks');
+      } else {
+        console.log('Real API mode - checking throttling status');
         CampaignThrottling.checkThrottling(adAccountId);
       }
       
