@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Check, X, Brain, Bug, RefreshCw } from 'lucide-react';
@@ -50,6 +51,11 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
   }, [displayedCampaignsCount, rawCampaignsCount, filters, adAccountId]);
   
   if (!isMockMode && !isMetaMockMode) return null;
+
+  const handleRefresh = () => {
+    localStorage.setItem("FORCE_MOCK_REFRESH", "true");
+    triggerCampaignRefresh(true);
+  };
 
   const mockDiagnosticItems: DiagnosticItem[] = [
     {
