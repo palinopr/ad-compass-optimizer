@@ -1,6 +1,7 @@
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
+import { CampaignThrottling } from './campaign/throttling';
 
 export interface MetaCampaign {
   id: string;
@@ -35,11 +36,14 @@ export class MetaCampaignService extends BaseApiService {
         throw new Error('Ad Account ID is required');
       }
 
-      // Track the fetch attempt for debugging
+      // Check rate limit throttling before proceeding
+      CampaignThrottling.checkThrottling(adAccountId);
+      
+      // Track the fetch attempt for diagnostics
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
       
-      // Use the new funnel service to get campaign data via batch API
+      // Use the funnel service to get campaign data via batch API
       const { campaigns } = await MetaFunnelService.fetchFunnelData(token, adAccountId);
       
       // Store metadata for diagnostics
