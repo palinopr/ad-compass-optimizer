@@ -169,9 +169,17 @@ const Campaigns = () => {
                 
                 {debugResult.length > 0 && (
                   <div className="mt-4 bg-muted p-3 rounded-md text-sm font-mono space-y-1">
-                    {debugResult.map((line, i) => (
-                      <div key={i}>{line}</div>
-                    ))}
+                    {debugResult.map((line, i) => {
+                      let color = 'text-muted-foreground';
+                      if (line.includes('❌')) color = 'text-red-500';
+                      else if (line.includes('⚠️')) color = 'text-yellow-600';
+                      else if (line.includes('✅')) color = 'text-green-600';
+                      return (
+                        <div key={i} className={color}>
+                          {line}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
