@@ -1,4 +1,3 @@
-
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
@@ -8,7 +7,6 @@ import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 import DiagnosticButton from '@/components/campaigns/DiagnosticButton';
 import CampaignCreationTrigger from '@/components/campaigns/CampaignCreationTrigger';
 
-// Import our components
 import CampaignHeader from '@/components/campaigns/CampaignHeader';
 import ConnectionStatusAlerts from '@/components/campaigns/ConnectionStatusAlerts';
 import CampaignTabs from '@/components/campaigns/CampaignTabs';
@@ -37,7 +35,6 @@ const Campaigns = () => {
   } = useCampaignsPage();
 
   const handleForceRefresh = () => {
-    // Force refresh of campaign data
     triggerCampaignRefresh(true);
     toast({
       title: "Forcing Campaign Refresh",
@@ -46,7 +43,6 @@ const Campaigns = () => {
   };
 
   const handleForceDisplayRefresh = () => {
-    // Force refresh of UI display
     triggerDisplayRefresh();
     toast({
       title: "UI Refresh Triggered",
@@ -124,16 +120,20 @@ const Campaigns = () => {
             
             <CampaignTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             
-            {/* Make the diagnostic button more visible with a border */}
             <div className="border-t border-gray-200 pt-6 mt-8">
               <h3 className="text-sm font-medium text-center mb-2">Campaign Connection Troubleshooter</h3>
               <DiagnosticButton />
             </div>
+
+            {localStorage.getItem("USE_MOCK_MODE") === "true" && (
+              <MockDiagnosticPanel 
+                displayedCampaignsCount={activeTab === 'active' ? campaigns?.length || 0 : 0}
+              />
+            )}
           </>
         )}
       </div>
       
-      {/* Meta Connection Dialog that automatically shows when needed */}
       <MetaConnectionDialog
         open={showConnectionDialog}
         onOpenChange={setShowConnectionDialog}
@@ -141,7 +141,6 @@ const Campaigns = () => {
         onError={handleConnectionError}
       />
       
-      {/* Campaign Creation Trigger */}
       <CampaignCreationTrigger />
     </AppLayout>
   );
