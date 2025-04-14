@@ -1,17 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Check, X, Brain, Bug, RefreshCw, Terminal } from 'lucide-react';
-import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
-import { Button } from '@/components/ui/button';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 import { MockApiService } from '@/services/api/mock/MockApiService';
-import { ScrollArea } from '@/components/ui/scroll-area';
-
-interface DiagnosticItem {
-  label: string;
-  status: 'success' | 'error' | 'info' | 'warning';
-  details?: string;
-}
+import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
+import MockHeader from './mock-panel/MockHeader';
+import DiagnosticItems from './mock-panel/DiagnosticItems';
+import MockApiCallsLog from './mock-panel/MockApiCallsLog';
 
 interface MockDiagnosticPanelProps {
   displayedCampaignsCount: number;
@@ -33,7 +28,7 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
   const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
   const isMetaMockMode = MockApiService.isMockMetaApiMode();
   const [verifiedCount, setVerifiedCount] = useState(displayedCampaignsCount);
-  const [mockSourceData, setMockSourceData] = useState(mockFunnelData.campaigns.length);
+  const [mockSourceData] = useState(mockFunnelData.campaigns.length);
 
   useEffect(() => {
     console.log('MockDiagnosticPanel: Updating verified count', {
@@ -57,142 +52,83 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
     triggerCampaignRefresh(true);
   };
 
-  const mockDiagnosticItems: DiagnosticItem[] = [
+  const diagnosticItems = [
     {
       label: 'Mock Mode Type',
-      status: 'info',
+      status: 'info' as const,
       details: isMetaMockMode ? 'Meta API Simulation' : 'Basic Mock Data'
-    }
-  ];
-
-  if (isMetaMockMode) {
-    mockDiagnosticItems.push(
+    },
+    ...(isMetaMockMode ? [
       {
         label: 'Mocked Services',
-        status: 'success',
+        status: 'success' as const,
         details: 'Campaigns, Ad Sets, Ads, Insights'
       },
       {
         label: 'Meta API Status',
-        status: 'info',
+        status: 'info' as const,
         details: 'Using simulated responses'
       }
-    );
-  }
-
-  const diagnosticItems: DiagnosticItem[] = [
-    ...mockDiagnosticItems,
+    ] : []),
     {
       label: 'Campaign Flow',
-      status: rawCampaignsCount === 0 ? 'error' : 'info',
+      status: (rawCampaignsCount === 0 ? 'error' : 'info') as const,
       details: `${mockSourceData} in funnel → ${rawCampaignsCount ?? 0} in state → ${verifiedCount} filtered`
     },
     {
       label: 'Mock Source Data',
-      status: 'info',
+      status: 'info' as const,
       details: `${mockSourceData} campaigns in mockFunnelData`
     },
     {
       label: 'Raw Campaigns',
-      status: rawCampaignsCount === 0 ? 'error' : 'info',
+      status: (rawCampaignsCount === 0 ? 'error' : 'info') as const,
       details: `${rawCampaignsCount ?? 'unknown'} campaigns in state`
     },
     {
       label: 'Filtered Campaigns',
-      status: verifiedCount > 0 ? 'success' : 'error',
+      status: (verifiedCount > 0 ? 'success' : 'error') as const,
       details: `${verifiedCount} campaigns displayed`
-    }
-  ];
-
-  diagnosticItems.push({
-    label: 'Mock Data Sync',
-    status: rawCampaignsCount === 0 ? 'error' : 'success',
-    details: rawCampaignsCount === 0 ? 'Not synced to state' : 'Successfully synced'
-  });
-
-  if (filters) {
-    diagnosticItems.push({
+    },
+    {
+      label: 'Mock Data Sync',
+      status: (rawCampaignsCount === 0 ? 'error' : 'success') as const,
+      details: rawCampaignsCount === 0 ? 'Not synced to state' : 'Successfully synced'
+    },
+    ...(filters ? [{
       label: 'Active Filters',
-      status: 'info',
+      status: 'info' as const,
       details: `Status: ${filters.status || 'none'}, Date: ${filters.datePreset || 'none'}, Search: ${filters.search ? 'yes' : 'no'}`
-    });
-  }
-
-  if (adAccountId) {
-    diagnosticItems.push({
+    }] : []),
+    ...(adAccountId ? [{
       label: 'Ad Account',
-      status: 'info',
+      status: 'info' as const,
       details: adAccountId
-    });
-  }
-
-  if (verifiedCount === 0) {
-    diagnosticItems.push({
-      label: 'Possible Fix',
-      status: 'warning',
-      details: 'Try clicking "Force UI Refresh" or reload the page'
-    });
-    
-    if (rawCampaignsCount === 0) {
-      diagnosticItems.push({
+    }] : []),
+    ...(verifiedCount === 0 ? [
+      {
+        label: 'Possible Fix',
+        status: 'warning' as const,
+        details: 'Try clicking "Force UI Refresh" or reload the page'
+      },
+      ...(rawCampaignsCount === 0 ? [{
         label: 'Data Flow Issue',
-        status: 'error',
+        status: 'error' as const,
         details: 'Mock data not reaching state - check console logs'
-      });
-    }
-  }
+      }] : [])
+    ] : [])
+  ];
 
   return (
     <Card className="mt-8 p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-sm font-medium flex items-center">
-          <Bug className="w-4 h-4 mr-2 text-amber-500" />
-          {isMetaMockMode ? 'Meta API Simulation Panel' : 'Mock Diagnostic Panel'}
-        </h3>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleRefresh}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-3 w-3" />
-          Refresh Mock Data
-        </Button>
-      </div>
+      <MockHeader 
+        isMetaMockMode={isMetaMockMode}
+        onRefresh={handleRefresh}
+      />
       
       <div className="space-y-4">
-        {diagnosticItems.map((item, index) => (
-          <div key={index} className="flex items-center space-x-2 text-sm">
-            {item.status === 'success' && <Check className="w-4 h-4 text-green-500" />}
-            {item.status === 'error' && <X className="w-4 h-4 text-red-500" />}
-            {item.status === 'warning' && <Bug className="w-4 h-4 text-amber-500" />}
-            {item.status === 'info' && <Brain className="w-4 h-4 text-blue-500" />}
-            <span className="font-medium">{item.label}:</span>
-            <span className={item.status === 'error' ? 'text-red-600' : 'text-gray-600'}>
-              {item.details}
-            </span>
-          </div>
-        ))}
-        
-        <div className="mt-4">
-          <h4 className="text-sm font-medium flex items-center mb-2">
-            <Terminal className="w-4 h-4 mr-2" />
-            Recent Mock API Calls
-          </h4>
-          <ScrollArea className="h-[200px] rounded-md border p-2">
-            {MockApiService.getRecentMockCalls().map((call, index) => (
-              <div key={index} className="text-xs mb-2 space-y-1">
-                <div className="flex items-center text-green-600">
-                  <Check className="w-3 h-3 mr-1" />
-                  {call.endpoint}
-                </div>
-                <div className="text-gray-500 pl-4">
-                  {new Date(call.timestamp).toLocaleTimeString()}
-                </div>
-              </div>
-            ))}
-          </ScrollArea>
-        </div>
+        <DiagnosticItems items={diagnosticItems} />
+        <MockApiCallsLog calls={MockApiService.getRecentMockCalls()} />
       </div>
     </Card>
   );
