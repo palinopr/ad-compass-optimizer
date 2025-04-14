@@ -102,26 +102,6 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
           onRetry={() => refetchCampaigns(true)}
           errorDetails={errorDetails}
         />
-        
-        {/* Add detailed API error display for debugging */}
-        <div className="px-6 pb-4 mt-2">
-          <div className="text-sm bg-red-50 border border-red-200 rounded p-3">
-            <h4 className="font-medium mb-1">🚫 Campaign Fetch Error Details</h4>
-            <div className="text-red-600 text-xs overflow-auto max-h-32 font-mono">
-              {error}
-            </div>
-            {errorDetails && (
-              <div className="mt-2 pt-2 border-t border-red-200">
-                <div className="text-xs font-mono text-red-500 overflow-auto max-h-48">
-                  {typeof errorDetails === 'object' ? 
-                    JSON.stringify(errorDetails, null, 2) : 
-                    String(errorDetails)
-                  }
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
       </Card>
     );
   }
@@ -174,15 +154,17 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         onClearFilters={handleClearFilters}
       />
       
-      <MockApiControls onRefresh={handleRefresh} />
-      
-      {isMockMode && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mt-4">
-          <p className="text-yellow-800">🎭 Mock Mode Active - Using simulated campaign data</p>
-        </div>
+      {process.env.NODE_ENV !== 'production' && (
+        <>
+          <MockApiControls onRefresh={handleRefresh} />
+          {isMockMode && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mt-4">
+              <p className="text-yellow-800">🎭 Mock Mode Active - Using simulated campaign data</p>
+            </div>
+          )}
+          <CampaignDebugInfo campaigns={campaigns} />
+        </>
       )}
-      
-      <CampaignDebugInfo campaigns={campaigns} />
     </div>
   );
 };

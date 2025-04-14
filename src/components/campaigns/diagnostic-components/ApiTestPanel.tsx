@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,8 @@ interface ApiTestResult {
 }
 
 const ApiTestPanel: React.FC = () => {
+  if (process.env.NODE_ENV === 'production') return null;
+  
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<ApiTestResult | null>(null);
   
@@ -22,7 +23,6 @@ const ApiTestPanel: React.FC = () => {
     setTestResult(null);
     
     try {
-      // Get the token
       const token = metaAuthService.getAccessToken();
       
       if (!token) {
@@ -34,7 +34,6 @@ const ApiTestPanel: React.FC = () => {
         return;
       }
       
-      // Get the selected account ID
       const adAccountId = localStorage.getItem('selected_ad_account');
       
       if (!adAccountId) {
@@ -46,10 +45,8 @@ const ApiTestPanel: React.FC = () => {
         return;
       }
       
-      // Format the account ID
       const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
       
-      // Make a simple API call to verify access
       const response = await fetch(
         `https://graph.facebook.com/v17.0/${formattedAccountId}?fields=name,id,account_status&access_token=${token}`,
         {
@@ -67,7 +64,6 @@ const ApiTestPanel: React.FC = () => {
       
       const data = await response.json();
       
-      // Second test: check if we can fetch campaign fields
       const campaignsResponse = await fetch(
         `https://graph.facebook.com/v17.0/${formattedAccountId}/campaigns?fields=name,id&limit=1&access_token=${token}`,
         {

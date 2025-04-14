@@ -60,7 +60,7 @@ const Campaigns = () => {
               resetConnection={resetConnection}
             />
             
-            {localStorage.getItem("USE_MOCK_MODE") === "true" && (
+            {process.env.NODE_ENV !== 'production' && localStorage.getItem("USE_MOCK_MODE") === "true" && (
               <MockDiagnosticPanel 
                 displayedCampaignsCount={filteredCampaigns?.length || 0}
                 rawCampaignsCount={campaigns?.length || 0}
@@ -77,7 +77,7 @@ const Campaigns = () => {
             
             <CampaignTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             
-            <CampaignTroubleshooter />
+            {process.env.NODE_ENV !== 'production' && <CampaignTroubleshooter />}
           </>
         )}
       </div>
