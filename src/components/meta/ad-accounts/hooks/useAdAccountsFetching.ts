@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { metaAuthService, MetaAuthService } from '@/services/MetaAuthService';
 import { AdAccount } from '../types';
@@ -93,11 +92,14 @@ export function useAdAccountsFetching() {
         const permissions = rawPermissions ? JSON.parse(rawPermissions) : [];
         console.log('[META DEBUG] Token permissions at failure:', permissions);
         
-        // Check for required permissions
-        const hasMissingPermissions = !permissions.includes("ads_management") || !permissions.includes("ads_read");
+        // Track which specific permissions are missing
+        const missingPermissions = [];
+        if (!permissions.includes("ads_read")) missingPermissions.push("ads_read");
+        if (!permissions.includes("ads_management")) missingPermissions.push("ads_management");
         
-        if (hasMissingPermissions) {
-          setError("Your Meta token is missing required permissions (ads_read or ads_management). Please reconnect your Meta account with full ad access.");
+        if (missingPermissions.length > 0) {
+          console.warn(`[META DEBUG] Missing required permissions: ${missingPermissions.join(", ")}`);
+          setError(`Your Meta token is missing required permissions (${missingPermissions.join(", ")}). Please reconnect your Meta account with full ad access.`);
         } else {
           setError(errorMessage);
         }
