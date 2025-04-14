@@ -4,3 +4,4 @@ export * from './rateLimit';
 export * from './cacheManager';
 export * from './errorHandler';
 export * from './fetchHelpers';
+export * from './index.js';

@@ -53,3 +53,54 @@ export const cacheCampaigns = (campaigns) => {
     return false;
   }
 };
+
+/**
+ * Determines if a fetch request should be throttled based on time since last fetch
+ * Following Meta's best practice to spread requests evenly
+ */
+export const shouldThrottleFetch = (lastFetchTime) => {
+  const now = Date.now();
+  
+  // Check if less than 2 seconds since last fetch
+  if (now - lastFetchTime < 2000) {
+    return true;
+  }
+  
+  // Check if we've had multiple rate limits recently
+  // If so, increase throttling time
+  const rateLimitHistory = JSON.parse(localStorage.getItem('meta_rate_limit_history') || '[]');
+  if (rateLimitHistory.length >= 3) {
+    // If we've had 3+ rate limits, enforce stricter throttling
+    // of 10 seconds between requests
+    return now - lastFetchTime < 10000;
+  }
+  
+  return false;
+};
+
+/**
+ * Calculate backoff time based on recent API issues
+ */
+export const getBackoffTime = (lastFetchSuccess, rateLimitHistory, callCount) => {
+  // Base backoff time
+  let backoffTime = 2000; // 2 seconds minimum
+  
+  // If we've had failures, increase backoff
+  if (!lastFetchSuccess) {
+    backoffTime = 5000; // 5 seconds
+  }
+  
+  // If we've had rate limits, increase further
+  if (rateLimitHistory && rateLimitHistory.length > 0) {
+    // Exponential backoff based on number of recent rate limits
+    backoffTime = 5000 * Math.pow(1.5, Math.min(rateLimitHistory.length, 5));
+  }
+  
+  // If we're close to API limits, be more conservative
+  if (callCount && callCount > 80) {
+    backoffTime = Math.max(backoffTime, 10000); // At least 10 seconds
+  }
+  
+  // Cap at 60 seconds
+  return Math.min(backoffTime, 60000);
+};
