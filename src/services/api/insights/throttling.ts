@@ -5,6 +5,7 @@
 import { BaseApiService } from '../BaseApiService';
 import { checkRateLimitStatus, markRateLimited } from '@/hooks/campaigns/fetch-utils/rateLimitStatus';
 import { shouldThrottleFetch } from '@/hooks/campaigns/fetch-utils/rateLimitStatus';
+import { storeApiUsage } from '@/hooks/campaigns/fetch-utils/apiUsage';
 
 export class InsightsThrottling {
   private static lastFetchTime: number = 0;
@@ -24,11 +25,11 @@ export class InsightsThrottling {
       throw new Error('Rate limiting: Please wait before making another request');
     }
     
-    // Check if we've recently hit a rate limit
+    // Check if we've recently hit a rate limit for this specific account
     const rateStatus = checkRateLimitStatus(accountId);
     if (rateStatus.isRateLimited) {
       console.log(`Rate limit active for account ${accountId}, remaining time: ${rateStatus.timeRemaining} minutes`);
-      throw new Error(`Meta API rate limit reached. Please wait approximately ${rateStatus.timeRemaining} more minutes.`);
+      throw new Error(`Meta API rate limit reached for account ${accountId}. Please wait approximately ${rateStatus.timeRemaining} more minutes.`);
     }
     
     // Update last fetch time
@@ -50,12 +51,16 @@ export class InsightsThrottling {
     if (appUsage) {
       try {
         const usage = JSON.parse(appUsage);
+        
+        // Store the usage data for this specific account
+        storeApiUsage(usage, this.currentAccountId);
+        
         // If we're over 80% of rate limit, log a warning
         if (usage.call_count > 80 || usage.total_cputime > 80 || usage.total_time > 80) {
-          console.warn('Approaching Meta API rate limits:', usage);
+          console.warn(`Approaching Meta API rate limits for account ${this.currentAccountId}:`, usage);
         }
         
-        // If we're at 100%, mark as rate limited
+        // If we're at 100%, mark as rate limited for this account
         if (usage.call_count >= 100 || usage.total_cputime >= 100 || usage.total_time >= 100) {
           markRateLimited(15, this.currentAccountId);
         }
