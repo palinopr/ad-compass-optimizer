@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
 import MetaConnect from '@/components/meta/MetaConnect';
@@ -39,6 +40,18 @@ const Campaigns = () => {
   // Get campaigns and filters for the active tab
   const { campaigns, filteredCampaigns } = useCampaigns(activeTab);
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
+  
+  // Track if mock campaigns have loaded
+  const [mockDataLoaded, setMockDataLoaded] = React.useState(false);
+  
+  // Monitor campaign data loading for mock mode
+  useEffect(() => {
+    const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
+    if (isMockMode && campaigns?.length > 0 && !mockDataLoaded) {
+      console.log("Mock campaign data loaded, updating diagnostic panel state");
+      setMockDataLoaded(true);
+    }
+  }, [campaigns, mockDataLoaded]);
 
   const handleForceRefresh = () => {
     triggerCampaignRefresh(true);
@@ -103,6 +116,20 @@ const Campaigns = () => {
               {isAuthenticated && <AdAccountSelector />}
             </div>
             
+            {/* Mock Diagnostic Panel - positioned before the campaign tabs */}
+            {localStorage.getItem("USE_MOCK_MODE") === "true" && (
+              <MockDiagnosticPanel 
+                displayedCampaignsCount={filteredCampaigns?.length || 0}
+                rawCampaignsCount={campaigns?.length || 0}
+                filters={{
+                  status: activeTab,
+                  datePreset: 'last30days',
+                  search: ''
+                }}
+                adAccountId={selectedAdAccount || undefined}
+              />
+            )}
+            
             {isAuthenticated && hasAdAccount && (
               <div className="flex gap-2 justify-end mb-4">
                 <Button 
@@ -130,19 +157,6 @@ const Campaigns = () => {
               <h3 className="text-sm font-medium text-center mb-2">Campaign Connection Troubleshooter</h3>
               <DiagnosticButton />
             </div>
-
-            {localStorage.getItem("USE_MOCK_MODE") === "true" && (
-              <MockDiagnosticPanel 
-                displayedCampaignsCount={filteredCampaigns?.length || 0}
-                rawCampaignsCount={campaigns?.length || 0}
-                filters={{
-                  status: activeTab,
-                  datePreset: 'last30days',
-                  search: ''
-                }}
-                adAccountId={selectedAdAccount || undefined}
-              />
-            )}
           </>
         )}
       </div>

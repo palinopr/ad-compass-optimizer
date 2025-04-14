@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
@@ -10,7 +11,6 @@ import CampaignDebugInfo from './CampaignDebugInfo';
 import EmptyCampaignState from './EmptyCampaignState';
 import { useCampaignListState } from '@/hooks/campaigns/useCampaignListState';
 import { useCampaignMetrics } from '@/hooks/campaigns/useCampaignMetrics';
-import MockDiagnosticPanel from './diagnostic-components/MockDiagnosticPanel';
 import MockApiControls from './diagnostic-components/MockApiControls';
 
 interface CampaignListProps {
@@ -133,16 +133,9 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       <MockApiControls onRefresh={handleRefresh} />
       
       {isMockMode && (
-        <>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mt-4">
-            <p className="text-yellow-800">🎭 Mock Mode Active - Using simulated campaign data</p>
-          </div>
-          <MockDiagnosticPanel 
-            displayedCampaignsCount={filteredCampaigns.length} 
-            rawCampaignsCount={campaigns.length}
-            filters={filters}
-          />
-        </>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mt-4">
+          <p className="text-yellow-800">🎭 Mock Mode Active - Using simulated campaign data</p>
+        </div>
       )}
       
       <CampaignDebugInfo campaigns={campaigns} />
