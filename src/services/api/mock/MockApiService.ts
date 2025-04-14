@@ -62,6 +62,9 @@ export class MockApiService {
    */
   public static getMockFunnelData(): FunnelData {
     console.log('🎭 Returning mock funnel data from MockApiService');
+    console.log('  → Campaigns:', mockFunnelData.campaigns.length);
+    console.log('  → Ad Sets:', mockFunnelData.adsets.length);
+    console.log('  → Ads:', mockFunnelData.ads.length);
     return mockFunnelData;
   }
 
@@ -71,5 +74,15 @@ export class MockApiService {
   public static getMockInsights(objectId: string): InsightsResponse {
     console.log(`🎭 Returning mock insights for ${objectId} from MockApiService`);
     return generateMockInsights(objectId);
+  }
+
+  /**
+   * Check if a specific service is being mocked
+   */
+  public static isServiceMocked(serviceName: 'campaigns' | 'funnel' | 'insights' | 'creative'): boolean {
+    if (!this.isMockMetaApiMode()) return false;
+
+    // Currently all services are mocked when mock mode is enabled
+    return true;
   }
 }
