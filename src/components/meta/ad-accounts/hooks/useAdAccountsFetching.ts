@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { metaAuthService } from '@/services/MetaAuthService';
+import { metaAuthService, MetaAuthService } from '@/services/MetaAuthService';
 import { AdAccount } from '../types';
 import { getMockAdAccount } from '../utils/mockAccountData';
 import { fetchSelectedAccounts, fetchAllAccounts } from '../utils/fetchUtils';
@@ -90,7 +90,7 @@ export function useAdAccountsFetching() {
       
       // Log token permissions during fetch failure
       try {
-        const rawPermissions = localStorage.getItem(metaAuthService.PERMISSIONS_KEY);
+        const rawPermissions = localStorage.getItem(MetaAuthService.PERMISSIONS_KEY);
         const permissions = rawPermissions ? JSON.parse(rawPermissions) : [];
         console.log('[META DEBUG] Token permissions at failure:', permissions);
       } catch (parseErr) {
