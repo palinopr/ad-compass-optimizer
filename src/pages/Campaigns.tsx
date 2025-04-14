@@ -12,6 +12,8 @@ import { useCampaigns } from '@/hooks/campaigns';
 import ConnectionSection from '@/components/campaigns/connection/ConnectionSection';
 import RefreshControls from '@/components/campaigns/refresh/RefreshControls';
 import EmptyStateMessage from '@/components/campaigns/EmptyStateMessage';
+import MockDiagnosticPanel from '@/components/campaigns/diagnostic-components/MockDiagnosticPanel';
+import CampaignTroubleshooter from '@/components/campaigns/troubleshooter/CampaignTroubleshooter';
 
 const Campaigns = () => {
   const {

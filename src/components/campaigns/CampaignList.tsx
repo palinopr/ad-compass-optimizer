@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import CampaignFilterToolbar from './CampaignFilterToolbar';
 import CampaignMetrics from './CampaignMetrics';
 import NoCampaignsFoundPanel from './diagnostic-components/NoCampaignsFoundPanel';
-import { LoadingState, ErrorState } from './CampaignListStates';
+import { LoadingState, ErrorState, EmptyState } from './CampaignListStates';
 import CampaignFilteredResults from './CampaignFilteredResults';
 import CampaignDebugInfo from './CampaignDebugInfo';
 import EmptyCampaignState from './EmptyCampaignState';
@@ -14,7 +14,6 @@ import MockApiControls from './diagnostic-components/MockApiControls';
 import NoCampaignsFoundWarning from './NoCampaignsFoundWarning';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { META_API_CONFIG } from '@/config/socialAuth';
-import EmptyState from './CampaignListStates';
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
