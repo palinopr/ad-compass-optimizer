@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { AdAccount } from '../types';
@@ -16,6 +15,7 @@ export function useAdAccountsFetching() {
   
   useEffect(() => {
     if (isMockMode()) {
+      console.log('🎭 Mock mode: Using mock ad accounts');
       setAdAccounts([getMockAdAccount()]);
     }
   }, []);
@@ -27,7 +27,7 @@ export function useAdAccountsFetching() {
       setIsLoading(false);
       return;
     }
-    
+
     const accessToken = metaAuthService.getAccessToken();
     
     if (!accessToken) {
@@ -91,4 +91,3 @@ export function useAdAccountsFetching() {
     setAdAccounts
   };
 }
-

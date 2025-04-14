@@ -1,10 +1,17 @@
-
 import { useToast } from '@/hooks/use-toast';
 
 export const useAdAccountsError = () => {
   const { toast } = useToast();
 
   const handleFetchError = (err: any) => {
+    // Don't show error toasts in mock mode
+    if (localStorage.getItem("USE_MOCK_MODE") === "true") {
+      return {
+        error: null,
+        shouldReconnect: false
+      };
+    }
+
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error('Ad account fetch error:', errorMessage);
     
@@ -31,4 +38,3 @@ export const useAdAccountsError = () => {
 
   return { handleFetchError };
 };
-

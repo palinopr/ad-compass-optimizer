@@ -1,9 +1,15 @@
-
 import { MetaApiService } from '@/services/MetaApiService';
 import { AdAccount } from '../types';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { getMockAdAccount } from './mockAccountData';
 
 export const fetchSelectedAccounts = async (selectedIds: string[], token: string): Promise<AdAccount[]> => {
+  // Return mock data if in mock mode
+  if (localStorage.getItem("USE_MOCK_MODE") === "true") {
+    console.log('🎭 Mock mode: Returning mock ad account');
+    return [getMockAdAccount()];
+  }
+
   try {
     const connectionTest = await MetaApiService.testConnection(token);
     if (!connectionTest.success) {
@@ -32,6 +38,12 @@ export const fetchSelectedAccounts = async (selectedIds: string[], token: string
 };
 
 export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
+  // Return mock data if in mock mode
+  if (localStorage.getItem("USE_MOCK_MODE") === "true") {
+    console.log('🎭 Mock mode: Returning mock ad account');
+    return [getMockAdAccount()];
+  }
+
   try {
     const connectionTest = await MetaApiService.testConnection(token);
     if (!connectionTest.success) {
@@ -46,4 +58,3 @@ export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
     throw error;
   }
 };
-
