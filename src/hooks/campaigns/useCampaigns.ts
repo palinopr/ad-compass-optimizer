@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useAuthCheck } from './useAuthCheck';
 import { useAdAccountSelection } from './useAdAccountSelection';
@@ -16,15 +16,23 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const { getSelectedAdAccount } = useAdAccountSelection();
   const { fetchCampaignData } = useCampaignFetcher();
   
-  // Use the new hook for state management
+  // Use the enhanced hook for state management
   const {
     campaigns, setCampaigns,
     isLoading, setIsLoading,
     error, setError,
     errorDetails, setErrorDetails,
     displayRefresh, incrementDisplayRefresh,
-    isFetchingRef, lastFetchTimeRef, mountedRef
+    clearCampaigns, forceUiRefresh,
+    isFetchingRef, lastFetchTimeRef, mountedRef, campaignCountRef
   } = useCampaignFetchState();
+  
+  // Force a UI refresh when displayRefresh changes
+  useEffect(() => {
+    if (displayRefresh > 0 && campaigns.length > 0) {
+      console.log(`Display refresh triggered (${displayRefresh}), forcing UI update with ${campaigns.length} campaigns`);
+    }
+  }, [displayRefresh, campaigns.length]);
   
   // Function to fetch campaigns with enhanced display refresh
   const fetchCampaigns = useCallback(async (forceRefresh = false) => {
@@ -102,9 +110,11 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         localStorage.setItem('last_campaign_count', fetchedCampaigns.length.toString());
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.setItem('last_campaign_list_status', status || 'all');
+        localStorage.setItem('last_empty_result', fetchedCampaigns.length === 0 ? 'true' : 'false');
         
         // Update state only if the component is still mounted
         if (mountedRef.current) {
+          // First set campaigns
           setCampaigns(fetchedCampaigns);
           
           // Force UI refresh by triggering display refresh counter
@@ -143,8 +153,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       setCampaigns, setError, setErrorDetails, setIsLoading, incrementDisplayRefresh, 
       isFetchingRef, lastFetchTimeRef, mountedRef]);
   
-  // Use the new hook for event listeners
-  useCampaignEventListeners(fetchCampaigns, incrementDisplayRefresh, status);
+  // Use the enhanced hook for event listeners
+  useCampaignEventListeners(fetchCampaigns, incrementDisplayRefresh, forceUiRefresh, clearCampaigns, status);
   
   return {
     campaigns,

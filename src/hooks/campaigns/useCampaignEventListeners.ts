@@ -5,35 +5,42 @@ import { CampaignRefreshEvent } from './fetch-utils/eventHandlers';
 type FetchFunction = (force?: boolean) => void;
 
 /**
- * Hook for setting up campaign-related event listeners
+ * Hook for setting up campaign-related event listeners with improved refresh handling
  */
 export function useCampaignEventListeners(
   fetchCampaigns: FetchFunction,
   incrementDisplayRefresh: () => void,
+  forceUiRefresh: () => void,
+  clearCampaigns: () => void,
   status?: string
 ) {
-  const mountedRef = useRef<boolean>(false);
+  const mountedRef = useRef<boolean>(true);
   
   // Handle manual refresh requests
   const handleManualRefresh = useCallback((e: CampaignRefreshEvent) => {
     console.log("Manual campaign refresh requested", e.detail);
+    // Clear campaigns first to ensure UI resets
+    clearCampaigns();
     // If force refresh is specified, pass through the force parameter
     fetchCampaigns(e.detail?.force);
-  }, [fetchCampaigns]);
+  }, [fetchCampaigns, clearCampaigns]);
   
   // Handle display refresh requests
   const handleDisplayRefresh = useCallback(() => {
     console.log("Campaign display refresh requested");
     incrementDisplayRefresh();
+    forceUiRefresh();
     localStorage.setItem('had_display_issues', 'true');
-  }, [incrementDisplayRefresh]);
+  }, [incrementDisplayRefresh, forceUiRefresh]);
 
   // Handle ad account change events
   const handleAdAccountChange = useCallback(() => {
     console.log("Ad account changed, refreshing campaigns...");
+    // Clear campaigns first to reset UI
+    clearCampaigns();
     // Add a slight delay to let any other UI updates complete
-    setTimeout(() => fetchCampaigns(), 100);
-  }, [fetchCampaigns]);
+    setTimeout(() => fetchCampaigns(true), 100);
+  }, [fetchCampaigns, clearCampaigns]);
 
   useEffect(() => {
     mountedRef.current = true;

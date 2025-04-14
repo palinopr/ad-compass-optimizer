@@ -1,9 +1,9 @@
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 
 /**
- * Hook for managing campaign fetch state
+ * Hook for managing campaign fetch state with improved UI refresh capabilities
  */
 export function useCampaignFetchState() {
   const [campaigns, setCampaigns] = useState<MetaCampaign[]>([]);
@@ -15,7 +15,23 @@ export function useCampaignFetchState() {
   // Use refs to prevent multiple concurrent fetches
   const isFetchingRef = useRef<boolean>(false);
   const lastFetchTimeRef = useRef<number>(0);
-  const mountedRef = useRef<boolean>(false);
+  const mountedRef = useRef<boolean>(true);
+  const campaignCountRef = useRef<number>(0);
+
+  // Set mounted flag on component mount/unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Update campaign count ref whenever campaigns change
+  useEffect(() => {
+    campaignCountRef.current = campaigns.length;
+    // Log for debugging
+    console.log(`Campaign count updated: ${campaignCountRef.current}`);
+  }, [campaigns]);
 
   const incrementDisplayRefresh = () => {
     setDisplayRefresh(prev => {
@@ -23,6 +39,23 @@ export function useCampaignFetchState() {
       console.log(`Incrementing display refresh counter: ${prev} -> ${newValue}`);
       return newValue;
     });
+  };
+
+  // Function to clear campaigns state (useful when switching accounts)
+  const clearCampaigns = () => {
+    console.log('Clearing campaign state');
+    setCampaigns([]);
+    campaignCountRef.current = 0;
+  };
+
+  // Function to force a UI refresh
+  const forceUiRefresh = () => {
+    console.log('Forcing UI refresh');
+    incrementDisplayRefresh();
+    // Trigger React to re-render by cloning the campaigns array
+    if (campaigns.length > 0) {
+      setCampaigns([...campaigns]);
+    }
   };
 
   return {
@@ -37,10 +70,13 @@ export function useCampaignFetchState() {
     setErrorDetails,
     displayRefresh,
     incrementDisplayRefresh,
+    clearCampaigns,
+    forceUiRefresh,
     
     // Refs
     isFetchingRef,
     lastFetchTimeRef,
-    mountedRef
+    mountedRef,
+    campaignCountRef
   };
 }

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCampaigns } from '@/hooks/campaigns';
@@ -29,6 +29,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const campaignsRef = useRef<typeof campaigns>([]);
   const renderCountRef = useRef(0);
   const metrics = useCampaignMetrics(filteredCampaigns);
+  // Add forceRender state to help with UI updates
+  const [forceRender, setForceRender] = useState(0);
   
   const authResult = validateAuthentication();
   const effectiveIsAuthenticated = authResult.isValid;
@@ -43,7 +45,25 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       displayRefresh
     });
     campaignsRef.current = campaigns;
+    
+    // Force a re-render when campaigns change to ensure UI updates
+    if (campaigns.length > 0) {
+      setForceRender(prev => prev + 1);
+    }
   }, [campaigns, filteredCampaigns.length, status, displayRefresh]);
+  
+  // Force UI refresh when ad account changes
+  useEffect(() => {
+    const handleAdAccountChange = () => {
+      console.log('Ad account changed, forcing UI refresh in CampaignList');
+      setForceRender(prev => prev + 1);
+    };
+    
+    window.addEventListener('ad-account-changed', handleAdAccountChange);
+    return () => {
+      window.removeEventListener('ad-account-changed', handleAdAccountChange);
+    };
+  }, []);
   
   useEffect(() => {
     const token = metaAuthService.getAccessToken();
@@ -131,22 +151,28 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   
   if (!campaigns || campaigns.length === 0) {
     return (
-      <Card>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="flex gap-1 text-xs text-gray-500"
-          onClick={handleRefresh}
-        >
-          <RefreshCw className="h-3 w-3" />
-          Debug Refresh
-        </Button>
+      <Card className="p-4">
+        <div className="text-center text-gray-500">
+          <p className="mb-2">No campaigns found in this ad account.</p>
+          <div className="flex justify-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex gap-1 text-xs"
+              onClick={handleRefresh}
+            >
+              <RefreshCw className="h-3 w-3" />
+              Refresh Campaigns
+            </Button>
+          </div>
+        </div>
       </Card>
     );
   }
 
+  // Use forceRender as a key to force component re-rendering
   return (
-    <>
+    <div key={`campaign-list-${forceRender}`}>
       <CampaignFilterToolbar 
         filters={filters}
         onDateRangeChange={setDateRange}
@@ -169,7 +195,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         hasFilteredResults={filteredCampaigns.length > 0}
         onClearFilters={handleClearFilters}
       />
-    </>
+    </div>
   );
 };
 
