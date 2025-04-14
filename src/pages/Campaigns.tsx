@@ -1,4 +1,3 @@
-
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
@@ -37,8 +36,9 @@ const Campaigns = () => {
     isAuthSyncing
   } = useCampaignsPage();
 
-  // Get campaigns for the active tab to pass to the diagnostic panel
-  const { campaigns } = useCampaigns(activeTab);
+  // Get campaigns and filters for the active tab
+  const { campaigns, filteredCampaigns } = useCampaigns(activeTab);
+  const selectedAdAccount = localStorage.getItem('selected_ad_account');
 
   const handleForceRefresh = () => {
     triggerCampaignRefresh(true);
@@ -133,7 +133,14 @@ const Campaigns = () => {
 
             {localStorage.getItem("USE_MOCK_MODE") === "true" && (
               <MockDiagnosticPanel 
-                displayedCampaignsCount={campaigns?.length || 0}
+                displayedCampaignsCount={filteredCampaigns?.length || 0}
+                rawCampaignsCount={campaigns?.length || 0}
+                filters={{
+                  status: activeTab,
+                  datePreset: 'last30days',
+                  search: ''
+                }}
+                adAccountId={selectedAdAccount || undefined}
               />
             )}
           </>
