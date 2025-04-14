@@ -1,10 +1,10 @@
-
 import React from 'react';
 import DiagnosticResults from './DiagnosticResults';
 import CorsAlert from './CorsAlert';
 import { metaAuthService } from '@/services/MetaAuthService';
 import DiagnosticsHeader from './DiagnosticsHeader';
 import LastMetaError from './LastMetaError';
+import CurrentMetaTokenInfo from './CurrentMetaTokenInfo';
 
 interface DiagnosticsTabProps {
   diagnosticResults: any;
@@ -50,6 +50,7 @@ const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({
             tokenSource={metaAuthService.getTokenSource()}
           />
 
+          <CurrentMetaTokenInfo />
           <LastMetaError lastMetaError={lastMetaError} />
         </div>
       ) : (
