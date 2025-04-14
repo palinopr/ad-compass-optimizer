@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
@@ -18,6 +17,7 @@ import { RefreshCw, Power, RotateCcw } from 'lucide-react';
 import { triggerCampaignRefresh, triggerDisplayRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 import { toast } from '@/hooks/use-toast';
 import { useCampaigns } from '@/hooks/campaigns';
+import { runLiveCampaignDiagnostic } from '@/utils/meta-diagnostics/liveCampaignDiagnostic';
 
 const Campaigns = () => {
   const {
@@ -37,14 +37,11 @@ const Campaigns = () => {
     isAuthSyncing
   } = useCampaignsPage();
 
-  // Get campaigns and filters for the active tab
   const { campaigns, filteredCampaigns } = useCampaigns(activeTab);
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
   
-  // Track if mock campaigns have loaded
   const [mockDataLoaded, setMockDataLoaded] = React.useState(false);
   
-  // Monitor campaign data loading for mock mode
   useEffect(() => {
     const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
     if (isMockMode && campaigns?.length > 0 && !mockDataLoaded) {
@@ -116,7 +113,6 @@ const Campaigns = () => {
               {isAuthenticated && <AdAccountSelector />}
             </div>
             
-            {/* Mock Diagnostic Panel - positioned before the campaign tabs */}
             {localStorage.getItem("USE_MOCK_MODE") === "true" && (
               <MockDiagnosticPanel 
                 displayedCampaignsCount={filteredCampaigns?.length || 0}
@@ -155,7 +151,17 @@ const Campaigns = () => {
             
             <div className="border-t border-gray-200 pt-6 mt-8">
               <h3 className="text-sm font-medium text-center mb-2">Campaign Connection Troubleshooter</h3>
-              <DiagnosticButton />
+              <div className="flex flex-col gap-2">
+                <DiagnosticButton />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={runLiveCampaignDiagnostic}
+                  className="w-full"
+                >
+                  Run Live Campaign Debugger
+                </Button>
+              </div>
             </div>
           </>
         )}
