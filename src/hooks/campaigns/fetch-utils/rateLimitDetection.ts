@@ -1,3 +1,4 @@
+
 /**
  * Checks whether an error is related to API rate limiting
  */
