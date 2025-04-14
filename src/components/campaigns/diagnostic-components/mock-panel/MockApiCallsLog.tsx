@@ -1,14 +1,16 @@
 
 import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Check, Terminal, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, Terminal, ChevronDown, ChevronUp, Copy, Download } from 'lucide-react';
 import { MockedRequest } from '@/services/api/mock/logger/MockRequestLogger';
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 interface MockApiCallsLogProps {
   calls: MockedRequest[];
@@ -16,12 +18,45 @@ interface MockApiCallsLogProps {
 
 const MockApiCallsLog: React.FC<MockApiCallsLogProps> = ({ calls }) => {
   const [expandedCall, setExpandedCall] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const formatResponse = (response: any): string => {
     if (Array.isArray(response)) {
       return `[${response.length} items] ${JSON.stringify(response[0], null, 2).slice(0, 150)}...`;
     }
     return JSON.stringify(response, null, 2).slice(0, 150) + '...';
+  };
+
+  const copyToClipboard = async (response: any) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(response, null, 2));
+      toast({
+        description: "Response copied to clipboard",
+        duration: 2000,
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        description: "Failed to copy response",
+        duration: 2000,
+      });
+    }
+  };
+
+  const downloadJson = (response: any, endpoint: string) => {
+    const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mock-response-${endpoint.replace(/\//g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      description: "Response downloaded as JSON",
+      duration: 2000,
+    });
   };
 
   return (
@@ -66,6 +101,32 @@ const MockApiCallsLog: React.FC<MockApiCallsLogProps> = ({ calls }) => {
             
             {expandedCall === call.endpoint && (
               <div className="mt-2 pl-4 pr-2">
+                <div className="flex gap-2 mb-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyToClipboard(call.response);
+                    }}
+                  >
+                    <Copy className="w-3 h-3 mr-1" />
+                    Copy
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="h-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadJson(call.response, call.endpoint);
+                    }}
+                  >
+                    <Download className="w-3 h-3 mr-1" />
+                    Download
+                  </Button>
+                </div>
                 <pre className="text-xs bg-gray-50 p-2 rounded overflow-auto max-h-[200px]">
                   {JSON.stringify(call.response, null, 2)}
                 </pre>
@@ -79,3 +140,4 @@ const MockApiCallsLog: React.FC<MockApiCallsLogProps> = ({ calls }) => {
 };
 
 export default MockApiCallsLog;
+
