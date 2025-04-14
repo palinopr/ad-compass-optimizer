@@ -1,4 +1,3 @@
-
 import { MetaBatchService } from './batch/MetaBatchService';
 import { MetaFunnelBatchService } from './funnel/MetaFunnelBatchService';
 import { FunnelData } from './types/funnelTypes';
@@ -8,23 +7,14 @@ import { MockApiService } from './mock/MockApiService';
 
 export class MetaFunnelService {
   public static isMockMode(): boolean {
-    return localStorage.getItem("USE_MOCK_MODE") === "true" || MockApiService.isMockMetaApiMode();
+    return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static async fetchFunnelData(token: string, adAccountId: string): Promise<FunnelData> {
     try {
-      // Check for either regular mock mode or Meta API mock mode
       if (this.isMockMode()) {
-        console.log('🎭 Using mock campaign data for funnel');
-        
-        if (MockApiService.isMockMetaApiMode()) {
-          console.log('🎭 Using enhanced Meta API mock data');
-        }
-        
-        console.log("[MOCK DEBUG] campaigns from funnelData:", mockFunnelData.campaigns.length);
-        localStorage.setItem('using_mock_data', 'true');
-        localStorage.setItem('mock_mode_activated_at', new Date().toISOString());
-        return mockFunnelData;
+        console.log('🎭 Using mock funnel data');
+        return MockApiService.getMockFunnelData();
       }
 
       InsightsThrottling.checkThrottling(adAccountId);

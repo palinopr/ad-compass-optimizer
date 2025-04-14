@@ -66,7 +66,7 @@ export class MockApiService {
   }
 
   /**
-   * Generate mock insights response
+   * Generate mock insights response with full data
    */
   public static getMockInsights(objectId: string): InsightsResponse {
     console.log(`🎭 Returning mock insights for ${objectId} from MockApiService`);
