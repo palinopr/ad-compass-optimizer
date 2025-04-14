@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -126,6 +125,8 @@ export function Sidebar() {
           ))}
         </div>
       </div>
+      {!isCollapsed && <DataSourceStatus />}
+      
       <div className="mt-auto border-t p-2">
         <Button 
           variant="ghost" 
