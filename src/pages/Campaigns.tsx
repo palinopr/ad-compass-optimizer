@@ -1,3 +1,4 @@
+
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
@@ -6,6 +7,7 @@ import AdAccountSelector from '@/components/meta/AdAccountSelector';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 import DiagnosticButton from '@/components/campaigns/DiagnosticButton';
 import CampaignCreationTrigger from '@/components/campaigns/CampaignCreationTrigger';
+import MockDiagnosticPanel from '@/components/campaigns/diagnostic-components/MockDiagnosticPanel';
 
 import CampaignHeader from '@/components/campaigns/CampaignHeader';
 import ConnectionStatusAlerts from '@/components/campaigns/ConnectionStatusAlerts';
@@ -15,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, Power, RotateCcw } from 'lucide-react';
 import { triggerCampaignRefresh, triggerDisplayRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 import { toast } from '@/hooks/use-toast';
+import { useCampaigns } from '@/hooks/campaigns';
 
 const Campaigns = () => {
   const {
@@ -33,6 +36,9 @@ const Campaigns = () => {
     resetConnection,
     isAuthSyncing
   } = useCampaignsPage();
+
+  // Get campaigns for the active tab to pass to the diagnostic panel
+  const { campaigns } = useCampaigns(activeTab);
 
   const handleForceRefresh = () => {
     triggerCampaignRefresh(true);
@@ -127,7 +133,7 @@ const Campaigns = () => {
 
             {localStorage.getItem("USE_MOCK_MODE") === "true" && (
               <MockDiagnosticPanel 
-                displayedCampaignsCount={activeTab === 'active' ? campaigns?.length || 0 : 0}
+                displayedCampaignsCount={campaigns?.length || 0}
               />
             )}
           </>
