@@ -12,12 +12,11 @@ export interface MetaAdAccount {
 }
 
 export class MetaAdAccountService extends BaseApiService {
-  /**
-   * Fetch ad accounts for the authenticated user
-   */
   public static async fetchAdAccounts(token: string): Promise<MetaAdAccount[]> {
     try {
-      console.log('Fetching Meta ad accounts...');
+      console.log('[AD ACCOUNT FETCH] Starting fetch with token:', token?.substring(0, 8) + '...');
+      console.log('[AD ACCOUNT FETCH] Endpoint:', `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts`);
+      
       this.validateToken(token, 'fetchAdAccounts');
       
       // Add permission verification
@@ -40,13 +39,17 @@ export class MetaAdAccountService extends BaseApiService {
         `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`
       );
       
-      const data = await this.processApiResponse(response, 'fetchAdAccounts');
+      const text = await response.text();
+      console.log('[AD ACCOUNT FETCH] Response:', response.status, text);
+      
+      // Parse the response text as JSON
+      const data = text ? JSON.parse(text) : null;
       
       // Log successful response
       console.log('Ad accounts fetched successfully:', data);
-      console.log(`Found ${data.data?.length || 0} ad accounts`);
+      console.log(`Found ${data?.data?.length || 0} ad accounts`);
       
-      return data.data || [];
+      return data?.data || [];
     } catch (error) {
       console.error('Error fetching ad accounts:', error);
       

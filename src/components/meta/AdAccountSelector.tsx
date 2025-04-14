@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -50,7 +49,14 @@ const AdAccountSelector = () => {
       </CardHeader>
       <CardContent>
         {error && (
-          <p className="text-sm text-red-500 mb-3">{error}</p>
+          <div className="space-y-2 mb-3">
+            <p className="text-sm text-red-500">🛑 Ad account fetch failed</p>
+            <div className="text-xs bg-red-50 border border-red-200 rounded p-2">
+              <div className="font-mono text-red-600 whitespace-pre-wrap break-all">
+                {error || 'No details returned from Meta'}
+              </div>
+            </div>
+          </div>
         )}
         
         {isLoading ? (
