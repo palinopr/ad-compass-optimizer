@@ -14,6 +14,7 @@ import CtrChart from './charts/CtrChart';
 import ImpressionsChart from './charts/ImpressionsChart';
 import RecommendationsBox from './RecommendationsBox';
 import { useRecommendations } from '@/hooks/funnel/useRecommendations';
+import CreativeRotationBox from './CreativeRotationBox';
 
 interface TrendsPanelProps {
   isOpen: boolean;
@@ -77,6 +78,11 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
           recommendations={recommendations}
           isLoading={isRecsLoading}
           error={recsError}
+        />
+
+        <CreativeRotationBox 
+          creatives={itemData?.creatives || []}
+          creationDates={itemData?.creative_dates}
         />
 
         <BudgetTracker 
