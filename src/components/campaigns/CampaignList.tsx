@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+
+import React, { useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCampaigns } from '@/hooks/campaigns';
@@ -12,7 +13,7 @@ import { metaAuthService } from '@/services/MetaAuthService';
 import { useAuthCheck } from '@/hooks/campaigns/useAuthCheck'; 
 import { toast } from '@/hooks/use-toast';
 import { useEffect as useEffectKey } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, InfoIcon } from 'lucide-react';
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
@@ -24,9 +25,30 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     useCampaignFilters(campaigns);
   const { isAuthenticated, hasPermissions, showConnectionDialog, checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
+  const campaignsRef = useRef<typeof campaigns>([]);
+  const renderCountRef = useRef(0);
   
   const authResult = validateAuthentication();
   const effectiveIsAuthenticated = authResult.isValid;
+  
+  // Track when campaigns change to help diagnose render issues
+  useEffect(() => {
+    renderCountRef.current += 1;
+    
+    console.log(`CampaignList (${status}): Render #${renderCountRef.current}`, { 
+      campaignsLength: campaigns.length,
+      filteredLength: filteredCampaigns.length,
+      campaignsChanged: campaigns !== campaignsRef.current,
+      displayRefresh
+    });
+    
+    campaignsRef.current = campaigns;
+    
+    // Log campaign data for debugging
+    if (campaigns.length > 0) {
+      console.log(`First campaign sample:`, campaigns[0]);
+    }
+  }, [campaigns, filteredCampaigns.length, status, displayRefresh]);
   
   useEffect(() => {
     const token = metaAuthService.getAccessToken();
@@ -47,6 +69,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     const campaignCount = localStorage.getItem('last_campaign_count');
     if (campaignCount && parseInt(campaignCount) > 0 && campaigns.length === 0) {
       console.log('Display inconsistency detected - has campaigns in storage but not showing');
+      localStorage.setItem('display_issue_detected', 'true');
+      
       toast({
         title: "Display Issue Detected",
         description: "Campaign data was loaded but may not be displaying correctly. Try refreshing.",
@@ -65,6 +89,36 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       console.log(`Display refresh triggered (${displayRefresh})`);
     }
   }, [displayRefresh]);
+  
+  // Log detailed information about the current state
+  useEffect(() => {
+    console.log('Campaign rendering state:', {
+      status,
+      isLoading,
+      error: error ? 'Error present' : 'No error',
+      campaignsLength: campaigns.length,
+      filteredLength: filteredCampaigns.length,
+      hasVisibleCampaigns: filteredCampaigns.length > 0,
+      displayRefreshCount: displayRefresh
+    });
+  }, [campaigns.length, error, filteredCampaigns.length, isLoading, status, displayRefresh]);
+  
+  // Add manual refresh button for user debugging
+  const handleDebugRefresh = () => {
+    console.log('Manual debug refresh requested');
+    
+    // Clear any potential cached state
+    localStorage.removeItem('campaign_filter_state');
+    localStorage.removeItem('cached_campaign_data');
+    
+    // Force a re-fetch with cleared caches
+    refetchCampaigns(true);
+    
+    toast({
+      title: "Debug Refresh Triggered",
+      description: "Attempting to refresh campaign data with cleared caches",
+    });
+  };
   
   const metrics = {
     impressions: filteredCampaigns.reduce((total, campaign) => {
@@ -126,6 +180,19 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     return (
       <Card>
         <EmptyState status={status} />
+        
+        {/* Add debug button for no campaigns case */}
+        <div className="flex justify-center p-4 border-t border-gray-100">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex gap-1 text-xs text-gray-500"
+            onClick={handleDebugRefresh}
+          >
+            <InfoIcon className="h-3 w-3" />
+            Debug Refresh
+          </Button>
+        </div>
       </Card>
     );
   }
@@ -166,6 +233,19 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
             </Button>
           </div>
         )}
+        
+        {/* Add debug button even when campaigns are present */}
+        <div className="flex justify-center p-3 border-t border-gray-100">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex gap-1 text-xs text-gray-500"
+            onClick={handleDebugRefresh}
+          >
+            <InfoIcon className="h-3 w-3" />
+            Debug Refresh (Campaigns: {campaigns.length}, Filtered: {filteredCampaigns.length})
+          </Button>
+        </div>
       </Card>
     </>
   );

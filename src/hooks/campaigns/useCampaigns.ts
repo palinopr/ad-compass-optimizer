@@ -19,6 +19,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   // Use refs to prevent multiple concurrent fetches
   const isFetchingRef = useRef<boolean>(false);
   const lastFetchTimeRef = useRef<number>(0);
+  const mountedRef = useRef<boolean>(false);
   
   const { checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
@@ -47,7 +48,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     setErrorDetails(null);
     
     try {
-      console.log('Starting campaign fetch process...');
+      console.log('Starting campaign fetch process...', { status, forceRefresh });
       
       // Step 1: Always check token directly as the source of truth
       const token = metaAuthService.getAccessToken();
@@ -85,24 +86,46 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         await fetchCampaignData(token, accountResult.adAccountId, status);
       
       if (fetchError) {
+        console.error('Campaign fetch error:', fetchError, fetchErrorDetails);
         setError(fetchError);
         if (fetchErrorDetails) {
           setErrorDetails(fetchErrorDetails);
         }
       } else {
-        setCampaigns(fetchedCampaigns);
-        // Force UI refresh by triggering display refresh counter
-        setDisplayRefresh(prev => prev + 1);
+        console.log(`Successfully fetched ${fetchedCampaigns.length} campaigns`, {
+          status,
+          firstCampaign: fetchedCampaigns[0] ? fetchedCampaigns[0].id : 'none',
+          mounted: mountedRef.current
+        });
         
-        // If we have campaigns but previously had display issues, show success toast
-        const hadDisplayIssues = localStorage.getItem('had_display_issues') === 'true';
-        if (fetchedCampaigns.length > 0 && hadDisplayIssues) {
-          toast({
-            title: "Campaign Data Loaded Successfully",
-            description: `Found ${fetchedCampaigns.length} campaigns. Display issues have been fixed.`,
-            variant: "default",
+        // Save to localStorage for troubleshooting
+        localStorage.setItem('last_campaign_count', fetchedCampaigns.length.toString());
+        localStorage.setItem('last_campaign_fetch_success', 'true');
+        localStorage.setItem('last_campaign_list_status', status || 'all');
+        
+        // Update state only if the component is still mounted
+        if (mountedRef.current) {
+          setCampaigns(fetchedCampaigns);
+          
+          // Force UI refresh by triggering display refresh counter
+          setDisplayRefresh(prev => {
+            const newValue = prev + 1;
+            console.log(`Incrementing display refresh counter: ${prev} -> ${newValue}`);
+            return newValue;
           });
-          localStorage.removeItem('had_display_issues');
+          
+          // If we have campaigns but previously had display issues, show success toast
+          const hadDisplayIssues = localStorage.getItem('had_display_issues') === 'true';
+          if (fetchedCampaigns.length > 0 && hadDisplayIssues) {
+            toast({
+              title: "Campaign Data Loaded Successfully",
+              description: `Found ${fetchedCampaigns.length} campaigns. Display issues have been fixed.`,
+              variant: "default",
+            });
+            localStorage.removeItem('had_display_issues');
+          }
+        } else {
+          console.warn('Component unmounted before state update could complete');
         }
       }
     } catch (err: any) {
@@ -115,12 +138,18 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         } 
       });
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
       isFetchingRef.current = false;
     }
   }, [status, validateAuthentication, getSelectedAdAccount, fetchCampaignData]);
   
   useEffect(() => {
+    mountedRef.current = true;
+    
+    console.log(`CampaignList(${status}): Component mounted, setting up listeners`);
+    
     // Add delay between initial auth and data fetch to prevent race conditions
     const timer = setTimeout(() => {
       fetchCampaigns();
@@ -157,12 +186,14 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     window.addEventListener('campaign-display-refresh', handleDisplayRefresh);
     
     return () => {
+      console.log(`CampaignList(${status}): Component unmounting`);
+      mountedRef.current = false;
       clearTimeout(timer);
       window.removeEventListener('ad-account-changed', handleAdAccountChange);
       window.removeEventListener('campaign-data-refresh', handleManualRefresh as EventListener);
       window.removeEventListener('campaign-display-refresh', handleDisplayRefresh);
     };
-  }, [fetchCampaigns]);
+  }, [fetchCampaigns, status]);
   
   return {
     campaigns,

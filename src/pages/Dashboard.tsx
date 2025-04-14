@@ -8,6 +8,7 @@ import InsightsDemoCard from '@/components/insights/InsightsDemoCard';
 import ApiRateLimitStatus from '@/components/dashboard/rate-limit/ApiRateLimitStatus';
 import { MetaApiService } from '@/services/MetaApiService';
 import CampaignDisplayFix from '@/components/dashboard/CampaignDisplayFix';
+import CampaignResetButton from '@/components/dashboard/CampaignResetButton';
 
 export default function Dashboard() {
   useEffect(() => {
@@ -25,6 +26,15 @@ export default function Dashboard() {
     if (rateLimitInfo.isRateLimited) {
       console.log('Current rate limit status:', rateLimitInfo);
     }
+    
+    // Log campaign data state for debugging
+    const campaignCount = localStorage.getItem('last_campaign_count');
+    const fetchSuccess = localStorage.getItem('last_campaign_fetch_success');
+    console.log('Campaign data state on dashboard load:', {
+      storedCount: campaignCount ? parseInt(campaignCount) : 0,
+      fetchStatus: fetchSuccess,
+      displayIssueDetected: localStorage.getItem('display_issue_detected') === 'true'
+    });
   }, []);
 
   return (
@@ -37,6 +47,9 @@ export default function Dashboard() {
         
         {/* Display Fix Alert - Added to help with campaign display issues */}
         <CampaignDisplayFix />
+        
+        {/* Campaign Reset Button - Added for more aggressive troubleshooting */}
+        <CampaignResetButton />
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <CampaignsQuickAccess />
