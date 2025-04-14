@@ -1,30 +1,30 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import { useCallback } from 'react';
+import { metaAuthService } from '@/services/MetaAuthService';
 import { useAuthCheck } from './useAuthCheck';
 import { useAdAccountSelection } from './useAdAccountSelection';
-import { useCampaignFetcher } from './useCampaignFetcher';
-import { UseCampaignsResult } from './types';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
-import { metaAuthService } from '@/services/MetaAuthService';
+import { useCampaignFetchState } from './useCampaignFetchState';
+import { useCampaignEventListeners } from './useCampaignEventListeners';
+import { useCampaignFetcher } from './useCampaignFetcher';
 import { toast } from '@/hooks/use-toast';
+import { UseCampaignsResult } from './types';
 
 export function useCampaigns(status?: string): UseCampaignsResult {
-  const [campaigns, setCampaigns] = useState<MetaCampaign[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [errorDetails, setErrorDetails] = useState<any>(null);
-  const [displayRefresh, setDisplayRefresh] = useState<number>(0);
-  
-  // Use refs to prevent multiple concurrent fetches
-  const isFetchingRef = useRef<boolean>(false);
-  const lastFetchTimeRef = useRef<number>(0);
-  const mountedRef = useRef<boolean>(false);
-  
   const { checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
   const { getSelectedAdAccount } = useAdAccountSelection();
   const { fetchCampaignData } = useCampaignFetcher();
+  
+  // Use the new hook for state management
+  const {
+    campaigns, setCampaigns,
+    isLoading, setIsLoading,
+    error, setError,
+    errorDetails, setErrorDetails,
+    displayRefresh, incrementDisplayRefresh,
+    isFetchingRef, lastFetchTimeRef, mountedRef
+  } = useCampaignFetchState();
   
   // Function to fetch campaigns with enhanced display refresh
   const fetchCampaigns = useCallback(async (forceRefresh = false) => {
@@ -108,11 +108,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           setCampaigns(fetchedCampaigns);
           
           // Force UI refresh by triggering display refresh counter
-          setDisplayRefresh(prev => {
-            const newValue = prev + 1;
-            console.log(`Incrementing display refresh counter: ${prev} -> ${newValue}`);
-            return newValue;
-          });
+          incrementDisplayRefresh();
           
           // If we have campaigns but previously had display issues, show success toast
           const hadDisplayIssues = localStorage.getItem('had_display_issues') === 'true';
@@ -143,57 +139,12 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       }
       isFetchingRef.current = false;
     }
-  }, [status, validateAuthentication, getSelectedAdAccount, fetchCampaignData]);
+  }, [status, validateAuthentication, getSelectedAdAccount, fetchCampaignData, 
+      setCampaigns, setError, setErrorDetails, setIsLoading, incrementDisplayRefresh, 
+      isFetchingRef, lastFetchTimeRef, mountedRef]);
   
-  useEffect(() => {
-    mountedRef.current = true;
-    
-    console.log(`CampaignList(${status}): Component mounted, setting up listeners`);
-    
-    // Add delay between initial auth and data fetch to prevent race conditions
-    const timer = setTimeout(() => {
-      fetchCampaigns();
-    }, 500);
-    
-    // Add event listener for ad account changes
-    const handleAdAccountChange = () => {
-      console.log("Ad account changed, refreshing campaigns...");
-      // Add a slight delay to let any other UI updates complete
-      setTimeout(() => fetchCampaigns(), 100);
-    };
-    
-    // Handle manual refresh requests
-    const handleManualRefresh = (e: CustomEvent) => {
-      console.log("Manual campaign refresh requested", e.detail);
-      // If force refresh is specified, reset the timer to allow immediate fetch
-      if (e.detail?.force) {
-        lastFetchTimeRef.current = 0;
-        fetchCampaigns(true);
-      } else {
-        fetchCampaigns();
-      }
-    };
-    
-    // Handle display refresh requests (new)
-    const handleDisplayRefresh = () => {
-      console.log("Campaign display refresh requested");
-      setDisplayRefresh(prev => prev + 1);
-      localStorage.setItem('had_display_issues', 'true');
-    };
-    
-    window.addEventListener('ad-account-changed', handleAdAccountChange);
-    window.addEventListener('campaign-data-refresh', handleManualRefresh as EventListener);
-    window.addEventListener('campaign-display-refresh', handleDisplayRefresh);
-    
-    return () => {
-      console.log(`CampaignList(${status}): Component unmounting`);
-      mountedRef.current = false;
-      clearTimeout(timer);
-      window.removeEventListener('ad-account-changed', handleAdAccountChange);
-      window.removeEventListener('campaign-data-refresh', handleManualRefresh as EventListener);
-      window.removeEventListener('campaign-display-refresh', handleDisplayRefresh);
-    };
-  }, [fetchCampaigns, status]);
+  // Use the new hook for event listeners
+  useCampaignEventListeners(fetchCampaigns, incrementDisplayRefresh, status);
   
   return {
     campaigns,
@@ -201,6 +152,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     error,
     errorDetails,
     refetchCampaigns: fetchCampaigns,
-    displayRefresh // Add this to help components know when to re-render
+    displayRefresh
   };
 }

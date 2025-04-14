@@ -2,6 +2,7 @@
 import { useCallback, useRef } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import {
   checkRateLimitStatus,
   notifyRateLimit,
@@ -16,7 +17,6 @@ import {
 } from './fetch-utils';
 
 export function useCampaignFetcher() {
-  const { toast } = useToast();
   // Add a reference to track in-flight requests
   const pendingRequestRef = useRef<boolean>(false);
   // Add a timestamp for the last successful fetch to avoid duplicate requests
@@ -133,7 +133,7 @@ export function useCampaignFetcher() {
     } finally {
       pendingRequestRef.current = false;
     }
-  }, [toast]);
+  }, []);
 
   return { fetchCampaignData };
 }
