@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { DataSourceStatus } from './DataSourceStatus';
 import {
   Home,
   BarChart2,
@@ -67,7 +68,7 @@ export function Sidebar() {
 
   const handleLogout = () => {
     metaAuthService.logout();
-    checkAuth(); // Update the auth state
+    checkAuth();
     toast({
       title: "Logged out",
       description: "You have been disconnected from Meta"
