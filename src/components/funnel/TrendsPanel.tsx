@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import {
   Sheet,
@@ -13,6 +12,8 @@ import PerformanceAlerts from './PerformanceAlerts';
 import SpendChart from './charts/SpendChart';
 import CtrChart from './charts/CtrChart';
 import ImpressionsChart from './charts/ImpressionsChart';
+import RecommendationsBox from './RecommendationsBox';
+import { useRecommendations } from '@/hooks/funnel/useRecommendations';
 
 interface TrendsPanelProps {
   isOpen: boolean;
@@ -36,6 +37,12 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
   itemData
 }) => {
   const { budgetStatus, isLoading: isBudgetLoading, error: budgetError, trackBudget } = useBudgetTracker();
+  const { recommendations, isLoading: isRecsLoading, error: recsError } = useRecommendations(
+    itemId,
+    itemData?.target_cpa ? budgetStatus : null,
+    itemData?.creatives,
+    insights
+  );
   
   useEffect(() => {
     if (isOpen && itemId && itemData) {
@@ -64,6 +71,12 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
           itemId={itemId}
           creationDate={itemData?.start_time}
           targetCPA={itemData?.target_cpa}
+        />
+
+        <RecommendationsBox 
+          recommendations={recommendations}
+          isLoading={isRecsLoading}
+          error={recsError}
         />
 
         <BudgetTracker 
