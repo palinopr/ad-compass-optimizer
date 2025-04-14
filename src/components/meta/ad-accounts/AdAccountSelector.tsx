@@ -12,7 +12,12 @@ const AdAccountSelector = () => {
 
   // Format the error message to be more user-friendly
   const getFormattedError = () => {
-    if (!error) return null;
+    if (!error) {
+      console.log('[❌ AD ACCOUNT ERROR] No error detected');
+      return null;
+    }
+
+    console.log('[🔍 AD ACCOUNT ERROR] Raw Error:', error);
 
     try {
       // Try to parse if the error is a stringified JSON
@@ -20,15 +25,23 @@ const AdAccountSelector = () => {
         ? JSON.parse(error) 
         : null;
 
+      console.log('[🔍 AD ACCOUNT ERROR] Parsed Error:', parsedError);
+
       if (parsedError?.error) {
-        return `Meta API Error ${parsedError.error.code || ''}: ${parsedError.error.message || 'Unknown error'}`;
+        const formattedMessage = `Meta API Error ${parsedError.error.code || ''}: ${parsedError.error.message || 'Unknown error'}`;
+        console.log('[✅ AD ACCOUNT ERROR SHOWN] Message:', formattedMessage);
+        return formattedMessage;
       }
 
       // If we have a string error that's not JSON, show it directly
+      console.log('[✅ AD ACCOUNT ERROR SHOWN] Message:', error);
       return error;
     } catch (e) {
+      console.error('[❌ AD ACCOUNT ERROR] Error parsing:', e);
       // If parsing fails, return the original error or a fallback
-      return error || 'Failed to fetch ad accounts. See console for details.';
+      const fallbackMessage = error || 'Failed to fetch ad accounts. See console for details.';
+      console.log('[✅ AD ACCOUNT ERROR SHOWN] Fallback Message:', fallbackMessage);
+      return fallbackMessage;
     }
   };
 
