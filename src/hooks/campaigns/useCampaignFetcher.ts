@@ -73,16 +73,21 @@ export function useCampaignFetcher() {
     
     try {
       console.log('[CAMPAIGN DEBUG] Starting fetch for account:', adAccountId);
-      console.log('[CAMPAIGN DEBUG] Token starts with:', token ? token.substring(0, 5) + '...' : 'null');
-
+      
       const tokenValidation = validateToken();
       if (!tokenValidation.isValid) {
-        console.error('[CAMPAIGN DEBUG] Token validation failed:', tokenValidation.error);
         return { campaigns: [], error: tokenValidation.error };
       }
 
-      localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
-      localStorage.setItem('last_campaign_fetch_account', adAccountId);
+      // Run diagnostic check in production mode
+      if (!isMockMode()) {
+        const diagnosticResult = await runFinalDiagnosticCheck();
+        if (!diagnosticResult.success) {
+          throw new Error(diagnosticResult.error);
+        }
+      }
+
+      console.log('[CAMPAIGN DEBUG] Token starts with:', token ? token.substring(0, 5) + '...' : 'null');
 
       const MetaCampaignService = (await import('@/services/api/MetaCampaignService')).default;
       console.log('[CAMPAIGN DEBUG] Calling MetaCampaignService.fetchCampaigns...');

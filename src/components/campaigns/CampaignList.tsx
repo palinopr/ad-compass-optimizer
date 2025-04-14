@@ -137,7 +137,12 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
           onRefresh={handleRefresh} 
           hasLastFetchSuccess={localStorage.getItem('last_campaign_fetch_success') === 'true'} 
         />
-        <NoCampaignsFoundWarning hasValidConnection={hasValidConnection} />
+        <div className="mt-4 text-center p-4 bg-gray-50 border rounded-md">
+          <p className="text-gray-600">
+            No {status} campaigns found for this ad account. 
+            {status === 'active' && " Create a new campaign or switch to a different ad account."}
+          </p>
+        </div>
       </>
     );
   }
