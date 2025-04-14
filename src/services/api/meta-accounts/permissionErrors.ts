@@ -14,8 +14,14 @@ export const isPermissionError = (error: MetaApiError): boolean => {
 };
 
 export const getPermissionErrorMessage = (error: MetaApiError): string => {
+  // Log error details for debugging
+  console.log('[🔍 META ERROR] Code:', error.code);
+  console.log('[🔍 META ERROR] Subcode:', error.error_subcode);
+  console.log('[🔍 META ERROR] Message:', error.message);
+
   if (isPermissionError(error)) {
-    return "Your Meta token may be missing ad account permissions. Please reconnect your Meta account.";
+    const subcodeInfo = error.error_subcode ? ` (Subcode ${error.error_subcode})` : '';
+    return `Your Meta token may be missing ad account permissions${subcodeInfo}. Please reconnect your Meta account.`;
   }
-  return `Meta API Error ${error.code || ''}: ${error.message || 'Unknown error'}`;
+  return `Meta API Error ${error.code || ''}${error.error_subcode ? ` (Subcode ${error.error_subcode})` : ''}: ${error.message || 'Unknown error'}`;
 };

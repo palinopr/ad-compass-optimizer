@@ -29,6 +29,11 @@ const AdAccountError: React.FC<AdAccountErrorProps> = ({ error, onReconnect }) =
       console.log('[🔍 AD ACCOUNT ERROR] Parsed Error:', parsedError);
 
       if (parsedError?.error) {
+        // Log specific error details for debugging
+        console.log('[🔍 AD ACCOUNT ERROR] Code:', parsedError.error.code);
+        console.log('[🔍 AD ACCOUNT ERROR] Subcode:', parsedError.error.error_subcode);
+        console.log('[🔍 AD ACCOUNT ERROR] Message:', parsedError.error.message);
+
         const formattedMessage = getPermissionErrorMessage(parsedError.error);
         console.log('[✅ AD ACCOUNT ERROR SHOWN] Message:', formattedMessage);
         return {
