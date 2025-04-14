@@ -3,8 +3,8 @@
  * Throttling logic for Meta Insights API requests
  */
 import { BaseApiService } from '../BaseApiService';
-import { checkRateLimitStatus, markRateLimited } from '@/hooks/campaigns/fetch-utils';
-import { shouldThrottleFetch } from '@/hooks/campaigns/fetch-utils';
+import { checkRateLimitStatus, markRateLimited } from '@/hooks/campaigns/fetch-utils/rateLimitStatus';
+import { shouldThrottleFetch } from '@/hooks/campaigns/fetch-utils/rateLimitStatus';
 
 export class InsightsThrottling {
   private static lastFetchTime: number = 0;

@@ -6,7 +6,7 @@ export * from './errorHandler';
 export * from './fetchHelpers';
 export * from './eventHandlers';
 
-// Re-export specific functions from rateLimitStatus that were previously part of rateLimit
+// Re-export specific functions from rateLimitStatus directly to maintain backward compatibility
 export { 
   checkRateLimitStatus, 
   markRateLimited, 
