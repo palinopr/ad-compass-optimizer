@@ -1,4 +1,6 @@
 
+import { metaSubcodeDescriptions } from './errorSubcodes';
+
 interface MetaApiError {
   code?: number;
   error_subcode?: number;
@@ -19,9 +21,18 @@ export const getPermissionErrorMessage = (error: MetaApiError): string => {
   console.log('[🔍 META ERROR] Subcode:', error.error_subcode);
   console.log('[🔍 META ERROR] Message:', error.message);
 
+  const subcodeExplanation = error.error_subcode ? 
+    metaSubcodeDescriptions[error.error_subcode] : undefined;
+
   if (isPermissionError(error)) {
-    const subcodeInfo = error.error_subcode ? ` (Subcode ${error.error_subcode})` : '';
+    const subcodeInfo = error.error_subcode ? 
+      ` (Subcode ${error.error_subcode}${subcodeExplanation ? ` - ${subcodeExplanation}` : ''})` : 
+      '';
     return `Your Meta token may be missing ad account permissions${subcodeInfo}. Please reconnect your Meta account.`;
   }
-  return `Meta API Error ${error.code || ''}${error.error_subcode ? ` (Subcode ${error.error_subcode})` : ''}: ${error.message || 'Unknown error'}`;
+
+  const subcodeInfo = error.error_subcode ? 
+    ` (Subcode ${error.error_subcode}${subcodeExplanation ? ` - ${subcodeExplanation}` : ''})` : 
+    '';
+  return `Meta API Error ${error.code || ''}${subcodeInfo}: ${error.message || 'Unknown error'}`;
 };
