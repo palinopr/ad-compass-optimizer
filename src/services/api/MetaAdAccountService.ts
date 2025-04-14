@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { META_API_CONFIG } from '@/config/socialAuth';
@@ -56,17 +57,18 @@ export class MetaAdAccountService extends BaseApiService {
           
           toast({
             title: "Meta API Error",
-            description: (
-              <div className="space-y-2">
-                <p>{errorMsg}</p>
-                <details className="bg-destructive/10 p-2 rounded text-xs font-mono whitespace-pre-wrap">
-                  <summary className="cursor-pointer">Show Error Details</summary>
-                  {errorDetails}
-                </details>
-              </div>
-            ),
+            description: `${errorMsg}\n\nClick for details`,
             variant: "destructive",
-            duration: 10000
+            duration: 10000,
+            action: () => {
+              console.log("Showing error details:", errorDetails);
+              toast({
+                title: "Error Details",
+                description: errorDetails,
+                variant: "destructive",
+                duration: 15000
+              });
+            }
           });
           
           throw new Error(errorMsg);
@@ -84,17 +86,18 @@ export class MetaAdAccountService extends BaseApiService {
           console.error('[AD ACCOUNT FETCH] Unparseable response body:', responseText);
           toast({
             title: "Meta API Error",
-            description: (
-              <div className="space-y-2">
-                <p>Failed to parse API response</p>
-                <details className="bg-destructive/10 p-2 rounded text-xs font-mono">
-                  <summary className="cursor-pointer">Show Raw Response</summary>
-                  {responseText}
-                </details>
-              </div>
-            ),
+            description: "Failed to parse API response",
             variant: "destructive",
-            duration: 10000
+            duration: 10000,
+            action: () => {
+              console.log("Showing raw response:", responseText);
+              toast({
+                title: "Raw Response",
+                description: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''),
+                variant: "destructive",
+                duration: 15000
+              });
+            }
           });
         }
         
@@ -114,17 +117,18 @@ export class MetaAdAccountService extends BaseApiService {
       
       toast({
         title: "Ad Account Error",
-        description: (
-          <div className="space-y-2">
-            <p>{errorMessage}</p>
-            <details className="bg-destructive/10 p-2 rounded text-xs font-mono">
-              <summary className="cursor-pointer">Show Error Details</summary>
-              {JSON.stringify(errorDetails, null, 2)}
-            </details>
-          </div>
-        ),
+        description: errorMessage,
         variant: "destructive",
-        duration: 10000
+        duration: 10000,
+        action: () => {
+          console.log("Showing error details:", JSON.stringify(errorDetails, null, 2));
+          toast({
+            title: "Error Details",
+            description: JSON.stringify(errorDetails, null, 2).substring(0, 500),
+            variant: "destructive",
+            duration: 15000
+          });
+        }
       });
       
       return this.handleApiError(error, 'fetchAdAccounts');
