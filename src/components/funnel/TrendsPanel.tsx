@@ -8,8 +8,9 @@ import {
 } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, TooltipProps } from 'recharts';
 import { Loader2 } from 'lucide-react';
+import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 
 interface TrendsPanelProps {
   isOpen: boolean;
@@ -62,9 +63,9 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
               <ChartContainer className="h-64" config={{}}>
                 <LineChart data={insights.spend}>
                   <XAxis dataKey="date" />
-                  <YAxis tickFormatter={(value) => formatValue(value)} />
+                  <YAxis tickFormatter={(value: number) => formatValue(value)} />
                   <ChartTooltip
-                    content={({ active, payload }) => {
+                    content={({ active, payload }: TooltipProps<ValueType, NameType>) => {
                       if (active && payload?.length) {
                         return (
                           <ChartTooltipContent
@@ -72,7 +73,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
                             content={
                               <div>
                                 <div className="font-medium">Spend</div>
-                                <div>{formatValue(payload[0].value)}</div>
+                                <div>{formatValue(payload[0].value as number)}</div>
                               </div>
                             }
                           />
@@ -98,9 +99,9 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
               <ChartContainer className="h-64" config={{}}>
                 <LineChart data={insights.ctr}>
                   <XAxis dataKey="date" />
-                  <YAxis tickFormatter={(value) => formatPercentage(value)} />
+                  <YAxis tickFormatter={(value: number) => formatPercentage(value)} />
                   <ChartTooltip
-                    content={({ active, payload }) => {
+                    content={({ active, payload }: TooltipProps<ValueType, NameType>) => {
                       if (active && payload?.length) {
                         return (
                           <ChartTooltipContent
@@ -108,7 +109,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
                             content={
                               <div>
                                 <div className="font-medium">CTR</div>
-                                <div>{formatPercentage(payload[0].value)}</div>
+                                <div>{formatPercentage(payload[0].value as number)}</div>
                               </div>
                             }
                           />
@@ -136,7 +137,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
                   <XAxis dataKey="date" />
                   <YAxis />
                   <ChartTooltip
-                    content={({ active, payload }) => {
+                    content={({ active, payload }: TooltipProps<ValueType, NameType>) => {
                       if (active && payload?.length) {
                         return (
                           <ChartTooltipContent
@@ -144,7 +145,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
                             content={
                               <div>
                                 <div className="font-medium">Impressions</div>
-                                <div>{payload[0].value.toLocaleString()}</div>
+                                <div>{(payload[0].value as number).toLocaleString()}</div>
                               </div>
                             }
                           />

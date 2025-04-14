@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { MetaInsightsService } from '@/services/api/MetaInsightsService';
+import { MetaInsightsService, InsightFilterOptions } from '@/services/api/MetaInsightsService';
 import { metaAuthService } from '@/services/MetaAuthService';
 
 export const useItemInsights = () => {
@@ -18,7 +18,7 @@ export const useItemInsights = () => {
         throw new Error('No access token available');
       }
 
-      const options = {
+      const options: InsightFilterOptions = {
         datePreset: 'last_30d',
         fields: ['spend', 'ctr', 'impressions'],
       };

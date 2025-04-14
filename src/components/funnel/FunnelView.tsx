@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +25,22 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
   } | null>(null);
   
   const { insights, isLoading, fetchInsights } = useItemInsights();
+
+  const toggleCampaign = (campaignId: string) => {
+    setOpenCampaigns(prev => 
+      prev.includes(campaignId)
+        ? prev.filter(id => id !== campaignId)
+        : [...prev, campaignId]
+    );
+  };
+
+  const toggleAdSet = (adSetId: string) => {
+    setOpenAdSets(prev => 
+      prev.includes(adSetId)
+        ? prev.filter(id => id !== adSetId)
+        : [...prev, adSetId]
+    );
+  };
 
   const handleItemClick = async (id: string, name: string, type: 'campaign' | 'adset') => {
     setSelectedItem({ id, name, type });
