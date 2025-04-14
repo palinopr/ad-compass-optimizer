@@ -22,7 +22,7 @@ const CampaignFilteredResults = ({
   if (hasFilteredResults) {
     return (
       <Card>
-        <CampaignTable campaigns={campaigns} status={status} />
+        <CampaignTable campaigns={campaigns} status={status as 'active' | 'draft' | 'archived'} />
       </Card>
     );
   }
