@@ -1,3 +1,4 @@
+
 import { MetaBatchService } from './batch/MetaBatchService';
 import { MetaFunnelBatchService } from './funnel/MetaFunnelBatchService';
 import { FunnelData } from './types/funnelTypes';
@@ -18,8 +19,8 @@ export class MetaFunnelService {
         const mockData = MockApiService.getMockFunnelData();
         
         // Sync the mock campaigns with global state 
-        // Use BaseMockService's sync function
-        BaseMockService.prototype.constructor.syncMockCampaignsToState(mockData.campaigns);
+        // Use BaseMockService's static sync function
+        BaseMockService.syncMockCampaignsToState(mockData.campaigns);
         
         return mockData;
       }
