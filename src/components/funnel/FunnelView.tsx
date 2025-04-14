@@ -22,6 +22,7 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
     id: string;
     name: string;
     type: 'campaign' | 'adset';
+    data: any;
   } | null>(null);
   
   const { insights, isLoading, fetchInsights } = useItemInsights();
@@ -42,8 +43,8 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
     );
   };
 
-  const handleItemClick = async (id: string, name: string, type: 'campaign' | 'adset') => {
-    setSelectedItem({ id, name, type });
+  const handleItemClick = async (id: string, name: string, type: 'campaign' | 'adset', data: any) => {
+    setSelectedItem({ id, name, type, data });
     await fetchInsights(id, type);
   };
 
@@ -98,7 +99,7 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
               className="w-full flex items-center justify-between p-2 hover:bg-gray-50"
               onClick={() => {
                 toggleAdSet(adSet.id);
-                handleItemClick(adSet.id, adSet.name, 'adset');
+                handleItemClick(adSet.id, adSet.name, 'adset', adSet);
               }}
             >
               <div className="flex items-center gap-2">
@@ -143,7 +144,7 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
                   className="w-full flex items-center justify-between p-2 hover:bg-gray-50"
                   onClick={() => {
                     toggleCampaign(campaign.id);
-                    handleItemClick(campaign.id, campaign.name, 'campaign');
+                    handleItemClick(campaign.id, campaign.name, 'campaign', campaign);
                   }}
                 >
                   <div className="flex items-center gap-2">
@@ -171,6 +172,7 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
             itemId={selectedItem.id}
             itemName={selectedItem.name}
             itemType={selectedItem.type}
+            itemData={selectedItem.data}
             insights={insights}
             isLoading={isLoading}
           />
