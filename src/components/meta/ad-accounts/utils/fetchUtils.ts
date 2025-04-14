@@ -1,0 +1,49 @@
+
+import { MetaApiService } from '@/services/MetaApiService';
+import { AdAccount } from '../types';
+import { metaAuthService } from '@/services/MetaAuthService';
+
+export const fetchSelectedAccounts = async (selectedIds: string[], token: string): Promise<AdAccount[]> => {
+  try {
+    const connectionTest = await MetaApiService.testConnection(token);
+    if (!connectionTest.success) {
+      throw new Error(connectionTest.error || 'Invalid or expired token');
+    }
+    
+    const accounts = await Promise.all(
+      selectedIds.map(async (id) => {
+        try {
+          const formattedId = id.startsWith('act_') ? id : `act_${id}`;
+          console.log(`Fetching details for account ${formattedId}`);
+          const accountDetails = await MetaApiService.fetchAdAccountDetails(token, formattedId);
+          return accountDetails;
+        } catch (error) {
+          console.error(`Error fetching details for account ${id}:`, error);
+          return null;
+        }
+      })
+    );
+    
+    return accounts.filter(account => account !== null) as AdAccount[];
+  } catch (error) {
+    console.error('Error in fetchSelectedAccounts:', error);
+    throw error;
+  }
+};
+
+export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
+  try {
+    const connectionTest = await MetaApiService.testConnection(token);
+    if (!connectionTest.success) {
+      throw new Error(connectionTest.error || 'Invalid or expired token');
+    }
+    
+    const accounts = await MetaApiService.fetchAdAccounts(token);
+    console.log('Fetched all accounts:', accounts.length);
+    return accounts;
+  } catch (error) {
+    console.error('Error in fetchAllAccounts:', error);
+    throw error;
+  }
+};
+
