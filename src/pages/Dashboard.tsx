@@ -8,7 +8,7 @@ import InsightsDemoCard from '@/components/insights/InsightsDemoCard';
 import ApiRateLimitStatus from '@/components/dashboard/rate-limit/ApiRateLimitStatus';
 import { MetaApiService } from '@/services/MetaApiService';
 import CampaignDisplayFix from '@/components/dashboard/CampaignDisplayFix';
-import CampaignResetButton from '@/components/dashboard/CampaignResetButton';
+import CampaignResetButton from '@/components/dashboard/campaign-reset';
 import DiagnosticButton from '@/components/campaigns/DiagnosticButton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Clock, RefreshCw } from 'lucide-react';
