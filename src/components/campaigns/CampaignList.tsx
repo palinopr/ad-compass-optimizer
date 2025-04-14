@@ -286,7 +286,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
             <p className="text-gray-500">No campaigns match the current filters.</p>
             <Button variant="outline" className="mt-4" onClick={() => {
               setStatusFilter('all');
-              setDateRange({ from: null, to: null });
+              setDateRange({ from: null, to: null }, 'custom');
               setSearchQuery('');
             }}>
               Clear Filters
