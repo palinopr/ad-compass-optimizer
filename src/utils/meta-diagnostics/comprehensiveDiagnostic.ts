@@ -1,15 +1,6 @@
 
-// Comprehensive diagnostic runner
-
-import { testMetaApi } from './apiTest';
-import { checkForCorsIssues, testProxyApproach } from './corsCheck';
-import { testBrowserCompatibility } from './browserCheck';
-import { generateDiagnosticSummary } from './summaryGenerator';
-import { ComprehensiveDiagnosticResult, TokenAnalysisResult } from './types';
-
-// Run all diagnostic tests and return a comprehensive report
 export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnosticResult> => {
-  console.log('=== LOVABLE COMPREHENSIVE DIAGNOSTIC ===');
+  console.log('[META DEBUG] === LOVABLE COMPREHENSIVE DIAGNOSTIC ===');
   
   // Get browser info
   const browserInfo = {
@@ -18,12 +9,12 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
     language: navigator.language
   };
   
-  console.log('Browser info:', browserInfo);
+  console.log('[META DEBUG] Browser info:', browserInfo);
   
   // Step 1: Run token diagnostic
   const { runTokenDiagnostic, analyzeDiagnosticResults } = await import('../metaTokenDiagnostic');
   const tokenResults = runTokenDiagnostic();
-  console.log('Token diagnostic results:', tokenResults);
+  console.log('[META DEBUG] Token diagnostic results:', tokenResults);
   
   // Fix the type conversion by adding required properties
   const analysisResults = analyzeDiagnosticResults(tokenResults);
@@ -38,14 +29,14 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
   // Step 2: Check API connection
   let apiResults = { success: false, error: 'Test not run' };
   if (tokenResults.hasToken) {
-    console.log('Testing API connection...');
+    console.log('[META DEBUG] Testing API connection...');
     apiResults = await testMetaApi();
   }
   
   // Step 3: Check for CORS issues
   let corsResults = { hasCorsIssues: false, error: 'Test not run' };
   if (tokenResults.hasToken) {
-    console.log('Checking for CORS issues...');
+    console.log('[META DEBUG] Checking for CORS issues...');
     corsResults = await checkForCorsIssues();
   }
   
@@ -65,7 +56,7 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
   };
   
   if (corsResults.hasCorsIssues) {
-    console.log('CORS issues detected, testing proxy approach...');
+    console.log('[META DEBUG] CORS issues detected, testing proxy approach...');
     const tempResults = await testProxyApproach();
     // Ensure the result matches the expected format
     proxyResults = {
@@ -75,7 +66,7 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
     };
   }
   
-  console.log('=== END COMPREHENSIVE DIAGNOSTIC ===');
+  console.log('[META DEBUG] === END COMPREHENSIVE DIAGNOSTIC ===');
   
   // Generate summary with correct type
   const summaryResults = generateDiagnosticSummary(tokenResults, tokenAnalysis, apiResults, corsResults, compatibilityResults, proxyResults);
@@ -96,3 +87,4 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
     }
   };
 };
+

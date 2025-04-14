@@ -1,13 +1,10 @@
 
-// Browser compatibility checking utilities
-
-// Test browser compatibility with Meta API requests
 export const testBrowserCompatibility = () => {
-  console.log('=== BROWSER COMPATIBILITY TEST ===');
+  console.log('[META DEBUG] === BROWSER COMPATIBILITY TEST ===');
   
   // Detect browser
   const userAgent = navigator.userAgent;
-  console.log('User Agent:', userAgent);
+  console.log('[META DEBUG] User Agent:', userAgent);
   
   // Check for known problematic browsers or features
   const isIE = /MSIE|Trident/.test(userAgent);
@@ -91,8 +88,9 @@ export const testBrowserCompatibility = () => {
     compatibility
   };
   
-  console.log('Browser compatibility test results:', results);
-  console.log('=== END COMPATIBILITY TEST ===');
+  console.log('[META DEBUG] Browser compatibility test results:', results);
+  console.log('[META DEBUG] === END COMPATIBILITY TEST ===');
   
   return results;
 };
+

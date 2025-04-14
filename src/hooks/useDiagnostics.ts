@@ -12,22 +12,22 @@ export const useDiagnostics = () => {
 
   const runDiagnostics = async () => {
     // Log the current state for debugging
-    console.log('Starting diagnostic run...');
+    console.log('[META DEBUG] Starting diagnostic run...');
     const token = metaAuthService.getAccessToken();
-    console.log('Current token:', token ? `${token.substring(0, 10)}... (${token.length} chars)` : 'No token');
+    console.log('[META DEBUG] Current token:', token ? `${token.substring(0, 10)}... (${token.length} chars)` : 'No token');
     
     setIsRunningDiagnostic(true);
     try {
       const results = await runComprehensiveDiagnostic();
-      console.log("Diagnostic results:", results);
+      console.log('[META DEBUG] Diagnostic results:', results);
       
       // Compare local diagnostic results with MetaAuthService state
       if (results.token.hasToken !== !!metaAuthService.getAccessToken()) {
-        console.warn("Inconsistency detected: Token diagnostic result doesn't match MetaAuthService state");
+        console.warn('[META DEBUG] Inconsistency detected: Token diagnostic result doesn\'t match MetaAuthService state');
         
         // Try to reconcile the inconsistency
         if (metaAuthService.getAccessToken() && !results.token.hasToken) {
-          console.log("Token found in MetaAuthService but not in diagnostic - updating diagnostic");
+          console.log('[META DEBUG] Token found in MetaAuthService but not in diagnostic - updating diagnostic');
           results.token.hasToken = true;
           results.token.tokenLength = metaAuthService.getAccessToken()?.length || 0;
         }
@@ -35,12 +35,12 @@ export const useDiagnostics = () => {
 
       // Double-check the authentication state for consistency
       const authState = metaAuthService.isAuthenticated();
-      console.log("AuthService authentication state:", authState);
-      console.log("Token validity from diagnostic:", results.tokenAnalysis?.isValid);
+      console.log('[META DEBUG] AuthService authentication state:', authState);
+      console.log('[META DEBUG] Token validity from diagnostic:', results.tokenAnalysis?.isValid);
       
       // Check if we're actually getting campaign data
       const adAccountId = localStorage.getItem('selected_ad_account');
-      console.log("Selected ad account:", adAccountId);
+      console.log('[META DEBUG] Selected ad account:', adAccountId);
       
       // Add a data loading check to diagnostics
       results.dataCheck = {
@@ -101,7 +101,7 @@ export const useDiagnostics = () => {
       // Persist diagnostic results in sessionStorage for debugging
       sessionStorage.setItem('last_diagnostic_results', JSON.stringify(results));
     } catch (error) {
-      console.error("Error running diagnostics:", error);
+      console.error('[META DEBUG] ❌ Error running diagnostics:', error);
       toast({
         title: "Diagnostic Error",
         description: "Failed to run connection diagnostics, check console for details",
@@ -142,20 +142,20 @@ export const useDiagnostics = () => {
     
     // Log issue details for debugging
     if (tokenIssues || permissionIssues || apiIssues || adAccountIssues || dataLoadingIssues || emptyCampaignsIssue) {
-      console.log("Diagnostic issues detected:");
-      if (tokenIssues) console.log("- Token issues:", { 
+      console.log('[META DEBUG] Diagnostic issues detected:');
+      if (tokenIssues) console.log('[META DEBUG] Token issues:', { 
         hasToken: diagnosticResults.token.hasToken, 
         isValid: diagnosticResults.tokenAnalysis?.isValid, 
         length: diagnosticResults.token.tokenLength 
       });
-      if (permissionIssues) console.log("- Permission issues:", { 
+      if (permissionIssues) console.log('[META DEBUG] Permission issues:', { 
         hasAdsRead: diagnosticResults.token.hasAdsRead, 
         hasAdsManagement: diagnosticResults.token.hasAdsManagement 
       });
-      if (apiIssues) console.log("- API issues:", diagnosticResults.api.error || "API call failed");
-      if (adAccountIssues) console.log("- Ad account issues: No ad account selected");
-      if (dataLoadingIssues) console.log("- Data loading issues: Campaign data fetch failed");
-      if (emptyCampaignsIssue) console.log("- Empty campaigns issue: No campaigns found in this account");
+      if (apiIssues) console.log('[META DEBUG] API issues:', diagnosticResults.api.error || "API call failed");
+      if (adAccountIssues) console.log('[META DEBUG] Ad account issues: No ad account selected');
+      if (dataLoadingIssues) console.log('[META DEBUG] Data loading issues: Campaign data fetch failed');
+      if (emptyCampaignsIssue) console.log('[META DEBUG] Empty campaigns issue: No campaigns found in this account');
     }
     
     return tokenIssues || permissionIssues || apiIssues || adAccountIssues || dataLoadingIssues || emptyCampaignsIssue;
@@ -170,3 +170,4 @@ export const useDiagnostics = () => {
     runDiagnostics
   };
 };
+

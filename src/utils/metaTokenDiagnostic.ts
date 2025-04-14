@@ -4,33 +4,33 @@ export const runTokenDiagnostic = () => {
   const token = localStorage.getItem('meta_access_token');
   const source = localStorage.getItem('meta_token_source') || 'unknown';
   
-  console.log('=== META TOKEN DIAGNOSTIC ===');
-  console.log('Token exists:', !!token);
+  console.log('[META DEBUG] === META TOKEN DIAGNOSTIC ===');
+  console.log('[META DEBUG] Token exists:', !!token);
   
   if (token) {
-    console.log('Token length:', token.length);
-    console.log('Token first 10 chars:', token.substring(0, 10) + '...');
-    console.log('Token contains whitespace:', /\s/.test(token));
-    console.log('Token contains invalid chars:', /[^a-zA-Z0-9_\-\.]/.test(token));
+    console.log('[META DEBUG] Token length:', token.length);
+    console.log('[META DEBUG] Token first 10 chars:', token.substring(0, 10) + '...');
+    console.log('[META DEBUG] Token contains whitespace:', /\s/.test(token));
+    console.log('[META DEBUG] Token contains invalid chars:', /[^a-zA-Z0-9_\-\.]/.test(token));
   }
   
   // Get permissions
   const permissionsStr = localStorage.getItem('meta_permissions');
   const permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
   
-  console.log('Permissions:', permissions);
-  console.log('Has ads_management:', permissions.includes('ads_management'));
-  console.log('Has ads_read:', permissions.includes('ads_read'));
+  console.log('[META DEBUG] Permissions:', permissions);
+  console.log('[META DEBUG] Has ads_management:', permissions.includes('ads_management'));
+  console.log('[META DEBUG] Has ads_read:', permissions.includes('ads_read'));
   
   // Get token timestamp
   const timestamp = localStorage.getItem('meta_token_timestamp');
   let tokenAge = null;
   if (timestamp) {
     tokenAge = Math.floor((Date.now() - parseInt(timestamp)) / (24 * 60 * 60 * 1000));
-    console.log('Token age (days):', tokenAge);
+    console.log('[META DEBUG] Token age (days):', tokenAge);
   }
   
-  console.log('=== END DIAGNOSTIC ===');
+  console.log('[META DEBUG] === END DIAGNOSTIC ===');
   
   return {
     hasToken: !!token,
@@ -114,3 +114,4 @@ export const analyzeDiagnosticResults = (results) => {
     message: issues.length > 0 ? issues[0] : 'Token is valid' // Add message property to match interface
   };
 };
+
