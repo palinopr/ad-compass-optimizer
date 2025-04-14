@@ -4,6 +4,7 @@ import { FunnelData } from './types/funnelTypes';
 import { InsightsThrottling } from './insights/throttling';
 import { mockFunnelData } from './mock/mockCampaignData';
 import { MockApiService } from './mock/MockApiService';
+import { BaseMockService } from '../meta/BaseMockService';
 
 export class MetaFunnelService {
   public static isMockMode(): boolean {
@@ -14,7 +15,13 @@ export class MetaFunnelService {
     try {
       if (this.isMockMode()) {
         console.log('🎭 Using mock funnel data');
-        return MockApiService.getMockFunnelData();
+        const mockData = MockApiService.getMockFunnelData();
+        
+        // Sync the mock campaigns with global state 
+        // Use BaseMockService's sync function
+        BaseMockService.prototype.constructor.syncMockCampaignsToState(mockData.campaigns);
+        
+        return mockData;
       }
 
       InsightsThrottling.checkThrottling(adAccountId);

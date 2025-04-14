@@ -2,6 +2,7 @@
 import { MockApiService } from '../api/mock/MockApiService';
 import { RateLimitManager } from '../api/rate-limit/RateLimitManager';
 import { RequestQueueManager } from '../api/queue/RequestQueueManager';
+import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 
 export abstract class BaseMockService {
   protected static readonly API_VERSION = 'v17.0';
@@ -17,6 +18,22 @@ export abstract class BaseMockService {
       return true;
     }
     return false;
+  }
+
+  // New function to sync mock campaign data with global state
+  protected static syncMockCampaignsToState(campaigns: any[]): void {
+    console.log(`🎭 [Mock Sync] Syncing ${campaigns.length} mock campaigns to global state`);
+    
+    // Create a custom event with the campaigns data
+    const syncEvent = new CustomEvent('sync-mock-campaigns', { 
+      detail: { campaigns } 
+    });
+    
+    // Dispatch the event to be caught by the campaign state hooks
+    window.dispatchEvent(syncEvent);
+    
+    // Also trigger a campaign refresh to ensure UI updates
+    triggerCampaignRefresh(false);
   }
 
   protected static async executeWithRateLimiting<T>(

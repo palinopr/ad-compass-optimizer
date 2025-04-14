@@ -70,6 +70,22 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     }
   }, [isMockMode, mockCampaigns, updateCampaigns, campaigns.length]);
 
+  // Listen for the sync-mock-campaigns event
+  useEffect(() => {
+    const handleSyncMockCampaigns = (event: CustomEvent) => {
+      if (event.detail?.campaigns && Array.isArray(event.detail.campaigns)) {
+        console.log(`[MOCK META SYNC] Received ${event.detail.campaigns.length} campaigns to update`);
+        updateCampaigns(event.detail.campaigns);
+      }
+    };
+    
+    window.addEventListener('sync-mock-campaigns', handleSyncMockCampaigns as EventListener);
+    
+    return () => {
+      window.removeEventListener('sync-mock-campaigns', handleSyncMockCampaigns as EventListener);
+    };
+  }, [updateCampaigns]);
+
   // Add an additional effect to detect and fix empty campaign state in mock mode
   useEffect(() => {
     if (isMockMode() && campaigns.length === 0 && !isLoading) {
