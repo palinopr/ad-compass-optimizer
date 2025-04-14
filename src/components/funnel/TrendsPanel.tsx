@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import {
   Sheet,
@@ -12,6 +11,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { Loader2 } from 'lucide-react';
 import BudgetTracker from './BudgetTracker';
 import { useBudgetTracker } from '@/hooks/funnel/useBudgetTracker';
+import PerformanceAlerts from './PerformanceAlerts';
 
 interface TrendsPanelProps {
   isOpen: boolean;
@@ -64,7 +64,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
 
   if (!isOpen) return null;
 
-  // Custom tooltip components (now using direct render functions)
   const renderSpendTooltip = (props: any) => {
     if (!props.active || !props.payload || !props.payload.length) {
       return null;
@@ -111,7 +110,12 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
           <SheetTitle>{itemType === 'campaign' ? 'Campaign' : 'Ad Set'}: {itemName}</SheetTitle>
         </SheetHeader>
 
-        {/* Budget Tracker */}
+        <PerformanceAlerts 
+          itemId={itemId}
+          creationDate={itemData?.start_time}
+          targetCPA={itemData?.target_cpa}
+        />
+
         <BudgetTracker 
           budgetStatus={budgetStatus} 
           isLoading={isBudgetLoading} 
@@ -124,7 +128,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
           </div>
         ) : insights ? (
           <div className="space-y-6 py-6">
-            {/* Spend Trend */}
             <Card className="p-4">
               <h3 className="text-sm font-medium mb-4">Spend Trend</h3>
               <ChartContainer className="h-64" config={{}}>
@@ -145,7 +148,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
               </ChartContainer>
             </Card>
 
-            {/* CTR Trend */}
             <Card className="p-4">
               <h3 className="text-sm font-medium mb-4">CTR Trend</h3>
               <ChartContainer className="h-64" config={{}}>
@@ -166,7 +168,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
               </ChartContainer>
             </Card>
 
-            {/* Impressions Trend */}
             <Card className="p-4">
               <h3 className="text-sm font-medium mb-4">Impressions Trend</h3>
               <ChartContainer className="h-64" config={{}}>
