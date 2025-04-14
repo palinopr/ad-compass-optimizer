@@ -11,7 +11,7 @@ export function useCampaignFetchState() {
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<any>(null);
   const [displayRefresh, setDisplayRefresh] = useState<number>(0);
-  const [forceRender, setForceRender] = useState<number>(0); // New state for forcing renders
+  const [forceRender, setForceRender] = useState<number>(0); // State for forcing renders
   
   // Use refs to prevent multiple concurrent fetches
   const isFetchingRef = useRef<boolean>(false);
@@ -108,6 +108,7 @@ export function useCampaignFetchState() {
     setErrorDetails,
     displayRefresh,
     forceRender, // Expose forceRender for components to use as key
+    setForceRender, // Explicitly expose setForceRender
     incrementDisplayRefresh,
     clearCampaigns,
     forceUiRefresh,

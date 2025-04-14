@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect } from 'react';
 import { useMockCampaigns } from './mock/useMockCampaigns';
 import { useRefreshLogic } from './refresh/useRefreshLogic';
@@ -21,6 +20,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     incrementDisplayRefresh,
     clearCampaigns,
     forceUiRefresh,
+    setForceRender,
   } = useCampaignFetchState();
 
   const { mockCampaigns, loadMockCampaigns } = useMockCampaigns(status);
@@ -61,7 +61,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   }, [isMockMode, loadMockCampaigns, fetchCampaigns, mountedRef, 
       setIsLoading, setError, setErrorDetails, updateCampaigns]);
 
-  // Update campaigns when mock data changes (this is now a backup mechanism)
   useEffect(() => {
     if (isMockMode() && mockCampaigns.length > 0 && campaigns.length === 0) {
       console.log(`[MOCK DEBUG] Mock campaigns sync: found ${mockCampaigns.length} mock campaigns but state has ${campaigns.length}. Syncing...`);
@@ -70,24 +69,19 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     }
   }, [isMockMode, mockCampaigns, updateCampaigns, campaigns.length]);
 
-  // ENHANCED: Explicitly handle the sync-mock-campaigns event
   useEffect(() => {
     const handleSyncMockCampaigns = (event: CustomEvent) => {
       if (event.detail?.campaigns && Array.isArray(event.detail.campaigns)) {
         const incomingCampaigns = event.detail.campaigns;
         console.log(`[MOCK META SYNC] Received ${incomingCampaigns.length} campaigns to update`);
         
-        // Save current ad account context to storage for diagnostic purposes
         const selectedAdAccount = localStorage.getItem('selected_ad_account') || 'unknown';
         localStorage.setItem('last_mock_sync_adaccount', selectedAdAccount);
         
-        // Get current campaign count for logging
         const prevCount = campaigns.length;
         
-        // Update campaigns state with incoming data
         updateCampaigns(incomingCampaigns);
         
-        // Log detailed information for debugging
         console.log(`[MOCK META SYNC] Updated campaigns: ${prevCount} → ${incomingCampaigns.length}`, {
           firstCampaignId: incomingCampaigns[0]?.id || 'none',
           adAccountContext: selectedAdAccount,
@@ -96,7 +90,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       }
     };
     
-    // Add event listener for sync events
     window.addEventListener('sync-mock-campaigns', handleSyncMockCampaigns as EventListener);
     
     return () => {
@@ -104,15 +97,13 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     };
   }, [campaigns.length, updateCampaigns]);
 
-  // Export forceUiRefresh to be used by other components
   const exposedForceUiRefresh = useCallback(() => {
     console.log('🎭 [MOCK DEBUG] External component called forceUiRefresh');
     forceUiRefresh();
-    // Small delay and then force render again to ensure UI updates
     setTimeout(() => {
       setForceRender(prev => prev + 1);
     }, 200);
-  }, [forceUiRefresh]);
+  }, [forceUiRefresh, setForceRender]);
 
   useCampaignEventListeners(
     handleFetchCampaigns,

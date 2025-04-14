@@ -1,3 +1,4 @@
+
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 
 export interface UseCampaignsResult {
@@ -9,6 +10,7 @@ export interface UseCampaignsResult {
   refetchCampaigns: (forceRefresh?: boolean) => void;
   displayRefresh: number;
   forceRender: number;
+  forceUiRefresh: () => void;
 }
 
 export interface CampaignFilterOptions {
