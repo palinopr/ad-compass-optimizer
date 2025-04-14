@@ -1,8 +1,8 @@
-
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
 import { CampaignThrottling } from './campaign/throttling';
+import { MockApiService } from './mock/MockApiService';
 
 export interface MetaCampaign {
   id: string;
@@ -13,8 +13,8 @@ export interface MetaCampaign {
   results: string;
   cost_per_result: string;
   budget: string;
-  daily_budget: string;
-  lifetime_budget: string;
+  daily_budget?: string;
+  lifetime_budget?: string;
   start_time: string;
   end_time: string | null;
   created_time: string;
@@ -30,14 +30,7 @@ export interface MetaCampaign {
 export class MetaCampaignService extends BaseApiService {
   private static isMockMode(): boolean {
     // Enhanced mock detection to be consistent with MetaFunnelService
-    const urlParams = new URLSearchParams(window.location.search);
-    const mockEnabled = urlParams.get('mock') === 'true';
-    
-    if (mockEnabled) {
-      console.log('[MOCK MODE] Activated in Campaign Service - bypassing API calls');
-    }
-    
-    return mockEnabled;
+    return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {

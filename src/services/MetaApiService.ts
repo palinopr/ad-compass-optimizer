@@ -1,4 +1,3 @@
-
 import { MetaUserService } from './api/MetaUserService';
 import { MetaAdAccountService } from './api/MetaAdAccountService';
 import { MetaBusinessService } from './api/MetaBusinessService';
@@ -9,14 +8,15 @@ import { RateLimitManager } from './api/rate-limit/RateLimitManager';
 import { RequestQueueManager } from './api/queue/RequestQueueManager';
 import { ErrorUtils } from './api/errors/ErrorUtils';
 import { mockFunnelData } from './api/mock/mockCampaignData';
+import { MockApiService } from './api/mock/MockApiService';
 
 export class MetaApiService {
   private static readonly API_VERSION = 'v17.0';
   private static readonly BASE_URL = 'https://graph.facebook.com';
 
   public static isMockMode(): boolean {
-    // Use global mock mode detection from localStorage
-    return localStorage.getItem("USE_MOCK_MODE") === "true";
+    // Use global mock mode detection from MockApiService
+    return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static async executeWithRateLimiting<T>(
@@ -57,7 +57,6 @@ export class MetaApiService {
     }
   }
 
-  // Enhanced mock data functions with consistent type signatures
   private static getMockAdAccounts() {
     return [{
       id: 'act_123456789',
@@ -161,7 +160,7 @@ export class MetaApiService {
   public static async fetchCampaigns(token: string, adAccountId: string) {
     if (this.isMockMode()) {
       console.log('🎭 Returning mock campaigns');
-      return mockFunnelData.campaigns;
+      return MockApiService.getMockCampaigns();
     }
     return this.executeWithRateLimiting(() => 
       MetaCampaignService.fetchCampaigns(token, adAccountId)
@@ -171,7 +170,7 @@ export class MetaApiService {
   public static async fetchInsights(token: string, objectId: string, options = {}) {
     if (this.isMockMode()) {
       console.log('🎭 Returning mock insights');
-      return { data: [] };
+      return MockApiService.getMockInsights(objectId);
     }
     return this.executeWithRateLimiting(() => 
       MetaInsightsService.fetchInsights(token, objectId, options)
@@ -181,7 +180,7 @@ export class MetaApiService {
   public static async fetchCampaignInsights(token: string, campaignId: string, options = {}) {
     if (this.isMockMode()) {
       console.log('🎭 Returning mock campaign insights');
-      return { data: [] };
+      return MockApiService.getMockInsights(campaignId);
     }
     return this.executeWithRateLimiting(() => 
       MetaInsightsService.fetchCampaignInsights(token, campaignId, options)
@@ -191,7 +190,7 @@ export class MetaApiService {
   public static async fetchAccountInsights(token: string, accountId: string, options = {}) {
     if (this.isMockMode()) {
       console.log('🎭 Returning mock account insights');
-      return { data: [] };
+      return MockApiService.getMockInsights(accountId);
     }
     return this.executeWithRateLimiting(() => 
       MetaInsightsService.fetchAccountInsights(token, accountId, options)

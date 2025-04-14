@@ -6,6 +6,7 @@ import { BaseApiService } from '../BaseApiService';
 import { checkRateLimitStatus, markRateLimited } from '@/hooks/campaigns/fetch-utils/rateLimitStatus';
 import { shouldThrottleFetch } from '@/hooks/campaigns/fetch-utils/rateLimitStatus';
 import { storeApiUsage } from '@/hooks/campaigns/fetch-utils/apiUsage';
+import { MockApiService } from '../mock/MockApiService';
 
 export class InsightsThrottling {
   private static lastFetchTime: number = 0;
@@ -18,6 +19,12 @@ export class InsightsThrottling {
    * Check and apply throttling as needed
    */
   public static checkThrottling(accountId?: string): void {
+    // Skip throttling in mock mode
+    if (MockApiService.isMockMetaApiMode()) {
+      console.log('🎭 Mock API mode - bypassing throttling checks');
+      return;
+    }
+    
     // Set current account ID for this request
     this.currentAccountId = accountId;
     

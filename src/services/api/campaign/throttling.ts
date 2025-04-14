@@ -2,13 +2,15 @@
 /**
  * Throttling logic for Meta Campaign API requests
  */
+import { MockApiService } from '../mock/MockApiService';
+
 export class CampaignThrottling {
   private static readonly THROTTLE_KEY = 'meta_campaign_fetch_timestamp';
   private static readonly MIN_INTERVAL_MS = 60000; // 1 minute cooldown
 
   public static isMockMode(): boolean {
-    // Use consistent mock detection from localStorage
-    return localStorage.getItem("USE_MOCK_MODE") === "true";
+    // Use consistent mock detection from MockApiService
+    return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
   }
 
   public static checkThrottling(accountId?: string): void {
