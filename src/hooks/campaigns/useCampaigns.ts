@@ -28,12 +28,15 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const { filteredCampaigns, filters } = useCampaignFilters(campaigns);
 
   const handleFetchCampaigns = useCallback(async (forceRefresh = false) => {
+    console.log(`[MOCK DEBUG] handleFetchCampaigns called, mockMode: ${isMockMode()}, forceRefresh: ${forceRefresh}`);
+    
     if (isMockMode()) {
       console.log(`🎭 Mock mode fetch triggered, forceRefresh: ${forceRefresh}`);
       const result = loadMockCampaigns(forceRefresh);
       if (result && result.campaigns) {
-        console.log(`🎭 Mock fetch returned ${result.campaigns.length} campaigns`);
+        console.log(`🎭 Mock fetch returned ${result.campaigns.length} campaigns, updating state...`);
         updateCampaigns(result.campaigns);
+        console.log(`[MOCK DEBUG] After updateCampaigns call, campaigns state should be updated`);
       }
       setIsLoading(false);
       return;
@@ -50,6 +53,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         setError(result.error);
         setErrorDetails(result.errorDetails);
       } else if (result && 'campaigns' in result && result.campaigns) {
+        console.log(`[DEBUG] Real API returned ${result.campaigns.length} campaigns`);
         updateCampaigns(result.campaigns);
       }
       setIsLoading(false);
@@ -60,8 +64,9 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   // Update campaigns when mock data changes (this is now a backup mechanism)
   useEffect(() => {
     if (isMockMode() && mockCampaigns.length > 0 && campaigns.length === 0) {
-      console.log(`🎭 Mock campaigns sync: found ${mockCampaigns.length} mock campaigns but state has ${campaigns.length}. Syncing...`);
+      console.log(`[MOCK DEBUG] Mock campaigns sync: found ${mockCampaigns.length} mock campaigns but state has ${campaigns.length}. Syncing...`);
       updateCampaigns(mockCampaigns);
+      console.log(`[MOCK DEBUG] After updateCampaigns in effect hook`);
     }
   }, [isMockMode, mockCampaigns, updateCampaigns, campaigns.length]);
 

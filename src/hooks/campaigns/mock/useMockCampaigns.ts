@@ -12,11 +12,13 @@ export const useMockCampaigns = (status?: string) => {
   const loadMockCampaigns = useCallback((forceRefresh = false) => {
     if (!forceRefresh && mockInitialized) {
       console.log('🎭 Mock mode: Using cached mock campaigns');
+      console.log('[MOCK DEBUG] Returning cached mock campaigns:', mockCampaigns.length);
       return { campaigns: mockCampaigns };
     }
 
     console.log('🎭 Mock mode: Loading mock campaigns from source data');
     let campaigns = [...mockFunnelData.campaigns]; // Get a fresh copy
+    console.log('[MOCK DEBUG] Source mock data has', campaigns.length, 'campaigns');
     
     if (status && status !== 'all') {
       campaigns = campaigns.filter(campaign => 
@@ -33,7 +35,7 @@ export const useMockCampaigns = (status?: string) => {
       description: `Loaded ${campaigns.length} simulated campaigns.`,
     });
     
-    console.log(`🎭 Returning ${campaigns.length} mock campaigns for status: ${status || 'all'}`);
+    console.log(`[MOCK DEBUG] Returning ${campaigns.length} mock campaigns for status: ${status || 'all'}`);
     return { campaigns };
   }, [status, mockCampaigns, mockInitialized]);
 

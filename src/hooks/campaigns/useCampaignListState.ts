@@ -20,24 +20,27 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
 
   useEffect(() => {
     renderCountRef.current += 1;
-    console.log(`CampaignList (${status}): Render #${renderCountRef.current}`, { 
+    console.log(`[MOCK DEBUG] CampaignList (${status}): Render #${renderCountRef.current}`, { 
       campaignsLength: campaigns.length,
       filteredLength: filteredCampaigns.length,
       campaignsChanged: campaigns !== campaignsRef.current,
       displayRefresh,
       forceRender,
-      localRenderKey
+      localRenderKey,
+      mockMode: localStorage.getItem("USE_MOCK_MODE") === "true"
     });
+    
     campaignsRef.current = campaigns;
     
     if (campaigns.length > 0) {
+      console.log(`[MOCK DEBUG] CampaignList has ${campaigns.length} campaigns, updating localRenderKey`);
       setLocalRenderKey(prev => prev + 1);
     }
   }, [campaigns, filteredCampaigns.length, status, displayRefresh, forceRender]);
 
   useEffect(() => {
     const handleAdAccountChange = () => {
-      console.log('Ad account changed, forcing UI refresh in CampaignList');
+      console.log('[MOCK DEBUG] Ad account changed, forcing UI refresh in CampaignList');
       setLocalRenderKey(prev => prev + 1);
     };
     
@@ -50,15 +53,30 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
   useEffect(() => {
     const token = metaAuthService.getAccessToken();
     const directAuthCheck = token && token.length >= 50;
-    console.log(`CampaignList (${status}): Direct auth check:`, 
+    console.log(`[MOCK DEBUG] CampaignList (${status}): Direct auth check:`, 
       directAuthCheck ? 'Valid token found' : 'No valid token',
       'Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated'
     );
+    
     if (directAuthCheck !== isAuthenticated) {
-      console.log('Authentication state mismatch detected in CampaignList, refreshing...');
+      console.log('[MOCK DEBUG] Authentication state mismatch detected in CampaignList, refreshing...');
       checkAuth();
     }
   }, [checkAuth, isAuthenticated, status]);
+
+  // Add a forced initial fetch for mock mode
+  useEffect(() => {
+    const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
+    
+    if (isMockMode && campaigns.length === 0) {
+      console.log(`[MOCK DEBUG] CampaignList (${status}): Initial mock mode load, forcing fetch`);
+      // Use immediate timeout to ensure other hooks have initialized
+      const timer = setTimeout(() => {
+        refetchCampaigns(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [campaigns.length, refetchCampaigns, status]);
 
   return {
     campaigns,

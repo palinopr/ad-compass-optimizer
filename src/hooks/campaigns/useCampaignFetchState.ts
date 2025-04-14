@@ -18,6 +18,7 @@ export function useCampaignFetchState() {
   const lastFetchTimeRef = useRef<number>(0);
   const mountedRef = useRef<boolean>(true);
   const campaignCountRef = useRef<number>(0);
+  const lastUpdateSourceRef = useRef<string>('init');
 
   // Set mounted flag on component mount/unmount
   useEffect(() => {
@@ -31,12 +32,15 @@ export function useCampaignFetchState() {
 
   // Update campaign count ref whenever campaigns change
   useEffect(() => {
+    const prevCount = campaignCountRef.current;
     campaignCountRef.current = campaigns.length;
+    
     // Log for debugging
-    console.log(`Campaign count updated: ${campaignCountRef.current}`, {
+    console.log(`[MOCK DEBUG] Campaign count updated: ${prevCount} → ${campaignCountRef.current}`, {
       firstCampaign: campaigns[0] ? campaigns[0].id : 'none',
       displayRefresh,
-      forceRender
+      forceRender,
+      lastUpdateSource: lastUpdateSourceRef.current
     });
     
     // Force a re-render when campaigns update
@@ -55,7 +59,8 @@ export function useCampaignFetchState() {
 
   // Function to clear campaigns state (useful when switching accounts)
   const clearCampaigns = () => {
-    console.log('Clearing campaign state');
+    console.log('[MOCK DEBUG] Clearing campaign state');
+    lastUpdateSourceRef.current = 'clearCampaigns';
     setCampaigns([]);
     campaignCountRef.current = 0;
     // Also increment force render to ensure UI updates
@@ -64,19 +69,27 @@ export function useCampaignFetchState() {
 
   // Enhanced function to force a UI refresh
   const forceUiRefresh = () => {
-    console.log('Forcing UI refresh');
+    console.log('[MOCK DEBUG] Forcing UI refresh');
+    lastUpdateSourceRef.current = 'forceUiRefresh';
     incrementDisplayRefresh();
     setForceRender(prev => prev + 1);
     // Trigger React to re-render by cloning the campaigns array
     if (campaigns.length > 0) {
-      console.log('Cloning campaigns array to force update');
+      console.log('[MOCK DEBUG] Cloning campaigns array to force update');
       setCampaigns([...campaigns]);
     }
   };
 
+  // Direct setCampaigns with tracking
+  const wrappedSetCampaigns = (newCampaigns: MetaCampaign[]) => {
+    console.log(`[MOCK DEBUG] Direct setCampaigns called with ${newCampaigns.length} campaigns from ${lastUpdateSourceRef.current}`);
+    setCampaigns(newCampaigns);
+  };
+
   // New function to update campaigns with guaranteed UI refresh
   const updateCampaigns = (newCampaigns: MetaCampaign[]) => {
-    console.log(`Updating campaigns with ${newCampaigns.length} items`);
+    console.log(`[MOCK DEBUG] updateCampaigns called with ${newCampaigns.length} campaigns from ${lastUpdateSourceRef.current}`);
+    lastUpdateSourceRef.current = 'updateCampaigns';
     setCampaigns(newCampaigns);
     incrementDisplayRefresh();
     setForceRender(prev => prev + 1);
@@ -85,7 +98,7 @@ export function useCampaignFetchState() {
   return {
     // State
     campaigns,
-    setCampaigns,
+    setCampaigns: wrappedSetCampaigns,
     updateCampaigns, // New method for guaranteed update
     isLoading,
     setIsLoading,
