@@ -7,7 +7,9 @@ import DiagnosticsHeader from './DiagnosticsHeader';
 import LastMetaError from './LastMetaError';
 import CurrentMetaTokenInfo from './CurrentMetaTokenInfo';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { META_API_CONFIG } from '@/config/socialAuth';
 
 interface DiagnosticsTabProps {
   diagnosticResults: any;
@@ -33,12 +35,37 @@ const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({
     }
   }, []);
 
+  const permissions = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('meta_permissions') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // Check for missing required permissions
+  const missingPermissions = React.useMemo(() => {
+    return META_API_CONFIG.adPermissions.filter(
+      perm => !permissions.includes(perm)
+    );
+  }, [permissions]);
+
   return (
     <div className="bg-white border rounded-md p-4">
       <DiagnosticsHeader 
         runningDiagnostic={runningDiagnostic}
         runDiagnostic={runDiagnostic}
       />
+      
+      {/* Persistent warning for missing permissions */}
+      {missingPermissions.length > 0 && diagnosticResults && (
+        <Alert variant="destructive" className="mt-4 mb-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            Missing required permissions: {missingPermissions.join(', ')}. Expand diagnostics below to reconnect.
+          </AlertDescription>
+        </Alert>
+      )}
       
       {diagnosticResults ? (
         <Collapsible className="mt-4">
@@ -73,4 +100,3 @@ const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({
 };
 
 export default DiagnosticsTab;
-
