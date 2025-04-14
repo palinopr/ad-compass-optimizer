@@ -14,6 +14,7 @@ import MockApiControls from './diagnostic-components/MockApiControls';
 import NoCampaignsFoundWarning from './NoCampaignsFoundWarning';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { META_API_CONFIG } from '@/config/socialAuth';
+import EmptyState from './CampaignListStates';
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
@@ -110,22 +111,13 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     filteredCampaigns.length > 0 : 
     filteredCampaigns.length > 0 || (effectiveIsAuthenticated && localStorage.getItem('last_campaign_fetch_success') === 'true');
 
-  if (!shouldShowCampaigns && !isMockMode && !isMockApiMode) {
+  if (!shouldShowCampaigns) {
     return (
-      <>
-        <EmptyCampaignState 
-          onRefresh={handleRefresh} 
-          hasLastFetchSuccess={localStorage.getItem('last_campaign_fetch_success') === 'true'} 
-        />
-        <div className="mt-4 text-center p-4 bg-gray-50 border rounded-md">
-          <p className="text-gray-600">
-            No {status} campaigns found for this ad account. 
-            {status === 'active' && " Create a new campaign or switch to a different ad account."}
-          </p>
-        </div>
-      </>
+      <EmptyState status={status} />
     );
   }
+
+  const debugMode = process.env.NODE_ENV !== 'production';
 
   return (
     <div key={`campaign-list-${localRenderKey}-${status}`}>
@@ -154,7 +146,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         onClearFilters={handleClearFilters}
       />
       
-      {process.env.NODE_ENV !== 'production' && (
+      {debugMode && (
         <>
           <MockApiControls onRefresh={handleRefresh} />
           {isMockMode && (
