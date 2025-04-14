@@ -14,8 +14,8 @@ export const useBudgetTracker = () => {
   const trackBudget = useCallback(async ({
     itemId,
     itemType,
-    startTime,
-    endTime,
+    startDate,
+    endDate,
     budget,
     dailyBudget,
     lifetimeBudget
@@ -53,7 +53,7 @@ export const useBudgetTracker = () => {
       
       let result: BudgetStatus;
       
-      if (endTime) {
+      if (endDate) {
         const totalBudget = budget || lifetimeBudget || 0;
         if (totalBudget <= 0) {
           result = {
@@ -64,7 +64,7 @@ export const useBudgetTracker = () => {
             spentPercentage: 0
           };
         } else {
-          result = calculateTimeBasedBudget(startTime || new Date().toISOString(), endTime, totalBudget, spendToDate);
+          result = calculateTimeBasedBudget(startDate || new Date().toISOString(), endDate, totalBudget, spendToDate);
         }
       } else {
         try {
