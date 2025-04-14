@@ -1,4 +1,3 @@
-
 /**
  * Central service for managing mock API responses
  * This allows us to test UI and data flows without hitting real Meta API endpoints
@@ -9,9 +8,16 @@ import { FunnelData } from '../types/funnelTypes';
 import { InsightsResponse } from '../insights/types';
 import { generateMockInsights } from './mockInsightsData';
 
+interface MockedRequest {
+  endpoint: string;
+  timestamp: string;
+  response: any;
+}
+
 export class MockApiService {
   private static readonly MOCK_FLAG = 'mockMeta';
   private static readonly MOCK_STORAGE_KEY = 'USE_MOCK_META_API';
+  private static recentMockCalls: MockedRequest[] = [];
 
   /**
    * Check if mock Meta API mode is active
@@ -39,15 +45,37 @@ export class MockApiService {
     console.log('🎭 Meta API Mock Mode disabled');
   }
 
+  private static logMockRequest(endpoint: string, response: any) {
+    console.log(`✅ Mocking Meta API call: ${endpoint}`);
+    console.log('  → Using mocked response data');
+    
+    this.recentMockCalls.unshift({
+      endpoint,
+      timestamp: new Date().toISOString(),
+      response
+    });
+
+    // Keep only last 10 calls
+    if (this.recentMockCalls.length > 10) {
+      this.recentMockCalls.pop();
+    }
+  }
+
+  /**
+   * Get recent mock API calls for diagnostics
+   */
+  public static getRecentMockCalls(): MockedRequest[] {
+    return this.recentMockCalls;
+  }
+
   /**
    * Generate mock campaign response
    */
   public static getMockCampaigns(filterStatus?: string): MetaCampaign[] {
-    console.log('🎭 Returning mock campaigns from MockApiService');
+    this.logMockRequest('/campaigns', mockFunnelData.campaigns);
     
     let campaigns = [...mockFunnelData.campaigns];
     
-    // Apply status filter if provided
     if (filterStatus && filterStatus !== 'all') {
       campaigns = campaigns.filter(campaign => 
         campaign.status?.toLowerCase() === filterStatus.toLowerCase()
@@ -61,10 +89,7 @@ export class MockApiService {
    * Generate mock funnel data response
    */
   public static getMockFunnelData(): FunnelData {
-    console.log('🎭 Returning mock funnel data from MockApiService');
-    console.log('  → Campaigns:', mockFunnelData.campaigns.length);
-    console.log('  → Ad Sets:', mockFunnelData.adsets.length);
-    console.log('  → Ads:', mockFunnelData.ads.length);
+    this.logMockRequest('/funnel', mockFunnelData);
     return mockFunnelData;
   }
 
@@ -72,8 +97,9 @@ export class MockApiService {
    * Generate mock insights response with full data
    */
   public static getMockInsights(objectId: string): InsightsResponse {
-    console.log(`🎭 Returning mock insights for ${objectId} from MockApiService`);
-    return generateMockInsights(objectId);
+    const insights = generateMockInsights(objectId);
+    this.logMockRequest(`/insights/${objectId}`, insights);
+    return insights;
   }
 
   /**

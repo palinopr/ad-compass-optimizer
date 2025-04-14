@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Check, X, Brain, Bug, RefreshCw } from 'lucide-react';
+import { Check, X, Brain, Bug, RefreshCw, Terminal } from 'lucide-react';
 import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
 import { Button } from '@/components/ui/button';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 import { MockApiService } from '@/services/api/mock/MockApiService';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DiagnosticItem {
   label: string;
@@ -150,8 +150,8 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
           {isMetaMockMode ? 'Meta API Simulation Panel' : 'Mock Diagnostic Panel'}
         </h3>
         <Button 
-          variant="outline"
-          size="sm"
+          variant="outline" 
+          size="sm" 
           onClick={handleRefresh}
           className="flex items-center gap-2"
         >
@@ -160,7 +160,7 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
         </Button>
       </div>
       
-      <div className="space-y-2">
+      <div className="space-y-4">
         {diagnosticItems.map((item, index) => (
           <div key={index} className="flex items-center space-x-2 text-sm">
             {item.status === 'success' && <Check className="w-4 h-4 text-green-500" />}
@@ -173,6 +173,26 @@ const MockDiagnosticPanel: React.FC<MockDiagnosticPanelProps> = ({
             </span>
           </div>
         ))}
+        
+        <div className="mt-4">
+          <h4 className="text-sm font-medium flex items-center mb-2">
+            <Terminal className="w-4 h-4 mr-2" />
+            Recent Mock API Calls
+          </h4>
+          <ScrollArea className="h-[200px] rounded-md border p-2">
+            {MockApiService.getRecentMockCalls().map((call, index) => (
+              <div key={index} className="text-xs mb-2 space-y-1">
+                <div className="flex items-center text-green-600">
+                  <Check className="w-3 h-3 mr-1" />
+                  {call.endpoint}
+                </div>
+                <div className="text-gray-500 pl-4">
+                  {new Date(call.timestamp).toLocaleTimeString()}
+                </div>
+              </div>
+            ))}
+          </ScrollArea>
+        </div>
       </div>
     </Card>
   );
