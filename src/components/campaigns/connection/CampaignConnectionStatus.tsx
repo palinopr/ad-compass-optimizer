@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, Check, AlertTriangle } from 'lucide-react';
+import { Shield, Check, AlertTriangle, Globe, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 import { metaAuthService } from '@/services/MetaAuthService';
 
 const CampaignConnectionStatus = () => {
@@ -12,18 +12,15 @@ const CampaignConnectionStatus = () => {
   const isMockMode = localStorage.getItem('USE_MOCK_META_API') === 'true';
   const lastApiCall = localStorage.getItem('last_campaign_fetch_attempt');
   const lastApiSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
+  const lastFetchMetadata = useCampaignFetchState()?.lastFetchMetadata;
 
   const formatTimestamp = (timestamp: string | null) => {
     if (!timestamp) return 'Never';
-    return new Date(timestamp).toLocaleString('en-US', {
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short'
-    });
+    try {
+      return format(new Date(timestamp), "h:mm a · MMM d", { hourCycle: 'h12' });
+    } catch (e) {
+      return timestamp;
+    }
   };
 
   const getStatusIcon = (condition: boolean) => {
@@ -97,6 +94,53 @@ const CampaignConnectionStatus = () => {
             </span>
           </div>
         </div>
+
+        {lastFetchMetadata && (
+          <div className="mt-4 space-y-2 border-t pt-2">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Status:
+              </span>
+              <span className="flex items-center gap-2">
+                {lastFetchMetadata.success ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                )}
+                {lastFetchMetadata.status ? `${lastFetchMetadata.status} OK` : 'Unknown'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Campaigns:
+              </span>
+              <span>{lastFetchMetadata.campaignCount}</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Last Sync:
+              </span>
+              <span>{formatTimestamp(lastFetchMetadata.fetchedAt)}</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Source:</span>
+              <span className={cn(
+                "text-xs px-2 py-0.5 rounded-full",
+                lastFetchMetadata.source === 'Mock Data' ? 
+                  "bg-amber-100 text-amber-700" : 
+                  "bg-blue-100 text-blue-700"
+              )}>
+                {lastFetchMetadata.source}
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className={cn(
           "mt-4 p-2 rounded text-sm font-medium",

@@ -1,6 +1,13 @@
-
 import { useRef, useState, useEffect } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
+
+interface FetchMetadata {
+  status?: number;
+  success: boolean;
+  campaignCount: number;
+  fetchedAt: string;
+  source: 'Live Meta API' | 'Mock Data';
+}
 
 /**
  * Hook for managing campaign fetch state with improved UI refresh capabilities
@@ -19,6 +26,7 @@ export function useCampaignFetchState() {
   const mountedRef = useRef<boolean>(true);
   const campaignCountRef = useRef<number>(0);
   const lastUpdateSourceRef = useRef<string>('init');
+  const [lastFetchMetadata, setLastFetchMetadata] = useState<FetchMetadata | null>(null);
 
   // Set mounted flag on component mount/unmount
   useEffect(() => {
@@ -35,19 +43,15 @@ export function useCampaignFetchState() {
     const prevCount = campaignCountRef.current;
     campaignCountRef.current = campaigns.length;
     
-    // Log for debugging
-    console.log(`[MOCK DEBUG] Campaign count updated: ${prevCount} → ${campaignCountRef.current}`, {
-      firstCampaign: campaigns[0] ? campaigns[0].id : 'none',
-      displayRefresh,
-      forceRender,
-      lastUpdateSource: lastUpdateSourceRef.current
-    });
-    
-    // Force a re-render when campaigns update
-    if (campaigns.length > 0) {
-      setForceRender(prev => prev + 1);
+    // Update fetch metadata when campaigns change
+    if (campaigns.length !== prevCount) {
+      updateFetchMetadata({
+        success: true,
+        campaignCount: campaigns.length,
+        status: 200,
+      });
     }
-  }, [campaigns, displayRefresh]);
+  }, [campaigns]);
 
   const incrementDisplayRefresh = () => {
     setDisplayRefresh(prev => {
@@ -95,6 +99,16 @@ export function useCampaignFetchState() {
     setForceRender(prev => prev + 1);
   };
 
+  const updateFetchMetadata = (metadata: Partial<FetchMetadata>) => {
+    setLastFetchMetadata(prev => ({
+      status: metadata.status || prev?.status,
+      success: metadata.success ?? prev?.success ?? false,
+      campaignCount: metadata.campaignCount ?? prev?.campaignCount ?? 0,
+      fetchedAt: metadata.fetchedAt || new Date().toISOString(),
+      source: metadata.source || (localStorage.getItem("USE_MOCK_MODE") === "true" ? 'Mock Data' : 'Live Meta API')
+    }));
+  };
+
   return {
     // State
     campaigns,
@@ -117,6 +131,8 @@ export function useCampaignFetchState() {
     isFetchingRef,
     lastFetchTimeRef,
     mountedRef,
-    campaignCountRef
+    campaignCountRef,
+    lastFetchMetadata,
+    updateFetchMetadata
   };
 }
