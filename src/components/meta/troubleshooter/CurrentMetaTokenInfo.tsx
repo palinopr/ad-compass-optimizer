@@ -4,6 +4,7 @@ import { Key, Shield, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { META_API_CONFIG } from '@/config/socialAuth';
+import ReAuthenticateButton from '@/components/meta/ReAuthenticateButton';
 
 const CurrentMetaTokenInfo = () => {
   const token = metaAuthService.getAccessToken();
@@ -14,6 +15,10 @@ const CurrentMetaTokenInfo = () => {
   const missingPermissions = META_API_CONFIG.adPermissions.filter(
     perm => !permissions.includes(perm)
   );
+  
+  const handleReAuthenticated = () => {
+    window.location.reload();
+  };
 
   return (
     <Card className="mt-4 border-blue-200 bg-blue-50">
@@ -60,16 +65,19 @@ const CurrentMetaTokenInfo = () => {
               
               {/* Permission Status */}
               {missingPermissions.length > 0 ? (
-                <div className="flex items-start gap-1.5 text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="font-medium">Missing Required Permissions:</div>
-                    <ul className="list-disc pl-4 mt-1">
-                      {missingPermissions.map(perm => (
-                        <li key={perm}>{perm}</li>
-                      ))}
-                    </ul>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start gap-1.5 text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium">Missing Required Permissions:</div>
+                      <ul className="list-disc pl-4 mt-1">
+                        {missingPermissions.map(perm => (
+                          <li key={perm}>{perm}</li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
+                  <ReAuthenticateButton onReAuthenticated={handleReAuthenticated} />
                 </div>
               ) : (
                 <div className="text-green-600 bg-green-50 p-2 rounded border border-green-200">
