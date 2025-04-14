@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +5,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { AdSet, Ad } from '@/services/api/types/funnelTypes';
 import { Button } from '@/components/ui/button';
+import TrendsPanel from './TrendsPanel';
+import { useItemInsights } from '@/hooks/funnel/useItemInsights';
 
 interface FunnelViewProps {
   campaigns: MetaCampaign[];
@@ -16,17 +17,17 @@ interface FunnelViewProps {
 const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
   const [openCampaigns, setOpenCampaigns] = useState<string[]>([]);
   const [openAdSets, setOpenAdSets] = useState<string[]>([]);
+  const [selectedItem, setSelectedItem] = useState<{
+    id: string;
+    name: string;
+    type: 'campaign' | 'adset';
+  } | null>(null);
+  
+  const { insights, isLoading, fetchInsights } = useItemInsights();
 
-  const toggleCampaign = (id: string) => {
-    setOpenCampaigns(prev => 
-      prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
-    );
-  };
-
-  const toggleAdSet = (id: string) => {
-    setOpenAdSets(prev => 
-      prev.includes(id) ? prev.filter(aid => aid !== id) : [...prev, id]
-    );
+  const handleItemClick = async (id: string, name: string, type: 'campaign' | 'adset') => {
+    setSelectedItem({ id, name, type });
+    await fetchInsights(id, type);
   };
 
   const getMetricDisplay = (value: string | undefined) => {
@@ -78,7 +79,10 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
             <Button
               variant="ghost"
               className="w-full flex items-center justify-between p-2 hover:bg-gray-50"
-              onClick={() => toggleAdSet(adSet.id)}
+              onClick={() => {
+                toggleAdSet(adSet.id);
+                handleItemClick(adSet.id, adSet.name, 'adset');
+              }}
             >
               <div className="flex items-center gap-2">
                 {isOpen ? (
@@ -120,7 +124,10 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
                 <Button
                   variant="ghost"
                   className="w-full flex items-center justify-between p-2 hover:bg-gray-50"
-                  onClick={() => toggleCampaign(campaign.id)}
+                  onClick={() => {
+                    toggleCampaign(campaign.id);
+                    handleItemClick(campaign.id, campaign.name, 'campaign');
+                  }}
                 >
                   <div className="flex items-center gap-2">
                     {isOpen ? (
@@ -139,6 +146,18 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
             </Collapsible>
           );
         })}
+
+        {selectedItem && (
+          <TrendsPanel
+            isOpen={!!selectedItem}
+            onClose={() => setSelectedItem(null)}
+            itemId={selectedItem.id}
+            itemName={selectedItem.name}
+            itemType={selectedItem.type}
+            insights={insights}
+            isLoading={isLoading}
+          />
+        )}
       </CardContent>
     </Card>
   );
