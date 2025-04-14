@@ -15,6 +15,7 @@ import ImpressionsChart from './charts/ImpressionsChart';
 import RecommendationsBox from './RecommendationsBox';
 import { useRecommendations } from '@/hooks/funnel/useRecommendations';
 import CreativeRotationBox from './CreativeRotationBox';
+import ScalingSignalsBox from './ScalingSignalsBox';
 
 interface TrendsPanelProps {
   isOpen: boolean;
@@ -83,6 +84,11 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({
         <CreativeRotationBox 
           creatives={itemData?.creatives || []}
           creationDates={itemData?.creative_dates}
+        />
+
+        <ScalingSignalsBox
+          itemId={itemId}
+          targetCPA={itemData?.target_cpa}
         />
 
         <BudgetTracker 
