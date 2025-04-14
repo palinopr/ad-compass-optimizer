@@ -19,6 +19,9 @@ const AdAccountSelector = () => {
   } = useAdAccounts();
 
   const handleResetConnection = () => {
+    // Log reconnect attempt for diagnostics
+    console.log('[META DEBUG] 🔁 Reconnect Meta Account triggered by user');
+
     // Clear Meta-related data
     metaAuthService.logout();
     localStorage.removeItem('selected_ad_account');
