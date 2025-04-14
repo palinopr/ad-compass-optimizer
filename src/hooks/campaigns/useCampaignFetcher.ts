@@ -56,7 +56,9 @@ export function useCampaignFetcher() {
 
       return { campaigns, error: null };
     } catch (err: any) {
-      return handleError(err, adAccountId);
+      // Fix: Include the empty campaigns array in the error response
+      const { error, errorDetails } = handleError(err, adAccountId);
+      return { campaigns: [], error, errorDetails };
     } finally {
       endFetch();
     }
