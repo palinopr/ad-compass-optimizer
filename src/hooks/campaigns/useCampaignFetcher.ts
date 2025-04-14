@@ -5,12 +5,22 @@ import { useErrorHandler } from './fetch-hooks/useErrorHandler';
 import { useFetchState } from './fetch-hooks/useFetchState';
 import { useTokenValidation } from './fetch-hooks/useTokenValidation';
 import { toast } from '@/hooks/use-toast';
+import { debounce } from 'lodash';
 
 export function useCampaignFetcher() {
   const { error, errorDetails, handleError, clearErrors } = useErrorHandler();
-  const { isLoading, startFetch, endFetch, canFetch, mountedRef } = useFetchState();
+  const { 
+    isLoading, 
+    startFetch, 
+    debouncedStartFetch,
+    endFetch, 
+    canFetch, 
+    mountedRef, 
+    increaseCooldown
+  } = useFetchState();
   const { validateToken } = useTokenValidation();
 
+  // Create a debounced fetch implementation
   const fetchCampaignData = useCallback(async (
     token: string,
     adAccountId: string, 
@@ -19,8 +29,8 @@ export function useCampaignFetcher() {
     if (!canFetch()) {
       return { 
         campaigns: [], 
-        error: 'A campaign fetch request is already in progress',
-        errorDetails: { concurrent: true }
+        error: 'A campaign fetch request is already in progress or throttled',
+        errorDetails: { concurrent: true, throttled: true }
       };
     }
     
@@ -56,16 +66,38 @@ export function useCampaignFetcher() {
 
       return { campaigns, error: null };
     } catch (err: any) {
+      // Check for rate limit errors (status 429)
+      if (err?.status === 429 || 
+          (err?.message && err.message.toLowerCase().includes('rate limit')) ||
+          (err?.code === 4 || err?.code === 17)) {
+        // Increase cooldown time when rate limits are hit
+        increaseCooldown();
+        
+        toast({
+          title: "Meta API Rate Limited",
+          description: "Too many requests sent to Meta. Please wait a few minutes before trying again.",
+          variant: "destructive",
+          duration: 10000,
+        });
+      }
+      
       // Fix: Include the empty campaigns array in the error response
       const { error, errorDetails } = handleError(err, adAccountId);
       return { campaigns: [], error, errorDetails };
     } finally {
       endFetch();
     }
-  }, [canFetch, startFetch, endFetch, clearErrors, handleError, validateToken, mountedRef]);
+  }, [canFetch, startFetch, endFetch, clearErrors, handleError, validateToken, mountedRef, increaseCooldown]);
+
+  // Create a debounced version of the function
+  const debouncedFetchCampaignData = useCallback(
+    debounce(fetchCampaignData, 1000), // 1 second debounce
+    [fetchCampaignData]
+  );
 
   return { 
     fetchCampaignData,
+    debouncedFetchCampaignData,
     isLoading,
     error,
     errorDetails

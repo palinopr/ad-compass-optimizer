@@ -61,23 +61,22 @@ export const checkRateLimitStatus = (accountId?: string) => {
  */
 export const markRateLimited = (minutes = 10, accountId?: string) => {
   const futureTime = new Date();
-  futureTime.setMinutes(futureTime.getMinutes() + minutes);
+  
+  // Dynamic backoff: If we've had multiple rate limits, increase the timeout
+  const rateHistory = getRateLimitHistory(accountId);
+  const backoffMinutes = rateHistory.length > 2 ? Math.min(minutes * rateHistory.length, 60) : minutes;
+  
+  futureTime.setMinutes(futureTime.getMinutes() + backoffMinutes);
   
   const key = getAccountSpecificKey(RATE_LIMIT_KEY_PREFIX, accountId);
   localStorage.setItem(key, futureTime.toISOString());
   
   // Add to rate limit history for adaptive backoff
-  const historyKey = getAccountSpecificKey(RATE_LIMIT_HISTORY_KEY_PREFIX, accountId);
-  const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
-  history.push(new Date().toISOString());
-  if (history.length > 10) {
-    history.shift(); // Keep only the 10 most recent entries
-  }
-  localStorage.setItem(historyKey, JSON.stringify(history));
+  addRateLimitToHistory(accountId);
   
   return {
     isRateLimited: true,
-    timeRemaining: minutes,
+    timeRemaining: backoffMinutes,
     rateLimitTimestamp: futureTime.toISOString(),
     accountId
   };
@@ -103,10 +102,39 @@ export const clearRateLimit = (accountId?: string) => {
 export const notifyRateLimit = (timeRemaining: number) => {
   toast({
     title: "Meta API Rate Limited",
-    description: `Please wait ${timeRemaining} minute${timeRemaining !== 1 ? 's' : ''} before trying again.`,
+    description: `Please wait ${timeRemaining} minute${timeRemaining !== 1 ? 's' : ''} before trying again. API access will be restored automatically.`,
     variant: "destructive",
-    duration: 6000,
+    duration: 10000,
   });
+};
+
+/**
+ * Get rate limit history for an account
+ */
+const getRateLimitHistory = (accountId?: string) => {
+  const historyKey = getAccountSpecificKey(RATE_LIMIT_HISTORY_KEY_PREFIX, accountId);
+  return JSON.parse(localStorage.getItem(historyKey) || '[]');
+};
+
+/**
+ * Add a rate limit event to history
+ */
+const addRateLimitToHistory = (accountId?: string) => {
+  const historyKey = getAccountSpecificKey(RATE_LIMIT_HISTORY_KEY_PREFIX, accountId);
+  const history = getRateLimitHistory(accountId);
+  
+  // Only keep rate limit events from the last 24 hours
+  const now = new Date().getTime();
+  const recentHistory = history
+    .filter((timestamp: string) => {
+      const eventTime = new Date(timestamp).getTime();
+      return now - eventTime < 24 * 60 * 60 * 1000; // 24 hours
+    })
+    .slice(-9); // Keep max 9 recent events
+  
+  // Add the current event
+  recentHistory.push(new Date().toISOString());
+  localStorage.setItem(historyKey, JSON.stringify(recentHistory));
 };
 
 /**
@@ -114,8 +142,7 @@ export const notifyRateLimit = (timeRemaining: number) => {
  */
 export const shouldThrottleFetch = (accountId?: string) => {
   // Get rate limit history
-  const historyKey = getAccountSpecificKey(RATE_LIMIT_HISTORY_KEY_PREFIX, accountId);
-  const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+  const history = getRateLimitHistory(accountId);
   const recentRateLimits = history.filter((timestamp: string) => {
     const rateTime = new Date(timestamp).getTime();
     const currentTime = new Date().getTime();
