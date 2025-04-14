@@ -88,6 +88,15 @@ export function useAdAccountsFetching() {
       const { error: errorMessage, shouldReconnect } = handleFetchError(err);
       setError(errorMessage);
       
+      // Log token permissions during fetch failure
+      try {
+        const rawPermissions = localStorage.getItem(metaAuthService.PERMISSIONS_KEY);
+        const permissions = rawPermissions ? JSON.parse(rawPermissions) : [];
+        console.log('[META DEBUG] Token permissions at failure:', permissions);
+      } catch (parseErr) {
+        console.warn('[META DEBUG] Failed to parse token permissions:', parseErr);
+      }
+      
       // Auto-scroll to error when error is set
       setTimeout(() => {
         if (errorRef.current) {
@@ -113,4 +122,3 @@ export function useAdAccountsFetching() {
     setAdAccounts
   };
 }
-
