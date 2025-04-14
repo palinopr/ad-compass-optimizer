@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Shield, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';

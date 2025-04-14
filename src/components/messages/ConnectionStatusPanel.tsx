@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { useDiagnostics } from '@/hooks/useDiagnostics';
 import ConnectionStatusSummary from './connection-status/ConnectionStatusSummary';
 import Troubleshooting from './connection-status/Troubleshooting';
 import NextSteps from './connection-status/NextSteps';
@@ -30,10 +31,16 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
   onConnectWithBrowser
 }) => {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
   const [isRunningTest, setIsRunningTest] = useState(false);
-  const [isRunningComprehensiveDiagnostic, setIsRunningComprehensiveDiagnostic] = useState(false);
   const [proxyTestResult, setProxyTestResult] = useState<any>(null);
+  
+  const {
+    isRunningDiagnostic: isRunningComprehensiveDiagnostic,
+    diagnosticResults,
+    showResults,
+    setShowResults,
+    runDiagnostics: handleComprehensiveDiagnostic
+  } = useDiagnostics();
   
   // Get token freshness information
   const tokenInfo = isAuthenticated ? metaAuthService.checkTokenFreshness() : { isFresh: false, age: 0 };
@@ -54,48 +61,36 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
   const handleRunDiagnostic = () => {
     setIsRunningTest(true);
     const results = runTokenDiagnostic();
-    setDiagnosticResults(results);
-    setShowDiagnostics(true);
+    setShowResults(true);
     setIsRunningTest(false);
   };
 
   const handleApiTest = async () => {
     setIsRunningTest(true);
     const results = await testMetaApi();
-    setDiagnosticResults(results);
-    setShowDiagnostics(true);
+    setShowResults(true);
     setIsRunningTest(false);
   };
 
   const handleCorsCheck = async () => {
     setIsRunningTest(true);
     const results = await checkForCorsIssues();
-    setDiagnosticResults(results);
-    setShowDiagnostics(true);
+    setShowResults(true);
     setIsRunningTest(false);
-  };
-
-  const handleComprehensiveDiagnostic = async () => {
-    setIsRunningComprehensiveDiagnostic(true);
-    setShowDiagnostics(true);
-    const results = await runComprehensiveDiagnostic();
-    setDiagnosticResults(results);
-    setIsRunningComprehensiveDiagnostic(false);
   };
 
   const handleTestProxy = async () => {
     setIsRunningTest(true);
     const results = await testProxyApproach();
     setProxyTestResult(results);
-    setShowDiagnostics(true);
+    setShowResults(true);
     setIsRunningTest(false);
   };
 
   const handleBrowserCompatibility = () => {
     setIsRunningTest(true);
     const results = testBrowserCompatibility();
-    setDiagnosticResults(results);
-    setShowDiagnostics(true);
+    setShowResults(true);
     setIsRunningTest(false);
   };
 
@@ -148,7 +143,7 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
           handleTestProxy={handleTestProxy}
         />
 
-        {showDiagnostics && diagnosticResults && (
+        {showResults && diagnosticResults && (
           <DiagnosticResults
             diagnosticResults={diagnosticResults}
             proxyTestResult={proxyTestResult}
@@ -161,3 +156,4 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({
 };
 
 export default ConnectionStatusPanel;
+

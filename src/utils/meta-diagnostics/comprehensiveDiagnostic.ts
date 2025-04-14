@@ -1,3 +1,5 @@
+import { testMetaApi, checkForCorsIssues, testBrowserCompatibility, testProxyApproach } from './apiTest';
+import { ComprehensiveDiagnosticResult } from './types';
 
 export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnosticResult> => {
   console.log('[META DEBUG] === LOVABLE COMPREHENSIVE DIAGNOSTIC ===');
@@ -87,4 +89,3 @@ export const runComprehensiveDiagnostic = async (): Promise<ComprehensiveDiagnos
     }
   };
 };
-

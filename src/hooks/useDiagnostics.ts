@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { runComprehensiveDiagnostic } from '@/utils/metaApiTest';
+import { ComprehensiveDiagnosticResult } from '@/utils/meta-diagnostics/types';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -8,7 +9,7 @@ export const useDiagnostics = () => {
   const { toast } = useToast();
   const [isRunningDiagnostic, setIsRunningDiagnostic] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
+  const [diagnosticResults, setDiagnosticResults] = useState<ComprehensiveDiagnosticResult | null>(null);
 
   const runDiagnostics = async () => {
     // Log the current state for debugging
@@ -20,81 +21,6 @@ export const useDiagnostics = () => {
     try {
       const results = await runComprehensiveDiagnostic();
       console.log('[META DEBUG] Diagnostic results:', results);
-      
-      // Compare local diagnostic results with MetaAuthService state
-      if (results.token.hasToken !== !!metaAuthService.getAccessToken()) {
-        console.warn('[META DEBUG] Inconsistency detected: Token diagnostic result doesn\'t match MetaAuthService state');
-        
-        // Try to reconcile the inconsistency
-        if (metaAuthService.getAccessToken() && !results.token.hasToken) {
-          console.log('[META DEBUG] Token found in MetaAuthService but not in diagnostic - updating diagnostic');
-          results.token.hasToken = true;
-          results.token.tokenLength = metaAuthService.getAccessToken()?.length || 0;
-        }
-      }
-
-      // Double-check the authentication state for consistency
-      const authState = metaAuthService.isAuthenticated();
-      console.log('[META DEBUG] AuthService authentication state:', authState);
-      console.log('[META DEBUG] Token validity from diagnostic:', results.tokenAnalysis?.isValid);
-      
-      // Check if we're actually getting campaign data
-      const adAccountId = localStorage.getItem('selected_ad_account');
-      console.log('[META DEBUG] Selected ad account:', adAccountId);
-      
-      // Add a data loading check to diagnostics
-      results.dataCheck = {
-        adAccountSelected: !!adAccountId,
-        lastCampaignFetchAttempt: localStorage.getItem('last_campaign_fetch_attempt'),
-        lastCampaignFetchSuccess: localStorage.getItem('last_campaign_fetch_success'),
-        lastCampaignCount: localStorage.getItem('last_campaign_count') || '0'
-      };
-      
-      // Add campaign loading issue detection to summary
-      if (adAccountId && 
-          results.token.hasToken && 
-          results.tokenAnalysis && 
-          results.tokenAnalysis.isValid !== false &&
-          results.api.success) {
-          
-        // If all checks pass but no campaigns are loading, add a specific issue
-        const lastCampaignCount = parseInt(localStorage.getItem('last_campaign_count') || '0');
-        const lastFetchSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
-        
-        if (lastFetchSuccess && lastCampaignCount === 0) {
-          if (results.summary && results.summary.issues) {
-            // Replace "No issues detected" with empty campaigns warning
-            if (results.summary.issues.includes('No issues detected')) {
-              results.summary.issues = ['Your account is properly connected, but no campaigns were found in this ad account.'];
-              
-              if (results.summary.recommendations) {
-                results.summary.recommendations.unshift(
-                  'Try selecting a different ad account that contains campaigns',
-                  'Or create a new campaign in this ad account'
-                );
-              }
-            }
-          }
-        } else if (!lastFetchSuccess) {
-          // Add data loading issue
-          if (results.summary && results.summary.issues) {
-            // Replace "No issues detected" with data loading issue
-            if (results.summary.issues.includes('No issues detected')) {
-              results.summary.issues = ['Campaign data failed to load despite valid authentication and permissions.'];
-              
-              if (results.summary.recommendations) {
-                results.summary.recommendations = [
-                  'Check browser console for specific API errors',
-                  'Try reconnecting your Facebook account',
-                  'Try selecting a different ad account',
-                  'Verify your ad account has active campaigns'
-                ];
-              }
-            }
-          }
-        }
-      }
-      
       setDiagnosticResults(results);
       setShowResults(true);
       

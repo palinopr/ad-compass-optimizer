@@ -42,3 +42,4 @@ export interface ComprehensiveDiagnosticResult {
     recommendations: string[];
   };
 }
+

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Bug, Code, AlertTriangle, Stethoscope, Globe, Shield } from 'lucide-react';
