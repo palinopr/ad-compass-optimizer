@@ -43,7 +43,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       if (result?.error) {
         setError(result.error);
         setErrorDetails(result.errorDetails);
-      } else if (result?.campaigns) {
+      } else if (result && 'campaigns' in result && result.campaigns) {
         updateCampaigns(result.campaigns);
       }
       setIsLoading(false);
