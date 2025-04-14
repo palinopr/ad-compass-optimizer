@@ -36,7 +36,9 @@ export function useCampaignFetcher() {
     status?: string,
     forceRefresh: boolean = false
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
-    if (isMockMode()) {
+    const mockMode = isMockMode();
+    
+    if (mockMode) {
       console.log('🎭 Mock mode: Returning mock campaign data');
       
       let campaigns = [...mockFunnelData.campaigns];
@@ -47,6 +49,7 @@ export function useCampaignFetcher() {
         );
       }
       
+      handleFetchSuccess(true); // Pass true to indicate mock mode
       return { campaigns, error: null };
     }
     
@@ -131,7 +134,7 @@ export function useCampaignFetcher() {
         }
       }
 
-      handleFetchSuccess();
+      handleFetchSuccess(false); // Pass false to indicate live API mode
       return { campaigns, error: null };
     } catch (err: any) {
       console.error('[CAMPAIGN DEBUG] Fetch error:', err);

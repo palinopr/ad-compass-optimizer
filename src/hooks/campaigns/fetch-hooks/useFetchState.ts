@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback } from 'react';
 import { debounce } from 'lodash';
 import { toast } from '@/hooks/use-toast';
@@ -42,10 +43,17 @@ export const useFetchState = () => {
     return true;
   }, []);
 
-  const handleFetchSuccess = useCallback(() => {
+  const updateFetchSource = useCallback((isMockMode: boolean) => {
+    const source = isMockMode ? 'Mock Data' : 'Live Meta API';
+    localStorage.setItem('last_campaign_source', source);
+    localStorage.setItem('last_campaign_fetch_at', new Date().toISOString());
+  }, []);
+
+  const handleFetchSuccess = useCallback((isMockMode: boolean = false) => {
     setConsecutiveFailures(0);
+    updateFetchSource(isMockMode);
     endFetch();
-  }, [endFetch]);
+  }, [endFetch, updateFetchSource]);
 
   const handleFetchFailure = useCallback(() => {
     setConsecutiveFailures(prev => {

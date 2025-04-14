@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 import { useCampaignFetchState } from '@/hooks/campaigns/useCampaignFetchState';
@@ -13,6 +12,8 @@ import { format } from 'date-fns';
 import { metaAuthService } from '@/services/MetaAuthService';
 
 const CampaignConnectionStatus = () => {
+  const [lastSource, setLastSource] = useState<string>('');
+  const [lastFetchTime, setLastFetchTime] = useState<string>('');
   const token = metaAuthService.getAccessToken();
   const permissions = metaAuthService.getPermissions();
   const selectedAccount = localStorage.getItem('selected_ad_account');
@@ -21,7 +22,14 @@ const CampaignConnectionStatus = () => {
   const lastApiSuccess = localStorage.getItem('last_campaign_fetch_success') === 'true';
   const lastFetchMetadata = useCampaignFetchState()?.lastFetchMetadata;
 
-  const formatTimestamp = (timestamp: string | null) => {
+  useEffect(() => {
+    const source = localStorage.getItem('last_campaign_source') || '';
+    const fetchTime = localStorage.getItem('last_campaign_fetch_at') || '';
+    setLastSource(source);
+    setLastFetchTime(fetchTime);
+  }, []);
+
+  const formatTimestamp = (timestamp: string) => {
     if (!timestamp) return 'Never';
     try {
       return format(new Date(timestamp), "h:mm a · MMM d");
@@ -54,6 +62,21 @@ const CampaignConnectionStatus = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
+        {/* Source and Last Sync Info */}
+        {lastSource && (
+          <div className="bg-gray-50 p-2 rounded-md text-xs space-y-1">
+            <div className="flex items-center">
+              {lastSource === 'Mock Data' ? '🎭' : '📦'} 
+              <span className="ml-1">Source: {lastSource}</span>
+            </div>
+            {lastFetchTime && (
+              <div className="text-gray-600">
+                ⏱️ Last Sync: {formatTimestamp(lastFetchTime)}
+              </div>
+            )}
+          </div>
+        )}
+
         <TokenBasicInfo tokenInfo={tokenInfo} />
         
         <ApiStatusSection
