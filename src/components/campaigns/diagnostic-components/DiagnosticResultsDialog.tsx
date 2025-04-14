@@ -1,10 +1,10 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, AlertCircle, RefreshCw, Loader2, ExternalLink } from 'lucide-react';
+import { CheckCircle, AlertCircle, RefreshCw, Loader2, ExternalLink, Copy, ClipboardCheck } from 'lucide-react';
 import DiagnosticResults from './DiagnosticResults';
 import TokenDetails from './TokenDetails';
+import { toast } from '@/hooks/use-toast';
 
 interface DiagnosticResultsDialogProps {
   showResults: boolean;
@@ -23,17 +23,93 @@ const DiagnosticResultsDialog: React.FC<DiagnosticResultsDialogProps> = ({
   isRunningDiagnostic,
   runDiagnostics
 }) => {
+  const [isCopied, setIsCopied] = useState(false);
+
+  const formatDiagnosticResults = () => {
+    if (!diagnosticResults) return '';
+    
+    const sections = [
+      '# Campaign Loading Diagnostic Results',
+      '',
+      '## Issues Detected:',
+      ...(diagnosticResults.summary?.issues || []).map(issue => `• ${issue}`),
+      '',
+      '## Recommended Solutions:',
+      ...(diagnosticResults.summary?.recommendations || []).map(rec => `• ${rec}`),
+      '',
+      '## Token Details:',
+      `- Has Token: ${diagnosticResults.token?.hasToken}`,
+      `- Token Length: ${diagnosticResults.token?.tokenLength} characters`,
+      `- Token Age: ${diagnosticResults.token?.age || 'Unknown'} days`,
+      `- Token Source: ${diagnosticResults.token?.source}`,
+      `- Permissions: ${diagnosticResults.token?.permissions?.join(', ')}`,
+      '',
+      '## API Status:',
+      `- Last Check: ${new Date().toLocaleString()}`,
+      `- Success: ${diagnosticResults.api?.success}`,
+      '',
+      '## Data Loading:',
+      `- Campaign Count: ${localStorage.getItem('last_campaign_count') || '0'}`,
+      `- Selected Ad Account: ${localStorage.getItem('selected_ad_account') || 'None'}`,
+      '',
+      '## Troubleshooting Notes:',
+      '- Check browser console for detailed network errors',
+      '- Verify Meta API permissions',
+      '- Consider Facebook authentication to bypass CORS issues'
+    ];
+    
+    return sections.join('\n');
+  };
+
+  const handleCopyDiagnostics = () => {
+    const diagnosticText = formatDiagnosticResults();
+    
+    navigator.clipboard.writeText(diagnosticText).then(() => {
+      setIsCopied(true);
+      toast({
+        title: "Diagnostic Information Copied",
+        description: "Diagnostic details have been copied to clipboard",
+        variant: "default"
+      });
+      
+      // Reset copied state after 2 seconds
+      setTimeout(() => setIsCopied(false), 2000);
+    }).catch(err => {
+      console.error('Failed to copy diagnostic information', err);
+      toast({
+        title: "Copy Failed",
+        description: "Unable to copy diagnostic information",
+        variant: "destructive"
+      });
+    });
+  };
+
   return (
     <AlertDialog open={showResults} onOpenChange={setShowResults}>
       <AlertDialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center">
-            {hasIssues ? (
-              <AlertCircle className="h-5 w-5 text-amber-500 mr-2" />
-            ) : (
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-            )}
-            Campaign Loading Diagnostic Results
+          <AlertDialogTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              {hasIssues ? (
+                <AlertCircle className="h-5 w-5 text-amber-500 mr-2" />
+              ) : (
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+              )}
+              Campaign Loading Diagnostic Results
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleCopyDiagnostics}
+              className="flex items-center gap-2"
+            >
+              {isCopied ? (
+                <ClipboardCheck className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+              {isCopied ? "Copied" : "Copy Diagnostics"}
+            </Button>
           </AlertDialogTitle>
           <AlertDialogDescription>
             {hasIssues
@@ -54,7 +130,6 @@ const DiagnosticResultsDialog: React.FC<DiagnosticResultsDialogProps> = ({
               hasIssues={hasIssues} 
             />
             
-            {/* Show token details in a separate section */}
             {diagnosticResults.token && (
               <TokenDetails tokenInfo={diagnosticResults.token} tokenAnalysis={diagnosticResults.tokenAnalysis} />
             )}
