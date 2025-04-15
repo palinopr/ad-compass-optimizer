@@ -15,12 +15,15 @@ export class CampaignQueryBuilder {
     // Map legacy presets to Meta API compatible presets
     let validDatePreset = this.normalizePreset(datePreset);
     
-    // Use the defined fields from config
-    const basicFields = CAMPAIGN_FIELDS.BASIC.join(',');
-    const insightFields = CAMPAIGN_FIELDS.INSIGHTS.join(',');
+    // Use simplified fields for initial load to reduce API complexity
+    const basicFields = 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time';
     
-    // Build query with the validated date preset
-    const query = `${basicFields},insights.date_preset(${validDatePreset}){${insightFields}}`;
+    // Build a clean insights field string with the validated date preset
+    // This format was proven to work in previous fixes
+    const insightFields = 'impressions,clicks,spend,actions,cost_per_action_type,website_purchase_roas';
+    
+    // Build query with the validated date preset using simplified structure
+    const query = `${basicFields}&insights.date_preset(${validDatePreset}).fields(${insightFields})`;
     
     // Log the query for debugging
     console.log(`[CAMPAIGN QUERY] Built query with date preset: ${validDatePreset}`);
@@ -58,7 +61,7 @@ export class CampaignQueryBuilder {
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.7-all-presets-fix';
+    return '1.0.8-fixed-query-structure';
   }
   
   // Adding timestamp to ensure no cache is used

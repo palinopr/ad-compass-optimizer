@@ -46,9 +46,11 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     const token = metaAuthService.getAccessToken();
     const selectedAdAccount = localStorage.getItem('selected_ad_account');
     const hasAuth = token && token.length > 50 && selectedAdAccount;
+    const campaignsFetched = localStorage.getItem('last_campaign_fetch_completed');
+    const hasRecentFetch = campaignsFetched && (Date.now() - new Date(campaignsFetched).getTime() < 60000); // 1 minute
     
-    if (hasAuth && !isLoading && campaigns.length === 0) {
-      console.log('[CAMPAIGN LIST] Authenticated but no campaigns, forcing fetch');
+    if (hasAuth && !isLoading && campaigns.length === 0 && !hasRecentFetch) {
+      console.log('[CAMPAIGN LIST] Authenticated but no campaigns or old data, forcing fetch');
       refetchCampaigns(true);
     }
   }, []);
@@ -111,6 +113,19 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       return () => clearTimeout(insightCheckTimeout);
     }
   }, [fetchCompleted, campaigns.length, refetchCampaigns, insightsFetchStatus]);
+  
+  // Force render on successful campaign data load if we have valid campaigns
+  useEffect(() => {
+    if (campaigns.length > 0 && fetchCompleted) {
+      console.log('[CAMPAIGN LIST] Campaigns data loaded, forcing UI refresh');
+      const forceRenderTimeout = setTimeout(() => {
+        // Force a UI refresh to ensure all campaign data is properly displayed
+        window.dispatchEvent(new Event('force-campaign-ui-refresh'));
+      }, 300);
+      
+      return () => clearTimeout(forceRenderTimeout);
+    }
+  }, [campaigns.length, fetchCompleted]);
 
   // Log component render to track state changes
   console.log(`[CAMPAIGN LIST] Rendering with state:`, { 
@@ -135,7 +150,10 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   // Only show error state if we have a genuine error and:
   // 1. We don't have any campaigns OR
   // 2. Insights fetch completely failed AND we're not in mock mode
-  if (error && !isMockMode && (campaigns.length === 0 || insightsFetchStatus === 'failed')) {
+  const hasValidData = campaigns.length > 0 && 
+    (insightsFetchStatus === 'success' || insightsFetchStatus === 'partial');
+    
+  if (error && !isMockMode && !hasValidData) {
     return (
       <Card>
         <ErrorState 
@@ -191,7 +209,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         status={status}
         hasFilteredResults={filteredCampaigns.length > 0}
         onClearFilters={() => {
-          setDateRange(null, 'last_28d');  // Updated to use last_28d
+          setDateRange(null, 'last_28d');
           setStatusFilter(null);
           setSearchQuery('');
         }}

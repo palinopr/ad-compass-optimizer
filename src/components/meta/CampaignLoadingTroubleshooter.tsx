@@ -69,13 +69,13 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
   // Check if we have any successful insights data (suppress warning if we do)
   const hasValidInsightsData = insightsFetchStatus === 'success' || insightsFetchStatus === 'partial';
   const hasCampaignsData = localStorage.getItem('has_campaigns_data') === 'true';
+  const hasApiError = !!errorDetails && errorDetails.status && errorDetails.status !== 200;
   
   // Only show troubleshooter if:
-  // 1. We have actual API errors, AND
-  // 2. No campaign data exists, OR
-  // 3. Insights fetch completely failed (and wasn't partial or successful)
-  // This prevents false positives
-  if (hasValidInsightsData && hasCampaignsData) {
+  // 1. Campaign fetch returned 0 items, OR
+  // 2. All insight requests failed, OR
+  // 3. An explicit error is returned from the API
+  if ((hasValidInsightsData || (hasCampaignsData && !hasApiError)) && !isPermissionError) {
     console.log('Suppressing troubleshooter - we have valid campaign/insights data');
     return null;
   }

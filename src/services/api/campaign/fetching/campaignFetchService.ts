@@ -38,15 +38,16 @@ export class CampaignFetchService extends BaseApiService {
 
       // Use the provided date preset or default to last_28d
       // CampaignQueryBuilder.normalizePreset will validate/map the preset
-      const fields = CampaignQueryBuilder.buildCampaignQuery(datePreset || 'last_28d');
+      const fieldsQuery = CampaignQueryBuilder.buildCampaignQuery(datePreset || 'last_28d');
       
       // Verify that the date preset is valid
-      CampaignQueryBuilder.verifyDatePreset(fields);
+      CampaignQueryBuilder.verifyDatePreset(fieldsQuery);
       
-      console.log('[CAMPAIGN FETCH] Using query fields:', fields);
+      console.log('[CAMPAIGN FETCH] Using query fields:', fieldsQuery);
 
-      // Ensure we're using the properly formatted account ID in the URL
-      const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
+      // Build URL - IMPORTANT: Use fields= for the first part, then append the rest
+      // This structure mimics the successful format from previous fixes
+      const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fieldsQuery}&limit=500&access_token=${token}`;
       
       // Log the actual URL that will be used (with token redacted)
       const redactedUrl = url.replace(token, 'REDACTED');
@@ -56,19 +57,20 @@ export class CampaignFetchService extends BaseApiService {
       try {
         localStorage.setItem('last_campaign_request_url', redactedUrl);
         localStorage.setItem('last_campaign_request_timestamp', new Date().toISOString());
-        localStorage.setItem('last_campaign_request_date_preset', fields.match(/date_preset\(([^)]+)\)/)?.[1] || 'unknown');
+        localStorage.setItem('last_campaign_request_date_preset', datePreset || 'last_28d');
       } catch (e) {
         console.error('[CAMPAIGN FETCH] Error storing request info:', e);
       }
       
+      // Execute the fetch and get campaigns
       const campaigns = await this.executeFetch(url);
       
       // If we get empty data and datePreset is not already maximum, try with maximum
       if (campaigns.length === 0 && datePreset !== 'maximum') {
         console.log('[CAMPAIGN FETCH] No campaigns returned, trying with date_preset=maximum');
         // Rebuild query with maximum preset
-        const maximumFields = CampaignQueryBuilder.buildCampaignQuery('maximum');
-        const maximumUrl = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${maximumFields}&access_token=${token}`;
+        const maximumFieldsQuery = CampaignQueryBuilder.buildCampaignQuery('maximum');
+        const maximumUrl = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${maximumFieldsQuery}&limit=500&access_token=${token}`;
         try {
           return await this.executeFetch(maximumUrl);
         } catch (maximumError) {
@@ -90,44 +92,81 @@ export class CampaignFetchService extends BaseApiService {
     const redactedForLogging = url.replace(/access_token=[^&]+/, 'access_token=REDACTED');
     console.log(`[CAMPAIGN FETCH] Executing fetch to: ${redactedForLogging}`);
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'meta-marketing-dashboard/1.0'
+        }
+      });
+      
+      this.lastResponseHeaders = {};
+      response.headers.forEach((value, key) => {
+        this.lastResponseHeaders[key] = value;
+      });
+  
+      if (!response.ok) {
+        console.error(`[CAMPAIGN FETCH] API request failed with status: ${response.status}`);
+        // Use the separate ErrorHandler class with correct casing
+        await ErrorHandler.handleErrorResponse(response);
       }
-    });
-    
-    this.lastResponseHeaders = {};
-    response.headers.forEach((value, key) => {
-      this.lastResponseHeaders[key] = value;
-    });
-
-    if (!response.ok) {
-      console.error(`[CAMPAIGN FETCH] API request failed with status: ${response.status}`);
-      // Use the separate ErrorHandler class with correct casing
-      await ErrorHandler.handleErrorResponse(response);
-    }
-
-    const data = await response.json();
-    ErrorStorage.storeRawSuccessResponse(data);
-    
-    if (!data || !data.data) {
-      console.error('[CAMPAIGN FETCH] Invalid response format:', data);
-      throw new Error('Invalid response format from Meta API');
-    }
-
-    let allCampaigns = [...data.data];
-    
-    if (data.paging && data.paging.next) {
-      console.log('[CAMPAIGN FETCH] Pagination detected, fetching more pages');
+  
+      const data = await response.json();
+      
+      // Store raw response for debugging
       try {
-        const nextPageCampaigns = await PaginationHandler.fetchPaginatedCampaigns(data.paging.next);
-        allCampaigns = [...allCampaigns, ...nextPageCampaigns];
-      } catch (paginationError) {
-        console.error('[CAMPAIGN FETCH] Error fetching additional pages:', paginationError);
+        localStorage.setItem('raw_campaign_response', JSON.stringify(data));
+      } catch (e) {
+        console.error('[CAMPAIGN FETCH] Error storing raw response:', e);
       }
+      
+      ErrorStorage.storeRawSuccessResponse(data);
+      
+      if (!data || !data.data) {
+        console.error('[CAMPAIGN FETCH] Invalid response format:', data);
+        throw new Error('Invalid response format from Meta API');
+      }
+  
+      let allCampaigns = [...data.data];
+      
+      if (data.paging && data.paging.next) {
+        console.log('[CAMPAIGN FETCH] Pagination detected, fetching more pages');
+        try {
+          const nextPageCampaigns = await PaginationHandler.fetchPaginatedCampaigns(data.paging.next);
+          allCampaigns = [...allCampaigns, ...nextPageCampaigns];
+        } catch (paginationError) {
+          console.error('[CAMPAIGN FETCH] Error fetching additional pages:', paginationError);
+        }
+      }
+      
+      console.log(`[CAMPAIGN FETCH] Successfully fetched ${allCampaigns.length} campaigns`);
+      
+      // Mark successful fetch in localStorage
+      localStorage.setItem('last_campaign_fetch_success', 'true');
+      localStorage.setItem('last_campaign_count', String(allCampaigns.length));
+      localStorage.setItem('last_campaign_fetch_completed', new Date().toISOString());
+      
+      if (allCampaigns.length > 0) {
+        localStorage.setItem('has_campaigns_data', 'true');
+      }
+      
+      return CampaignProcessor.processCampaigns(allCampaigns);
+    } catch (error) {
+      console.error('[CAMPAIGN FETCH] Fetch execution error:', error);
+      
+      // Store error for debugging
+      try {
+        localStorage.setItem('raw_campaign_error_response', JSON.stringify({
+          message: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        }));
+      } catch (e) {
+        console.error('[CAMPAIGN FETCH] Error storing error details:', e);
+      }
+      
+      throw error;
     }
-    
-    return CampaignProcessor.processCampaigns(allCampaigns);
   }
 }

@@ -31,7 +31,8 @@ export function useCampaignFetcher() {
   ) => {
     console.log('[CAMPAIGNS DEBUG] Starting campaign fetch...');
 
-    if (!canFetch()) {
+    if (!canFetch() && !forceRefresh) {
+      console.log('[CAMPAIGNS DEBUG] Fetch already in progress or cooling down');
       return { 
         campaigns: [], 
         error: 'A campaign fetch request is already in progress.',
@@ -45,12 +46,38 @@ export function useCampaignFetcher() {
     try {
       const { error: prepError } = await prepareFetchRequest(token, adAccountId);
       if (prepError) {
+        endFetch();
         return { campaigns: [], error: prepError };
       }
 
       logFetchDetails(adAccountId, token);
 
-      const data = await MetaFunnelService.fetchFunnelData(token, adAccountId);
+      // Store attempt timestamp for rate limiting & debugging
+      localStorage.setItem('campaign_fetch_timestamp', Date.now().toString());
+      localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
+
+      const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'last_28d');
+      
+      // Validate the response has campaigns
+      if (!data || !data.campaigns || data.campaigns.length === 0) {
+        console.warn('[CAMPAIGNS DEBUG] No campaigns returned from API');
+        localStorage.setItem('has_campaigns_data', 'false');
+        localStorage.setItem('empty_campaigns_response', 'true');
+      } else {
+        localStorage.setItem('has_campaigns_data', 'true');
+        localStorage.setItem('empty_campaigns_response', 'false');
+        console.log(`[CAMPAIGNS DEBUG] Successfully fetched ${data.campaigns.length} campaigns`);
+        
+        // Log the first campaign to verify structure
+        if (data.campaigns.length > 0) {
+          console.log('[CAMPAIGNS DEBUG] First campaign sample:', {
+            id: data.campaigns[0].id,
+            name: data.campaigns[0].name,
+            hasInsights: !!data.campaigns[0].insights,
+            insights: data.campaigns[0].insights ? Object.keys(data.campaigns[0].insights) : 'none'
+          });
+        }
+      }
       
       handleSuccessfulFetch(data.campaigns, mountedRef, increaseCooldown);
       handleFetchSuccess(false);
