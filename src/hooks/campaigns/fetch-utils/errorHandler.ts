@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 import { isRateLimitError, markRateLimited } from './rateLimit';
 
@@ -24,45 +25,55 @@ export const handleApiError = async (apiErr: any): Promise<{
   if (apiErr?.response) {
     try {
       console.log('[API ERROR DEBUG] Found response object, attempting to parse');
-      const responseData = await apiErr.response.json();
-      console.error('[API ERROR DEBUG] API error response data:', responseData);
       
-      // Store the complete error details
-      errorDetails = responseData;
+      // Log raw response details first
+      console.log(`[CAMPAIGN FETCH] Status:`, apiErr.response.status, apiErr.response.statusText);
+      console.log(`[CAMPAIGN FETCH] Headers:`, Object.fromEntries([...apiErr.response.headers.entries()]));
       
-      // Check for specific Meta API errors
-      if (responseData.error) {
-        apiErrorMessage = `Meta API Error ${responseData.error.code}: ${responseData.error.message}`;
-        
-        // Add specific error context based on code
-        if (responseData.error.code === 190) {
-          apiErrorMessage += "\nYour access token has expired or is invalid.";
-        } else if (responseData.error.code === 200) {
-          apiErrorMessage += "\nPermission denied - check app permissions.";
-        } else if (responseData.error.code === 100) {
-          apiErrorMessage += "\nInvalid parameter in request.";
-        }
-        
-        // Check for rate limit errors
-        if (responseData.error.code === 4 || 
-            responseData.error.code === 17 ||
-            (responseData.error.code >= 80000 && responseData.error.code <= 80014) ||
-            responseData.error.message?.toLowerCase().includes('rate limit')) {
-          isRateLimitDetected = true;
-        }
-      }
-    } catch (jsonErr) {
-      console.error('[API ERROR DEBUG] Failed to parse API error response:', jsonErr);
-      apiErrorMessage = "Failed to load campaigns. Check console for full error.";
+      // Get the raw response text
+      const responseText = await apiErr.response.text();
+      console.log(`[CAMPAIGN FETCH] Raw Body:`, responseText);
       
-      // Try to get raw text
       try {
-        const responseText = await apiErr.response.text();
-        console.error('[API ERROR DEBUG] Raw error response text:', responseText);
-        errorDetails = { rawResponse: responseText };
-      } catch (textErr) {
-        console.error('[API ERROR DEBUG] Failed to get response text:', textErr);
+        const parsed = JSON.parse(responseText);
+        console.log(`[CAMPAIGN FETCH] Parsed JSON:`, parsed);
+        
+        // Store the complete error details
+        errorDetails = parsed;
+        
+        // Check for specific Meta API errors
+        if (parsed.error) {
+          apiErrorMessage = `Meta API Error ${parsed.error.code}: ${parsed.error.message}`;
+          console.error(`[CAMPAIGN FETCH] Meta API Error:`, {
+            code: parsed.error.code,
+            message: parsed.error.message,
+            type: parsed.error.type,
+            fbtraceId: parsed.error.fbtrace_id
+          });
+          
+          // Add specific error context based on code
+          if (parsed.error.code === 190) {
+            apiErrorMessage += "\nYour access token has expired or is invalid.";
+          } else if (parsed.error.code === 200) {
+            apiErrorMessage += "\nPermission denied - check app permissions.";
+          } else if (parsed.error.code === 100) {
+            apiErrorMessage += "\nInvalid parameter in request.";
+          }
+          
+          // Check for rate limit errors
+          if (parsed.error.code === 4 || 
+              parsed.error.code === 17 ||
+              (parsed.error.code >= 80000 && parsed.error.code <= 80014) ||
+              parsed.error.message?.toLowerCase().includes('rate limit')) {
+            isRateLimitDetected = true;
+          }
+        }
+      } catch (jsonErr) {
+        console.error(`[CAMPAIGN FETCH] ❌ JSON parse error:`, jsonErr);
+        apiErrorMessage = "Failed to load campaigns. Check console for full error.";
       }
+    } catch (textErr) {
+      console.error(`[CAMPAIGN FETCH] ❌ Failed to read response body:`, textErr);
     }
   }
   

@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -63,24 +62,66 @@ export class MetaCampaignService extends BaseApiService {
       
       // Use the funnel service to get campaign data via batch API
       console.log('[CAMPAIGN FETCH] Making API call via MetaFunnelService...');
-      const response = await MetaFunnelService.fetchFunnelData(token, adAccountId);
       
-      console.log('[CAMPAIGN FETCH] MetaFunnelService Response:', {
-        campaignsCount: response.campaigns.length,
-        adsetsCount: response.adsets.length,
-        adsCount: response.ads.length,
-        status: 'success'
-      });
-      
-      // Log response details
-      console.log(`[CAMPAIGN FETCH] Success! Received ${response.campaigns.length} campaigns`);
-      
-      // Store metadata for diagnostics
-      localStorage.setItem('last_campaign_count', response.campaigns.length.toString());
-      localStorage.setItem('last_campaign_fetch_success', 'true');
-      localStorage.removeItem('last_empty_result');
-      
-      return response.campaigns;
+      try {
+        const response = await MetaFunnelService.fetchFunnelData(token, adAccountId);
+        
+        console.log('[CAMPAIGN FETCH] MetaFunnelService Response:', {
+          campaignsCount: response.campaigns.length,
+          adsetsCount: response.adsets.length,
+          adsCount: response.ads.length,
+          status: 'success'
+        });
+        
+        // Log response details
+        console.log(`[CAMPAIGN FETCH] Success! Received ${response.campaigns.length} campaigns`);
+        
+        // Store metadata for diagnostics
+        localStorage.setItem('last_campaign_count', response.campaigns.length.toString());
+        localStorage.setItem('last_campaign_fetch_success', 'true');
+        localStorage.removeItem('last_empty_result');
+        
+        return response.campaigns;
+      } catch (fetchError: any) {
+        // Enhanced error logging for the API call
+        console.error(`[CAMPAIGN FETCH] Error in MetaFunnelService.fetchFunnelData:`, fetchError);
+        
+        // Extract and log the raw response if available
+        if (fetchError?.response) {
+          console.log(`[CAMPAIGN FETCH] Status:`, fetchError.response.status, fetchError.response.statusText);
+          console.log(`[CAMPAIGN FETCH] Headers:`, Object.fromEntries([...fetchError.response.headers.entries()]));
+          
+          try {
+            const responseText = await fetchError.response.text();
+            console.log(`[CAMPAIGN FETCH] Raw Body:`, responseText);
+            
+            try {
+              const parsed = JSON.parse(responseText);
+              console.log(`[CAMPAIGN FETCH] Parsed JSON:`, parsed);
+              
+              // Check specifically for Meta API errors
+              if (parsed.error) {
+                console.error(`[CAMPAIGN FETCH] Meta API Error:`, {
+                  code: parsed.error.code,
+                  message: parsed.error.message,
+                  type: parsed.error.type,
+                  fbtraceId: parsed.error.fbtrace_id
+                });
+              }
+            } catch (jsonErr) {
+              console.error(`[CAMPAIGN FETCH] ❌ JSON parse error:`, jsonErr);
+              console.error(`[CAMPAIGN FETCH] Unparseable response body:`, responseText);
+            }
+          } catch (textErr) {
+            console.error(`[CAMPAIGN FETCH] ❌ Failed to read response body:`, textErr);
+          }
+        } else {
+          console.error(`[CAMPAIGN FETCH] No response object in error:`, fetchError);
+        }
+        
+        // Rethrow the error after logging
+        throw fetchError;
+      }
     } catch (error: any) {
       console.error(`[CAMPAIGN FETCH] Error fetching campaigns for ad account ${adAccountId}:`, error);
       console.error(`[CAMPAIGN FETCH] Error details:`, error?.response ? {
@@ -88,22 +129,6 @@ export class MetaCampaignService extends BaseApiService {
         statusText: error.response.statusText,
         headers: Object.fromEntries([...error.response.headers.entries()]),
       } : 'No response details available');
-      
-      if (error?.response) {
-        try {
-          const responseText = await error.response.text();
-          console.error(`[CAMPAIGN FETCH] Error response body:`, responseText);
-          
-          try {
-            const json = JSON.parse(responseText);
-            console.error('[CAMPAIGN FETCH] Parsed error JSON:', json);
-          } catch (parseErr) {
-            console.error('[CAMPAIGN FETCH] ❌ Failed to parse error JSON:', parseErr);
-          }
-        } catch (e) {
-          console.error(`[CAMPAIGN FETCH] Could not read error response text:`, e);
-        }
-      }
       
       localStorage.setItem('last_campaign_fetch_success', 'false');
       localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
