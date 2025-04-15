@@ -6,6 +6,10 @@ import { InsightsThrottling } from './insights/throttling';
 import { BaseApiService } from './BaseApiService';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 
+// Define API constants to match BaseApiService values
+const API_BASE_URL = 'https://graph.facebook.com';
+const API_VERSION = 'v17.0';
+
 export class MetaFunnelService {
   public static isMockMode(): boolean {
     return false; // Mock mode is disabled
@@ -63,7 +67,7 @@ export class MetaFunnelService {
       // If batch fails or returns no campaigns, try direct API call
       console.log('[META FUNNEL] Attempting direct API call to fetch campaigns');
       const fields = 'id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
-      const url = `${BaseApiService.BASE_URL}/${BaseApiService.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
+      const url = `${API_BASE_URL}/${API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log('[META FUNNEL] Direct API URL:', url.replace(token, 'REDACTED'));
       
@@ -96,8 +100,8 @@ export class MetaFunnelService {
       console.log(`[META FUNNEL] Direct API returned ${data.data.length} campaigns`);
       
       // Fetch adsets and ads directly
-      const adsetsUrl = `${BaseApiService.BASE_URL}/${BaseApiService.API_VERSION}/${formattedAccountId}/adsets?fields=id,name,campaign_id,status,effective_status&access_token=${token}`;
-      const adsUrl = `${BaseApiService.BASE_URL}/${BaseApiService.API_VERSION}/${formattedAccountId}/ads?fields=id,name,adset_id,status,effective_status&access_token=${token}`;
+      const adsetsUrl = `${API_BASE_URL}/${API_VERSION}/${formattedAccountId}/adsets?fields=id,name,campaign_id,status,effective_status&access_token=${token}`;
+      const adsUrl = `${API_BASE_URL}/${API_VERSION}/${formattedAccountId}/ads?fields=id,name,adset_id,status,effective_status&access_token=${token}`;
       
       const [adsetsResponse, adsResponse] = await Promise.all([
         fetch(adsetsUrl).then(res => res.json()),
