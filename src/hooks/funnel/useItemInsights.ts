@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { MetaInsightsService, InsightFilterOptions } from '@/services/api/MetaInsightsService';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -6,8 +5,8 @@ import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePre
 import { format } from 'date-fns';
 import { InsightsRequestThrottler } from '@/services/api/insights/requestThrottling';
 
-const getDateRange = (datePreset: string) => {
-  const date = datePreset === 'today' 
+const getDateRange = (preset: string) => {
+  const date = preset === 'today' 
     ? new Date() 
     : new Date(Date.now() - 86400000); // yesterday
   
@@ -50,51 +49,42 @@ export const useItemInsights = () => {
         'website_purchase_roas'
       ];
 
-      // Create base options
-      let baseOptions: Omit<InsightFilterOptions, 'datePreset'> = {
-        fields: commonFields,
+      // Create base options without datePreset
+      const baseOptions: Omit<InsightFilterOptions, 'datePreset'> = {
+        fields: commonFields
       };
 
       // Prepare requests array for batching
       const requests: (() => Promise<any>)[] = [];
-      
-      // For today/yesterday, use time_range with time_increment=1 instead of date_preset
+
+      // Primary request with optimal configuration for the date range
+      const primaryOptions: InsightFilterOptions = {
+        ...baseOptions,
+        timeIncrement: 1 // Always use time_increment=1 for consistent data breakdown
+      };
+
+      // For today/yesterday and other short ranges, use time_range
       if (['today', 'yesterday'].includes(validDatePreset)) {
-        const timeRange = getDateRange(validDatePreset);
-        const timeRangeOptions: InsightFilterOptions = {
-          ...baseOptions,
-          timeRange,
-          timeIncrement: 1
-        };
-        
-        // Primary request with time_range
-        requests.push(() => itemType === 'campaign' 
-          ? MetaInsightsService.fetchCampaignInsights(token, itemId, timeRangeOptions)
-          : MetaInsightsService.fetchAdSetInsights(token, itemId, timeRangeOptions));
+        primaryOptions.timeRange = getDateRange(validDatePreset);
       } else {
-        // For other presets, use date_preset
-        const standardOptions: InsightFilterOptions = {
-          ...baseOptions,
-          datePreset: validDatePreset as InsightFilterOptions['datePreset']
-        };
-        
-        // Primary request with date_preset
-        requests.push(() => itemType === 'campaign' 
-          ? MetaInsightsService.fetchCampaignInsights(token, itemId, standardOptions)
-          : MetaInsightsService.fetchAdSetInsights(token, itemId, standardOptions));
+        primaryOptions.datePreset = validDatePreset as InsightFilterOptions['datePreset'];
       }
 
-      // Add maximum fallback for all cases
-      const maximumOptions: InsightFilterOptions = { 
-        ...baseOptions, 
-        datePreset: 'maximum' 
+      // Add primary request
+      requests.push(() => itemType === 'campaign'
+        ? MetaInsightsService.fetchCampaignInsights(token, itemId, primaryOptions)
+        : MetaInsightsService.fetchAdSetInsights(token, itemId, primaryOptions));
+
+      // Add fallback request with maximum date range
+      const fallbackOptions: InsightFilterOptions = {
+        ...baseOptions,
+        datePreset: 'maximum',
+        timeIncrement: 1
       };
-      
-      requests.push(() => {
-        return itemType === 'campaign'
-          ? MetaInsightsService.fetchCampaignInsights(token, itemId, maximumOptions)
-          : MetaInsightsService.fetchAdSetInsights(token, itemId, maximumOptions);
-      });
+
+      requests.push(() => itemType === 'campaign'
+        ? MetaInsightsService.fetchCampaignInsights(token, itemId, fallbackOptions)
+        : MetaInsightsService.fetchAdSetInsights(token, itemId, fallbackOptions));
 
       // Execute requests with throttling
       const results = await InsightsRequestThrottler.throttleRequests(requests);
