@@ -30,7 +30,21 @@ export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
       throw new Error('No ad accounts found. Please check Meta permissions and token scopes.');
     }
 
-    const accounts = response;
+    // Validate and normalize account IDs
+    const accounts = response.map(acct => ({
+      ...acct,
+      id: acct.id.startsWith('act_') ? acct.id : `act_${acct.id}`
+    }));
+
+    // Clear invalid stored account if it exists
+    const storedAccountId = localStorage.getItem('selected_ad_account');
+    if (storedAccountId && !accounts.some(acc => 
+      acc.id.replace(/^act_/, '') === storedAccountId.replace(/^act_/, '')
+    )) {
+      console.warn('[CAMPAIGNS DEBUG] Stored account ID not found in fetched accounts, clearing...');
+      localStorage.removeItem('selected_ad_account');
+    }
+
     accounts.forEach((acct, i) => {
       console.log(`[CAMPAIGNS DEBUG] Account ${i + 1}: ID=${acct.id}, Name=${acct.name}`);
     });
