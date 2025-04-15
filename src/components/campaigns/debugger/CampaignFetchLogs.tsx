@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, BarChart } from 'lucide-react';
+import { Loader2, BarChart, AlertCircle } from 'lucide-react';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
 import { Badge } from '@/components/ui/badge';
 
@@ -60,9 +60,27 @@ const CampaignFetchLogs = () => {
                         )}
                       </div>
                       {log.parsedJson && (
-                        <div className="mt-1">
-                          Campaigns: {log.parsedJson.data?.length || 0}
-                        </div>
+                        <>
+                          <div className="mt-1">
+                            Campaigns: {log.parsedJson.data?.length || 0}
+                            {log.datePreset && (
+                              <span className="ml-2 text-gray-500">
+                                (Date: {log.datePreset})
+                              </span>
+                            )}
+                          </div>
+                          {!log.insightsData && (
+                            <div className="mt-1 text-amber-600 flex items-center text-[10px]">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              No insights data returned for the specified date range
+                            </div>
+                          )}
+                          {log.queryParams && (
+                            <div className="mt-1 text-[10px] text-gray-500">
+                              Query: {log.queryParams}
+                            </div>
+                          )}
+                        </>
                       )}
                     </>
                   )}

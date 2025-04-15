@@ -8,6 +8,8 @@ interface CampaignFetchLog {
   parsedJson?: any;
   error?: string;
   insightsData?: boolean;
+  datePreset?: string;
+  queryParams?: string;
 }
 
 class CampaignFetchLogger {
@@ -26,17 +28,28 @@ class CampaignFetchLogger {
     }
   }
 
-  static async logResponse(response: Response, accountId: string) {
+  static async logResponse(response: Response, accountId: string, queryParams?: string) {
     try {
       const responseText = await response.clone().text();
       console.log('[CAMPAIGN FETCH] 📦 Raw Response:', response.status, response.statusText);
       console.log('[CAMPAIGN FETCH] 📄 Response Body:', responseText);
+      console.log('[CAMPAIGN FETCH] 🔍 Query Parameters:', queryParams);
 
       let parsedJson;
       let hasInsights = false;
+      let datePreset = '';
+      
       try {
         parsedJson = JSON.parse(responseText);
         console.log('[CAMPAIGN FETCH] ✅ Parsed JSON:', parsedJson);
+        
+        // Extract date_preset from query parameters
+        if (queryParams) {
+          const datePresetMatch = queryParams.match(/date_preset=([^&]+)/);
+          if (datePresetMatch) {
+            datePreset = datePresetMatch[1];
+          }
+        }
         
         // Check if any campaigns have insights data
         if (parsedJson && parsedJson.data && Array.isArray(parsedJson.data)) {
@@ -46,6 +59,10 @@ class CampaignFetchLogger {
           
           hasInsights = campaignsWithInsights > 0;
           console.log(`[CAMPAIGN FETCH] 📊 Campaigns with insights data: ${campaignsWithInsights}/${parsedJson.data.length}`);
+          
+          if (campaignsWithInsights === 0) {
+            console.warn('[CAMPAIGN FETCH] ⚠️ No insights data found in response');
+          }
           
           // Log first campaign insights for debugging
           if (hasInsights && parsedJson.data[0].insights) {
@@ -63,7 +80,9 @@ class CampaignFetchLogger {
         statusText: response.statusText,
         responseBody: responseText,
         parsedJson,
-        insightsData: hasInsights
+        insightsData: hasInsights,
+        datePreset,
+        queryParams
       };
 
       this.logs.unshift(log);

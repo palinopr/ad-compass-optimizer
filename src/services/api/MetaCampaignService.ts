@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -58,14 +57,16 @@ export class MetaCampaignService extends BaseApiService {
     
       try {
         const endpoint = `/act_${adAccountId}/campaigns`;
-        // Include insights fields in the campaign request
+        // Include insights fields in the campaign request with date_preset
+        const datePreset = 'last_30d';
         const fields = 'id,name,objective,status,spend,results,cost_per_result,budget,daily_budget,lifetime_budget,start_time,end_time,created_time,updated_time,insights.date_preset(last_30d){impressions,clicks,cpc,ctr,spend,cost_per_action_type}';
         
+        const queryParams = `fields=${fields}&date_preset=${datePreset}&access_token=${token}`;
         console.log(`[CAMPAIGN FETCH] Fetching campaigns with insights for act_${adAccountId}`);
-        console.log(`[CAMPAIGN FETCH] Fields requested: ${fields}`);
+        console.log(`[CAMPAIGN FETCH] Using date_preset: ${datePreset}`);
         
         const response = await fetch(
-          `${this.BASE_URL}/${this.API_VERSION}${endpoint}?fields=${fields}&access_token=${token}`,
+          `${this.BASE_URL}/${this.API_VERSION}${endpoint}?${queryParams}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ export class MetaCampaignService extends BaseApiService {
           }
         );
 
-        await CampaignFetchLogger.logResponse(response, adAccountId);
+        await CampaignFetchLogger.logResponse(response, adAccountId, queryParams);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
