@@ -16,6 +16,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     incrementDisplayRefresh,
     clearCampaigns,
     forceUiRefresh,
+    hasEverHadCampaignsRef
   } = useCampaignFetchState();
 
   const [localForceRender, setLocalForceRender] = useState(0);
@@ -36,11 +37,22 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       if (result?.error) {
         setError(result.error);
         setErrorDetails(result.errorDetails);
+        // Exit loading state even on error to prevent stuck loading state
+        setIsLoading(false);
       } else if (result && 'campaigns' in result && result.campaigns) {
         console.log(`[CAMPAIGN FETCH] API returned ${result.campaigns.length} campaigns`);
+        
+        // Exit loading state before updating campaigns
+        if (result.campaigns.length > 0) {
+          setIsLoading(false);
+        }
+        
         updateCampaigns(result.campaigns);
+      } else {
+        console.warn('[CAMPAIGN FETCH] Fetch returned no campaigns and no error');
+        // Exit loading state to prevent stuck state
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
   }, [fetchCampaigns, mountedRef, 
       setIsLoading, setError, setErrorDetails, updateCampaigns]);
@@ -53,6 +65,28 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       setLocalForceRender(prev => prev + 1);
     }, 200);
   }, [forceUiRefresh]);
+
+  // Add a safety check for stuck loading state
+  useEffect(() => {
+    let timeoutId: number | undefined;
+    
+    if (isLoading) {
+      timeoutId = window.setTimeout(() => {
+        // If we're still loading after 10 seconds and we've had campaigns before,
+        // force exit loading state to prevent stuck UI
+        if (isLoading && hasEverHadCampaignsRef?.current) {
+          console.log('[CAMPAIGN FETCH] Safety timeout: forcing exit from loading state');
+          setIsLoading(false);
+        }
+      }, 10000); // 10 second safety timeout
+    }
+    
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [isLoading, hasEverHadCampaignsRef]);
 
   // Set up event listeners for campaign refresh events
   useCampaignEventListeners(

@@ -28,8 +28,34 @@ class ResponseParser {
     try {
       parsedJson = JSON.parse(responseText);
       
+      // Store raw campaign response for debugging
+      try {
+        localStorage.setItem('raw_campaign_response', JSON.stringify({
+          data: parsedJson.data?.slice(0, 2), // Store just a couple campaigns to avoid huge storage
+          paging: parsedJson.paging,
+          responseStatus: response.status,
+          timestamp: new Date().toISOString()
+        }));
+      } catch (e) {
+        console.error('[CAMPAIGN FETCH] Error storing raw response:', e);
+      }
+      
       if (parsedJson && parsedJson.data && Array.isArray(parsedJson.data)) {
+        console.log(`[CAMPAIGN FETCH] Response contains ${parsedJson.data.length} campaigns`);
         campaignPreviews = parseCampaignPreviews(parsedJson.data);
+        
+        // Detailed analysis of insights data presence
+        const insightsStats = {
+          total: parsedJson.data.length,
+          withInsights: parsedJson.data.filter(c => !!c.insights).length,
+          withoutInsights: parsedJson.data.filter(c => !c.insights).length,
+          insightsSamples: parsedJson.data.slice(0, 2).map(c => ({
+            id: c.id,
+            hasInsights: !!c.insights,
+            insightsKeys: c.insights ? Object.keys(c.insights) : []
+          }))
+        };
+        console.log('[CAMPAIGN FETCH] Insights data analysis:', insightsStats);
       }
       
       // Enhanced error handling

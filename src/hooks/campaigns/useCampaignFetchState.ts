@@ -28,6 +28,8 @@ export function useCampaignFetchState() {
   const campaignCountRef = useRef<number>(0);
   const lastUpdateSourceRef = useRef<string>('init');
   const [lastFetchMetadata, setLastFetchMetadata] = useState<FetchMetadata | null>(null);
+  // Add a sentinelRef to track if we've ever had campaigns (prevents stuck loading state)
+  const hasEverHadCampaignsRef = useRef<boolean>(false);
 
   // Set mounted flag on component mount/unmount
   useEffect(() => {
@@ -44,6 +46,8 @@ export function useCampaignFetchState() {
     const prevCount = campaignCountRef.current;
     campaignCountRef.current = campaigns.length;
     
+    console.log(`[CAMPAIGN STATE] Campaign count updated: ${prevCount} -> ${campaigns.length}`);
+    
     // Update fetch metadata when campaigns change
     if (campaigns.length !== prevCount) {
       updateFetchMetadata({
@@ -51,8 +55,28 @@ export function useCampaignFetchState() {
         campaignCount: campaigns.length,
         status: 200,
       });
+      
+      if (campaigns.length > 0) {
+        // Mark that we've received campaigns at least once
+        hasEverHadCampaignsRef.current = true;
+        
+        // If we were in loading state and received campaigns, exit loading state
+        if (isLoading) {
+          console.log('[CAMPAIGN STATE] Received campaigns, exiting loading state');
+          setIsLoading(false);
+        }
+      }
     }
-  }, [campaigns]);
+  }, [campaigns, isLoading]);
+
+  // Check for stuck loading state
+  useEffect(() => {
+    if (isLoading && !isFetchingRef.current && hasEverHadCampaignsRef.current) {
+      // If we're in loading state but not fetching and have had campaigns before
+      console.log('[CAMPAIGN STATE] Detected stuck loading state, forcing exit');
+      setIsLoading(false);
+    }
+  }, [isLoading]);
 
   const incrementDisplayRefresh = () => {
     setDisplayRefresh(prev => {
@@ -88,13 +112,47 @@ export function useCampaignFetchState() {
   // Direct setCampaigns with tracking
   const wrappedSetCampaigns = (newCampaigns: MetaCampaign[]) => {
     console.log(`[MOCK DEBUG] Direct setCampaigns called with ${newCampaigns.length} campaigns from ${lastUpdateSourceRef.current}`);
+    
+    // Clear loading state when setting campaigns directly
+    if (newCampaigns.length > 0 && isLoading) {
+      console.log('[CAMPAIGN STATE] Setting campaigns directly, clearing loading state');
+      setIsLoading(false);
+    }
+    
     setCampaigns(newCampaigns);
+    
+    // Mark that we've had campaigns if we're setting non-empty array
+    if (newCampaigns.length > 0) {
+      hasEverHadCampaignsRef.current = true;
+    }
   };
 
   // New function to update campaigns with guaranteed UI refresh
   const updateCampaigns = (newCampaigns: MetaCampaign[]) => {
     console.log(`[MOCK DEBUG] updateCampaigns called with ${newCampaigns.length} campaigns from ${lastUpdateSourceRef.current}`);
     lastUpdateSourceRef.current = 'updateCampaigns';
+    
+    // Log a sample campaign for debugging (if available)
+    if (newCampaigns.length > 0) {
+      const sample = newCampaigns[0];
+      console.log('[CAMPAIGN STATE] Sample campaign:', {
+        id: sample.id,
+        name: sample.name,
+        status: sample.status,
+        hasInsights: !!sample.insights,
+        insightKeys: sample.insights ? Object.keys(sample.insights) : []
+      });
+    }
+    
+    // Clear loading state when setting new campaigns
+    if (newCampaigns.length > 0) {
+      if (isLoading) {
+        console.log('[CAMPAIGN STATE] Received campaigns, clearing loading state');
+        setIsLoading(false);
+      }
+      hasEverHadCampaignsRef.current = true;
+    }
+    
     setCampaigns(newCampaigns);
     incrementDisplayRefresh();
     setForceRender(prev => prev + 1);
@@ -134,6 +192,7 @@ export function useCampaignFetchState() {
     mountedRef,
     campaignCountRef,
     lastFetchMetadata,
-    updateFetchMetadata
+    updateFetchMetadata,
+    hasEverHadCampaignsRef
   };
 }

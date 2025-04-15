@@ -50,6 +50,43 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       refetchCampaigns(true);
     }
   }, []);
+  
+  // Add safety timeout to exit loading state if stuck
+  useEffect(() => {
+    let safetyTimeout: number | undefined;
+    
+    if (isLoading) {
+      console.log(`[CAMPAIGN LIST] Loading state started, setting safety timeout`);
+      safetyTimeout = window.setTimeout(() => {
+        if (isLoading) {
+          console.log('[CAMPAIGN LIST] Safety timeout triggered - forcing exit from loading state');
+          toast({
+            title: "Loading timeout",
+            description: "Campaign loading took too long. Please try refreshing.",
+            variant: "destructive",
+          });
+          // We don't call setIsLoading directly to prevent dependency cycle,
+          // instead trigger a refresh that will reset loading state
+          refetchCampaigns(true);
+        }
+      }, 15000); // 15 seconds safety timeout
+    }
+    
+    return () => {
+      if (safetyTimeout) {
+        window.clearTimeout(safetyTimeout);
+      }
+    };
+  }, [isLoading, refetchCampaigns]);
+
+  // Log component render to track state changes
+  console.log(`[CAMPAIGN LIST] Rendering with state:`, { 
+    status,
+    isLoading, 
+    hasError: !!error,
+    campaignCount: campaigns.length,
+    filteredCount: filteredCampaigns.length
+  });
 
   if (isLoading) {
     return (
