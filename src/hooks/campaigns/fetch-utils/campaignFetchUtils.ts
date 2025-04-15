@@ -154,10 +154,10 @@ export const logFetchDetails = (
     url: fullUrl,
   });
 
-  // Log the full URL format (without actual token) for debugging
+  // Log the full URL format (without actual token) for debugging - HERE'S THE FIX!
   console.log('[CAMPAIGNS] Full URL format:', 
     `${fullUrl}` +
-    `?fields=name,status,daily_budget,effective_status,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}` +
+    `?fields=name,status,daily_budget,effective_status,insights.date_preset(last_28d){impressions,clicks,spend,actions,cost_per_action_type}` +
     `&access_token=[REDACTED]`
   );
   
