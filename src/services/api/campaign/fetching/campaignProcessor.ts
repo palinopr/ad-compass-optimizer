@@ -29,54 +29,55 @@ export class CampaignProcessor {
       }
     }
     
-    // Process campaigns with normalized insights
     return campaigns.map(campaign => {
-      // Create a base normalized campaign with empty insights
+      // Create a base normalized campaign
       const normalizedCampaign: MetaCampaign = {
         ...campaign,
-        // Ensure insights is always at least an empty object to prevent null reference errors
         insights: campaign.insights || {},
       };
       
-      // Calculate derived fields if insights exist
       if (campaign.insights) {
-        // Ensure spend is available
-        if (!normalizedCampaign.spend && campaign.insights.spend) {
-          normalizedCampaign.spend = campaign.insights.spend;
-        }
-        
+        // Map basic metrics directly
+        normalizedCampaign.insights = {
+          ...normalizedCampaign.insights,
+          clicks: campaign.insights.clicks,
+          spend: campaign.insights.spend,
+        };
+
         // Calculate results from actions if available
         if (campaign.insights.actions && Array.isArray(campaign.insights.actions)) {
-          const purchaseAction = campaign.insights.actions.find(
-            (a: any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase'
-          );
+          const results = campaign.insights.actions
+            .filter((a: any) => a.action_type === 'offsite_conversion' || 
+                               a.action_type === 'purchase' || 
+                               a.action_type === 'omni_purchase')
+            .reduce((sum: number, action: any) => sum + parseFloat(action.value || '0'), 0);
           
-          if (purchaseAction) {
-            normalizedCampaign.results = purchaseAction.value;
-          }
+          normalizedCampaign.results = results.toString();
         }
         
-        // Calculate CPA if cost_per_action_type exists
+        // Get CPA from cost_per_action_type
         if (campaign.insights.cost_per_action_type && Array.isArray(campaign.insights.cost_per_action_type)) {
-          const purchaseCost = campaign.insights.cost_per_action_type.find(
+          const offsiteConversion = campaign.insights.cost_per_action_type.find(
+            (c: any) => c.action_type === 'offsite_conversion'
+          );
+          const purchase = campaign.insights.cost_per_action_type.find(
             (c: any) => c.action_type === 'purchase' || c.action_type === 'omni_purchase'
           );
           
-          if (purchaseCost) {
-            normalizedCampaign.insights.cpa = purchaseCost.value;
+          if (offsiteConversion || purchase) {
+            normalizedCampaign.insights.cpa = (offsiteConversion || purchase).value;
           }
         }
         
-        // Calculate ROAS if both spend and results exist
+        // Calculate ROAS if we have both spend and results
         const spend = parseFloat(campaign.insights.spend || '0');
-        const resultValue = parseFloat(normalizedCampaign.results || '0');
+        const results = parseFloat(normalizedCampaign.results || '0');
         
-        if (spend > 0 && resultValue > 0) {
-          // Assuming an average order value of $50 for demonstration
-          // In a real app, this would come from actual conversion values
-          const estimatedRevenue = resultValue * 50;
-          const roas = (estimatedRevenue / spend).toFixed(1);
-          normalizedCampaign.insights.roas = `${roas}x`;
+        if (spend > 0 && results > 0) {
+          // Calculate estimated ROAS based on an average order value of 50
+          // This is a simplified calculation - in real scenarios this would come from actual conversion values
+          const estimatedRevenue = results * 50;
+          normalizedCampaign.insights.roas = `${(estimatedRevenue / spend).toFixed(2)}x`;
         }
       }
       

@@ -40,42 +40,31 @@ export const getMetricDisplay = (value: string | undefined, isMonetary: boolean 
 };
 
 export const renderMetrics = (item: any) => {
-  const spend = getMetricDisplay(
-    item.insights?.spend || 
-    (typeof item.spend === 'string' ? item.spend : undefined),
-    true
-  );
-  
-  const impressions = getMetricDisplay(item.insights?.impressions);
   const clicks = getMetricDisplay(item.insights?.clicks);
-  
-  // Debug insights issues
-  if (!item.insights || Object.keys(item.insights).length === 0) {
-    console.warn(`[METRICS] Item is missing insights data:`, {
-      id: item.id,
-      name: item.name,
-      type: item.adset_id ? 'ad' : item.campaign_id ? 'adset' : 'campaign'
-    });
-  }
+  const spend = getMetricDisplay(item.insights?.spend, true);
+  const results = getMetricDisplay(item.results);
+  const cpa = getMetricDisplay(item.insights?.cpa, true);
+  const roas = item.insights?.roas || '-';
   
   return (
-    <div className="grid grid-cols-4 gap-4 text-sm text-gray-600">
+    <div className="grid grid-cols-5 gap-4 text-sm text-gray-600">
+      <div>
+        <span className="font-medium">Clicks:</span> {clicks}
+      </div>
       <div>
         <span className="font-medium">Spend:</span> {spend}
       </div>
       <div>
-        <span className="font-medium">Status:</span>{' '}
-        <span className={item.status === 'ACTIVE' ? 'text-green-600' : 'text-gray-500'}>
-          {item.status?.toLowerCase() || '-'}
+        <span className="font-medium">Results:</span> {results}
+      </div>
+      <div>
+        <span className="font-medium">CPA:</span> {cpa}
+      </div>
+      <div>
+        <span className="font-medium">ROAS:</span>{' '}
+        <span className={parseFloat(roas) >= 2 ? 'text-green-600 font-medium' : ''}>
+          {roas}
         </span>
-      </div>
-      <div>
-        <span className="font-medium">Impressions:</span>{' '}
-        {impressions}
-      </div>
-      <div>
-        <span className="font-medium">Clicks:</span>{' '}
-        {clicks}
       </div>
     </div>
   );
