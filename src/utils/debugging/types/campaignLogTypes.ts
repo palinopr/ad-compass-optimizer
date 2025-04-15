@@ -1,3 +1,4 @@
+
 export interface CampaignFetchLog {
   timestamp: string;
   requestTimestamp?: string;
@@ -22,6 +23,7 @@ export interface CampaignFetchLog {
   queryParams?: string;
   requestUrl?: string;
   campaignPreviews?: CampaignPreview[];
+  headers?: Record<string, string>; // Add this property
 }
 
 export interface CampaignPreview {
