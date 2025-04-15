@@ -1,8 +1,4 @@
 
-/**
- * Campaign fetch utilities
- */
-
 import { isRateLimitError } from './rateLimitDetection';
 import { 
   checkRateLimitStatus,
