@@ -15,6 +15,7 @@ export interface InsightFilterOptions {
     since: string; // YYYY-MM-DD format
     until: string; // YYYY-MM-DD format
   };
+  timeIncrement?: number;
   level?: 'account' | 'campaign' | 'adset' | 'ad';
   filtering?: Array<{
     field: string;
