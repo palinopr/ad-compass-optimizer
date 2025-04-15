@@ -1,3 +1,4 @@
+
 export interface ErrorDetails {
   code: string | number;
   type: string;
@@ -26,6 +27,12 @@ export interface CampaignFetchLog {
   requestUrl?: string;
   campaignPreviews?: CampaignPreview[];
   headers?: Record<string, string>;
+  requestDetails?: {
+    url: string;
+    headers: Record<string, string>;
+    status: number;
+    statusText: string;
+  };
 }
 
 export interface CampaignPreview {

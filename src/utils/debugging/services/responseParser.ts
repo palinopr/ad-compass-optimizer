@@ -10,7 +10,6 @@ class ResponseParser {
     // Store full request details
     const requestDetails = {
       url: response.url,
-      method: response.method,
       headers: Object.fromEntries(response.headers.entries()),
       status: response.status,
       statusText: response.statusText
