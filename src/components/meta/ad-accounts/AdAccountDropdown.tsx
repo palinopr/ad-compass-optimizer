@@ -26,7 +26,6 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
 }) => {
   const [error, setError] = useState<string | null>(null);
 
-  // Safe handler to avoid crashes
   const handleAccountChange = (value: string) => {
     try {
       if (!value) {
@@ -34,8 +33,19 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
         setError('Invalid selection');
         return;
       }
+      
+      // Format account ID consistently
+      const formattedId = value.startsWith('act_') ? value : `act_${value}`;
+      console.log('[META] Changing account to:', formattedId);
+      
       setError(null);
-      onChange(value);
+      onChange(formattedId);
+      
+      // Trigger immediate campaign refresh
+      const event = new CustomEvent('campaign-data-refresh', {
+        detail: { force: true, accountId: formattedId }
+      });
+      window.dispatchEvent(event);
     } catch (err) {
       console.error('[META] Error in account dropdown change:', err);
       setError('Failed to change account');

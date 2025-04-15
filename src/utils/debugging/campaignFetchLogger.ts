@@ -1,4 +1,3 @@
-
 import { CampaignFetchLog } from './types/campaignLogTypes';
 import LogStorage from './services/logStorage';
 import LogEventEmitter from './services/logEventEmitter';
@@ -43,7 +42,6 @@ class CampaignFetchLogger {
 
   static async logResponse(response: Response, accountId: string, queryParams?: string): Promise<void> {
     try {
-      // Create base log entry
       const log: CampaignFetchLog = {
         timestamp: new Date().toISOString(),
         accountId,
@@ -51,92 +49,44 @@ class CampaignFetchLogger {
         statusText: response.statusText,
         queryParams
       };
-      
-      // Add response headers
-      try {
-        const headers: Record<string, string> = {};
-        response.headers.forEach((value, key) => {
-          headers[key] = value;
-        });
-        log.headers = headers;
+
+      if (!response.ok) {
+        const errorData = await response.clone().json();
+        const error = errorData?.error || {};
         
-        // Store headers in localStorage for debugging
-        localStorage.setItem('last_campaign_fetch_headers', JSON.stringify(headers));
-        console.log('[CAMPAIGN FETCH] 📋 Response headers captured and stored');
-      } catch (err) {
-        console.error('[CAMPAIGN FETCH] ❌ Error extracting headers:', err);
-      }
-      
-      // Try to parse the response body
-      try {
-        // Clone the response so we can read the body
-        const clonedResponse = response.clone();
-        const bodyText = await clonedResponse.text();
-        log.responseBody = bodyText.substring(0, 1000); // Limit size for storage
+        log.error = {
+          code: error.code,
+          type: error.type,
+          message: error.message,
+          subcode: error.error_subcode,
+          fbtraceId: error.fbtrace_id
+        };
         
-        console.log('[CAMPAIGN FETCH] 📥 Raw response body:', bodyText.substring(0, 500) + '...');
-        
-        // Try to parse as JSON
+        // Store error details for debugging panel
         try {
-          const json = JSON.parse(bodyText);
-          log.parsedJson = json;
-          
-          // Extract Meta API specific error details if present
-          if (json.error) {
-            log.errorDetails = {
-              status: response.status,
-              statusText: response.statusText,
-              message: json.error.message,
-              code: json.error.code,
-              type: json.error.type,
-              subcode: json.error.error_subcode,
-              fbTraceId: json.error.fbtrace_id
-            };
-            
-            // Store error details in localStorage
-            localStorage.setItem('last_campaign_fetch_error', JSON.stringify(log.errorDetails));
-            console.log('[CAMPAIGN FETCH] ❌ API error detected and logged:', log.errorDetails);
-          }
-          
-          // Extract campaign previews for debugging
-          if (json.data && Array.isArray(json.data)) {
-            console.log(`[CAMPAIGN FETCH] ✅ Found ${json.data.length} campaigns in response`);
-            
-            const parsedResult = await ResponseParser.parseResponse(response, accountId, queryParams);
-            if (parsedResult && parsedResult.campaignPreviews) {
-              log.campaignPreviews = parsedResult.campaignPreviews;
-              console.log('[CAMPAIGN FETCH] 📊 Campaign previews extracted:', log.campaignPreviews.length);
-            }
-          }
-        } catch (jsonErr) {
-          console.warn('[CAMPAIGN FETCH] ⚠️ Response not valid JSON:', jsonErr);
+          localStorage.setItem('last_meta_error', JSON.stringify(log.error));
+        } catch (e) {
+          console.error('Error storing error details:', e);
         }
-      } catch (bodyErr) {
-        console.error('[CAMPAIGN FETCH] ❌ Error reading response body:', bodyErr);
+      } else {
+        try {
+          const data = await response.clone().json();
+          log.campaignPreviews = data.data?.slice(0, 3).map((campaign: any) => ({
+            id: campaign.id,
+            name: campaign.name,
+            status: campaign.status,
+            spend: campaign.insights?.spend || '$0.00',
+            results: campaign.insights?.actions?.find((a: any) => a.action_type === 'purchase')?.value || '0'
+          }));
+        } catch (e) {
+          console.error('Error parsing success response:', e);
+        }
       }
 
       LogStorage.addLog(log);
       LogEventEmitter.emitLogUpdate(log);
-      
-      // If there's an error status, log it clearly
-      if (!response.ok) {
-        console.error(
-          `[CAMPAIGN FETCH] ❌ Error response: ${response.status} ${response.statusText}`,
-          log.errorDetails || {}
-        );
-      }
-    } catch (error) {
-      console.error('[CAMPAIGN FETCH] ❌ Error logging response:', error);
-      
-      // Create a basic error log
-      const errorLog: CampaignFetchLog = {
-        timestamp: new Date().toISOString(),
-        accountId,
-        error: error instanceof Error ? error.message : String(error)
-      };
-      
-      LogStorage.addLog(errorLog);
-      LogEventEmitter.emitLogUpdate(errorLog);
+    } catch (err) {
+      console.error('Error in logResponse:', err);
     }
   }
 

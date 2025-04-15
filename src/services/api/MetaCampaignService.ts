@@ -53,13 +53,9 @@ export class MetaCampaignService extends BaseApiService {
       const cleanAccountId = adAccountId.replace(/^act_/, '');
       CampaignThrottling.checkThrottling(adAccountId);
 
+      // Using proper GET request format with fields parameter
       const fields = 'name,status,daily_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
-      const queryParams = new URLSearchParams({
-        fields,
-        access_token: token
-      });
-      
-      const url = `${this.BASE_URL}/${this.API_VERSION}/act_${cleanAccountId}/campaigns?${queryParams}`;
+      const url = `${this.BASE_URL}/${this.API_VERSION}/act_${cleanAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       console.log(`[CAMPAIGN FETCH] Fetching from: ${url.replace(token, 'REDACTED')}`);
       
       const response = await fetch(url);
@@ -72,12 +68,25 @@ export class MetaCampaignService extends BaseApiService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error(`[CAMPAIGN FETCH] Error response:`, {
+        const error = errorData?.error || {};
+        
+        // Enhanced error logging
+        console.error('[CAMPAIGN FETCH] Error response:', {
           status: response.status,
-          statusText: response.statusText,
-          error: errorData
+          code: error.code,
+          type: error.type,
+          message: error.message,
+          subcode: error.error_subcode,
+          fbTraceId: error.fbtrace_id
         });
-        throw new Error(errorData?.error?.message || `HTTP error! status: ${response.status}`);
+        
+        throw {
+          message: error.message || `HTTP error! status: ${response.status}`,
+          code: error.code,
+          type: error.type,
+          subcode: error.error_subcode,
+          status: response.status
+        };
       }
 
       const data = await response.json();
@@ -88,9 +97,8 @@ export class MetaCampaignService extends BaseApiService {
 
       console.log(`[CAMPAIGN FETCH] Successfully received ${data.data.length} campaigns`);
       
-      // Process campaigns to include derived fields like budget, etc.
+      // Process campaigns to include derived fields
       const campaigns = data.data.map((campaign: any) => {
-        // Format budget for display
         let budget = '-';
         if (campaign.daily_budget) {
           budget = `$${(parseInt(campaign.daily_budget) / 100).toFixed(2)}/day`;
@@ -98,62 +106,47 @@ export class MetaCampaignService extends BaseApiService {
           budget = `$${(parseInt(campaign.lifetime_budget) / 100).toFixed(2)} total`;
         }
         
-        // Process insights data if available
-        if (campaign.insights && campaign.insights.data && campaign.insights.data.length > 0) {
+        let results = '0';
+        let spend = campaign.insights?.spend || '$0.00';
+        
+        if (campaign.insights?.data?.[0]) {
           const insightData = campaign.insights.data[0];
           
-          // Calculate CPA from cost_per_action_type
+          // Calculate CPA
           let cpa = '-';
-          if (insightData.cost_per_action_type && insightData.cost_per_action_type.length) {
-            const purchaseCpa = insightData.cost_per_action_type.find(
-              (item: any) => item.action_type === 'purchase'
-            );
-            if (purchaseCpa) {
-              cpa = purchaseCpa.value;
-            }
+          const purchaseCpa = insightData.cost_per_action_type?.find(
+            (item: any) => item.action_type === 'purchase'
+          );
+          if (purchaseCpa) {
+            cpa = purchaseCpa.value;
           }
           
-          // Calculate ROAS if available
-          let roas = '-';
-          if (insightData.purchase_roas && insightData.purchase_roas.length) {
-            const purchaseRoas = insightData.purchase_roas.find(
-              (item: any) => item.action_type === 'purchase'
-            );
-            if (purchaseRoas) {
-              roas = purchaseRoas.value;
-            }
-          }
-          
-          // Add calculated fields to insights
-          campaign.insights = {
-            ...insightData,
-            cpa,
-            roas,
-          };
-        }
-        
-        // Calculate results
-        let results = '0';
-        if (campaign.insights && campaign.insights.actions) {
-          const purchaseAction = campaign.insights.actions.find(
+          // Calculate results (purchases)
+          const purchaseAction = insightData.actions?.find(
             (action: any) => action.action_type === 'purchase'
           );
           if (purchaseAction) {
             results = purchaseAction.value;
           }
+          
+          campaign.insights = {
+            ...insightData,
+            cpa,
+            spend: insightData.spend || '$0.00'
+          };
         }
         
         return {
           ...campaign,
           budget,
           results,
-          spend: campaign.insights ? campaign.insights.spend : '$0.00'
+          spend
         };
       });
       
       return campaigns;
     } catch (error: any) {
-      console.error(`[CAMPAIGN FETCH] Failed:`, error);
+      console.error('[CAMPAIGN FETCH] Failed:', error);
       throw error;
     }
   }
