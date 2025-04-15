@@ -173,6 +173,7 @@ export function useCampaignFetcher() {
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.setItem('last_campaign_count', String(data.campaigns.length));
         localStorage.setItem('last_campaign_fetch_time', new Date().toISOString());
+        localStorage.setItem(`last_api_fetch_time_${adAccountId}`, new Date().toISOString());
       } catch (storageErr) {
         console.error('[CAMPAIGNS DEBUG] Error updating localStorage:', storageErr);
         // Continue execution - this is non-critical
@@ -188,7 +189,7 @@ export function useCampaignFetcher() {
         console.error('[CAMPAIGNS DEBUG] Error logging fetch details:', e);
       }
       
-      // Store detailed error information
+      // Store detailed error information for debugging
       try {
         if (typeof window !== 'undefined') {
           localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
@@ -261,7 +262,9 @@ export function useCampaignFetcher() {
         errorDetails: {
           ...errorDetails,
           status: err?.status || err?.code || 500,
-          message: err?.message || error
+          message: err?.message || error,
+          type: err?.type || 'ApiError',
+          code: err?.code
         }
       };
     } finally {

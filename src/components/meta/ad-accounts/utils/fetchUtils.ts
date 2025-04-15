@@ -33,7 +33,10 @@ export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
     // Validate and normalize account IDs
     const accounts = response.map(acct => ({
       ...acct,
-      id: acct.id.startsWith('act_') ? acct.id : `act_${acct.id}`
+      // Ensure consistent ID format with act_ prefix
+      id: acct.id.startsWith('act_') ? acct.id : `act_${acct.id}`,
+      // Add display name for dropdown
+      displayName: `${acct.name} (${acct.id.replace('act_', '')})`
     }));
 
     // Clear invalid stored account if it exists

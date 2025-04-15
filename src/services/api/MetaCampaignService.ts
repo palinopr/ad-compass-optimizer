@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { CampaignThrottling } from './campaign/throttling';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
@@ -52,12 +53,19 @@ export class MetaCampaignService extends BaseApiService {
       const cleanAccountId = adAccountId.replace(/^act_/, '');
       CampaignThrottling.checkThrottling(adAccountId);
 
+      // Using proper GET request with fields parameter
       const fields = 'name,status,daily_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
       const url = `${this.BASE_URL}/${this.API_VERSION}/act_${cleanAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
       this.lastResponseHeaders = {};
       response.headers.forEach((value, key) => {
         this.lastResponseHeaders[key] = value;
@@ -95,9 +103,57 @@ export class MetaCampaignService extends BaseApiService {
 
       console.log(`[CAMPAIGN FETCH] Successfully received ${data.data.length} campaigns`);
       
-      return this.processCampaigns(data.data);
+      // Handle pagination if needed
+      let allCampaigns = [...data.data];
+      
+      // Check if there's a next page
+      if (data.paging && data.paging.next) {
+        console.log('[CAMPAIGN FETCH] Pagination detected, fetching more pages');
+        try {
+          const nextPageCampaigns = await this.fetchPaginatedCampaigns(data.paging.next);
+          allCampaigns = [...allCampaigns, ...nextPageCampaigns];
+        } catch (paginationError) {
+          console.error('[CAMPAIGN FETCH] Error fetching additional pages:', paginationError);
+          // Continue with what we have
+        }
+      }
+      
+      return this.processCampaigns(allCampaigns);
     } catch (error: any) {
       console.error('[GRAPH API ERROR]:', error.response?.data || error);
+      throw error;
+    }
+  }
+  
+  // New helper method to handle pagination
+  private static async fetchPaginatedCampaigns(nextPageUrl: string): Promise<any[]> {
+    try {
+      // Remove access token from URL for logging
+      console.log(`[CAMPAIGN FETCH] Fetching next page: ${nextPageUrl.replace(/access_token=([^&]+)/, 'access_token=REDACTED')}`);
+      
+      const response = await fetch(nextPageUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data || !data.data || !Array.isArray(data.data)) {
+        throw new Error('Invalid pagination response format');
+      }
+      
+      let campaigns = [...data.data];
+      
+      // Check if there's another page
+      if (data.paging && data.paging.next) {
+        const moreCampaigns = await this.fetchPaginatedCampaigns(data.paging.next);
+        campaigns = [...campaigns, ...moreCampaigns];
+      }
+      
+      return campaigns;
+    } catch (error) {
+      console.error('[CAMPAIGN FETCH] Pagination error:', error);
       throw error;
     }
   }

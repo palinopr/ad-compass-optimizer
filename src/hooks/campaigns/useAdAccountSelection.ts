@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { MetaAdAccountService } from '@/services/api/MetaAdAccountService';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 export function useAdAccountSelection() {
   const [adAccounts, setAdAccounts] = useState<any[]>([]);
@@ -37,7 +38,7 @@ export function useAdAccountSelection() {
       // If no account is selected, try to get the first active account
       console.log('[META] No account selected, attempting to find first active account...');
       
-      const token = localStorage.getItem('meta_access_token');
+      const token = metaAuthService.getAccessToken();
       if (!token) {
         return {
           hasAccount: false,
@@ -48,45 +49,74 @@ export function useAdAccountSelection() {
       
       // Make a real API call to get ad accounts, do not use mock data
       console.log('[META] Fetching ad accounts from live API...');
-      const accounts = await MetaAdAccountService.fetchAdAccounts(token);
-      
-      if (!accounts || accounts.length === 0) {
-        console.error('[META] No ad accounts found from API call');
+      try {
+        const accounts = await MetaAdAccountService.fetchAdAccounts(token);
+        
+        if (!accounts || accounts.length === 0) {
+          console.error('[META] No ad accounts found from API call');
+          return {
+            hasAccount: false,
+            error: 'No ad accounts found',
+            errorDetails: { 
+              code: 'NO_ACCOUNTS',
+              isAccountError: true
+            }
+          };
+        }
+        
+        const activeAccount = accounts.find(acc => acc.account_status === 1);
+        
+        if (activeAccount) {
+          const accountId = activeAccount.id.replace(/^act_/, '');
+          console.log(`[META] Found active account ${accountId}, setting as default`);
+          
+          // Store this account as selected
+          localStorage.setItem('selected_ad_account', accountId);
+          localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
+          
+          return {
+            hasAccount: true,
+            adAccountId: `act_${accountId}`,
+            isDefaultAccount: true
+          };
+        }
+        
+        // If no active account found but we have accounts, use the first one
+        if (accounts.length > 0) {
+          const firstAccount = accounts[0];
+          const accountId = firstAccount.id.replace(/^act_/, '');
+          console.log(`[META] No active accounts found, using first available: ${accountId}`);
+          
+          // Store this account as selected
+          localStorage.setItem('selected_ad_account', accountId);
+          localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
+          
+          return {
+            hasAccount: true,
+            adAccountId: `act_${accountId}`,
+            isDefaultAccount: true
+          };
+        }
+        
         return {
           hasAccount: false,
-          error: 'No ad accounts found',
-          errorDetails: { 
-            code: 'NO_ACCOUNTS',
+          error: 'No active ad accounts found',
+          errorDetails: {
+            code: 'NO_ACTIVE_ACCOUNTS',
             isAccountError: true
           }
         };
-      }
-      
-      const activeAccount = accounts.find(acc => acc.account_status === 1);
-      
-      if (activeAccount) {
-        const accountId = activeAccount.id.replace(/^act_/, '');
-        console.log(`[META] Found active account ${accountId}, setting as default`);
-        
-        // Store this account as selected
-        localStorage.setItem('selected_ad_account', accountId);
-        localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
-        
+      } catch (apiError) {
+        console.error('[META] API error getting accounts:', apiError);
         return {
-          hasAccount: true,
-          adAccountId: `act_${accountId}`,
-          isDefaultAccount: true
+          hasAccount: false,
+          error: `Error fetching ad accounts: ${String(apiError)}`,
+          errorDetails: {
+            code: 'AD_ACCOUNT_FETCH_ERROR',
+            error: apiError
+          }
         };
       }
-      
-      return {
-        hasAccount: false,
-        error: 'No active ad accounts found',
-        errorDetails: {
-          code: 'NO_ACTIVE_ACCOUNTS',
-          isAccountError: true
-        }
-      };
     } catch (e) {
       console.error('[META] Error getting selected ad account:', e);
       return {

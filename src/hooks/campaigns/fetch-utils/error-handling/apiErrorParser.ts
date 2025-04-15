@@ -51,6 +51,28 @@ export const parseApiError = async (apiErr: any): Promise<{
         console.error('[GRAPH API ERROR] Failed to parse error response:', parseErr);
       }
     }
+    
+    // Direct error object handling (for fetch API errors)
+    if (apiErr?.error && typeof apiErr.error === 'object') {
+      const metaError = apiErr.error;
+      apiErrorMessage = `Meta API Error ${metaError.code || ''}: ${metaError.message || 'Unknown error'}`;
+      errorDetails = {
+        code: metaError.code,
+        type: metaError.type,
+        message: metaError.message,
+        subcode: metaError.error_subcode,
+        fbtraceId: metaError.fbtrace_id
+      };
+      
+      // Check for rate limit in direct error object
+      if (metaError.code === 4 || 
+          metaError.code === 17 ||
+          (metaError.code >= 80000 && metaError.code <= 80014) ||
+          (metaError.message && typeof metaError.message === 'string' && 
+           metaError.message.toLowerCase().includes('rate limit'))) {
+        isRateLimitDetected = true;
+      }
+    }
   } catch (e) {
     console.error('[GRAPH API ERROR] Exception in parseApiError:', e);
   }
