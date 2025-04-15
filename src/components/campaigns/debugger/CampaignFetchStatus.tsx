@@ -217,6 +217,13 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
                 </div>
               )}
               
+              {(errorDetails.type || errorDetails.details?.type) && (
+                <div className="flex justify-between mt-1">
+                  <span className="text-red-800">Error Type:</span>
+                  <span className="font-mono">{errorDetails.type || errorDetails.details?.type}</span>
+                </div>
+              )}
+              
               {errorDetails.timestamp && (
                 <div className="flex justify-between mt-1">
                   <span className="text-red-800">Time:</span>
@@ -228,6 +235,17 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
                 <div className="flex justify-between mt-1">
                   <span className="text-red-800">FB Trace:</span>
                   <span className="font-mono text-xs truncate">{errorDetails.fbTraceId || errorDetails.details?.fbTraceId}</span>
+                </div>
+              )}
+              
+              {errorDetails.rawResponse && (
+                <div className="flex flex-col mt-2">
+                  <span className="text-red-800">Raw Response:</span>
+                  <pre className="font-mono text-[10px] mt-1 bg-red-100 p-1 rounded overflow-auto max-h-32 whitespace-pre-wrap">
+                    {typeof errorDetails.rawResponse === 'string' 
+                      ? errorDetails.rawResponse.substring(0, 500) + (errorDetails.rawResponse.length > 500 ? '...' : '') 
+                      : JSON.stringify(errorDetails.rawResponse, null, 2)}
+                  </pre>
                 </div>
               )}
             </div>

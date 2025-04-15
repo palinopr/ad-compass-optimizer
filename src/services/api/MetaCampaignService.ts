@@ -64,20 +64,43 @@ export class MetaCampaignService extends BaseApiService {
         this.lastResponseHeaders[key] = value;
       });
 
+      // Store response headers for debugging
+      try {
+        localStorage.setItem('last_campaign_fetch_headers', JSON.stringify(this.lastResponseHeaders));
+      } catch (e) {
+        console.error('[CAMPAIGN FETCH] Failed to store headers:', e);
+      }
+
       await CampaignFetchLogger.logResponse(response.clone(), adAccountId, fields);
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorText = await response.text();
+        let errorData;
+        
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          console.error('[CAMPAIGN FETCH] Failed to parse error response:', e);
+          errorData = { error: { message: 'Failed to parse error response', code: 'PARSE_ERROR' }};
+        }
+        
+        console.error('[CAMPAIGN FETCH] Error response:', {
+          status: response.status,
+          errorText: errorText.substring(0, 500),
+          errorData
+        });
+        
         const error = errorData?.error || {};
         
         // Enhanced error logging
-        console.error('[CAMPAIGN FETCH] Error response:', {
+        console.error('[CAMPAIGN FETCH] Error response details:', {
           status: response.status,
           code: error.code,
           type: error.type,
           message: error.message,
           subcode: error.error_subcode,
-          fbTraceId: error.fbtrace_id
+          fbTraceId: error.fbtrace_id,
+          rawResponse: errorText.substring(0, 500)
         });
         
         throw {
@@ -85,13 +108,15 @@ export class MetaCampaignService extends BaseApiService {
           code: error.code,
           type: error.type,
           subcode: error.error_subcode,
-          status: response.status
+          status: response.status,
+          rawResponse: errorText
         };
       }
 
       const data = await response.json();
       
       if (!data || !data.data) {
+        console.error('[CAMPAIGN FETCH] Invalid response format:', data);
         throw new Error('Invalid response format from Meta API');
       }
 

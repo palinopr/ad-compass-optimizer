@@ -100,8 +100,16 @@ export const logFetchDetails = (
     tokenStart: token?.substring(0, 5) + '...',
     tokenEnd: '...' + token?.substring(token?.length - 5),
     endpoint: `/act_${cleanAccountId}/campaigns`,
+    url: `${BaseApiService.BASE_URL}/${BaseApiService.API_VERSION}/act_${cleanAccountId}/campaigns`,
     lastManualFetch
   });
+
+  // Log the full URL format (without actual token) for debugging
+  console.log('[CAMPAIGNS] Full URL format:', 
+    `${BaseApiService.BASE_URL}/${BaseApiService.API_VERSION}/act_${cleanAccountId}/campaigns` +
+    `?fields=name,status,daily_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}` +
+    `&access_token=[REDACTED]`
+  );
 };
 
 export const prepareFetchRequest = async (

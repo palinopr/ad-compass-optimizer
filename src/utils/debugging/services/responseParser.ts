@@ -34,6 +34,13 @@ class ResponseParser {
       
       // Enhanced error handling
       if (!response.ok || parsedJson.error) {
+        console.error('[CAMPAIGN FETCH FAILED]', {
+          status: response.status,
+          statusText: response.statusText,
+          error: parsedJson.error || 'Unknown error',
+          rawResponse: responseText.substring(0, 500) // Log first 500 chars to avoid massive logs
+        });
+        
         error = parseMetaError({
           ...parsedJson.error || parsedError,
           status: response.status,
@@ -68,7 +75,7 @@ class ResponseParser {
       queryParams,
       campaignPreviews,
       requestTimestamp: new Date().toISOString(),
-      requestDetails // Include full request details
+      requestDetails
     };
   }
 }

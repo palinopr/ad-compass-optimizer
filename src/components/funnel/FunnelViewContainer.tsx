@@ -106,6 +106,23 @@ const FunnelViewContainer = () => {
     fetchFunnelData();
   }, [campaigns.length, refetchCampaigns, lastFetchedAdAccount, funnelData.campaigns.length]);
 
+  // Auto-trigger campaign fetch after a short delay if we have token and account ID
+  useEffect(() => {
+    const token = metaAuthService.getAccessToken();
+    const selectedAdAccount = localStorage.getItem('selected_ad_account');
+    
+    if (token && selectedAdAccount) {
+      console.log('[CAMPAIGN AUTO-FETCH] Token and account ID present, scheduling auto-fetch...');
+      
+      const timer = setTimeout(() => {
+        console.log('[CAMPAIGN AUTO-FETCH] Auto-triggering campaign fetch...');
+        triggerCampaignRefresh(true);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   return (
     <Card>
       <div className="p-6">
