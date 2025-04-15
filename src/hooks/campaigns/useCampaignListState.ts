@@ -24,6 +24,34 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const authResult = validateAuthentication();
   const effectiveIsAuthenticated = authResult.isValid;
+  
+  // Enhanced logging for campaigns tab connection state
+  useEffect(() => {
+    const token = metaAuthService.getAccessToken();
+    const selectedAdAccountId = localStorage.getItem('selected_ad_account');
+    
+    console.log('[CAMPAIGNS TAB] Meta connection status:', {
+      isAuthenticated: effectiveIsAuthenticated,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      selectedAdAccountId,
+      authValid: authResult.isValid,
+      authError: authResult.error || 'No error'
+    });
+    
+    if (token && selectedAdAccountId) {
+      console.log('[CAMPAIGNS TAB] Fetch would be triggered with:', {
+        token: `${token.substring(0, 10)}...${token.substring(token.length - 10)}`,
+        adAccountId: selectedAdAccountId,
+        endpoint: `/act_${selectedAdAccountId}/campaigns`
+      });
+    } else {
+      console.log('[CAMPAIGNS TAB] Missing required fetch parameters:', {
+        hasToken: !!token,
+        hasAdAccountId: !!selectedAdAccountId
+      });
+    }
+  }, [effectiveIsAuthenticated, authResult]);
 
   // Reset filters when ad account changes
   useEffect(() => {

@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -38,6 +39,14 @@ export function useCampaignFetcher() {
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
     const mockMode = isMockMode();
     
+    console.log('[CAMPAIGNS TAB] fetchCampaignData called with:', {
+      adAccountId,
+      tokenLength: token ? token.length : 0,
+      status: status || 'all',
+      forceRefresh,
+      mockMode
+    });
+    
     if (mockMode) {
       console.log('🎭 Mock mode: Returning mock campaign data');
       
@@ -54,6 +63,7 @@ export function useCampaignFetcher() {
     }
     
     if (!canFetch()) {
+      console.log('[CAMPAIGNS TAB] Fetch blocked: already in progress or throttled');
       return { 
         campaigns: [], 
         error: 'A campaign fetch request is already in progress or throttled',
@@ -64,7 +74,7 @@ export function useCampaignFetcher() {
     if (!forceRefresh) {
       const { campaigns, isFresh } = getCachedCampaigns(adAccountId);
       if (campaigns && isFresh) {
-        console.log(`[CAMPAIGN FETCH] Using cached campaigns for account ${adAccountId}`);
+        console.log(`[CAMPAIGNS TAB] Using cached campaigns for account ${adAccountId}`);
         return { 
           campaigns, 
           error: null
@@ -76,38 +86,43 @@ export function useCampaignFetcher() {
     clearErrors();
     
     try {
-      console.log('[CAMPAIGN DEBUG] Starting fetch for account:', adAccountId);
+      console.log('[CAMPAIGNS TAB] Starting API fetch for account:', adAccountId);
       
       const tokenValidation = validateToken();
+      console.log('[CAMPAIGNS TAB] Token validation:', tokenValidation);
+      
       if (!tokenValidation.isValid) {
-        console.error('[CAMPAIGN FETCH] Token validation failed:', tokenValidation.error);
+        console.error('[CAMPAIGNS TAB] Token validation failed:', tokenValidation.error);
         return { campaigns: [], error: tokenValidation.error };
       }
 
       // Run diagnostic check in production mode
       if (!isMockMode()) {
-        console.log('[CAMPAIGN FETCH] Running diagnostic check...');
+        console.log('[CAMPAIGNS TAB] Running diagnostic check...');
         const diagnosticResult = await runFinalDiagnosticCheck();
         if (!diagnosticResult.success) {
-          console.error('[CAMPAIGN FETCH] Diagnostic check failed:', diagnosticResult.error);
+          console.error('[CAMPAIGNS TAB] Diagnostic check failed:', diagnosticResult.error);
           throw new Error(diagnosticResult.error);
         }
       }
 
-      console.log('[CAMPAIGN DEBUG] Token validation:', {
-        tokenLength: token ? token.length : 0,
-        tokenStart: token ? token.substring(0, 5) + '...' : 'null',
-        adAccountId
+      console.log('[CAMPAIGNS TAB] Preparing to call API with:', {
+        adAccountId,
+        tokenLength: token.length,
+        tokenStart: token.substring(0, 5) + '...',
+        tokenEnd: '...' + token.substring(token.length - 5),
+        endpoint: `/act_${adAccountId}/campaigns`
       });
 
       const MetaCampaignService = (await import('@/services/api/MetaCampaignService')).default;
-      console.log('[CAMPAIGN DEBUG] Calling MetaCampaignService.fetchCampaigns...');
+      console.log('[CAMPAIGNS TAB] Calling MetaCampaignService.fetchCampaigns...');
       const campaigns = await MetaCampaignService.fetchCampaigns(token, adAccountId);
       
-      console.log('[CAMPAIGN DEBUG] Fetch successful:', {
+      console.log('[CAMPAIGNS TAB] Fetch successful:', {
         campaignCount: campaigns.length,
         adAccountId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        firstCampaignId: campaigns.length > 0 ? campaigns[0].id : 'none'
       });
       
       if (mountedRef.current) {
@@ -148,16 +163,12 @@ export function useCampaignFetcher() {
       handleFetchSuccess(false); // Pass false to indicate live API mode
       return { campaigns, error: null };
     } catch (err: any) {
-      console.error('[CAMPAIGN DEBUG] Fetch error:', {
+      console.error('[CAMPAIGNS TAB] Fetch error details:', {
         error: err,
-        type: typeof err,
-        properties: Object.keys(err),
         message: err?.message,
-        stack: err?.stack
+        stack: err?.stack?.substring(0, 200) || 'No stack',
+        adAccountId
       });
-      
-      console.error('[CAMPAIGN DEBUG] Error type:', typeof err);
-      console.error('[CAMPAIGN DEBUG] Error properties:', Object.keys(err));
       
       if (err?.status === 429 || 
           (err?.message && err.message.toLowerCase().includes('rate limit')) ||
