@@ -1,65 +1,31 @@
+
 import { BaseApiService } from './BaseApiService';
 import { CampaignThrottling } from './campaign/throttling';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
+import { MetaCampaign } from './types/metaCampaignTypes';
+import { CampaignProcessor } from './campaign/fetching/campaignProcessor';
+import { PaginationHandler } from './campaign/fetching/paginationHandler';
+import { CampaignQueryBuilder } from './campaign/fetching/campaignQueryBuilder';
+import { ErrorStorage } from './campaign/error/errorStorage';
 
-export interface MetaCampaign {
-  id: string;
-  name: string;
-  status: string;
-  effective_status?: string;
-  daily_budget?: string;
-  lifetime_budget?: string;
-  budget?: string; // Derived field
-  spend?: string; // Derived field
-  results?: string; // Derived field
-  cost_per_result?: string;
-  created_time?: string;
-  updated_time?: string;
-  start_time?: string;
-  end_time?: string;
-  objective?: string;
-  insights?: {
-    impressions: string;
-    clicks: string;
-    spend: string;
-    cpa?: string; // Derived field
-    roas?: string; // Derived field
-    cost_per_action_type: Array<{
-      action_type: string;
-      value: string;
-    }>;
-    actions: Array<{
-      action_type: string;
-      value: string;
-    }>;
-  };
-}
+export { MetaCampaign };
 
 export class MetaCampaignService extends BaseApiService {
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
     try {
       CampaignFetchLogger.logAttempt(adAccountId);
       this.validateToken(token, 'fetchCampaigns');
-    
-      if (!adAccountId) {
-        throw new Error('Ad Account ID is required');
-      }
       
-      // Validate ad account ID format
-      if (!/^act_\d+$/.test(adAccountId)) {
-        console.error(`[CAMPAIGN FETCH] Invalid ad account ID format: ${adAccountId}`);
-        throw new Error(`Invalid ad account ID format: ${adAccountId}`);
-      }
-
-      // Ensure the ad account ID has the proper format
-      const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+      // Validate and format account ID
+      CampaignQueryBuilder.validateAdAccountId(adAccountId);
+      const formattedAccountId = CampaignQueryBuilder.formatAccountId(adAccountId);
       console.log(`[CAMPAIGN FETCH] Using formatted account ID: ${formattedAccountId}`);
       
       // Check if we should throttle the request
       CampaignThrottling.checkThrottling(formattedAccountId);
 
-      // Update date_preset from last_30_days to last_30d in insights request
-      const fields = 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30d){impressions,clicks,spend,actions,cost_per_action_type}';
+      // Build query fields
+      const fields = CampaignQueryBuilder.buildCampaignQuery();
       const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
@@ -94,11 +60,7 @@ export class MetaCampaignService extends BaseApiService {
         });
         
         // Store raw response for debugging
-        try {
-          localStorage.setItem('raw_campaign_error_response', JSON.stringify(errorData));
-        } catch (e) {
-          console.error('[CAMPAIGN FETCH] Error storing raw error response:', e);
-        }
+        ErrorStorage.storeRawErrorResponse(errorData);
         
         throw {
           message: error.message || `HTTP error! status: ${response.status}`,
@@ -117,12 +79,7 @@ export class MetaCampaignService extends BaseApiService {
       const data = await response.json();
       
       // Store raw response for debugging
-      try {
-        localStorage.setItem('raw_campaign_response', JSON.stringify(data));
-        console.log('[CAMPAIGN FETCH] Full response stored for debugging');
-      } catch (e) {
-        console.error('[CAMPAIGN FETCH] Error storing raw response:', e);
-      }
+      ErrorStorage.storeRawSuccessResponse(data);
       
       // Log raw response for debugging
       console.log('[CAMPAIGN FETCH] Raw response:', JSON.stringify(data).substring(0, 500) + '...');
@@ -141,7 +98,7 @@ export class MetaCampaignService extends BaseApiService {
       if (data.paging && data.paging.next) {
         console.log('[CAMPAIGN FETCH] Pagination detected, fetching more pages');
         try {
-          const nextPageCampaigns = await this.fetchPaginatedCampaigns(data.paging.next);
+          const nextPageCampaigns = await PaginationHandler.fetchPaginatedCampaigns(data.paging.next);
           allCampaigns = [...allCampaigns, ...nextPageCampaigns];
         } catch (paginationError) {
           console.error('[CAMPAIGN FETCH] Error fetching additional pages:', paginationError);
@@ -149,118 +106,10 @@ export class MetaCampaignService extends BaseApiService {
         }
       }
       
-      return this.processCampaigns(allCampaigns);
+      return CampaignProcessor.processCampaigns(allCampaigns);
     } catch (error: any) {
       console.error('[GRAPH API ERROR]:', error.response?.data || error);
       throw error;
     }
-  }
-  
-  // Helper method to handle pagination
-  private static async fetchPaginatedCampaigns(nextPageUrl: string): Promise<any[]> {
-    try {
-      // Remove access token from URL for logging
-      console.log(`[CAMPAIGN FETCH] Fetching next page: ${nextPageUrl.replace(/access_token=([^&]+)/, 'access_token=REDACTED')}`);
-      
-      const response = await fetch(nextPageUrl);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (!data || !data.data || !Array.isArray(data.data)) {
-        throw new Error('Invalid pagination response format');
-      }
-      
-      let campaigns = [...data.data];
-      
-      // Check if there's another page
-      if (data.paging && data.paging.next) {
-        const moreCampaigns = await this.fetchPaginatedCampaigns(data.paging.next);
-        campaigns = [...campaigns, ...moreCampaigns];
-      }
-      
-      return campaigns;
-    } catch (error) {
-      console.error('[CAMPAIGN FETCH] Pagination error:', error);
-      throw error;
-    }
-  }
-
-  private static processCampaigns(campaigns: any[]): MetaCampaign[] {
-    return campaigns.map((campaign: any) => {
-      let budget = '-';
-      if (campaign.daily_budget) {
-        budget = `$${(parseInt(campaign.daily_budget) / 100).toFixed(2)}/day`;
-      } else if (campaign.lifetime_budget) {
-        budget = `$${(parseInt(campaign.lifetime_budget) / 100).toFixed(2)} total`;
-      }
-      
-      // Default values for metrics to ensure UI always has values to display
-      let results = '0';
-      let spend = '$0.00';
-      let impressions = '0';
-      let clicks = '0';
-      let cpa = '-';
-      
-      // Process insights data if available, but don't block if missing
-      if (campaign.insights && campaign.insights.data && campaign.insights.data.length > 0) {
-        const insightData = campaign.insights.data[0];
-        
-        // Format impressions with commas
-        if (insightData.impressions) {
-          const impressionsVal = parseInt(insightData.impressions);
-          impressions = impressionsVal.toLocaleString();
-        }
-        
-        // Format clicks with commas
-        if (insightData.clicks) {
-          const clicksVal = parseInt(insightData.clicks);
-          clicks = clicksVal.toLocaleString();
-        }
-        
-        // Format spend as currency
-        if (insightData.spend) {
-          const spendVal = parseFloat(insightData.spend);
-          spend = `$${spendVal.toFixed(2)}`;
-        }
-        
-        // Calculate CPA
-        const purchaseCpa = insightData.cost_per_action_type?.find(
-          (item: any) => item.action_type === 'purchase'
-        );
-        if (purchaseCpa) {
-          cpa = `$${parseFloat(purchaseCpa.value).toFixed(2)}`;
-        }
-        
-        // Calculate results (purchases)
-        const purchaseAction = insightData.actions?.find(
-          (action: any) => action.action_type === 'purchase'
-        );
-        if (purchaseAction) {
-          results = purchaseAction.value;
-        }
-      }
-      
-      // Always ensure insights object exists with default values
-      const insights = {
-        impressions: impressions || '0',
-        clicks: clicks || '0',
-        spend: spend || '$0.00',
-        cpa: cpa || '-',
-        actions: campaign.insights?.data?.[0]?.actions || [],
-        cost_per_action_type: campaign.insights?.data?.[0]?.cost_per_action_type || []
-      };
-      
-      return {
-        ...campaign,
-        budget,
-        results,
-        spend,
-        insights
-      };
-    });
   }
 }
