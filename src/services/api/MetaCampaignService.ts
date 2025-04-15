@@ -1,9 +1,7 @@
-
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
 import { CampaignThrottling } from './campaign/throttling';
-import { MockApiService } from './mock/MockApiService';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
 
 export interface MetaCampaign {
@@ -30,21 +28,7 @@ export interface MetaCampaign {
 }
 
 export class MetaCampaignService extends BaseApiService {
-  private static isMockMode(): boolean {
-    try {
-      return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
-    } catch (e) {
-      console.error("Error checking mock mode:", e);
-      return false;
-    }
-  }
-
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
-    if (this.isMockMode()) {
-      console.warn('🎭 Direct MetaCampaignService.fetchCampaigns call attempted in mock mode');
-      throw new Error('Cannot make direct API calls in mock mode. Use MetaApiService instead.');
-    }
-
     try {
       CampaignFetchLogger.logAttempt(adAccountId);
     
@@ -54,15 +38,12 @@ export class MetaCampaignService extends BaseApiService {
         throw new Error('Ad Account ID is required');
       }
       
-      // Reject mock account IDs in real mode
-      if (adAccountId.includes('mock')) {
-        console.error('[CAMPAIGN FETCH] Cannot use mock account ID in real mode');
-        throw new Error('Invalid account ID: mock accounts cannot be used in real mode');
+      // Validate account ID format
+      if (!/^act_\d+$/.test(adAccountId)) {
+        throw new Error('Invalid ad account ID format');
       }
 
-      if (!this.isMockMode()) {
-        CampaignThrottling.checkThrottling(adAccountId);
-      }
+      CampaignThrottling.checkThrottling(adAccountId);
 
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
@@ -107,7 +88,15 @@ export class MetaCampaignService extends BaseApiService {
           
           // Log insights data for debugging
           if (campaign.insights?.data?.length > 0) {
-            console.log(`[CAMPAIGN FETCH] Campaign ${campaign.id} has insights data:`, insightsData);
+            console.log(`[CAMPAIGN FETCH] Campaign ${campaign.id} has insights:`, {
+              id: campaign.id,
+              name: campaign.name,
+              status: campaign.status,
+              spend: campaign.spend || '$0.00',
+              results: campaign.results || '0',
+              impressions: insightsData.impressions || '0',
+              clicks: insightsData.clicks || '0'
+            });
           }
           
           return {
@@ -148,39 +137,6 @@ export class MetaCampaignService extends BaseApiService {
       }));
     
       throw error;
-    }
-  }
-  
-  private static async verifyAdAccountAccess(token: string, adAccountId: string): Promise<void> {
-    try {
-      console.log(`Verifying ad account access by fetching adsets for ${adAccountId}...`);
-      
-      const response = await fetch(
-        `${this.BASE_URL}/${this.API_VERSION}/${adAccountId}/adsets?fields=id,name&limit=10&access_token=${token}`,
-        {
-          headers: {
-            'User-Agent': 'meta-marketing-dashboard/1.0',
-            'Accept': 'application/json'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        console.warn(`Adsets verification failed with status ${response.status}`);
-        localStorage.setItem('adsets_verification_failed', 'true');
-        return;
-      }
-      
-      const adsetsData = await this.processApiResponse(response, 'verifyAdAccountAccess');
-      const adsets = adsetsData.data || [];
-      
-      console.log(`Found ${adsets.length} adsets`);
-      
-      localStorage.setItem('has_adsets', adsets.length > 0 ? 'true' : 'false');
-      localStorage.setItem('adset_count', adsets.length.toString());
-    } catch (error) {
-      console.error('Error verifying ad account access:', error);
-      localStorage.setItem('adsets_verification_error', error instanceof Error ? error.message : String(error));
     }
   }
 }

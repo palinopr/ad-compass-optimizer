@@ -48,14 +48,27 @@ export const checkApiUsage = (increaseCooldown: () => void) => {
   }
 };
 
+export const validateAdAccount = (adAccountId: string | null): boolean => {
+  if (!adAccountId) return false;
+  
+  // Must start with act_ and contain only valid characters
+  const isValidFormat = /^act_\d+$/.test(adAccountId);
+  if (!isValidFormat) {
+    console.error('Invalid ad account format:', adAccountId);
+    return false;
+  }
+  
+  return true;
+};
+
 export const logFetchDetails = (
-  adAccountId: string,
+  adAccountId: string | null,
   token: string | null,
   error?: any
 ) => {
-  // Check for mock accounts
-  if (adAccountId && adAccountId.includes('mock')) {
-    console.warn('[CAMPAIGNS TAB] ⚠️ Attempted to use mock account:', adAccountId);
+  if (!validateAdAccount(adAccountId)) {
+    console.error('[CAMPAIGNS TAB] Invalid or missing ad account ID:', adAccountId);
+    throw new Error('Please select a valid ad account to load campaigns.');
   }
   
   if (error) {
@@ -86,30 +99,25 @@ export const logFetchDetails = (
 
 export const prepareFetchRequest = async (
   token: string,
-  adAccountId: string,
-  isMockMode: boolean
+  adAccountId: string
 ) => {
-  // Check for mock accounts in real mode
-  if (!isMockMode && adAccountId && adAccountId.includes('mock')) {
-    console.error('[CAMPAIGNS TAB] Cannot use mock account in real mode:', adAccountId);
-    return { error: 'Cannot use mock account in real mode' };
+  if (!validateAdAccount(adAccountId)) {
+    return { error: 'Please select a valid ad account to load campaigns.' };
   }
 
-  if (!isMockMode) {
-    const tokenValidation = validateToken(token);
-    console.log('[CAMPAIGNS TAB] Token validation:', tokenValidation);
-    
-    if (!tokenValidation.isValid) {
-      console.error('[CAMPAIGNS TAB] Token validation failed:', tokenValidation.error);
-      return { error: tokenValidation.error };
-    }
+  const tokenValidation = validateToken(token);
+  console.log('[CAMPAIGNS TAB] Token validation:', tokenValidation);
+  
+  if (!tokenValidation.isValid) {
+    console.error('[CAMPAIGNS TAB] Token validation failed:', tokenValidation.error);
+    return { error: tokenValidation.error };
+  }
 
-    console.log('[CAMPAIGNS TAB] Running diagnostic check...');
-    const diagnosticResult = await runFinalDiagnosticCheck();
-    if (!diagnosticResult.success) {
-      console.error('[CAMPAIGNS TAB] Diagnostic check failed:', diagnosticResult.error);
-      throw new Error(diagnosticResult.error);
-    }
+  console.log('[CAMPAIGNS TAB] Running diagnostic check...');
+  const diagnosticResult = await runFinalDiagnosticCheck();
+  if (!diagnosticResult.success) {
+    console.error('[CAMPAIGNS TAB] Diagnostic check failed:', diagnosticResult.error);
+    throw new Error(diagnosticResult.error);
   }
 
   return { error: null };
