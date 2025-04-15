@@ -24,7 +24,7 @@ export const useItemInsights = () => {
       }
 
       // Map any legacy presets to valid Meta API values
-      const validDatePreset = mapToValidDatePreset(datePreset);
+      const validDatePreset = mapToValidDatePreset(datePreset) as InsightFilterOptions['datePreset'];
 
       const options: InsightFilterOptions = {
         datePreset: validDatePreset,
