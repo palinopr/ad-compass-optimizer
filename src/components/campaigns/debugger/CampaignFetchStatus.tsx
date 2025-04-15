@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Database, AlertCircle, RefreshCw } from 'lucide-react';
@@ -18,13 +17,20 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
 }) => {
   const [fetchAttempts, setFetchAttempts] = useState(0);
   const [lastFetchTime, setLastFetchTime] = useState<string | null>(null);
+  const [lastManualFetchTime, setLastManualFetchTime] = useState<string | null>(null);
   const [lastFetchAccountId, setLastFetchAccountId] = useState<string | null>(null);
   
   useEffect(() => {
     // Load fetch history from local storage
     const storedFetchTime = localStorage.getItem('last_campaign_fetch_attempt');
+    const manualFetchTime = localStorage.getItem('last_manual_campaign_fetch');
+    
     if (storedFetchTime) {
       setLastFetchTime(storedFetchTime);
+    }
+    
+    if (manualFetchTime) {
+      setLastManualFetchTime(manualFetchTime);
     }
     
     const storedAccount = localStorage.getItem('last_campaign_fetch_account');
@@ -39,6 +45,12 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
       
       if (event.detail?.accountId) {
         setLastFetchAccountId(event.detail.accountId);
+      }
+      
+      // Update manual fetch time if available
+      const manualTime = localStorage.getItem('last_manual_campaign_fetch');
+      if (manualTime) {
+        setLastManualFetchTime(manualTime);
       }
     };
     
@@ -81,9 +93,16 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
             </div>
           )}
           
+          {lastManualFetchTime && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Last Manual Fetch:</span>
+              <span className="text-sm">{formatTime(lastManualFetchTime)}</span>
+            </div>
+          )}
+          
           {lastFetchTime && (
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">Last attempt:</span>
+              <span className="text-sm font-medium">Last Auto Fetch:</span>
               <span className="text-sm">{formatTime(lastFetchTime)}</span>
             </div>
           )}

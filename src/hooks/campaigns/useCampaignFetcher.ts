@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -71,6 +70,16 @@ export function useCampaignFetcher() {
       console.error('[CAMPAIGNS DEBUG] Fetch error:', err);
       logFetchDetails(adAccountId, token, err);
       
+      if (err.name === 'ThrottleError') {
+        toast({
+          title: "Campaign Fetch Throttled",
+          description: err.message,
+          variant: "warning",
+          duration: 5000,
+        });
+        return { campaigns: [], error: err.message };
+      }
+
       if (err?.status === 429 || 
           (err?.message && err.message.toLowerCase().includes('rate limit')) ||
           (err?.code === 4 || err?.code === 17)) {
