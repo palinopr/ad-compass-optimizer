@@ -97,6 +97,7 @@ export const useCampaignDiagnostics = () => {
 
     // Listen for ad account changes
     const handleAccountChange = () => {
+      console.log('[DIAGNOSTICS] Ad account change detected');
       updateDiagnostics();
     };
 

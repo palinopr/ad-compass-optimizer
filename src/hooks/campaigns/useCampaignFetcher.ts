@@ -6,7 +6,6 @@ import { useFetchState } from './fetch-hooks/useFetchState';
 import { toast } from '@/hooks/use-toast';
 import { debounce } from 'lodash';
 import { MetaFunnelService } from '@/services/api/MetaFunnelService';
-import { isMockMode, handleMockData } from './fetch-utils/mockModeUtils';
 import { handleSuccessfulFetch, logFetchDetails, prepareFetchRequest } from './fetch-utils/campaignFetchUtils';
 
 export function useCampaignFetcher() {
@@ -30,27 +29,14 @@ export function useCampaignFetcher() {
     status?: string,
     forceRefresh: boolean = false
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
-    const mockMode = isMockMode();
-    
-    console.log('[CAMPAIGNS TAB] fetchCampaignData called with:', {
-      adAccountId,
-      tokenLength: token ? token.length : 0,
-      status: status || 'all',
-      forceRefresh,
-      mockMode
-    });
-    
-    if (mockMode) {
-      console.log('🎭 Mock mode: Returning mock campaign data');
-      // Use fetchFunnelData with mock token/account
-      const mockData = await MetaFunnelService.fetchFunnelData('mock-token', adAccountId);
-      handleMockData(mockData, adAccountId);
-      handleFetchSuccess(true);
-      return { campaigns: mockData.campaigns, error: null };
-    }
+    console.log('[CAMPAIGNS DEBUG] Starting campaign fetch...');
+    console.log('[CAMPAIGNS DEBUG] Meta token:', token ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}` : 'NOT FOUND');
+    console.log('[CAMPAIGNS DEBUG] Selected Ad Account:', adAccountId);
+    console.log('[CAMPAIGNS DEBUG] Status filter:', status || 'all');
+    console.log('[CAMPAIGNS DEBUG] Force refresh:', forceRefresh);
     
     if (!canFetch()) {
-      console.log('[CAMPAIGNS TAB] Fetch blocked: already in progress or throttled');
+      console.log('[CAMPAIGNS DEBUG] Fetch blocked: already in progress or throttled');
       return { 
         campaigns: [], 
         error: 'A campaign fetch request is already in progress or throttled',
@@ -62,21 +48,27 @@ export function useCampaignFetcher() {
     clearErrors();
     
     try {
-      console.log('[CAMPAIGNS TAB] Starting API fetch for account:', adAccountId);
+      console.log('[CAMPAIGNS DEBUG] Starting API fetch for account:', adAccountId);
       
-      const { error: prepError } = await prepareFetchRequest(token, adAccountId, mockMode);
+      const { error: prepError } = await prepareFetchRequest(token, adAccountId, false);
       if (prepError) {
+        console.error('[CAMPAIGNS DEBUG] Preparation error:', prepError);
         return { campaigns: [], error: prepError };
       }
 
       logFetchDetails(adAccountId, token);
 
+      console.log('[CAMPAIGNS DEBUG] Calling MetaFunnelService.fetchFunnelData...');
       const data = await MetaFunnelService.fetchFunnelData(token, adAccountId);
+      console.log('[CAMPAIGNS DEBUG] Fetch successful, campaigns:', data.campaigns.length);
+      console.log('[CAMPAIGNS DEBUG] First campaign:', data.campaigns[0]);
+      
       handleSuccessfulFetch(data.campaigns, mountedRef, increaseCooldown);
       
       handleFetchSuccess(false);
       return { campaigns: data.campaigns, error: null };
     } catch (err: any) {
+      console.error('[CAMPAIGNS DEBUG] Fetch error:', err);
       logFetchDetails(adAccountId, token, err);
       
       if (err?.status === 429 || 
@@ -94,9 +86,11 @@ export function useCampaignFetcher() {
       
       const { error, errorDetails } = handleError(err, adAccountId);
       handleFetchFailure();
+      console.error('[CAMPAIGNS DEBUG] Error after handling:', error, errorDetails);
       return { campaigns: [], error, errorDetails };
     } finally {
       endFetch();
+      console.log('[CAMPAIGNS DEBUG] Fetch process completed');
     }
   }, [canFetch, startFetch, endFetch, clearErrors, handleError, mountedRef, increaseCooldown, handleFetchSuccess, handleFetchFailure]);
 
