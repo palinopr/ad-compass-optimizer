@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -56,14 +57,21 @@ export class MetaCampaignService extends BaseApiService {
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
     
       try {
-        const response = await MetaFunnelService.fetchFunnelData(token, adAccountId);
-        await CampaignFetchLogger.logResponse(response, adAccountId);
+        const funnelData = await MetaFunnelService.fetchFunnelData(token, adAccountId);
+        
+        // Log the funnel data directly without trying to treat it as a Response
+        CampaignFetchLogger.logError({
+          status: 200,
+          statusText: 'OK',
+          responseBody: JSON.stringify(funnelData),
+          parsedJson: funnelData
+        }, adAccountId);
       
-        localStorage.setItem('last_campaign_count', response.campaigns.length.toString());
+        localStorage.setItem('last_campaign_count', funnelData.campaigns.length.toString());
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.removeItem('last_empty_result');
       
-        return response.campaigns;
+        return funnelData.campaigns;
       } catch (fetchError: any) {
         CampaignFetchLogger.logError(fetchError, adAccountId);
         throw fetchError;

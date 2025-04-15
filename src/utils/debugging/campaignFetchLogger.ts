@@ -58,18 +58,41 @@ class CampaignFetchLogger {
   }
 
   static logError(error: any, accountId: string) {
-    const log: CampaignFetchLog = {
-      timestamp: new Date().toISOString(),
-      accountId,
-      error: error?.message || String(error)
-    };
+    // Handle direct data object (for non-Response objects)
+    let log: CampaignFetchLog;
+    
+    if (error && typeof error === 'object' && 'status' in error && 'statusText' in error) {
+      // This is likely a data object, not an actual error
+      log = {
+        timestamp: new Date().toISOString(),
+        accountId,
+        status: error.status,
+        statusText: error.statusText,
+        responseBody: error.responseBody,
+        parsedJson: error.parsedJson
+      };
+      
+      console.log('[CAMPAIGN FETCH] 📦 Data:', error.status, error.statusText);
+      if (error.responseBody) {
+        console.log('[CAMPAIGN FETCH] 📄 Data Body:', error.responseBody);
+      }
+      if (error.parsedJson) {
+        console.log('[CAMPAIGN FETCH] ✅ Parsed Data:', error.parsedJson);
+      }
+    } else {
+      // This is an actual error
+      log = {
+        timestamp: new Date().toISOString(),
+        accountId,
+        error: error?.message || String(error)
+      };
+      console.error('[CAMPAIGN FETCH] ❌ Error:', error);
+    }
 
     this.logs.unshift(log);
     if (this.logs.length > this.maxLogs) {
       this.logs.pop();
     }
-
-    console.error('[CAMPAIGN FETCH] ❌ Error:', error);
     
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('campaign-fetch-log', { 
