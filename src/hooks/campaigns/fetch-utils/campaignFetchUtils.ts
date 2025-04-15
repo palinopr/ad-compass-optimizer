@@ -5,7 +5,7 @@ import { validateToken } from './tokenUtils';
 import { runFinalDiagnosticCheck } from '@/utils/campaign-diagnostics/finalDiagnosticCheck';
 import { CampaignThrottling } from '@/services/api/campaign/throttling';
 
-// Define API constants that match BaseApiService values
+// Define these constants to remove direct usage of protected properties
 const API_BASE_URL = 'https://graph.facebook.com';
 const API_VERSION = 'v17.0';
 
@@ -141,6 +141,9 @@ export const logFetchDetails = (
   const adAccountIdString = String(adAccountId);
   const formattedId = adAccountIdString.startsWith('act_') ? adAccountIdString : `act_${adAccountIdString}`;
   
+  // Use a generic URL construction approach
+  const fullUrl = `${API_BASE_URL}/${API_VERSION}/${formattedId}/campaigns`;
+  
   console.log('[CAMPAIGNS] Preparing to call API with:', {
     adAccountId: formattedId,
     cleanAccountId: formattedId.replace(/^act_/, ''),
@@ -148,12 +151,12 @@ export const logFetchDetails = (
     tokenStart: token?.substring(0, 5) + '...',
     tokenEnd: '...' + token?.substring(token?.length - 5),
     endpoint: `/${formattedId}/campaigns`,
-    url: `${BaseApiService.BASE_URL}/${BaseApiService.API_VERSION}/${formattedId}/campaigns`,
+    url: fullUrl,
   });
 
   // Log the full URL format (without actual token) for debugging
   console.log('[CAMPAIGNS] Full URL format:', 
-    `${BaseApiService.BASE_URL}/${BaseApiService.API_VERSION}/${formattedId}/campaigns` +
+    `${fullUrl}` +
     `?fields=name,status,daily_budget,effective_status,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}` +
     `&access_token=[REDACTED]`
   );
