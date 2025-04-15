@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { CampaignThrottling } from './campaign/throttling';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
@@ -54,9 +53,10 @@ export class MetaCampaignService extends BaseApiService {
 
       // Ensure the ad account ID has the proper format
       const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+      console.log(`[CAMPAIGN FETCH] Using formatted account ID: ${formattedAccountId}`);
       
       // Check if we should throttle the request
-      CampaignThrottling.checkThrottling(adAccountId);
+      CampaignThrottling.checkThrottling(formattedAccountId);
 
       // Build the proper GET URL with fields including insights and effective_status
       const fields = 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
@@ -119,6 +119,7 @@ export class MetaCampaignService extends BaseApiService {
       // Store raw response for debugging
       try {
         localStorage.setItem('raw_campaign_response', JSON.stringify(data));
+        console.log('[CAMPAIGN FETCH] Full response stored for debugging');
       } catch (e) {
         console.error('[CAMPAIGN FETCH] Error storing raw response:', e);
       }

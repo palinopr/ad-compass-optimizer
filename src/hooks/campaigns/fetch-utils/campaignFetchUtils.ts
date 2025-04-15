@@ -25,6 +25,8 @@ export const handleSuccessfulFetch = (
       description: `Found ${campaigns.length} campaigns.`,
       variant: "default",
     });
+  } else {
+    console.warn('[CAMPAIGN FETCH] No campaigns returned from API');
   }
 
   checkApiUsage(increaseCooldown);
@@ -109,17 +111,15 @@ export const logFetchDetails = (
   // Make sure we're using a valid account ID format for the API
   const adAccountIdString = String(adAccountId);
   const formattedId = adAccountIdString.startsWith('act_') ? adAccountIdString : `act_${adAccountIdString}`;
-  const cleanAccountId = formattedId.replace(/^act_/, '');
   
   console.log('[CAMPAIGNS] Preparing to call API with:', {
     adAccountId: formattedId,
-    cleanAccountId,
+    cleanAccountId: formattedId.replace(/^act_/, ''),
     tokenLength: token?.length,
     tokenStart: token?.substring(0, 5) + '...',
     tokenEnd: '...' + token?.substring(token?.length - 5),
     endpoint: `/${formattedId}/campaigns`,
     url: `${API_BASE_URL}/${API_VERSION}/${formattedId}/campaigns`,
-    lastManualFetch
   });
 
   // Log the full URL format (without actual token) for debugging

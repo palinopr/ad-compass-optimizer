@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useCampaigns } from '@/hooks/campaigns';
 import FunnelView from './FunnelView';
@@ -23,7 +22,7 @@ const FunnelViewContainer = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [rawApiResponse, setRawApiResponse] = useState<any>(null);
   const [lastRequestDetails, setLastRequestDetails] = useState<any>(null);
-  const [showDebug, setShowDebug] = useState(false);
+  const [showDebug, setShowDebug] = useState(true);
 
   const {
     filteredData,
@@ -37,7 +36,6 @@ const FunnelViewContainer = () => {
     setSearchQuery
   } = useFunnelFilters(funnelData);
 
-  // Function to manually force a refresh
   const handleManualRefresh = () => {
     console.log('[FUNNEL] Manually triggering refresh...');
     setRetryCount(prev => prev + 1);
@@ -48,13 +46,18 @@ const FunnelViewContainer = () => {
     });
   };
 
-  // Load raw API response for debugging
   useEffect(() => {
     try {
       const storedResponse = localStorage.getItem('raw_campaign_response');
       if (storedResponse) {
-        const parsed = JSON.parse(storedResponse);
-        setRawApiResponse(parsed);
+        try {
+          const parsed = JSON.parse(storedResponse);
+          setRawApiResponse(parsed);
+          console.log('[FUNNEL DEBUG] Loaded stored API response:', parsed);
+        } catch (e) {
+          console.error('[FUNNEL DEBUG] Error parsing stored response:', e);
+          setRawApiResponse({ parseError: String(e) });
+        }
       }
       
       const storedError = localStorage.getItem('raw_campaign_error_response');
@@ -64,6 +67,7 @@ const FunnelViewContainer = () => {
           if (!rawApiResponse) {
             setRawApiResponse({ error: parsedError });
           }
+          console.log('[FUNNEL DEBUG] Loaded stored error response:', parsedError);
         } catch (e) {
           console.error('[FUNNEL DEBUG] Error parsing error response:', e);
         }
@@ -71,15 +75,13 @@ const FunnelViewContainer = () => {
     } catch (e) {
       console.error('[FUNNEL DEBUG] Error loading stored API response:', e);
     }
-  }, []);
+  }, [retryCount]);
 
   useEffect(() => {
     const fetchFunnelData = async () => {
-      // Safely get token and ad account ID
       let token: string | null = null;
       let selectedAdAccount: string | null = null;
       
-      // Safe environment check
       if (typeof window !== 'undefined') {
         token = metaAuthService.getAccessToken();
         
@@ -92,7 +94,6 @@ const FunnelViewContainer = () => {
         }
       }
       
-      // Log token and account for debugging
       console.log('[FUNNEL] Fetch attempt with token:', token ? 'Valid token' : 'No token');
       console.log('[FUNNEL] Selected ad account:', selectedAdAccount);
       
@@ -106,12 +107,10 @@ const FunnelViewContainer = () => {
         return;
       }
       
-      // Always ensure ad account has act_ prefix
       const formattedAccount = selectedAdAccount.startsWith('act_') 
         ? selectedAdAccount 
         : `act_${selectedAdAccount}`;
       
-      // Store request details for debugging
       setLastRequestDetails({
         endpoint: `${formattedAccount}/campaigns`,
         accountId: formattedAccount,
@@ -119,7 +118,6 @@ const FunnelViewContainer = () => {
         timestamp: new Date().toISOString()
       });
       
-      // If ad account hasn't changed and we have data, skip refetching
       if (formattedAccount === lastFetchedAdAccount && 
           funnelData.campaigns.length > 0 &&
           retryCount === 0) {
@@ -132,30 +130,31 @@ const FunnelViewContainer = () => {
         
         const data = await MetaFunnelService.fetchFunnelData(token, formattedAccount);
         
-        // Store raw response for debugging
         try {
-          localStorage.setItem('raw_campaign_response', JSON.stringify(data));
-          setRawApiResponse(data);
+          const storedResponse = localStorage.getItem('raw_campaign_response');
+          if (storedResponse) {
+            const parsed = JSON.parse(storedResponse);
+            setRawApiResponse(parsed);
+          }
         } catch (e) {
-          console.error('[FUNNEL] Error storing API response:', e);
+          console.error('[FUNNEL] Error loading API response:', e);
         }
         
         console.log(`[FUNNEL] Received funnel data with ${data.campaigns.length} campaigns`);
         if (data.campaigns.length > 0) {
           console.log('[FUNNEL] First campaign sample:', data.campaigns[0]);
+        } else {
+          console.warn('[FUNNEL] No campaigns found in response');
         }
         
         setFunnelData(data);
         setLastFetchedAdAccount(formattedAccount);
         setFunnelError(null);
         
-        // If we have data but campaigns state is empty or stale, trigger a refresh
         if (data.campaigns.length > 0) {
           console.log("[FUNNEL] Ensuring campaign state is in sync with funnel data");
           
-          // Small delay to ensure state updates happen after render
           setTimeout(() => {
-            // Force UI refresh for the campaign components
             triggerCampaignRefresh(true);
           }, 500);
         } else {
@@ -164,7 +163,6 @@ const FunnelViewContainer = () => {
       } catch (err: any) {
         console.error('[FUNNEL] Error fetching funnel data:', err);
         
-        // Enhanced error logging
         if (err?.error) {
           console.error('[FUNNEL] API Error details:', {
             message: err.error.message,
@@ -173,23 +171,23 @@ const FunnelViewContainer = () => {
             subcode: err.error.error_subcode
           });
           
-          // Store error response for debugging
           try {
-            localStorage.setItem('raw_campaign_error_response', JSON.stringify(err));
-            setRawApiResponse({ error: err.error || err });
+            const storedError = localStorage.getItem('raw_campaign_error_response');
+            if (storedError) {
+              const parsedError = JSON.parse(storedError);
+              setRawApiResponse({ error: parsedError });
+            }
           } catch (e) {
-            console.error('[FUNNEL] Error storing API error:', e);
+            console.error('[FUNNEL] Error loading API error:', e);
           }
         }
         
-        // Extract more detailed error information for display
         const errorMessage = err instanceof Error 
           ? err.message 
           : (err?.error?.message || 'Failed to fetch funnel data');
         
         setFunnelError(errorMessage);
                      
-        // Log detailed error information
         if (err?.error) {
           console.error('[FUNNEL] Error details:', {
             code: err.error.code,
@@ -295,7 +293,6 @@ const FunnelViewContainer = () => {
           </div>
         )}
         
-        {/* Debug section for raw API response */}
         {showDebug && rawApiResponse && filteredData.campaigns.length > 0 && (
           <div className="mt-4 border-t pt-4">
             <p className="font-medium mb-2">API Response Debug:</p>
