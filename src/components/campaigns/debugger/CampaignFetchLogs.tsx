@@ -51,7 +51,7 @@ const CampaignFetchLogs = () => {
                       </div>
                       {log.parsedJson && (
                         <div className="mt-1">
-                          Campaigns: {log.parsedJson.campaigns?.length || 0}
+                          Campaigns: {log.parsedJson.data?.length || 0}
                         </div>
                       )}
                     </>

@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -57,21 +56,47 @@ export class MetaCampaignService extends BaseApiService {
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
     
       try {
-        const funnelData = await MetaFunnelService.fetchFunnelData(token, adAccountId);
+        const endpoint = `/act_${adAccountId}/campaigns`;
+        const fields = 'id,name,objective,status,spend,results,cost_per_result,budget,daily_budget,lifetime_budget,start_time,end_time,created_time,updated_time';
         
-        // Log the funnel data directly without trying to treat it as a Response
-        CampaignFetchLogger.logError({
-          status: 200,
-          statusText: 'OK',
-          responseBody: JSON.stringify(funnelData),
-          parsedJson: funnelData
-        }, adAccountId);
-      
-        localStorage.setItem('last_campaign_count', funnelData.campaigns.length.toString());
+        const response = await fetch(
+          `${this.BASE_URL}/${this.API_VERSION}${endpoint}?fields=${fields}&access_token=${token}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+
+        await CampaignFetchLogger.logResponse(response, adAccountId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data || !data.data) {
+          throw new Error('Invalid response format');
+        }
+
+        const campaigns = data.data.map((campaign: any) => ({
+          ...campaign,
+          spend: campaign.spend || '$0.00',
+          results: campaign.results || '0',
+          cost_per_result: campaign.cost_per_result || '$0.00',
+          budget: campaign.daily_budget ? 
+            `$${(parseInt(campaign.daily_budget) / 100).toFixed(2)}/day` : 
+            (campaign.lifetime_budget ? 
+              `$${(parseInt(campaign.lifetime_budget) / 100).toFixed(2)} total` : 
+              '-')
+        }));
+
+        localStorage.setItem('last_campaign_count', campaigns.length.toString());
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.removeItem('last_empty_result');
       
-        return funnelData.campaigns;
+        return campaigns;
       } catch (fetchError: any) {
         CampaignFetchLogger.logError(fetchError, adAccountId);
         throw fetchError;
@@ -89,10 +114,6 @@ export class MetaCampaignService extends BaseApiService {
     }
   }
   
-  /**
-   * Verify access to the ad account by fetching adsets
-   * This is a fallback check when campaigns are not found
-   */
   private static async verifyAdAccountAccess(token: string, adAccountId: string): Promise<void> {
     try {
       console.log(`Verifying ad account access by fetching adsets for ${adAccountId}...`);
