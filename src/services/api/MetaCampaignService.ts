@@ -41,7 +41,7 @@ export class MetaCampaignService extends BaseApiService {
 
     try {
       console.log(`[CAMPAIGN FETCH] Starting campaign fetch for ad account: ${adAccountId}...`);
-      console.log(`[CAMPAIGN FETCH] Token: ${token.substring(0, 8)}...`);
+      console.log(`[CAMPAIGN FETCH] Token: ${token.substring(0, 8)}...${token.substring(token.length - 8)}`);
       
       this.validateToken(token, 'fetchCampaigns');
       
@@ -63,16 +63,24 @@ export class MetaCampaignService extends BaseApiService {
       
       // Use the funnel service to get campaign data via batch API
       console.log('[CAMPAIGN FETCH] Making API call via MetaFunnelService...');
-      const { campaigns } = await MetaFunnelService.fetchFunnelData(token, adAccountId);
+      const response = await MetaFunnelService.fetchFunnelData(token, adAccountId);
       
-      console.log(`[CAMPAIGN FETCH] Success! Received ${campaigns.length} campaigns`);
+      console.log('[CAMPAIGN FETCH] MetaFunnelService Response:', {
+        campaignsCount: response.campaigns.length,
+        adsetsCount: response.adsets.length,
+        adsCount: response.ads.length,
+        status: 'success'
+      });
+      
+      // Log response details
+      console.log(`[CAMPAIGN FETCH] Success! Received ${response.campaigns.length} campaigns`);
       
       // Store metadata for diagnostics
-      localStorage.setItem('last_campaign_count', campaigns.length.toString());
+      localStorage.setItem('last_campaign_count', response.campaigns.length.toString());
       localStorage.setItem('last_campaign_fetch_success', 'true');
       localStorage.removeItem('last_empty_result');
       
-      return campaigns;
+      return response.campaigns;
     } catch (error: any) {
       console.error(`[CAMPAIGN FETCH] Error fetching campaigns for ad account ${adAccountId}:`, error);
       console.error(`[CAMPAIGN FETCH] Error details:`, error?.response ? {
@@ -85,6 +93,13 @@ export class MetaCampaignService extends BaseApiService {
         try {
           const responseText = await error.response.text();
           console.error(`[CAMPAIGN FETCH] Error response body:`, responseText);
+          
+          try {
+            const json = JSON.parse(responseText);
+            console.error('[CAMPAIGN FETCH] Parsed error JSON:', json);
+          } catch (parseErr) {
+            console.error('[CAMPAIGN FETCH] ❌ Failed to parse error JSON:', parseErr);
+          }
         } catch (e) {
           console.error(`[CAMPAIGN FETCH] Could not read error response text:`, e);
         }

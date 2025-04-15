@@ -64,7 +64,7 @@ export function useCampaignFetcher() {
     if (!forceRefresh) {
       const { campaigns, isFresh } = getCachedCampaigns(adAccountId);
       if (campaigns && isFresh) {
-        console.log(`Using cached campaigns for account ${adAccountId}`);
+        console.log(`[CAMPAIGN FETCH] Using cached campaigns for account ${adAccountId}`);
         return { 
           campaigns, 
           error: null
@@ -80,24 +80,35 @@ export function useCampaignFetcher() {
       
       const tokenValidation = validateToken();
       if (!tokenValidation.isValid) {
+        console.error('[CAMPAIGN FETCH] Token validation failed:', tokenValidation.error);
         return { campaigns: [], error: tokenValidation.error };
       }
 
       // Run diagnostic check in production mode
       if (!isMockMode()) {
+        console.log('[CAMPAIGN FETCH] Running diagnostic check...');
         const diagnosticResult = await runFinalDiagnosticCheck();
         if (!diagnosticResult.success) {
+          console.error('[CAMPAIGN FETCH] Diagnostic check failed:', diagnosticResult.error);
           throw new Error(diagnosticResult.error);
         }
       }
 
-      console.log('[CAMPAIGN DEBUG] Token starts with:', token ? token.substring(0, 5) + '...' : 'null');
+      console.log('[CAMPAIGN DEBUG] Token validation:', {
+        tokenLength: token ? token.length : 0,
+        tokenStart: token ? token.substring(0, 5) + '...' : 'null',
+        adAccountId
+      });
 
       const MetaCampaignService = (await import('@/services/api/MetaCampaignService')).default;
       console.log('[CAMPAIGN DEBUG] Calling MetaCampaignService.fetchCampaigns...');
       const campaigns = await MetaCampaignService.fetchCampaigns(token, adAccountId);
       
-      console.log('[CAMPAIGN DEBUG] Fetch successful:', campaigns.length, 'campaigns returned');
+      console.log('[CAMPAIGN DEBUG] Fetch successful:', {
+        campaignCount: campaigns.length,
+        adAccountId,
+        timestamp: new Date().toISOString()
+      });
       
       if (mountedRef.current) {
         storeCampaignsInCache(campaigns, adAccountId);
@@ -137,7 +148,13 @@ export function useCampaignFetcher() {
       handleFetchSuccess(false); // Pass false to indicate live API mode
       return { campaigns, error: null };
     } catch (err: any) {
-      console.error('[CAMPAIGN DEBUG] Fetch error:', err);
+      console.error('[CAMPAIGN DEBUG] Fetch error:', {
+        error: err,
+        type: typeof err,
+        properties: Object.keys(err),
+        message: err?.message,
+        stack: err?.stack
+      });
       
       console.error('[CAMPAIGN DEBUG] Error type:', typeof err);
       console.error('[CAMPAIGN DEBUG] Error properties:', Object.keys(err));
