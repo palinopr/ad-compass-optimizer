@@ -19,7 +19,7 @@ export const useItemInsights = () => {
       }
 
       const options: InsightFilterOptions = {
-        datePreset: 'last_28d', // Updated from last_30d to last_28d
+        datePreset: 'last_28d', // Using the now-valid date preset
         fields: ['spend', 'ctr', 'impressions'],
       };
 
