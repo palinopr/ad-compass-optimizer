@@ -2,6 +2,7 @@
 import { MockApiService } from '@/services/api/mock/MockApiService';
 import { triggerCampaignRefresh } from './eventHandlers';
 import { BaseMockService } from '@/services/meta/BaseMockService';
+import { MetaFunnelService } from '@/services/api/MetaFunnelService';
 
 export const isMockMode = (): boolean => {
   try {

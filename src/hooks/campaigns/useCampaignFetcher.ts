@@ -42,7 +42,8 @@ export function useCampaignFetcher() {
     
     if (mockMode) {
       console.log('🎭 Mock mode: Returning mock campaign data');
-      const mockData = MetaFunnelService.getMockFunnelData();
+      // Fix: Use fetchFunnelData instead of getMockFunnelData, but with mock token/account 
+      const mockData = await MetaFunnelService.fetchFunnelData('mock-token', adAccountId);
       handleMockData(mockData, adAccountId);
       handleFetchSuccess(true);
       return { campaigns: mockData.campaigns, error: null };
