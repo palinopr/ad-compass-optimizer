@@ -1,4 +1,3 @@
-
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
@@ -15,6 +14,7 @@ import EmptyStateMessage from '@/components/campaigns/EmptyStateMessage';
 import MockDiagnosticPanel from '@/components/campaigns/diagnostic-components/MockDiagnosticPanel';
 import CampaignTroubleshooter from '@/components/campaigns/troubleshooter/CampaignTroubleshooter';
 import AdAccountSection from '@/components/meta/integration/AdAccountSection';
+import { CampaignsDiagnosticPanel } from '@/components/campaigns/CampaignsDiagnosticPanel';
 
 const Campaigns = () => {
   const {
@@ -46,9 +46,7 @@ const Campaigns = () => {
           disabled={showCreateWizard || !isAuthenticated || !hasAdAccount || !hasPermissions}
         />
         
-        {showCreateWizard ? (
-          <CampaignCreationWizard onCancel={() => setShowCreateWizard(false)} />
-        ) : (
+        {!showCreateWizard && (
           <>
             <ConnectionStatusAlerts 
               isAuthenticated={isAuthenticated} 
@@ -65,18 +63,7 @@ const Campaigns = () => {
             
             {isAuthenticated && <AdAccountSection isAuthenticated={isAuthenticated} />}
             
-            {debugMode && localStorage.getItem("USE_MOCK_MODE") === "true" && (
-              <MockDiagnosticPanel 
-                displayedCampaignsCount={filteredCampaigns?.length || 0}
-                rawCampaignsCount={campaigns?.length || 0}
-                filters={{
-                  status: activeTab,
-                  datePreset: 'last30days',
-                  search: ''
-                }}
-                adAccountId={selectedAdAccount || undefined}
-              />
-            )}
+            {process.env.NODE_ENV !== 'production' && <CampaignsDiagnosticPanel />}
             
             {isAuthenticated && hasAdAccount && <RefreshControls />}
             
