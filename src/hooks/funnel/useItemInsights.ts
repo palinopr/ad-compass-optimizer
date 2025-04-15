@@ -1,10 +1,21 @@
-
 import { useState, useCallback } from 'react';
 import { MetaInsightsService, InsightFilterOptions } from '@/services/api/MetaInsightsService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 import { format } from 'date-fns';
 import { InsightsRequestThrottler } from '@/services/api/insights/requestThrottling';
+
+const getDateRange = (datePreset: string) => {
+  const date = datePreset === 'today' 
+    ? new Date() 
+    : new Date(Date.now() - 86400000); // yesterday
+  
+  const formattedDate = format(date, 'yyyy-MM-dd');
+  return {
+    since: formattedDate,
+    until: formattedDate
+  };
+};
 
 export const useItemInsights = () => {
   const [insights, setInsights] = useState<any>(null);
@@ -39,52 +50,38 @@ export const useItemInsights = () => {
       ];
 
       // Create base options
-      const baseOptions: InsightFilterOptions = {
-        datePreset: validDatePreset as InsightFilterOptions['datePreset'],
+      let baseOptions: InsightFilterOptions = {
         fields: commonFields,
       };
 
-      // For today/yesterday, prepare time_range fallback
-      const requests: (() => Promise<any>)[] = [];
-      
-      // Primary request with date_preset
-      requests.push(() => itemType === 'campaign' 
-        ? MetaInsightsService.fetchCampaignInsights(token, itemId, baseOptions)
-        : MetaInsightsService.fetchAdSetInsights(token, itemId, baseOptions));
-
-      // Add time_range fallback for today/yesterday
-      if (validDatePreset === 'today' || validDatePreset === 'yesterday') {
-        const date = validDatePreset === 'today' ? new Date() : new Date(Date.now() - 86400000);
-        const formattedDate = format(date, 'yyyy-MM-dd');
-        
-        const timeRangeOptions: InsightFilterOptions = {
+      // Handle today/yesterday using time_range instead of date_preset
+      if (['today', 'yesterday'].includes(validDatePreset)) {
+        const timeRange = getDateRange(validDatePreset);
+        baseOptions = {
           ...baseOptions,
-          timeRange: {
-            since: formattedDate,
-            until: formattedDate
-          },
+          timeRange,
           timeIncrement: 1
         };
-        
-        requests.push(() => itemType === 'campaign'
-          ? MetaInsightsService.fetchCampaignInsights(token, itemId, timeRangeOptions)
-          : MetaInsightsService.fetchAdSetInsights(token, itemId, timeRangeOptions));
+      } else {
+        baseOptions.datePreset = validDatePreset as InsightFilterOptions['datePreset'];
       }
 
-      // Execute requests with throttling
-      const results = await InsightsRequestThrottler.throttleRequests(requests);
-      
-      // Find first valid response
-      const validResponse = results.find(response => response?.data?.length > 0) || results[0];
+      // Execute primary request
+      const primaryRequest = () => itemType === 'campaign' 
+        ? MetaInsightsService.fetchCampaignInsights(token, itemId, baseOptions)
+        : MetaInsightsService.fetchAdSetInsights(token, itemId, baseOptions);
 
-      if (!validResponse) {
+      // Execute request with throttling
+      const response = await InsightsRequestThrottler.throttleRequests([primaryRequest]);
+      const validResponse = response[0];
+
+      if (!validResponse || !validResponse.data?.length) {
         // Try maximum as last resort
-        console.log('[INSIGHTS] No data from primary or fallback, trying maximum preset');
+        console.log('[INSIGHTS] No data from primary request, trying maximum preset');
         const maximumResponse = await (itemType === 'campaign'
           ? MetaInsightsService.fetchCampaignInsights(token, itemId, { ...baseOptions, datePreset: 'maximum' })
           : MetaInsightsService.fetchAdSetInsights(token, itemId, { ...baseOptions, datePreset: 'maximum' }));
         
-        // Always use the response structure even if empty
         transformAndSetInsights(maximumResponse);
       } else {
         transformAndSetInsights(validResponse);
