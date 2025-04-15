@@ -2,8 +2,8 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import TokenStatusSection from './token-status/TokenStatusSection';
+import CampaignStatusSection from './campaign-status/CampaignStatusSection';
 
 interface TokenStatusInfo {
   exists: boolean;
@@ -59,28 +59,16 @@ const CampaignTroubleshooter = () => {
     <Card className="mt-4 p-4 bg-gray-50">
       <h3 className="text-sm font-medium mb-4">Campaign Status</h3>
       
-      {/* Token Status */}
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center justify-between text-sm">
-          <span>Token Status:</span>
-          <span className={tokenStatus.exists ? 'text-green-600' : 'text-red-600'}>
-            {tokenStatus.exists ? 'FOUND' : 'NOT FOUND'}
-          </span>
-        </div>
-      </div>
+      <TokenStatusSection 
+        exists={tokenStatus.exists}
+        isValid={tokenStatus.isValid}
+      />
 
-      {/* Campaign Status */}
-      {campaignStatus.error ? (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{campaignStatus.error}</AlertDescription>
-        </Alert>
-      ) : (
-        <div className="text-sm">
-          <p>Campaigns loaded: {campaignStatus.campaignCount}</p>
-          {campaignStatus.isFetching && <p>Fetching campaigns...</p>}
-        </div>
-      )}
+      <CampaignStatusSection 
+        error={campaignStatus.error}
+        isFetching={campaignStatus.isFetching}
+        campaignCount={campaignStatus.campaignCount}
+      />
     </Card>
   );
 };
