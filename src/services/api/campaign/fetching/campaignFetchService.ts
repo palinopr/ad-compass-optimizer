@@ -1,9 +1,9 @@
 
-import { MetaCampaign } from '../types/metaCampaignTypes';
-import { CampaignThrottling } from '../campaign/throttling';
+import { MetaCampaign } from '../../types/metaCampaignTypes';
+import { CampaignThrottling } from '../../campaign/throttling';
 import { CampaignQueryBuilder } from './campaignQueryBuilder';
-import { ErrorStorage } from '../campaign/error/errorStorage';
-import { BaseApiService } from '../BaseApiService';
+import { ErrorStorage } from '../../campaign/error/errorStorage';
+import { BaseApiService } from '../../BaseApiService';
 import { CampaignProcessor } from './campaignProcessor';
 import { PaginationHandler } from './paginationHandler';
 
