@@ -28,7 +28,15 @@ export const handleApiError = async (apiErr: any): Promise<{
       
       // Log raw response details first
       console.log(`[CAMPAIGN FETCH] Status:`, apiErr.response.status, apiErr.response.statusText);
-      console.log(`[CAMPAIGN FETCH] Headers:`, Object.fromEntries([...apiErr.response.headers.entries()]));
+      
+      // Safely log headers if available
+      if (apiErr.response.headers) {
+        try {
+          console.log(`[CAMPAIGN FETCH] Headers:`, Object.fromEntries([...apiErr.response.headers.entries()]));
+        } catch (headerErr) {
+          console.error('[CAMPAIGN FETCH] Could not log headers:', headerErr);
+        }
+      }
       
       // Get the raw response text
       const responseText = await apiErr.response.text();
@@ -70,10 +78,29 @@ export const handleApiError = async (apiErr: any): Promise<{
         }
       } catch (jsonErr) {
         console.error(`[CAMPAIGN FETCH] ❌ JSON parse error:`, jsonErr);
-        apiErrorMessage = "Failed to load campaigns. Check console for full error.";
+        apiErrorMessage = "Failed to load campaigns. Check console for full error details.";
       }
     } catch (textErr) {
       console.error(`[CAMPAIGN FETCH] ❌ Failed to read response body:`, textErr);
+    }
+  } else if (apiErr instanceof Error) {
+    // Handle plain Error objects
+    apiErrorMessage = apiErr.message;
+    errorDetails = {
+      name: apiErr.name,
+      message: apiErr.message,
+      stack: apiErr.stack
+    };
+    
+    // Check if it's a network error
+    if (apiErr.message.includes('Network Error') || 
+        apiErr.message.includes('Failed to fetch')) {
+      apiErrorMessage = 'Network error when connecting to Meta API. Please check your internet connection.';
+    }
+    
+    // Check if it's a rate limit error based on message content
+    if (isRateLimitError(apiErr)) {
+      isRateLimitDetected = true;
     }
   }
   
@@ -81,7 +108,9 @@ export const handleApiError = async (apiErr: any): Promise<{
   localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
     message: apiErrorMessage,
     timestamp: new Date().toISOString(),
-    details: errorDetails
+    details: errorDetails,
+    status: apiErr?.response?.status || apiErr?.status || 'unknown',
+    code: errorDetails?.error?.code || apiErr?.code
   }));
   
   return { 
@@ -121,7 +150,8 @@ export const processFetchError = (err: any, onFetchFailure?: () => void): {
         error: {
           code: 4,
           message: 'Application request limit reached',
-          isRateLimit: true
+          isRateLimit: true,
+          status: 429
         }
       }
     };
@@ -147,20 +177,25 @@ export const processFetchError = (err: any, onFetchFailure?: () => void): {
       
       if (errorCode === '400') {
         enhancedError = 'Failed to fetch campaign data (Error 400). This usually indicates an invalid token format or expired token.';
+        errorDetails.status = 400;
       } else if (errorCode === '401') {
-        enhancedError = 'Authentication failed (Error 401). Your Meta access token has expired.';
+        enhancedError = 'Authentication failed (Error 401). Please reconnect your Meta account.';
+        errorDetails.status = 401;
       } else if (errorCode === '403') {
-        enhancedError = 'Permission denied (Error 403). You don\'t have the required permissions to access this data.';
+        enhancedError = 'Permission denied (Error 403). Your account may not have access to this ad account.';
+        errorDetails.status = 403;
+      } else if (errorCode === '500') {
+        enhancedError = 'Meta API server error (Error 500). Please try again later.';
+        errorDetails.status = 500;
       }
     }
   }
   
-  // Show toast notification with more friendly error message
-  toast({
-    title: "Error Loading Campaigns",
-    description: "There was a problem loading your campaign data. Please check your connection.",
-    variant: "destructive"
-  });
-  
-  return { error: enhancedError, errorDetails };
+  return { 
+    error: enhancedError,
+    errorDetails: {
+      ...errorDetails,
+      fullMessage: errorMessage
+    }
+  };
 };

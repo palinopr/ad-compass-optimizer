@@ -46,7 +46,22 @@ export function useAdAccountSelection() {
         };
       }
       
+      // Make a real API call to get ad accounts, do not use mock data
+      console.log('[META] Fetching ad accounts from live API...');
       const accounts = await MetaAdAccountService.fetchAdAccounts(token);
+      
+      if (!accounts || accounts.length === 0) {
+        console.error('[META] No ad accounts found from API call');
+        return {
+          hasAccount: false,
+          error: 'No ad accounts found',
+          errorDetails: { 
+            code: 'NO_ACCOUNTS',
+            isAccountError: true
+          }
+        };
+      }
+      
       const activeAccount = accounts.find(acc => acc.account_status === 1);
       
       if (activeAccount) {
@@ -132,7 +147,7 @@ export function useAdAccountSelection() {
         window.dispatchEvent(event);
         console.log('[META] Dispatched ad-account-changed event');
         
-        // NEW: Force immediate campaign fetch after account selection
+        // Force immediate campaign fetch after account selection
         console.log('[CAMPAIGN FETCH] Triggering immediate fetch after account selection');
         const fetchEvent = new CustomEvent('campaign-data-refresh', { 
           detail: { 
@@ -163,7 +178,9 @@ export function useAdAccountSelection() {
   // Effect to initialize the selected account
   useEffect(() => {
     const initializeSelectedAccount = async () => {
+      console.log('[META] Initializing selected account...');
       const accountInfo = await getSelectedAdAccount();
+      console.log('[META] Account initialization complete:', accountInfo);
       setSelectedAccount(accountInfo);
     };
     

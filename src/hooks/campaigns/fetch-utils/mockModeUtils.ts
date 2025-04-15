@@ -41,7 +41,7 @@ export const handleMockData = (mockData: any, adAccountId: string): void => {
   try {
     const mockCampaigns = mockData.campaigns.map((campaign: any) => ({
       ...campaign,
-      ad_account_id: adAccountId || 'act_mock_account'
+      ad_account_id: adAccountId || 'unknown_account'
     }));
 
     console.log(`🎭 [Enhanced Sync] Syncing ${mockCampaigns.length} mock campaigns for account: ${adAccountId}`);

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Database, AlertCircle, RefreshCw } from 'lucide-react';
@@ -19,11 +20,14 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
   const [lastFetchTime, setLastFetchTime] = useState<string | null>(null);
   const [lastManualFetchTime, setLastManualFetchTime] = useState<string | null>(null);
   const [lastFetchAccountId, setLastFetchAccountId] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<any>(null);
   
   useEffect(() => {
     // Load fetch history from local storage
     const storedFetchTime = localStorage.getItem('last_campaign_fetch_attempt');
     const manualFetchTime = localStorage.getItem('last_manual_campaign_fetch');
+    const storedAttempts = localStorage.getItem('campaign_fetch_attempts');
+    const storedError = localStorage.getItem('last_campaign_fetch_error');
     
     if (storedFetchTime) {
       setLastFetchTime(storedFetchTime);
@@ -31,6 +35,18 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
     
     if (manualFetchTime) {
       setLastManualFetchTime(manualFetchTime);
+    }
+    
+    if (storedAttempts) {
+      setFetchAttempts(parseInt(storedAttempts, 10));
+    }
+    
+    if (storedError) {
+      try {
+        setErrorDetails(JSON.parse(storedError));
+      } catch (e) {
+        console.error('Error parsing stored error:', e);
+      }
     }
     
     const storedAccount = localStorage.getItem('last_campaign_fetch_account');
@@ -47,10 +63,28 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
         setLastFetchAccountId(event.detail.accountId);
       }
       
+      // Update manually recorded attempts
+      const storedAttempts = localStorage.getItem('campaign_fetch_attempts');
+      if (storedAttempts) {
+        setFetchAttempts(parseInt(storedAttempts, 10));
+      }
+      
       // Update manual fetch time if available
       const manualTime = localStorage.getItem('last_manual_campaign_fetch');
       if (manualTime) {
         setLastManualFetchTime(manualTime);
+      }
+      
+      // Get updated error info if any
+      const storedError = localStorage.getItem('last_campaign_fetch_error');
+      if (storedError) {
+        try {
+          setErrorDetails(JSON.parse(storedError));
+        } catch (e) {
+          console.error('Error parsing stored error:', e);
+        }
+      } else {
+        setErrorDetails(null);
       }
     };
     
@@ -89,7 +123,7 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
           {lastFetchAccountId && (
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium">Last account:</span>
-              <span className="text-sm font-mono truncate max-w-[150px]">act_{lastFetchAccountId}</span>
+              <span className="text-sm font-mono truncate max-w-[150px]">{lastFetchAccountId}</span>
             </div>
           )}
           
@@ -119,6 +153,48 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
+          )}
+          
+          {/* Enhanced error details */}
+          {errorDetails && (
+            <div className="mt-3 text-xs border border-red-200 rounded-md p-2 bg-red-50">
+              <h4 className="font-medium text-red-700 mb-1">Error Details:</h4>
+              
+              {errorDetails.status && (
+                <div className="flex justify-between">
+                  <span className="text-red-800">HTTP Status:</span>
+                  <span className="font-mono">{errorDetails.status}</span>
+                </div>
+              )}
+              
+              {errorDetails.message && (
+                <div className="flex flex-col mt-1">
+                  <span className="text-red-800">Message:</span>
+                  <span className="font-mono text-xs break-words">{errorDetails.message}</span>
+                </div>
+              )}
+              
+              {(errorDetails.code || errorDetails.details?.code) && (
+                <div className="flex justify-between mt-1">
+                  <span className="text-red-800">Error Code:</span>
+                  <span className="font-mono">{errorDetails.code || errorDetails.details?.code}</span>
+                </div>
+              )}
+              
+              {errorDetails.timestamp && (
+                <div className="flex justify-between mt-1">
+                  <span className="text-red-800">Time:</span>
+                  <span>{formatTime(errorDetails.timestamp)}</span>
+                </div>
+              )}
+              
+              {(errorDetails.fbTraceId || errorDetails.details?.fbTraceId) && (
+                <div className="flex justify-between mt-1">
+                  <span className="text-red-800">FB Trace:</span>
+                  <span className="font-mono text-xs truncate">{errorDetails.fbTraceId || errorDetails.details?.fbTraceId}</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </CardContent>
