@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 
 export function useAdAccountSelection() {
@@ -80,22 +80,24 @@ export function useAdAccountSelection() {
       localStorage.setItem('selected_ad_account', cleanAccountId);
       localStorage.setItem('selected_ad_accounts', JSON.stringify([cleanAccountId]));
       
+      // Show loading toast
+      toast({
+        title: "Switching ad account...",
+        description: "Loading campaigns for the selected account",
+        duration: 2000
+      });
+      
       // Dispatch the account change event
       const event = new CustomEvent('ad-account-changed', { 
         detail: { accountId: cleanAccountId } 
       });
       window.dispatchEvent(event);
       
-      // Also trigger a refresh of campaign data
+      // Trigger campaign data refresh
       const refreshEvent = new CustomEvent('campaign-data-refresh', {
         detail: { force: true }
       });
       window.dispatchEvent(refreshEvent);
-      
-      toast({
-        title: "Ad Account Changed",
-        description: `Switched to account ${cleanAccountId}`
-      });
       
       return true;
     } catch (e) {

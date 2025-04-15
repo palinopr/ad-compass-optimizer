@@ -16,15 +16,29 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     displayRefresh, 
     forceRender,
   } = useCampaigns(status);
+  
   const { filters, setDateRange, setStatusFilter, setSearchQuery, filteredCampaigns } = useCampaignFilters(campaigns);
   const { isAuthenticated, checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
-  
-  // Add a new state for status message
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const authResult = validateAuthentication();
   const effectiveIsAuthenticated = authResult.isValid;
+
+  // Reset filters when ad account changes
+  useEffect(() => {
+    const handleAccountChange = () => {
+      // Reset all filters to default values
+      setDateRange(null, 'last30days');
+      setStatusFilter(null);
+      setSearchQuery('');
+    };
+
+    window.addEventListener('ad-account-changed', handleAccountChange);
+    return () => {
+      window.removeEventListener('ad-account-changed', handleAccountChange);
+    };
+  }, [setDateRange, setStatusFilter, setSearchQuery]);
 
   useEffect(() => {
     if (campaigns.length === 0 && !isLoading) {
