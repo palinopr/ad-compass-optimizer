@@ -2,6 +2,7 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CampaignList from '@/components/campaigns/CampaignList';
+import { Info } from 'lucide-react';
 
 interface CampaignTabsProps {
   activeTab: string;
