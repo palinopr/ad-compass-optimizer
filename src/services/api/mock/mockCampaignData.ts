@@ -1,7 +1,4 @@
 
-/**
- * Mock data for campaigns, ad sets, and ads testing
- */
 import { FunnelData } from '../types/funnelTypes';
 import { MetaCampaign } from '../MetaCampaignService';
 
@@ -47,11 +44,28 @@ const generateCampaigns = (count = 10): MetaCampaign[] => {
     
     // Generate random performance metrics
     const spend = `$${(Math.random() * 200 + 10).toFixed(2)}`;
-    const results = (Math.random() * 50 + 5).toFixed(0);
-    const cpa = `$${(Math.random() * 20 + 2).toFixed(2)}`;
     const impressions = (Math.random() * 10000 + 1000).toFixed(0);
     const clicks = (Math.random() * 500 + 50).toFixed(0);
-    const roas = (Math.random() * 3 + 1).toFixed(2);
+    const results = (Math.random() * 50 + 5).toFixed(0);
+
+    // Generate cost per action and actions arrays to match MetaCampaign interface
+    const cost_per_action_type = [
+      {
+        action_type: 'purchase',
+        value: `$${(Math.random() * 20 + 2).toFixed(2)}`
+      }
+    ];
+    
+    const actions = [
+      {
+        action_type: 'purchase',
+        value: results
+      },
+      {
+        action_type: 'lead',
+        value: (parseInt(results) * 1.5).toFixed(0)
+      }
+    ];
     
     return {
       id: campaignId,
@@ -60,19 +74,21 @@ const generateCampaigns = (count = 10): MetaCampaign[] => {
       status,
       daily_budget: dailyBudget,
       lifetime_budget: lifetimeBudget,
-      spend,
       budget,
+      spend,
       results,
-      cost_per_result: cpa,
-      start_time: getRecentDate(90),
-      end_time: Math.random() > 0.7 ? getRecentDate(30) : null,
       created_time: getRecentDate(90),
       updated_time: getRecentDate(15),
+      start_time: getRecentDate(90),
+      end_time: Math.random() > 0.7 ? getRecentDate(30) : undefined,
       insights: {
-        cpa,
-        roas,
         impressions,
-        clicks
+        clicks,
+        spend,
+        cpa: `$${(Math.random() * 20 + 2).toFixed(2)}`,
+        roas: (Math.random() * 3 + 1).toFixed(2),
+        cost_per_action_type,
+        actions
       }
     };
   });

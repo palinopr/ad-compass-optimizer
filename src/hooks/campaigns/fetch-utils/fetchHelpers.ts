@@ -1,5 +1,5 @@
 
-import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import { MetaCampaign, MetaCampaignService } from '@/services/api/MetaCampaignService';
 import { handleApiError } from './errorHandler';
 
 /**
@@ -18,7 +18,6 @@ export const executeCampaignFetch = async (
     console.log(`Executing campaign fetch for: ${formattedId}`);
     
     // Use our API service to fetch campaigns
-    const MetaCampaignService = (await import('@/services/api/MetaCampaignService')).default;
     const campaigns = await MetaCampaignService.fetchCampaigns(token, formattedId);
     
     // Log rate limit usage data if available

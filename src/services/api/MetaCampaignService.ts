@@ -8,10 +8,22 @@ export interface MetaCampaign {
   name: string;
   status: string;
   daily_budget?: string;
+  lifetime_budget?: string;
+  budget?: string;
+  spend?: string;
+  results?: string;
+  cost_per_result?: string;
+  created_time?: string;
+  updated_time?: string;
+  start_time?: string;
+  end_time?: string;
+  objective?: string;
   insights?: {
     impressions: string;
     clicks: string;
     spend: string;
+    cpa?: string;
+    roas?: string;
     cost_per_action_type: Array<{
       action_type: string;
       value: string;
@@ -75,8 +87,71 @@ export class MetaCampaignService extends BaseApiService {
       }
 
       console.log(`[CAMPAIGN FETCH] Successfully received ${data.data.length} campaigns`);
-      return data.data;
       
+      // Process campaigns to include derived fields like budget, etc.
+      const campaigns = data.data.map((campaign: any) => {
+        // Format budget for display
+        let budget = '-';
+        if (campaign.daily_budget) {
+          budget = `$${(parseInt(campaign.daily_budget) / 100).toFixed(2)}/day`;
+        } else if (campaign.lifetime_budget) {
+          budget = `$${(parseInt(campaign.lifetime_budget) / 100).toFixed(2)} total`;
+        }
+        
+        // Process insights data if available
+        if (campaign.insights && campaign.insights.data && campaign.insights.data.length > 0) {
+          const insightData = campaign.insights.data[0];
+          
+          // Calculate CPA from cost_per_action_type
+          let cpa = '-';
+          if (insightData.cost_per_action_type && insightData.cost_per_action_type.length) {
+            const purchaseCpa = insightData.cost_per_action_type.find(
+              (item: any) => item.action_type === 'purchase'
+            );
+            if (purchaseCpa) {
+              cpa = purchaseCpa.value;
+            }
+          }
+          
+          // Calculate ROAS if available
+          let roas = '-';
+          if (insightData.purchase_roas && insightData.purchase_roas.length) {
+            const purchaseRoas = insightData.purchase_roas.find(
+              (item: any) => item.action_type === 'purchase'
+            );
+            if (purchaseRoas) {
+              roas = purchaseRoas.value;
+            }
+          }
+          
+          // Add calculated fields to insights
+          campaign.insights = {
+            ...insightData,
+            cpa,
+            roas,
+          };
+        }
+        
+        // Calculate results
+        let results = '0';
+        if (campaign.insights && campaign.insights.actions) {
+          const purchaseAction = campaign.insights.actions.find(
+            (action: any) => action.action_type === 'purchase'
+          );
+          if (purchaseAction) {
+            results = purchaseAction.value;
+          }
+        }
+        
+        return {
+          ...campaign,
+          budget,
+          results,
+          spend: campaign.insights ? campaign.insights.spend : '$0.00'
+        };
+      });
+      
+      return campaigns;
     } catch (error: any) {
       console.error(`[CAMPAIGN FETCH] Failed:`, error);
       throw error;

@@ -58,13 +58,11 @@ export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
         return false;
       }
 
-      // Filter by date range if set and not in mock mode
+      // Filter by date range if set and not in mock mode and created_time exists
       // For mock data, we don't filter by date since the dates are simulated
       if (!isMockMode && filters.dateRange?.from && filters.dateRange?.to && campaign.created_time) {
-        const campaignDate = campaign.created_time ? new Date(campaign.created_time) : null;
-        if (campaignDate) {
-          return campaignDate >= filters.dateRange.from && campaignDate <= filters.dateRange.to;
-        }
+        const campaignDate = new Date(campaign.created_time);
+        return campaignDate >= filters.dateRange.from && campaignDate <= filters.dateRange.to;
       }
 
       return true;

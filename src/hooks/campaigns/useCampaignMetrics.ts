@@ -20,8 +20,8 @@ export const useCampaignMetrics = (campaigns: MetaCampaign[] = []) => {
           totalClicks += parseInt(campaign.insights.clicks.replace(/,/g, '')) || 0;
         }
         
-        if (campaign.spend) {
-          const spendValue = parseFloat(campaign.spend.replace(/[$,]/g, '')) || 0;
+        if (campaign.insights.spend) {
+          const spendValue = parseFloat(campaign.insights.spend.replace(/[$,]/g, '')) || 0;
           totalSpend += spendValue;
         }
         
