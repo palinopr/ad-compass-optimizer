@@ -98,30 +98,35 @@ export const logFetchDetails = (
     console.error('[CAMPAIGNS] Invalid or missing ad account ID:', adAccountId);
     throw new Error('🔴 Please select a valid ad account to load campaigns.');
   }
-  
+
   if (error) {
-    console.error('[CAMPAIGNS] Fetch error details:', {
-      error,
-      message: error?.message,
-      stack: error?.stack?.substring(0, 200) || 'No stack',
-      adAccountId
-    });
+    // Enhanced error logging
+    const errorContext = {
+      error: {
+        message: error?.message,
+        code: error?.error?.code || error?.code,
+        type: error?.error?.type || error?.type,
+        subcode: error?.error?.error_subcode,
+        fbtrace_id: error?.error?.fbtrace_id,
+      },
+      response: error?.response?.data,
+      adAccountId,
+      timestamp: new Date().toISOString()
+    };
+
+    console.error('[CAMPAIGNS] Fetch error details:', errorContext);
     
-    // Save raw error response for debugging if available
     try {
-      if (error.response?.data) {
-        localStorage.setItem('raw_campaign_error_response', JSON.stringify(error.response.data));
+      // Store detailed error information for debugging
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('campaign_fetch_error', JSON.stringify(errorContext));
+        
+        if (error.response?.data) {
+          localStorage.setItem('raw_campaign_error_response', JSON.stringify(error.response.data));
+        }
       }
-      
-      // Save additional error context
-      localStorage.setItem('campaign_fetch_error_context', JSON.stringify({
-        adAccountId: adAccountId?.startsWith('act_') ? adAccountId : `act_${adAccountId}`,
-        timestamp: new Date().toISOString(),
-        errorMessage: error?.message || String(error),
-        errorType: error?.name || typeof error
-      }));
     } catch (e) {
-      console.error('[CAMPAIGNS] Error saving error response to storage:', e);
+      console.error('[CAMPAIGNS] Error storing error details:', e);
     }
     return;
   }

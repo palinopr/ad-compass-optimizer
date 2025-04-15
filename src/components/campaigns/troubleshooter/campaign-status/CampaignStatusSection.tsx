@@ -1,22 +1,18 @@
 
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { Bug } from 'lucide-react';
+import MetaApiError from '../../error-display/MetaApiError';
 
 interface CampaignStatusSectionProps {
-  error?: string;
+  error?: any;
   isFetching: boolean;
   campaignCount: number;
 }
 
 const CampaignStatusSection = ({ error, isFetching, campaignCount }: CampaignStatusSectionProps) => {
   if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
+    return <MetaApiError error={error} />;
   }
 
   return (
