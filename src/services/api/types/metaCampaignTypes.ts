@@ -1,4 +1,14 @@
 
+// Define the CampaignExtraStats interface in this file to avoid circular dependencies
+export interface CampaignExtraStats {
+  results: string;
+  cpa: string;
+  roas: string;
+  spend?: string;
+  clicks?: string;
+  impressions?: string;
+}
+
 export interface MetaCampaign {
   id: string;
   name: string;

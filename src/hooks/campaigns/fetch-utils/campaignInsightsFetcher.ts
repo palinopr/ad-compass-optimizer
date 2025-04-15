@@ -1,18 +1,7 @@
-
 import { MetaInsightsService } from '@/services/api/insights/MetaInsightsService';
 import { toast } from '@/hooks/use-toast';
-import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
+import { MetaCampaign, CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
 import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
-
-// Interface for the extra stats we'll add to each campaign
-export interface CampaignExtraStats {
-  results: string;
-  cpa: string;
-  roas: string;
-  spend?: string;
-  clicks?: string;
-  impressions?: string;
-}
 
 /**
  * Fetches detailed insights for a single campaign
