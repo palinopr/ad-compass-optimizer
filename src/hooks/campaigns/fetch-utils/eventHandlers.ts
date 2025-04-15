@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 
 /**
@@ -12,12 +13,19 @@ export const triggerCampaignRefresh = (
   withInsights = false
 ): void => {
   try {
-    console.log(`[CAMPAIGN REFRESH] Triggering refresh, force=${forceRefresh}, withInsights=${withInsights}`);
+    console.log(`[CAMPAIGN REFRESH] 🔄 Triggering refresh, force=${forceRefresh}, withInsights=${withInsights}`);
     
     // If account ID is provided, ensure it's properly formatted
     if (accountId) {
       const formattedId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
       console.log(`[CAMPAIGN REFRESH] Using specified account: ${formattedId}`);
+    }
+
+    // Clear any mock mode flags to ensure real API data is used
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('USE_MOCK_MODE');
+      localStorage.removeItem('mock_campaigns_data');
+      localStorage.removeItem('FORCE_MOCK_REFRESH');
     }
 
     // Store the fetch request time
@@ -38,7 +46,8 @@ export const triggerCampaignRefresh = (
         accountId: accountId || localStorage.getItem('selected_ad_account'),
         withInsights,
         timestamp: new Date().toISOString(),
-        manual: true
+        manual: true,
+        bypassThrottle: forceRefresh // Add flag to bypass throttling on forced refreshes
       }
     });
     window.dispatchEvent(event);

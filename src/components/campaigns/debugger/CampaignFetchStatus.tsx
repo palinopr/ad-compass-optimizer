@@ -5,6 +5,7 @@ import { Database, AlertCircle, RefreshCw, Archive } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 
 interface CampaignFetchStatusProps {
   campaigns: any[];
@@ -24,14 +25,21 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
   const [errorDetails, setErrorDetails] = useState<any>(null);
   const [responseHeaders, setResponseHeaders] = useState<any>(null);
   
-  // Function to force a fetch refresh
+  // Function to force a fetch refresh with bypass throttling
   const forceFetch = () => {
     try {
-      const event = new CustomEvent('force-campaign-refresh', {
-        detail: { timestamp: new Date().toISOString(), manual: true }
-      });
-      window.dispatchEvent(event);
-      console.log('[CAMPAIGN FETCH] Manual refresh triggered');
+      console.log('[CAMPAIGN FETCH] 🚀 Manual refresh triggered with bypass throttling');
+      
+      // Ensure we're not in mock mode
+      localStorage.removeItem('USE_MOCK_MODE');
+      localStorage.removeItem('mock_campaigns_data');
+      
+      // Force refresh with true parameter to bypass throttling
+      triggerCampaignRefresh(true, undefined, true);
+      
+      // Update the UI immediately to show activity
+      setLastManualFetchTime(new Date().toISOString());
+      setFetchAttempts(prev => prev + 1);
     } catch (e) {
       console.error('[CAMPAIGN FETCH] Error triggering manual refresh:', e);
     }
@@ -39,80 +47,33 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
   
   useEffect(() => {
     // Load fetch history from local storage
-    const storedFetchTime = localStorage.getItem('last_campaign_fetch_attempt');
-    const manualFetchTime = localStorage.getItem('last_manual_campaign_fetch');
-    const storedAttempts = localStorage.getItem('campaign_fetch_attempts');
-    const storedError = localStorage.getItem('last_campaign_fetch_error');
-    const storedHeaders = localStorage.getItem('last_campaign_fetch_headers');
-    
-    if (storedFetchTime) {
-      setLastFetchTime(storedFetchTime);
-    }
-    
-    if (manualFetchTime) {
-      setLastManualFetchTime(manualFetchTime);
-    }
-    
-    if (storedAttempts) {
-      setFetchAttempts(parseInt(storedAttempts, 10));
-    }
-    
-    if (storedError) {
-      try {
-        setErrorDetails(JSON.parse(storedError));
-      } catch (e) {
-        console.error('Error parsing stored error:', e);
-      }
-    }
-    
-    if (storedHeaders) {
-      try {
-        setResponseHeaders(JSON.parse(storedHeaders));
-      } catch (e) {
-        console.error('Error parsing stored headers:', e);
-      }
-    }
-    
-    const storedAccount = localStorage.getItem('last_campaign_fetch_account');
-    if (storedAccount) {
-      setLastFetchAccountId(storedAccount);
-    }
-    
-    // Listen for campaign fetch events
-    const handleFetchAttempt = (event: CustomEvent<{accountId?: string}>) => {
-      setFetchAttempts(prev => prev + 1);
-      setLastFetchTime(new Date().toISOString());
-      
-      if (event.detail?.accountId) {
-        setLastFetchAccountId(event.detail.accountId);
-      }
-      
-      // Update manually recorded attempts
+    const loadFetchHistory = () => {
+      const storedFetchTime = localStorage.getItem('last_campaign_fetch_attempt');
+      const manualFetchTime = localStorage.getItem('last_manual_campaign_fetch');
       const storedAttempts = localStorage.getItem('campaign_fetch_attempts');
+      const storedError = localStorage.getItem('last_campaign_fetch_error');
+      const storedHeaders = localStorage.getItem('last_campaign_fetch_headers');
+      
+      if (storedFetchTime) {
+        setLastFetchTime(storedFetchTime);
+      }
+      
+      if (manualFetchTime) {
+        setLastManualFetchTime(manualFetchTime);
+      }
+      
       if (storedAttempts) {
         setFetchAttempts(parseInt(storedAttempts, 10));
       }
       
-      // Update manual fetch time if available
-      const manualTime = localStorage.getItem('last_manual_campaign_fetch');
-      if (manualTime) {
-        setLastManualFetchTime(manualTime);
-      }
-      
-      // Get updated error info if any
-      const storedError = localStorage.getItem('last_campaign_fetch_error');
       if (storedError) {
         try {
           setErrorDetails(JSON.parse(storedError));
         } catch (e) {
           console.error('Error parsing stored error:', e);
         }
-      } else {
-        setErrorDetails(null);
       }
       
-      // Get updated headers if any
-      const storedHeaders = localStorage.getItem('last_campaign_fetch_headers');
       if (storedHeaders) {
         try {
           setResponseHeaders(JSON.parse(storedHeaders));
@@ -120,12 +81,40 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
           console.error('Error parsing stored headers:', e);
         }
       }
+      
+      const storedAccount = localStorage.getItem('last_campaign_fetch_account');
+      if (storedAccount) {
+        setLastFetchAccountId(storedAccount);
+      }
+    };
+    
+    // Initial load
+    loadFetchHistory();
+    
+    // Set up a timer to periodically refresh from localStorage
+    const refreshTimer = setInterval(loadFetchHistory, 2000);
+    
+    // Listen for campaign fetch events
+    const handleFetchAttempt = (event: CustomEvent<{accountId?: string}>) => {
+      console.log('[CAMPAIGN FETCH] Fetch attempt event detected');
+      
+      // Force refresh from localStorage
+      loadFetchHistory();
+      
+      if (event.detail?.accountId) {
+        setLastFetchAccountId(event.detail.accountId);
+      }
     };
     
     window.addEventListener('campaign-fetch-log', handleFetchAttempt as EventListener);
     window.addEventListener('campaign-fetch-attempt', handleFetchAttempt as EventListener);
+    window.addEventListener('campaign-refresh', () => {
+      console.log('[CAMPAIGN FETCH] Refresh event detected, updating UI');
+      loadFetchHistory();
+    });
     
     return () => {
+      clearInterval(refreshTimer);
       window.removeEventListener('campaign-fetch-log', handleFetchAttempt as EventListener);
       window.removeEventListener('campaign-fetch-attempt', handleFetchAttempt as EventListener);
     };
@@ -184,7 +173,7 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
               className="w-full flex gap-2 items-center justify-center"
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              Force Fetch Now
+              Force Fetch Now (Bypass Throttle)
             </Button>
           </div>
 

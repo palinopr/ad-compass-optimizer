@@ -17,7 +17,9 @@ class CampaignFetchLogger {
     try {
       if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
         const attempts = parseInt(localStorage.getItem('campaign_fetch_attempts') || '0', 10);
-        localStorage.setItem('campaign_fetch_attempts', (attempts + 1).toString());
+        const newAttempts = attempts + 1;
+        localStorage.setItem('campaign_fetch_attempts', newAttempts.toString());
+        console.log(`[CAMPAIGN FETCH] 🔢 Updated fetch attempts: ${attempts} → ${newAttempts}`);
       }
     } catch (e) {
       console.error('[CAMPAIGN FETCH] Error updating fetch attempts:', e);
@@ -63,6 +65,7 @@ class CampaignFetchLogger {
         
         // Store headers in localStorage for debugging
         localStorage.setItem('last_campaign_fetch_headers', JSON.stringify(headers));
+        console.log('[CAMPAIGN FETCH] 📋 Response headers captured and stored');
       } catch (err) {
         console.error('[CAMPAIGN FETCH] ❌ Error extracting headers:', err);
       }
@@ -71,6 +74,8 @@ class CampaignFetchLogger {
       try {
         const bodyText = await clonedResponse.text();
         log.responseBody = bodyText.substring(0, 1000); // Limit size for storage
+        
+        console.log('[CAMPAIGN FETCH] 📥 Raw response body:', bodyText.substring(0, 500) + '...');
         
         // Try to parse as JSON
         try {
@@ -91,13 +96,17 @@ class CampaignFetchLogger {
             
             // Store error details in localStorage
             localStorage.setItem('last_campaign_fetch_error', JSON.stringify(log.errorDetails));
+            console.log('[CAMPAIGN FETCH] ❌ API error detected and logged:', log.errorDetails);
           }
           
           // Extract campaign previews for debugging
           if (json.data && Array.isArray(json.data)) {
+            console.log(`[CAMPAIGN FETCH] ✅ Found ${json.data.length} campaigns in response`);
+            
             const parsedResult = await ResponseParser.parseResponse(response, accountId, queryParams);
             if (parsedResult && parsedResult.campaignPreviews) {
               log.campaignPreviews = parsedResult.campaignPreviews;
+              console.log('[CAMPAIGN FETCH] 📊 Campaign previews extracted:', log.campaignPreviews.length);
             }
           }
         } catch (jsonErr) {
@@ -154,6 +163,7 @@ class CampaignFetchLogger {
 
     // Store error details in localStorage
     localStorage.setItem('last_campaign_fetch_error', JSON.stringify(log.errorDetails));
+    console.log('[CAMPAIGN FETCH] ❌ Error details stored in localStorage');
 
     LogStorage.addLog(log);
     LogEventEmitter.emitLogUpdate(log);

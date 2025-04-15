@@ -52,9 +52,14 @@ export const useAdAccountSelection = (availableAccounts: any[] = []) => {
         setSelectedAccount(accountId);
         localStorage.setItem('selected_ad_account', accountId);
         
+        // Clear any mock data to ensure we're using live API
+        localStorage.removeItem('USE_MOCK_MODE');
+        localStorage.removeItem('mock_campaigns_data');
+        localStorage.removeItem('mock_account_data');
+        
         // Trigger initial campaign fetch with insights for the default account
         setTimeout(() => {
-          console.log(`[CAMPAIGN FETCH] Started for default account: act_${accountId}`);
+          console.log(`[CAMPAIGN FETCH] 🚀 Started for default account: act_${accountId}`);
           CampaignFetchLogger.logAttempt(`act_${accountId}`);
           triggerCampaignRefresh(true, accountId, true); 
         }, 500);
@@ -68,12 +73,13 @@ export const useAdAccountSelection = (availableAccounts: any[] = []) => {
 
     try {
       const cleanAccountId = accountId.replace(/^act_/, '');
-      console.log('[META] Changing account to:', cleanAccountId);
+      console.log('[META] 🔄 Changing account to:', cleanAccountId);
       
       // Remove any cached data
       localStorage.removeItem('mock_campaigns_data');
       localStorage.removeItem('mock_account_data');
       localStorage.removeItem('campaigns_cache');
+      localStorage.removeItem('USE_MOCK_MODE');
       
       // Update state and localStorage
       setSelectedAccount(cleanAccountId);
@@ -84,7 +90,7 @@ export const useAdAccountSelection = (availableAccounts: any[] = []) => {
       const formattedId = `act_${cleanAccountId}`;
       
       // Log the account change attempt
-      console.log(`[CAMPAIGN FETCH] Account changed to ${formattedId} - initiating fetch`);
+      console.log(`[CAMPAIGN FETCH] 🔄 Account changed to ${formattedId} - initiating fetch`);
       CampaignFetchLogger.logAttempt(formattedId);
       
       // Notify about account change
@@ -103,7 +109,7 @@ export const useAdAccountSelection = (availableAccounts: any[] = []) => {
       // Force immediate campaign refresh with insights data
       // Use a small timeout to ensure localStorage is updated
       setTimeout(() => {
-        console.log(`[CAMPAIGN FETCH] Forcing refresh for new account: ${formattedId}`);
+        console.log(`[CAMPAIGN FETCH] 🚀 Forcing refresh for new account: ${formattedId}`);
         triggerCampaignRefresh(true, cleanAccountId, true);
       }, 200);
     } catch (e) {

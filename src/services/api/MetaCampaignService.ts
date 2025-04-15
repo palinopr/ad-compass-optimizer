@@ -61,6 +61,12 @@ export class MetaCampaignService extends BaseApiService {
       localStorage.setItem('campaign_fetch_attempts', (attempts + 1).toString());
       
       console.log(`[CAMPAIGN FETCH] 🔄 Fetching campaigns for account ${adAccountId}, attempt #${attempts + 1}`);
+      
+      // IMPORTANT: Clear any mock data to ensure we're using real API
+      localStorage.removeItem('USE_MOCK_MODE');
+      localStorage.removeItem('mock_campaigns_data');
+      localStorage.removeItem('mock_account_data');
+      localStorage.removeItem('FORCE_MOCK_REFRESH');
     
       try {
         // Correctly format the endpoint with the account ID
@@ -73,17 +79,18 @@ export class MetaCampaignService extends BaseApiService {
         const queryParams = `fields=${encodeURIComponent(fields)}&date_preset=${datePreset}&effective_status=["ACTIVE","PAUSED","ARCHIVED"]&access_token=${token}`;
         const fullUrl = `${this.BASE_URL}/${this.API_VERSION}${endpoint}?${queryParams}`;
         
-        console.log(`[CAMPAIGN FETCH] Fetching campaigns from: ${endpoint}`);
+        console.log(`[CAMPAIGN FETCH] 🔍 Fetching campaigns from: ${endpoint}`);
         console.log(`[CAMPAIGN FETCH] Using date_preset: ${datePreset}`);
         
         // Log the API request URL (without token for security)
         const logUrl = `${this.BASE_URL}/${this.API_VERSION}${endpoint}?fields=${fields}&date_preset=${datePreset}`;
         CampaignFetchLogger.logRequest(adAccountId, logUrl);
         
+        console.log(`[CAMPAIGN FETCH] 🚀 Making API request to Meta Graph API...`);
         const response = await fetch(
           fullUrl,
           {
-            method: 'GET',  // Explicitly set to GET for clarity
+            method: 'GET',
             headers: {
               'Content-Type': 'application/json',
             }
@@ -99,20 +106,25 @@ export class MetaCampaignService extends BaseApiService {
         // Log the full response for debugging
         await CampaignFetchLogger.logResponse(response, adAccountId, fields);
 
+        // Clone the response to log raw payload while preserving the original
+        const clonedResponse = response.clone();
+        const rawData = await clonedResponse.text();
+        console.log(`[CAMPAIGN FETCH] 📥 Raw campaign fetch payload:`, rawData);
+
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`[CAMPAIGN FETCH] Error response: ${response.status} ${response.statusText}`, errorText);
+          console.error(`[CAMPAIGN FETCH] ❌ Error response: ${response.status} ${response.statusText}`, errorText);
           throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
         
         if (!data || !data.data) {
-          console.error('[CAMPAIGN FETCH] Invalid response format:', data);
+          console.error('[CAMPAIGN FETCH] ❌ Invalid response format:', data);
           throw new Error('Invalid response format from Meta API');
         }
 
-        console.log(`[CAMPAIGN FETCH] Received ${data.data.length} campaigns with insights data`);
+        console.log(`[CAMPAIGN FETCH] ✅ Received ${data.data.length} campaigns with insights data`);
         
         // Process campaign data including insights
         const campaigns = data.data.map((campaign: any) => {
@@ -144,11 +156,12 @@ export class MetaCampaignService extends BaseApiService {
       
         return campaigns;
       } catch (fetchError: any) {
+        console.error(`[CAMPAIGN FETCH] 🚨 Campaign fetch failed:`, fetchError.message);
         CampaignFetchLogger.logError(fetchError, adAccountId);
         throw fetchError;
       }
     } catch (error: any) {
-      console.error(`[CAMPAIGN FETCH] Error fetching campaigns for ad account ${adAccountId}:`, error);
+      console.error(`[CAMPAIGN FETCH] ❌ Error fetching campaigns for ad account ${adAccountId}:`, error);
     
       localStorage.setItem('last_campaign_fetch_success', 'false');
       localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
