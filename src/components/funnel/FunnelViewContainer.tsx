@@ -271,7 +271,7 @@ const FunnelViewContainer = () => {
         setIsFetchingFunnel(true);
         console.log('[FUNNEL] Fetching funnel data for account:', formattedAccount);
         
-        const campaignsUrl = `https://graph.facebook.com/v17.0/${formattedAccount}/campaigns?fields=id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_7d){impressions,clicks,spend,actions,cost_per_action_type}&access_token=[REDACTED]`;
+        const campaignsUrl = `https://graph.facebook.com/v17.0/${formattedAccount}/campaigns?fields=id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_30d){impressions,clicks,spend,actions,cost_per_action_type}&access_token=[REDACTED]`;
         console.log('[FUNNEL] API URL format:', campaignsUrl);
         
         const data = await MetaFunnelService.fetchFunnelData(token, formattedAccount);
