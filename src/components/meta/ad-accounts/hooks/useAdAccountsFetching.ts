@@ -1,9 +1,8 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { metaAuthService, MetaAuthService } from '@/services/MetaAuthService';
+import { metaAuthService } from '@/services/MetaAuthService';
 import { AdAccount } from '../types';
-import { getMockAdAccount } from '../utils/mockAccountData';
-import { fetchSelectedAccounts, fetchAllAccounts } from '../utils/fetchUtils';
+import { fetchAllAccounts } from '../utils/fetchUtils';
 import { useAdAccountsError } from './useAdAccountsError';
 
 export function useAdAccountsFetching() {
@@ -13,45 +12,9 @@ export function useAdAccountsFetching() {
   const errorRef = useRef<HTMLDivElement>(null);
   const { handleFetchError } = useAdAccountsError();
   
-  const isMockMode = () => localStorage.getItem("USE_MOCK_MODE") === "true";
-  
-  useEffect(() => {
-    if (isMockMode()) {
-      console.log('🎭 Mock mode: Using mock ad accounts');
-      const mockAccount = getMockAdAccount();
-      setAdAccounts([mockAccount]);
-      
-      // Set as selected account if none exists
-      const currentSelected = localStorage.getItem('selected_ad_account');
-      if (!currentSelected) {
-        localStorage.setItem('selected_ad_account', mockAccount.id.replace(/^act_/, ''));
-      }
-    }
-  }, []);
-  
   const fetchAdAccounts = async () => {
-    if (isMockMode()) {
-      console.log('🎭 Mock mode: Using mock ad accounts');
-      setAdAccounts([getMockAdAccount()]);
-      setIsLoading(false);
-      return;
-    }
-
     const accessToken = metaAuthService.getAccessToken();
-    console.log('[AD ACCOUNT FETCH] Token retrieval result:', accessToken ? 'Token found' : '❌ NOT FOUND');
-    
-    // Check token timestamp and warn if potentially expired
-    const timestamp = localStorage.getItem('meta_token_timestamp');
-    if (timestamp) {
-      const tokenAge = Date.now() - parseInt(timestamp);
-      if (tokenAge > 3600 * 1000) {
-        console.warn('⚠️ Meta token may be expired. Consider re-authenticating.');
-        setError('Warning: Meta token may be expired. Please consider reconnecting.');
-      }
-    }
-    
     if (!accessToken) {
-      console.log('No access token available for fetching ad accounts');
       setError('Not authenticated with Meta');
       return;
     }
@@ -61,114 +24,40 @@ export function useAdAccountsFetching() {
     
     try {
       console.log('[AD ACCOUNT FETCH] Starting fetch operation...');
-      const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
-      let selectedIds: string[] = [];
-      
-      if (selectedAdAccounts) {
-        try {
-          selectedIds = JSON.parse(selectedAdAccounts);
-          console.log('[AD ACCOUNT FETCH] Found selected ad accounts in storage:', selectedIds);
-        } catch (e) {
-          console.error('[AD ACCOUNT FETCH] Error parsing selected ad accounts:', e);
-          localStorage.removeItem('selected_ad_accounts');
-        }
-      }
-      
-      let fetchedAccounts: AdAccount[] = [];
-      
-      if (selectedIds.length > 0) {
-        console.log('[AD ACCOUNT FETCH] Fetching specific selected accounts:', selectedIds);
-        fetchedAccounts = await fetchSelectedAccounts(selectedIds, accessToken);
-        
-        if (fetchedAccounts.length === 0) {
-          console.log('[AD ACCOUNT FETCH] No valid accounts found from stored IDs, fetching all available accounts');
-          fetchedAccounts = await fetchAllAccounts(accessToken);
-        }
-      } else {
-        console.log('[AD ACCOUNT FETCH] No stored accounts, fetching all available accounts');
-        fetchedAccounts = await fetchAllAccounts(accessToken);
-      }
-      
-      console.log('[AD ACCOUNT FETCH] Successfully fetched accounts:', fetchedAccounts.length);
-      console.log('[AD ACCOUNT FETCH] Account details:', fetchedAccounts);
+      const fetchedAccounts = await fetchAllAccounts(accessToken);
       
       if (fetchedAccounts.length === 0) {
-        setError('⚠️ No ad accounts returned. Please check Meta permissions and token scopes.');
+        setError('No ad accounts found. Please check Meta permissions and token scopes.');
+      } else {
+        // Auto-select first account if none is selected
+        const currentSelected = localStorage.getItem('selected_ad_account');
+        if (!currentSelected && fetchedAccounts.length > 0) {
+          const firstAccount = fetchedAccounts[0];
+          localStorage.setItem('selected_ad_account', firstAccount.id.replace(/^act_/, ''));
+        }
       }
       
       setAdAccounts(fetchedAccounts);
       
     } catch (err) {
-      const { error: errorMessage, shouldReconnect } = handleFetchError(err);
+      const { error: errorMessage } = handleFetchError(err);
+      setError(errorMessage);
       
-      // Store the error in localStorage for post-mortem debugging
-      try {
-        const errorToStore = {
-          timestamp: new Date().toISOString(),
-          error: err instanceof Error ? err.message : String(err),
-          rawError: err,
-          context: {
-            shouldReconnect,
-            tokenPresent: !!metaAuthService.getAccessToken(),
-            mockMode: isMockMode()
-          }
-        };
-        
-        localStorage.setItem('last_meta_error', JSON.stringify(errorToStore));
-        console.log('[META DEBUG] Last Meta API error saved to localStorage:', errorToStore);
-      } catch (storageErr) {
-        console.warn('[META DEBUG] Failed to store error in localStorage:', storageErr);
-      }
-      
-      // Check for missing permissions
-      try {
-        const rawPermissions = localStorage.getItem(MetaAuthService.PERMISSIONS_KEY);
-        const permissions = rawPermissions ? JSON.parse(rawPermissions) : [];
-        console.log('[META DEBUG] Token permissions at failure:', permissions);
-        
-        // Track which specific permissions are missing
-        const missingPermissions = [];
-        if (!permissions.includes("ads_read")) missingPermissions.push("ads_read");
-        if (!permissions.includes("ads_management")) missingPermissions.push("ads_management");
-        
-        if (missingPermissions.length > 0) {
-          console.warn(`[META DEBUG] Missing required permissions: ${missingPermissions.join(", ")}`);
-          setError(`Your Meta token is missing required permissions (${missingPermissions.join(", ")}). Please reconnect your Meta account with full ad access.`);
-        } else {
-          setError(errorMessage);
-        }
-      } catch (parseErr) {
-        console.warn('[META DEBUG] Failed to parse token permissions:', parseErr);
-        setError(errorMessage); // Fallback to original error
-      }
-      
-      // Auto-scroll to error when error is set
+      // Auto-scroll to error when it occurs
       setTimeout(() => {
         if (errorRef.current) {
           errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 100);
-      
-      if (shouldReconnect) {
-        localStorage.setItem('show_meta_connection', 'true');
-        localStorage.setItem('meta_connection_context', 'token');
-      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Fetch accounts on mount
   useEffect(() => {
-    // Auto-select first account if no account is selected
-    if (adAccounts.length > 0) {
-      const currentSelected = localStorage.getItem('selected_ad_account');
-      if (!currentSelected) {
-        const firstAccount = adAccounts[0];
-        console.log('Auto-selecting first account:', firstAccount.id);
-        localStorage.setItem('selected_ad_account', firstAccount.id.replace(/^act_/, ''));
-      }
-    }
-  }, [adAccounts]);
+    fetchAdAccounts();
+  }, []);
 
   return {
     adAccounts,

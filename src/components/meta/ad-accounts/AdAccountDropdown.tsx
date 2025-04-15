@@ -31,42 +31,20 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
   onChange,
 }) => {
   const [open, setOpen] = React.useState(false);
-  
-  // Select first account if none selected and accounts are available
-  React.useEffect(() => {
-    if (!selectedAccount && adAccounts.length > 0) {
-      onChange(adAccounts[0].id.replace(/^act_/, ''));
-    }
-  }, [adAccounts, selectedAccount, onChange]);
-  
+
   // Find the selected account label to display
   const selectedAccountLabel = React.useMemo(() => {
     if (isLoading) return 'Loading accounts...';
-    
     if (adAccounts.length === 0) return 'No accounts available';
-    
+
     const account = adAccounts.find(account => {
-      // Normalize account IDs for comparison by removing 'act_' prefix if present
       const normalizedId = account.id.replace(/^act_/, '');
       const normalizedSelected = selectedAccount?.replace(/^act_/, '') || '';
       return normalizedId === normalizedSelected;
     });
-    
+
     return account ? `${account.name} (${account.id})` : 'Select an ad account';
   }, [adAccounts, selectedAccount, isLoading]);
-
-  // Handle selection with proper event management
-  const handleSelect = React.useCallback((accountId: string) => {
-    console.log('Account selection triggered:', accountId);
-    
-    // Close dropdown first to prevent UI freeze
-    setOpen(false);
-    
-    // Use setTimeout to ensure UI updates before potentially heavy operations
-    setTimeout(() => {
-      onChange(accountId);
-    }, 10);
-  }, [onChange]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -100,13 +78,18 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
               <CommandItem
                 key={account.id}
                 value={account.id}
-                onSelect={() => handleSelect(account.id)}
+                onSelect={() => {
+                  onChange(account.id);
+                  setOpen(false);
+                }}
                 className="cursor-pointer"
               >
                 <Check
                   className={cn(
                     "mr-2 h-4 w-4",
-                    selectedAccount?.replace(/^act_/, '') === account.id.replace(/^act_/, '') ? "opacity-100" : "opacity-0"
+                    selectedAccount?.replace(/^act_/, '') === account.id.replace(/^act_/, '') 
+                      ? "opacity-100" 
+                      : "opacity-0"
                   )}
                 />
                 <div className="flex flex-col">
