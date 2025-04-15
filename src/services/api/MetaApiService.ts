@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { MetaAdAccount } from './MetaAdAccountService';
 
@@ -74,7 +75,8 @@ export class MetaApiService extends BaseApiService {
     }
   }
 
-  private static validateToken(token: string, method: string) {
+  // Change from private to protected to match parent class
+  protected static validateToken(token: string, method: string) {
     if (!token || token.length < 50) {
       console.warn(`[META API ${method}] Invalid token:`, token);
       throw new Error('Invalid Meta access token');
