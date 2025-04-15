@@ -7,7 +7,13 @@ export interface CampaignFetchLog {
   statusText?: string;
   responseBody?: string;
   parsedJson?: any;
-  error?: string;
+  error?: string | {
+    code?: string | number;
+    type?: string;
+    message?: string;
+    subcode?: string | number;
+    fbtraceId?: string;
+  };
   errorDetails?: {
     status?: number;
     statusText?: string;

@@ -1,3 +1,4 @@
+
 import { CampaignFetchLog } from './types/campaignLogTypes';
 import LogStorage from './services/logStorage';
 import LogEventEmitter from './services/logEventEmitter';
@@ -54,6 +55,7 @@ class CampaignFetchLogger {
         const errorData = await response.clone().json();
         const error = errorData?.error || {};
         
+        // Update error logging to use the new flexible error property
         log.error = {
           code: error.code,
           type: error.type,
