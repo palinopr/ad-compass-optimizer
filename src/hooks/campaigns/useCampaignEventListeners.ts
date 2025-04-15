@@ -1,59 +1,66 @@
 
 import { useEffect } from 'react';
 
-export function useCampaignEventListeners(
-  handleFetchCampaigns: (forceRefresh?: boolean) => Promise<void>,
+export const useCampaignEventListeners = (
+  fetchCampaigns: (forceRefresh?: boolean) => void,
   incrementDisplayRefresh: () => void,
   forceUiRefresh: () => void,
   clearCampaigns: () => void,
   status?: string
-) {
+) => {
+  // Listen for campaign data refresh events
   useEffect(() => {
-    const handleRefreshEvent = (event: CustomEvent) => {
-      const { forceRefresh = false } = event.detail || {};
-      console.log(`Campaign refresh event received with forceRefresh=${forceRefresh}`);
-      handleFetchCampaigns(forceRefresh);
-    };
-
-    const handleDisplayRefreshEvent = () => {
-      console.log('Display refresh event received');
-      incrementDisplayRefresh();
+    const handleCampaignRefresh = (event: CustomEvent<{ force: boolean, accountId?: string, immediate?: boolean }>) => {
+      const { force = false, accountId, immediate = false } = event.detail || {};
+      console.log(`[CAMPAIGN EVENT] Refresh requested. Force: ${force}, Immediate: ${immediate}, Account: ${accountId || 'not specified'}`);
+      
+      // If immediate is set to true, fetch campaigns without any delay
+      if (immediate) {
+        console.log(`[CAMPAIGN FETCH] Started for act_${accountId || localStorage.getItem('selected_ad_account')}`);
+        fetchCampaigns(force);
+      } else {
+        // Add a small delay for non-immediate refreshes to allow other state updates to complete
+        setTimeout(() => fetchCampaigns(force), 100);
+      }
     };
     
-    const handleClearCampaignsEvent = () => {
-      console.log('Clear campaigns event received');
+    const handleDataClear = () => {
       clearCampaigns();
     };
     
-    const handleForceUiRefreshEvent = () => {
-      console.log('Force UI refresh event received');
+    const handleDisplayRefresh = () => {
+      incrementDisplayRefresh();
+    };
+    
+    const handleForceUiRefresh = () => {
       forceUiRefresh();
     };
     
-    // New handler for mock campaigns sync
-    const handleSyncMockCampaignsEvent = (event: CustomEvent) => {
-      console.log('Mock campaigns sync event received');
-      if (event.detail?.campaigns) {
-        console.log(`Syncing ${event.detail.campaigns.length} mock campaigns to state`);
-        // Use updateCampaigns directly from the event data
-        forceUiRefresh();
-      }
+    const handleAdAccountChange = (event: CustomEvent<{ accountId: string }>) => {
+      const accountId = event.detail?.accountId;
+      console.log(`[CAMPAIGN EVENT] Ad account changed to: ${accountId}`);
+      
+      // Log the account change
+      console.log(`[CAMPAIGN FETCH] Started for act_${accountId}`);
+      
+      // When the ad account changes, trigger an immediate campaign refresh
+      setTimeout(() => {
+        fetchCampaigns(true);
+      }, 300);
     };
+    
+    window.addEventListener('campaign-data-refresh', handleCampaignRefresh as EventListener);
+    window.addEventListener('campaign-display-refresh', handleDisplayRefresh as EventListener);
+    window.addEventListener('campaign-ui-refresh', handleForceUiRefresh as EventListener);
+    window.addEventListener('campaign-data-clear', handleDataClear as EventListener);
+    window.addEventListener('ad-account-changed', handleAdAccountChange as EventListener);
 
-    // Add event listeners
-    window.addEventListener('refresh-campaigns', handleRefreshEvent as EventListener);
-    window.addEventListener('display-refresh', handleDisplayRefreshEvent);
-    window.addEventListener('clear-campaigns', handleClearCampaignsEvent);
-    window.addEventListener('force-ui-refresh', handleForceUiRefreshEvent);
-    window.addEventListener('sync-mock-campaigns', handleSyncMockCampaignsEvent as EventListener);
-
-    // Clean up
     return () => {
-      window.removeEventListener('refresh-campaigns', handleRefreshEvent as EventListener);
-      window.removeEventListener('display-refresh', handleDisplayRefreshEvent);
-      window.removeEventListener('clear-campaigns', handleClearCampaignsEvent);
-      window.removeEventListener('force-ui-refresh', handleForceUiRefreshEvent);
-      window.removeEventListener('sync-mock-campaigns', handleSyncMockCampaignsEvent as EventListener);
+      window.removeEventListener('campaign-data-refresh', handleCampaignRefresh as EventListener);
+      window.removeEventListener('campaign-display-refresh', handleDisplayRefresh as EventListener);
+      window.removeEventListener('campaign-ui-refresh', handleForceUiRefresh as EventListener);
+      window.removeEventListener('campaign-data-clear', handleDataClear as EventListener);
+      window.removeEventListener('ad-account-changed', handleAdAccountChange as EventListener);
     };
-  }, [handleFetchCampaigns, incrementDisplayRefresh, forceUiRefresh, clearCampaigns]);
-}
+  }, [fetchCampaigns, incrementDisplayRefresh, forceUiRefresh, clearCampaigns, status]);
+};

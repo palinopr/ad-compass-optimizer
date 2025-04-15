@@ -15,6 +15,14 @@ class CampaignFetchLogger {
 
   static logAttempt(accountId: string) {
     console.log('[CAMPAIGN FETCH] 🔄 Fetching campaigns for:', accountId);
+    
+    // Dispatch event to notify UI components
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('campaign-fetch-attempt', { 
+        detail: { accountId } 
+      });
+      window.dispatchEvent(event);
+    }
   }
 
   static async logResponse(response: Response, accountId: string) {

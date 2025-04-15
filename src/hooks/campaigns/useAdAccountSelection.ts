@@ -140,19 +140,19 @@ export function useAdAccountSelection() {
         });
         window.dispatchEvent(event);
         console.log('[META] Dispatched ad-account-changed event');
+        
+        // NEW: Force immediate campaign fetch after account selection
+        console.log('[CAMPAIGN FETCH] Triggering immediate fetch after account selection');
+        const fetchEvent = new CustomEvent('campaign-data-refresh', { 
+          detail: { 
+            force: true,
+            accountId: cleanAccountId,
+            immediate: true 
+          } 
+        });
+        window.dispatchEvent(fetchEvent);
       } catch (e) {
         console.error('Error dispatching account change event:', e);
-      }
-      
-      // Trigger campaign data refresh
-      try {
-        const refreshEvent = new CustomEvent('campaign-data-refresh', {
-          detail: { force: true }
-        });
-        window.dispatchEvent(refreshEvent);
-        console.log('[META] Dispatched campaign-data-refresh event');
-      } catch (e) {
-        console.error('Error dispatching refresh event:', e);
       }
       
       return true;

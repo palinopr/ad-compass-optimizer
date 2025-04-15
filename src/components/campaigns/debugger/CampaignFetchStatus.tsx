@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Database, AlertCircle } from 'lucide-react';
+import { Database, AlertCircle, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -18,6 +18,7 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
 }) => {
   const [fetchAttempts, setFetchAttempts] = useState(0);
   const [lastFetchTime, setLastFetchTime] = useState<string | null>(null);
+  const [lastFetchAccountId, setLastFetchAccountId] = useState<string | null>(null);
   
   useEffect(() => {
     // Load fetch history from local storage
@@ -26,15 +27,27 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
       setLastFetchTime(storedFetchTime);
     }
     
+    const storedAccount = localStorage.getItem('last_campaign_fetch_account');
+    if (storedAccount) {
+      setLastFetchAccountId(storedAccount);
+    }
+    
     // Listen for campaign fetch events
-    const handleFetchAttempt = () => {
+    const handleFetchAttempt = (event: CustomEvent<{accountId?: string}>) => {
       setFetchAttempts(prev => prev + 1);
       setLastFetchTime(new Date().toISOString());
+      
+      if (event.detail?.accountId) {
+        setLastFetchAccountId(event.detail.accountId);
+      }
     };
     
-    window.addEventListener('campaign-fetch-attempt', handleFetchAttempt);
+    window.addEventListener('campaign-fetch-log', handleFetchAttempt as EventListener);
+    window.addEventListener('campaign-fetch-attempt', handleFetchAttempt as EventListener);
+    
     return () => {
-      window.removeEventListener('campaign-fetch-attempt', handleFetchAttempt);
+      window.removeEventListener('campaign-fetch-log', handleFetchAttempt as EventListener);
+      window.removeEventListener('campaign-fetch-attempt', handleFetchAttempt as EventListener);
     };
   }, []);
 
@@ -61,10 +74,24 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
             <span className="text-sm font-mono">{fetchAttempts}</span>
           </div>
           
+          {lastFetchAccountId && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Last account:</span>
+              <span className="text-sm font-mono truncate max-w-[150px]">act_{lastFetchAccountId}</span>
+            </div>
+          )}
+          
           {lastFetchTime && (
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium">Last attempt:</span>
               <span className="text-sm">{formatTime(lastFetchTime)}</span>
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="flex items-center gap-2 text-blue-600 text-xs mt-2">
+              <RefreshCw className="h-3 w-3 animate-spin" />
+              <span>Fetching campaigns...</span>
             </div>
           )}
 

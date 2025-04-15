@@ -1,112 +1,87 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { AdAccount } from '../types';
+import { useCallback } from 'react';
+import { MetaApiService } from '@/services/MetaApiService';
+import { metaAuthService } from '@/services/MetaAuthService';
+import { toast } from '@/hooks/use-toast';
+import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
+import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
 
-export function useAdAccountSelection(adAccounts: AdAccount[]) {
+export const useAdAccountSelection = (availableAccounts: any[] = []) => {
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
 
-  // Initialize selection from localStorage or default to first account
+  // Load the initially selected account from localStorage
   useEffect(() => {
     try {
-      // Get stored account and validate it exists in available accounts
-      const storedAccountId = localStorage.getItem('selected_ad_account');
-      console.log('[META] Checking stored account selection:', storedAccountId);
-      console.log('[META] Available accounts:', adAccounts.length);
-      
-      if (storedAccountId && adAccounts.some(acc => 
-        acc && acc.id && acc.id.replace(/^act_/, '') === storedAccountId.replace(/^act_/, '')
-      )) {
-        console.log('[META] Using stored account selection:', storedAccountId);
-        setSelectedAccount(storedAccountId);
-      } else if (adAccounts.length > 0) {
-        // Default to first valid account if stored one is invalid or not found
-        const firstAccount = adAccounts[0];
-        if (firstAccount && firstAccount.id) {
-          const accountId = firstAccount.id.replace(/^act_/, '');
-          console.log('[META] No valid stored account, defaulting to first account:', accountId);
-          setSelectedAccount(accountId);
-          localStorage.setItem('selected_ad_account', accountId);
-        }
+      const storedAccount = localStorage.getItem('selected_ad_account');
+      if (storedAccount) {
+        setSelectedAccount(storedAccount);
+        console.log('[META] Loaded selected account from storage:', storedAccount);
+      } else {
+        console.log('[META] No selected account in storage');
       }
     } catch (e) {
-      console.error('[META] Error initializing account selection:', e);
-      setError('Error loading account selection');
+      console.error('[META] Error loading selected account:', e);
     }
-  }, [adAccounts]);
+  }, []);
 
-  const handleAccountChange = useCallback((value: string) => {
-    if (!value) {
-      console.warn('[META] Empty account ID provided to handleAccountChange');
-      return;
+  // Update selected account when accounts load
+  useEffect(() => {
+    if (Array.isArray(availableAccounts) && availableAccounts.length > 0 && !selectedAccount) {
+      // If we have accounts but no selection, use the first one as default
+      const firstAccount = availableAccounts[0];
+      if (firstAccount && firstAccount.id) {
+        const accountId = firstAccount.id.replace(/^act_/, '');
+        console.log('[META] Setting default selected account:', accountId);
+        setSelectedAccount(accountId);
+        localStorage.setItem('selected_ad_account', accountId);
+      }
     }
+  }, [availableAccounts, selectedAccount]);
+
+  // Handle account change
+  const handleAccountChange = useCallback((accountId: string) => {
+    if (!accountId) return;
 
     try {
-      // Validate account exists in fetched accounts
-      const accountExists = adAccounts.some(acc => 
-        acc && acc.id && acc.id.replace(/^act_/, '') === value.replace(/^act_/, '')
-      );
-
-      if (!accountExists) {
-        console.error('[META] Selected account not found in available accounts:', value);
-        toast({
-          title: "Invalid Account Selection",
-          description: "The selected account is not available. Please choose a valid account.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('[META] Account selection change initiated:', value);
+      const cleanAccountId = accountId.replace(/^act_/, '');
+      console.log('[META] Changing account to:', cleanAccountId);
       
-      // Store without 'act_' prefix for consistency
-      const accountId = value.replace(/^act_/, '');
-      console.log('[META] Normalized account ID for storage:', accountId);
+      // Update state and localStorage
+      setSelectedAccount(cleanAccountId);
+      localStorage.setItem('selected_ad_account', cleanAccountId);
+      localStorage.setItem('selected_ad_accounts', JSON.stringify([cleanAccountId]));
       
-      // Update state
-      setSelectedAccount(accountId);
-      setError(null);
+      // Log the account change attempt
+      console.log(`[CAMPAIGN FETCH] Started for act_${cleanAccountId}`);
+      CampaignFetchLogger.logAttempt(cleanAccountId);
       
-      // Update localStorage
-      localStorage.setItem('selected_ad_account', accountId);
-      localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
-      
-      // Show toast notification
+      // Notify about account change
       toast({
-        title: "Ad Account Selected",
-        description: "Your ad account selection has been updated."
+        title: "Ad Account Changed",
+        description: `Now using account ${cleanAccountId}`,
+        duration: 3000
       });
-
-      // Dispatch events for account change
-      const event = new CustomEvent('ad-account-changed', { 
-        detail: { accountId } 
+      
+      // Dispatch event for other components to react
+      const event = new CustomEvent('ad-account-changed', {
+        detail: { accountId: cleanAccountId }
       });
       window.dispatchEvent(event);
-      console.log('[META] Dispatched ad-account-changed event');
-
-      // Trigger campaign data refresh
-      const refreshEvent = new CustomEvent('campaign-data-refresh', {
-        detail: { force: true }
-      });
-      window.dispatchEvent(refreshEvent);
-      console.log('[META] Dispatched campaign-data-refresh event');
-
-    } catch (err) {
-      console.error('[META] Error in account change handler:', err);
-      setError('Failed to change account');
+      
+      // Force immediate campaign refresh
+      triggerCampaignRefresh(true);
+    } catch (e) {
+      console.error('[META] Error changing account:', e);
       toast({
         title: "Error",
-        description: "Failed to change ad account. Please try again.",
+        description: "Failed to change ad account",
         variant: "destructive"
       });
     }
-  }, [adAccounts, toast]);
+  }, []);
 
   return {
     selectedAccount,
-    error,
     handleAccountChange
   };
-}
+};

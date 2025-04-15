@@ -6,6 +6,7 @@ import { useAdAccountSelection } from '../useAdAccountSelection';
 import { useCampaignFetcher } from '../useCampaignFetcher';
 import { toast } from '@/hooks/use-toast';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
 
 export const useRefreshLogic = (status?: string) => {
   const { validateAuthentication } = useAuthCheck();
@@ -73,6 +74,10 @@ export const useRefreshLogic = (status?: string) => {
 
       const currentAccountId = accountResult.adAccountId;
       localStorage.setItem('last_fetched_ad_account', currentAccountId);
+      
+      // Log the campaign fetch attempt with clear messaging
+      console.log(`[CAMPAIGN FETCH] Started for ${currentAccountId}`);
+      CampaignFetchLogger.logAttempt(currentAccountId.replace(/^act_/, ''));
       
       console.log('[CAMPAIGNS TAB] Fetch triggered with:', {
         token: `${token.substring(0, 10)}...${token.substring(token.length - 10)}`,
