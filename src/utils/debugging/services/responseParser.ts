@@ -1,36 +1,20 @@
 
-import { CampaignFetchLog, CampaignPreview } from '../types/campaignLogTypes';
+import { CampaignFetchLog } from '../types/campaignLogTypes';
+import { parseDatePreset } from './parsers/datePresetParser';
+import { parseCampaignPreviews, hasInsightsData } from './parsers/campaignPreviewParser';
+import { parseResponseBody } from './parsers/responseBodyParser';
 
 class ResponseParser {
   static async parseResponse(response: Response, accountId: string, queryParams?: string): Promise<Partial<CampaignFetchLog>> {
-    const responseText = await response.clone().text();
+    const responseText = await parseResponseBody(response);
     let parsedJson;
-    let hasInsights = false;
-    let campaignPreviews: CampaignPreview[] = [];
-    let datePreset = '';
-
+    let campaignPreviews = [];
+    
     try {
       parsedJson = JSON.parse(responseText);
       
-      if (queryParams) {
-        const datePresetMatch = queryParams.match(/date_preset=([^&]+)/);
-        if (datePresetMatch) {
-          datePreset = datePresetMatch[1];
-        }
-      }
-      
       if (parsedJson && parsedJson.data && Array.isArray(parsedJson.data)) {
-        campaignPreviews = parsedJson.data.map(campaign => ({
-          id: campaign.id,
-          name: campaign.name,
-          status: campaign.status,
-          spend: campaign.spend || '$0.00',
-          results: campaign.results || '0'
-        }));
-
-        hasInsights = parsedJson.data.some(
-          (campaign: any) => campaign.insights && campaign.insights.data && campaign.insights.data.length > 0
-        );
+        campaignPreviews = parseCampaignPreviews(parsedJson.data);
       }
     } catch (err) {
       console.error('[CAMPAIGN FETCH] ❌ Failed to parse JSON:', err);
@@ -43,8 +27,8 @@ class ResponseParser {
       statusText: response.statusText,
       responseBody: responseText,
       parsedJson,
-      insightsData: hasInsights,
-      datePreset,
+      insightsData: parsedJson?.data ? hasInsightsData(parsedJson.data) : false,
+      datePreset: parseDatePreset(queryParams),
       queryParams,
       campaignPreviews
     };
