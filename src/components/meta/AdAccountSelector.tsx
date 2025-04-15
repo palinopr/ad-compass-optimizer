@@ -1,41 +1,32 @@
+
 import React from 'react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RefreshCw, PlusCircle, ExternalLink } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Briefcase, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAdAccountsFetching } from './ad-accounts/hooks/useAdAccountsFetching';
-import { useAdAccountSelection } from '@/hooks/campaigns/useAdAccountSelection';
-import { Skeleton } from '@/components/ui/skeleton';
-import ExternalMetaLink from './ExternalMetaLink';
+import AdAccountDropdown from './ad-accounts/AdAccountDropdown';
+import { useAdAccounts } from './ad-accounts/hooks/useAdAccounts';
 import { toast } from '@/hooks/use-toast';
 
 const AdAccountSelector = () => {
   const { 
     adAccounts, 
+    selectedAccount, 
     isLoading, 
     error, 
-    fetchAdAccounts
-  } = useAdAccountsFetching();
-  
-  const { getSelectedAdAccount, switchToAccount } = useAdAccountSelection();
-  const selectedAccountData = getSelectedAdAccount();
-  const selectedAccount = selectedAccountData.hasAccount 
-    ? selectedAccountData.adAccountId.replace('act_', '') 
-    : '';
+    fetchAdAccounts, 
+    handleAccountChange 
+  } = useAdAccounts();
 
-  const handleAccountChange = (value: string) => {
-    // First, clear any campaign fetch errors
-    localStorage.removeItem('last_campaign_fetch_error');
-    
-    // Switch to the new account
-    switchToAccount(value);
-  };
+  // Log accounts for debugging
+  React.useEffect(() => {
+    console.log('[META] Available Ad Accounts:', adAccounts);
+    console.log('[META] Selected Account:', selectedAccount);
+  }, [adAccounts, selectedAccount]);
 
-  // Refresh with notification
-  const handleRefreshAccounts = () => {
+  const handleRefresh = () => {
     toast({
       title: "Refreshing Ad Accounts",
-      description: "Fetching your latest ad accounts..."
+      description: "Fetching your latest Meta ad accounts..."
     });
     fetchAdAccounts();
   };
@@ -43,64 +34,43 @@ const AdAccountSelector = () => {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center">
+        <CardTitle className="flex items-center text-base">
+          <Briefcase className="w-4 h-4 mr-2 text-blue-600" />
           Ad Account Selection
         </CardTitle>
       </CardHeader>
       <CardContent>
         {error && (
           <div className="space-y-2 mb-3">
-            <p className="text-sm text-red-500">🛑 Ad account fetch failed</p>
+            <p className="text-sm text-red-500">Error fetching ad accounts</p>
             <div className="text-xs bg-red-50 border border-red-200 rounded p-2">
-              <div className="font-mono text-red-600 whitespace-pre-wrap break-all">
-                {error || 'No details returned from Meta'}
-              </div>
+              <code className="text-red-600 whitespace-pre-wrap break-all">
+                {error}
+              </code>
             </div>
           </div>
         )}
         
-        {isLoading ? (
-          <Skeleton className="h-10 w-full" />
-        ) : (
-          <Select value={selectedAccount} onValueChange={handleAccountChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select an ad account" />
-            </SelectTrigger>
-            <SelectContent>
-              {adAccounts.length > 0 ? (
-                adAccounts.map(account => (
-                  <SelectItem key={account.id} value={account.id.replace('act_', '')}>
-                    {account.name} ({account.id.replace('act_', '')})
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="no-accounts" disabled>
-                  No ad accounts found
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-between pt-1">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={handleRefreshAccounts}
-          disabled={isLoading}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <AdAccountDropdown
+          adAccounts={adAccounts}
+          selectedAccount={selectedAccount}
+          isLoading={isLoading}
+          onChange={handleAccountChange}
+        />
         
-        <div className="flex gap-2">
-          <ExternalMetaLink type="createCampaign" size="sm">
-            <PlusCircle className="h-3 w-3" />
-            Create Campaign
-          </ExternalMetaLink>
+        <div className="flex justify-end mt-4">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh Accounts
+          </Button>
         </div>
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 };

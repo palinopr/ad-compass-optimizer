@@ -1,6 +1,6 @@
+
 import { MetaApiService } from '@/services/MetaApiService';
 import { AdAccount } from '../types';
-import { metaAuthService } from '@/services/MetaAuthService';
 import { getMockAdAccount } from './mockAccountData';
 
 export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
@@ -11,27 +11,30 @@ export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
   }
 
   try {
+    console.log('[META] Testing connection before fetching accounts...');
     const connectionTest = await MetaApiService.testConnection(token);
     if (!connectionTest.success) {
       throw new Error(connectionTest.error || 'Invalid or expired token');
     }
     
+    console.log('[META] Connection test successful, fetching ad accounts...');
     const accounts = await MetaApiService.fetchAdAccounts(token);
-    console.log('[AD ACCOUNT FETCH] Fetched all accounts:', accounts.length);
     
-    // Additional detailed logging
-    console.log('[AD ACCOUNT FETCH] Total accounts fetched:', accounts.length);
+    // Detailed logging of the API response
+    console.log('[META] Ad Accounts API Response:', accounts);
+    console.log('[META] Total accounts fetched:', accounts.length);
+    
     accounts.forEach((acct, i) => {
-      console.log(`[AD ACCOUNT ${i}]`, acct.id, acct.name);
+      console.log(`[META] Account ${i}: ID=${acct.id}, Name=${acct.name}`);
     });
 
     if (accounts.length === 0) {
-      console.warn('[AD ACCOUNT FETCH] ⚠️ No ad accounts returned from Meta API');
+      console.warn('[META] ⚠️ No ad accounts returned from Meta API');
     }
 
     return accounts;
   } catch (error) {
-    console.error('[AD ACCOUNT FETCH] Error in fetchAllAccounts:', error);
+    console.error('[META] Error in fetchAllAccounts:', error);
     throw error;
   }
 };
@@ -44,20 +47,22 @@ export const fetchSelectedAccounts = async (selectedIds: string[], token: string
   }
 
   try {
+    console.log('[META] Testing connection before fetching selected accounts...');
     const connectionTest = await MetaApiService.testConnection(token);
     if (!connectionTest.success) {
       throw new Error(connectionTest.error || 'Invalid or expired token');
     }
     
+    console.log('[META] Fetching selected accounts:', selectedIds);
     const accounts = await Promise.all(
       selectedIds.map(async (id) => {
         try {
           const formattedId = id.startsWith('act_') ? id : `act_${id}`;
-          console.log(`Fetching details for account ${formattedId}`);
+          console.log(`[META] Fetching details for account ${formattedId}`);
           const accountDetails = await MetaApiService.fetchAdAccountDetails(token, formattedId);
           return accountDetails;
         } catch (error) {
-          console.error(`Error fetching details for account ${id}:`, error);
+          console.error(`[META] Error fetching details for account ${id}:`, error);
           return null;
         }
       })
@@ -65,19 +70,16 @@ export const fetchSelectedAccounts = async (selectedIds: string[], token: string
     
     const filteredAccounts = accounts.filter(account => account !== null) as AdAccount[];
 
-    // Additional detailed logging
-    console.log('[AD ACCOUNT FETCH] Total accounts fetched:', filteredAccounts.length);
-    filteredAccounts.forEach((acct, i) => {
-      console.log(`[AD ACCOUNT ${i}]`, acct.id, acct.name);
-    });
+    console.log('[META] Selected accounts fetched:', filteredAccounts);
+    console.log('[META] Total selected accounts retrieved:', filteredAccounts.length);
 
     if (filteredAccounts.length === 0) {
-      console.warn('[AD ACCOUNT FETCH] ⚠️ No ad accounts returned from Meta API');
+      console.warn('[META] ⚠️ No selected ad accounts could be retrieved');
     }
 
     return filteredAccounts;
   } catch (error) {
-    console.error('Error in fetchSelectedAccounts:', error);
+    console.error('[META] Error in fetchSelectedAccounts:', error);
     throw error;
   }
 };

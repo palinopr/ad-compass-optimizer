@@ -1,47 +1,34 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAdAccountsFetching } from './useAdAccountsFetching';
-import { useAdAccountSelection } from './useAdAccountSelection';
-import { AdAccount } from '../types';
+import { toast } from '@/hooks/use-toast';
 
 export const useAdAccounts = () => {
   const { 
     adAccounts, 
     isLoading, 
-    error, 
+    error,
+    errorRef, 
     fetchAdAccounts,
     setAdAccounts 
   } = useAdAccountsFetching();
   
-  const { selectedAccount, handleAccountChange } = useAdAccountSelection(adAccounts);
-  
+  const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [retryCount, setRetryCount] = useState(0);
   
-  // Update error handling in fetchAdAccounts 
-  const handleRefreshEvent = useCallback(() => {
-    console.log('Ad account refresh event received');
-    fetchAdAccounts();
-  }, [fetchAdAccounts]);
-  
-  // Effect for initial fetch and event listeners setup
+  // Set up initial fetch on load
   useEffect(() => {
-    console.log('Initializing useAdAccounts hook');
-    
-    let isMounted = true;
+    console.log('[META] Initializing useAdAccounts hook');
     
     // Initial fetch with retry logic on failure
     const performInitialFetch = async () => {
       try {
         await fetchAdAccounts();
       } catch (err) {
-        console.error('Failed to fetch ad accounts on initial load:', err);
-        const errorMessage = err instanceof Error 
-          ? err.message 
-          : typeof err === 'string' 
-            ? err 
-            : 'Unknown error occurred';
-            
-        if (isMounted && retryCount < 2) {
-          console.log(`Retrying fetch (attempt ${retryCount + 1})...`);
+        console.error('[META] Failed to fetch ad accounts on initial load:', err);
+        
+        if (retryCount < 2) {
+          console.log(`[META] Retrying fetch (attempt ${retryCount + 1})...`);
           setRetryCount(prev => prev + 1);
           setTimeout(performInitialFetch, 1000);
         }
@@ -50,28 +37,66 @@ export const useAdAccounts = () => {
     
     performInitialFetch();
     
-    // Set up event listeners with debouncing
-    let debounceTimer: ReturnType<typeof setTimeout>;
-    
-    const debouncedRefresh = () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(handleRefreshEvent, 300);
-    };
-    
-    // Set up event listeners for all possible refresh events
-    window.addEventListener('refresh-ad-accounts', debouncedRefresh);
-    window.addEventListener('campaign-data-refresh', debouncedRefresh);
-    window.addEventListener('ad-account-changed', debouncedRefresh);
+    // Set up event listeners for account refresh
+    window.addEventListener('refresh-ad-accounts', fetchAdAccounts);
     
     // Clean up event listeners on unmount
     return () => {
-      isMounted = false;
-      clearTimeout(debounceTimer);
-      window.removeEventListener('refresh-ad-accounts', debouncedRefresh);
-      window.removeEventListener('campaign-data-refresh', debouncedRefresh);
-      window.removeEventListener('ad-account-changed', debouncedRefresh);
+      window.removeEventListener('refresh-ad-accounts', fetchAdAccounts);
     };
-  }, [fetchAdAccounts, handleRefreshEvent, retryCount]);
+  }, [fetchAdAccounts, retryCount]);
+  
+  // Initialize selected account from localStorage
+  useEffect(() => {
+    const storedAccount = localStorage.getItem('selected_ad_account');
+    if (storedAccount) {
+      console.log('[META] Using stored account selection:', storedAccount);
+      setSelectedAccount(storedAccount);
+    }
+  }, []);
+  
+  // Auto-select first account if no account is selected
+  useEffect(() => {
+    if (adAccounts.length > 0 && !selectedAccount) {
+      const firstAccount = adAccounts[0];
+      const accountId = firstAccount.id.replace(/^act_/, '');
+      console.log('[META] Auto-selecting first account:', accountId);
+      setSelectedAccount(accountId);
+      localStorage.setItem('selected_ad_account', accountId);
+      
+      // Show toast notification
+      toast({
+        title: "Ad Account Selected",
+        description: `${firstAccount.name} has been automatically selected.`
+      });
+    }
+  }, [adAccounts, selectedAccount]);
+  
+  // Handle account change
+  const handleAccountChange = useCallback((value: string) => {
+    console.log('[META] Account selection changed to:', value);
+    
+    // Normalize account ID (remove 'act_' prefix if present)
+    const accountId = value.replace(/^act_/, '');
+    
+    // Update state and localStorage
+    setSelectedAccount(accountId);
+    localStorage.setItem('selected_ad_account', accountId);
+    
+    // Update selected_ad_accounts for consistency
+    localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
+    
+    // Show toast notification
+    toast({
+      title: "Ad Account Selected",
+      description: "Your ad account selection has been updated."
+    });
+    
+    // Dispatch event for other components
+    window.dispatchEvent(new CustomEvent('ad-account-changed', { 
+      detail: { accountId } 
+    }));
+  }, []);
 
   return {
     adAccounts,
