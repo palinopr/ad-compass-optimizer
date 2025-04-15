@@ -12,15 +12,27 @@ interface CampaignTableRowProps {
 }
 
 const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status }) => {
-  // For debugging - log campaign structure if insights are missing
+  // Log detailed campaign data at render time for debugging
   React.useEffect(() => {
-    if (!campaign.insights || Object.keys(campaign.insights).length === 0) {
-      console.warn(`[CAMPAIGN ROW] Campaign "${campaign.name}" is missing insights data:`, campaign);
+    // Basic validation check
+    if (!campaign.id || !campaign.name) {
+      console.warn(`[CAMPAIGN ROW] Invalid campaign data:`, campaign);
+      return;
     }
-    
-    // Log extra stats if available
-    if (campaign.extraStats) {
-      console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" has extra stats:`, campaign.extraStats);
+
+    // Only log when insights data is missing
+    if (!campaign.insights || Object.keys(campaign.insights).length === 0) {
+      console.warn(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) is missing insights data`);
+    } else {
+      // Log existing insights for tracking
+      console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) insights data:`, {
+        spend: campaign.insights.spend || 'missing',
+        clicks: campaign.insights.clicks || 'missing',
+        impressions: campaign.insights.impressions || 'missing',
+        cpa: campaign.insights.cpa || 'missing',
+        roas: campaign.insights.roas || 'missing',
+        hasExtraStats: !!campaign.extraStats
+      });
     }
   }, [campaign]);
 
@@ -35,7 +47,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status })
           budget={campaign.budget}
           dailyBudget={campaign.daily_budget}
           lifetimeBudget={campaign.lifetime_budget}
-          spend={campaign.spend}
+          spend={campaign.insights?.spend}
           results={campaign.results}
           insights={campaign.insights}
           extraStats={campaign.extraStats}

@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { MetaInsightsService, InsightFilterOptions } from '@/services/api/MetaInsightsService';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -51,7 +52,8 @@ export const useItemInsights = () => {
 
       // Create base options without datePreset
       const baseOptions: Omit<InsightFilterOptions, 'datePreset'> = {
-        fields: commonFields
+        fields: commonFields,
+        timeIncrement: 1 // Always use time_increment=1 for consistent data breakdown
       };
 
       // Prepare requests array for batching
@@ -60,7 +62,6 @@ export const useItemInsights = () => {
       // Primary request with optimal configuration for the date range
       const primaryOptions: InsightFilterOptions = {
         ...baseOptions,
-        timeIncrement: 1 // Always use time_increment=1 for consistent data breakdown
       };
 
       // For today/yesterday and other short ranges, use time_range
@@ -79,7 +80,6 @@ export const useItemInsights = () => {
       const fallbackOptions: InsightFilterOptions = {
         ...baseOptions,
         datePreset: 'maximum',
-        timeIncrement: 1
       };
 
       requests.push(() => itemType === 'campaign'
@@ -94,6 +94,7 @@ export const useItemInsights = () => {
 
       if (validResponse) {
         transformAndSetInsights(validResponse);
+        console.log(`[INSIGHTS] Successfully processed insights data for ${itemType} ${itemId}`, validResponse);
       } else {
         console.error('[INSIGHTS] No data from any fetch attempt');
         setError('No insights data available');
@@ -107,8 +108,17 @@ export const useItemInsights = () => {
     }
   }, []);
 
-  // Helper to transform and set insights data
+  // Enhanced helper to transform and set insights data with improved extraction of metrics
   const transformAndSetInsights = (response: any) => {
+    if (!response?.data || response.data.length === 0) {
+      console.warn('[INSIGHTS] Response contains no data to transform');
+      setInsights(null);
+      return;
+    }
+
+    console.log('[INSIGHTS] Transforming data:', response.data);
+
+    // Basic time-series metrics
     const transformedData = {
       spend: response.data?.map((d: any) => ({
         date: d.date_start,
@@ -123,8 +133,58 @@ export const useItemInsights = () => {
         value: parseInt(d.impressions || 0)
       })) || []
     };
-    
-    setInsights(transformedData);
+
+    // Extract additional performance metrics
+    const latestData = response.data[0]; // Most recent data point
+    const additionalMetrics: any = {};
+
+    // Process cost per action type data
+    if (latestData.cost_per_action_type && Array.isArray(latestData.cost_per_action_type)) {
+      // Find purchase-related CPA
+      const purchaseCpa = latestData.cost_per_action_type.find(
+        (item: any) => item.action_type === 'purchase' || 
+                      item.action_type === 'omni_purchase' ||
+                      item.action_type === 'offsite_conversion'
+      );
+
+      if (purchaseCpa) {
+        additionalMetrics.cpa = purchaseCpa.value;
+        console.log('[INSIGHTS] Found CPA:', purchaseCpa.value);
+      }
+    }
+
+    // Process ROAS data
+    if (latestData.website_purchase_roas && Array.isArray(latestData.website_purchase_roas)) {
+      const purchaseRoas = latestData.website_purchase_roas[0];
+      if (purchaseRoas && purchaseRoas.value) {
+        const roasValue = parseFloat(purchaseRoas.value);
+        additionalMetrics.roas = `${roasValue.toFixed(2)}x`;
+        console.log('[INSIGHTS] Found ROAS:', additionalMetrics.roas);
+      }
+    }
+
+    // Process actions data to find conversions/purchases
+    if (latestData.actions && Array.isArray(latestData.actions)) {
+      const purchaseAction = latestData.actions.find(
+        (item: any) => item.action_type === 'purchase' || 
+                      item.action_type === 'omni_purchase' ||
+                      item.action_type === 'offsite_conversion'
+      );
+
+      if (purchaseAction) {
+        additionalMetrics.conversions = purchaseAction.value;
+        console.log('[INSIGHTS] Found conversions:', purchaseAction.value);
+      }
+    }
+
+    // Add additional metrics to the transformed data
+    const enhancedData = {
+      ...transformedData,
+      ...additionalMetrics
+    };
+
+    console.log('[INSIGHTS] Final transformed data:', enhancedData);
+    setInsights(enhancedData);
   };
 
   return {
