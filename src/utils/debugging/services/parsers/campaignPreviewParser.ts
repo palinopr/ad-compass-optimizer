@@ -2,23 +2,15 @@
 import { CampaignPreview } from '../../types/campaignLogTypes';
 
 export const parseCampaignPreviews = (data: any[]): CampaignPreview[] => {
-  if (!Array.isArray(data)) return [];
-  
-  return data.map(campaign => ({
+  return data.slice(0, 3).map((campaign: any) => ({
     id: campaign.id,
     name: campaign.name,
     status: campaign.status,
-    spend: campaign.spend || '$0.00',
-    results: campaign.results || '0'
+    spend: campaign.insights?.spend || '$0.00',
+    results: campaign.insights?.actions?.find((a: any) => a.action_type === 'purchase')?.value || '0'
   }));
 };
 
 export const hasInsightsData = (data: any[]): boolean => {
-  if (!Array.isArray(data)) return false;
-  
-  return data.some(
-    (campaign: any) => campaign.insights && 
-    campaign.insights.data && 
-    campaign.insights.data.length > 0
-  );
+  return data.some(item => item.insights?.data?.length > 0);
 };

@@ -1,7 +1,7 @@
 
-export const parseDatePreset = (queryParams?: string): string => {
-  if (!queryParams) return '';
+export const parseDatePreset = (queryParams?: string): string | undefined => {
+  if (!queryParams) return undefined;
   
-  const datePresetMatch = queryParams.match(/date_preset=([^&]+)/);
-  return datePresetMatch ? datePresetMatch[1] : '';
+  const match = queryParams.match(/date_preset\(([^)]+)\)/);
+  return match ? match[1] : undefined;
 };

@@ -1,5 +1,5 @@
 
-import { ErrorDetails } from '../types/campaignLogTypes';
+import { ErrorDetails } from '../../types/campaignLogTypes';
 
 export const parseMetaError = (error: any): ErrorDetails => {
   const defaultError: ErrorDetails = {
