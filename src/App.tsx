@@ -1,5 +1,5 @@
 
-// Trigger rebuild for last_28d fix
+// App.tsx - Updated implementation with version tracking for the last_28d fix (v1.0.1)
 
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -12,6 +12,11 @@ import { SharedMetaConnectionProvider } from '@/components/meta/SharedMetaConnec
 import { Toaster } from '@/components/ui/toaster';
 import FunnelViewContainer from '@/components/funnel/FunnelViewContainer';
 import { toast } from './hooks/use-toast';
+
+// Version info for tracking deployments
+const APP_VERSION = '1.0.1';
+const LAST_UPDATED = '2025-04-15';
+const INCLUDES_28D_FIX = true;
 
 // Enhanced global mock mode detection function with safeguards
 export const isMockMode = (): boolean => {
@@ -48,6 +53,12 @@ export const isMockMode = (): boolean => {
 
 function App() {
   const [isMockModeActive, setIsMockModeActive] = useState(false);
+
+  // Log app version on startup
+  useEffect(() => {
+    console.log(`[APP] Version ${APP_VERSION} (Last updated: ${LAST_UPDATED})`);
+    console.log(`[APP] Includes 28-day window fix: ${INCLUDES_28D_FIX ? 'Yes' : 'No'}`);
+  }, []);
 
   // Only run in browser environment
   useEffect(() => {
