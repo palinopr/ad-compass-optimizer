@@ -13,19 +13,19 @@ export type CampaignFilters = {
 export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   const [filters, setFilters] = useState<CampaignFilters>({
     dateRange: null,
-    datePreset: 'last30days',
+    datePreset: 'last_28d',  // Updated from 'last30days'
     status: null,
     search: '',
   });
 
-  // Initialize with default date range (last 30 days)
+  // Initialize with default date range (28 days)
   useEffect(() => {
     const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const twentyEightDaysAgo = new Date();
+    twentyEightDaysAgo.setDate(today.getDate() - 28); // Updated from 30 to 28
     setFilters(prev => ({
       ...prev,
-      dateRange: { from: thirtyDaysAgo, to: today }
+      dateRange: { from: twentyEightDaysAgo, to: today }
     }));
   }, []);
 
