@@ -17,6 +17,11 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status })
     if (!campaign.insights || Object.keys(campaign.insights).length === 0) {
       console.warn(`[CAMPAIGN ROW] Campaign "${campaign.name}" is missing insights data:`, campaign);
     }
+    
+    // Log extra stats if available
+    if (campaign.extraStats) {
+      console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" has extra stats:`, campaign.extraStats);
+    }
   }, [campaign]);
 
   return (
@@ -33,6 +38,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status })
           spend={campaign.spend}
           results={campaign.results}
           insights={campaign.insights}
+          extraStats={campaign.extraStats}
         />
       </TableCell>
       <TableCell className="text-right">

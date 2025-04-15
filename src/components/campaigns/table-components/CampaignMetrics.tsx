@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { CampaignExtraStats } from '@/hooks/campaigns/fetch-utils/campaignInsightsFetcher';
 
 const formatCurrency = (value: string | undefined): string => {
   if (!value || value === '-') return '-';
@@ -22,6 +23,7 @@ interface CampaignMetricsProps {
   lifetimeBudget?: string;
   spend?: string;
   results?: string;
+  extraStats?: CampaignExtraStats;
   insights?: {
     spend?: string;
     cpa?: string;
@@ -35,6 +37,7 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   lifetimeBudget,
   spend,
   results,
+  extraStats,
   insights
 }) => {
   const getBudgetDisplay = (): string => {
@@ -50,11 +53,27 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   };
 
   const getResultsDisplay = (): string => {
+    // Prioritize extraStats.results if available
+    if (extraStats?.results && extraStats.results !== '-') {
+      return extraStats.results;
+    }
     return results || '-';
   };
   
   const getCpaDisplay = (): string => {
+    // Prioritize extraStats.cpa if available
+    if (extraStats?.cpa && extraStats.cpa !== '-') {
+      return formatCurrency(extraStats.cpa);
+    }
     return insights?.cpa ? formatCurrency(insights.cpa) : '-';
+  };
+  
+  const getRoasDisplay = (): string => {
+    // Prioritize extraStats.roas if available
+    if (extraStats?.roas && extraStats.roas !== '-') {
+      return extraStats.roas;
+    }
+    return insights?.roas || '-';
   };
 
   return (
@@ -64,9 +83,9 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
       <div>{getResultsDisplay()}</div>
       <div>{getCpaDisplay()}</div>
       <div>
-        {insights?.roas && insights.roas !== '-' ? (
-          <span className={parseFloat(insights.roas) >= 4 ? 'text-green-600 font-medium' : ''}>
-            {insights.roas}
+        {getRoasDisplay() !== '-' ? (
+          <span className={parseFloat(getRoasDisplay()) >= 4 ? 'text-green-600 font-medium' : ''}>
+            {getRoasDisplay()}
           </span>
         ) : '-'}
       </div>
@@ -75,4 +94,3 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
 };
 
 export default CampaignMetrics;
-

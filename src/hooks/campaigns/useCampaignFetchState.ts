@@ -1,6 +1,7 @@
-
 import { useRef, useState, useEffect } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import { fetchInsightsForCampaigns } from './fetch-utils/campaignInsightsFetcher';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 interface FetchMetadata {
   status?: number;
@@ -127,8 +128,8 @@ export function useCampaignFetchState() {
     }
   };
 
-  // New function to update campaigns with guaranteed UI refresh
-  const updateCampaigns = (newCampaigns: MetaCampaign[]) => {
+  // New function to update campaigns with guaranteed UI refresh and additional insights fetch
+  const updateCampaigns = async (newCampaigns: MetaCampaign[]) => {
     console.log(`[MOCK DEBUG] updateCampaigns called with ${newCampaigns.length} campaigns from ${lastUpdateSourceRef.current}`);
     lastUpdateSourceRef.current = 'updateCampaigns';
     
@@ -153,9 +154,32 @@ export function useCampaignFetchState() {
       hasEverHadCampaignsRef.current = true;
     }
     
+    // First set the campaigns to show basic data immediately
     setCampaigns(newCampaigns);
-    incrementDisplayRefresh();
-    setForceRender(prev => prev + 1);
+    
+    // Then fetch additional insights for each campaign
+    try {
+      const token = metaAuthService.getAccessToken();
+      
+      if (token && newCampaigns.length > 0) {
+        console.log(`[CAMPAIGN STATE] Fetching additional insights for ${newCampaigns.length} campaigns`);
+        
+        // Keep the UI responsive by setting campaigns before the detailed fetch
+        incrementDisplayRefresh();
+        setForceRender(prev => prev + 1);
+        
+        // Fetch additional insights for each campaign
+        const enhancedCampaigns = await fetchInsightsForCampaigns(newCampaigns, token);
+        
+        // Update the campaigns with the enhanced data
+        console.log(`[CAMPAIGN STATE] Updating campaigns with enhanced insights data`);
+        setCampaigns(enhancedCampaigns);
+        incrementDisplayRefresh();
+        setForceRender(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('[CAMPAIGN STATE] Error fetching additional insights:', error);
+    }
   };
 
   const updateFetchMetadata = (metadata: Partial<FetchMetadata>) => {
@@ -172,7 +196,7 @@ export function useCampaignFetchState() {
     // State
     campaigns,
     setCampaigns: wrappedSetCampaigns,
-    updateCampaigns, // New method for guaranteed update
+    updateCampaigns, // Now includes additional insights fetch
     isLoading,
     setIsLoading,
     error,

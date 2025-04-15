@@ -1,4 +1,6 @@
 
+import { CampaignExtraStats } from '@/hooks/campaigns/fetch-utils/campaignInsightsFetcher';
+
 export interface MetaCampaign {
   id: string;
   name: string;
@@ -15,6 +17,7 @@ export interface MetaCampaign {
   start_time?: string;
   end_time?: string;
   objective?: string;
+  extraStats?: CampaignExtraStats; // New field for additional metrics
   insights?: {
     impressions: string;
     clicks: string;
