@@ -45,16 +45,20 @@ export class MetaCampaignService extends BaseApiService {
         throw new Error('Ad Account ID is required');
       }
       
+      // Validate ad account ID format
       if (!/^act_\d+$/.test(adAccountId)) {
         console.error(`[CAMPAIGN FETCH] Invalid ad account ID format: ${adAccountId}`);
         throw new Error(`Invalid ad account ID format: ${adAccountId}`);
       }
 
+      // Ensure the ad account ID has the proper format, removing 'act_' prefix if present
       const cleanAccountId = adAccountId.replace(/^act_/, '');
+      
+      // Check if we should throttle the request
       CampaignThrottling.checkThrottling(adAccountId);
 
-      // Using proper GET request with fields parameter
-      const fields = 'name,status,daily_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
+      // Build the proper GET URL with correct fields parameter
+      const fields = 'name,status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
       const url = `${this.BASE_URL}/${this.API_VERSION}/act_${cleanAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
@@ -66,6 +70,7 @@ export class MetaCampaignService extends BaseApiService {
         }
       });
       
+      // Store response headers for rate limit analysis
       this.lastResponseHeaders = {};
       response.headers.forEach((value, key) => {
         this.lastResponseHeaders[key] = value;
@@ -125,7 +130,7 @@ export class MetaCampaignService extends BaseApiService {
     }
   }
   
-  // New helper method to handle pagination
+  // Helper method to handle pagination
   private static async fetchPaginatedCampaigns(nextPageUrl: string): Promise<any[]> {
     try {
       // Remove access token from URL for logging

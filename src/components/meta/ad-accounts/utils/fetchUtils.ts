@@ -12,21 +12,21 @@ export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
       throw new Error(`API rate limit in effect. Please retry after ${remainingTime} seconds.`);
     }
 
-    console.log('[CAMPAIGNS DEBUG] Testing connection before fetching accounts...');
+    console.log('[AD ACCOUNTS DEBUG] Testing connection before fetching accounts...');
     const connectionTest = await MetaApiService.testConnection(token);
     if (!connectionTest.success) {
-      console.error('[CAMPAIGNS DEBUG] Connection test failed:', connectionTest.error);
+      console.error('[AD ACCOUNTS DEBUG] Connection test failed:', connectionTest.error);
       throw new Error(connectionTest.error || 'Invalid or expired token');
     }
     
-    console.log('[CAMPAIGNS DEBUG] Connection test successful, fetching ad accounts...');
+    console.log('[AD ACCOUNTS DEBUG] Connection test successful, fetching ad accounts...');
     const response = await MetaApiService.fetchAdAccounts(token);
     
-    console.log('[CAMPAIGNS DEBUG] Ad accounts response:', response);
-    console.log('[CAMPAIGNS DEBUG] Account count:', response?.length || 0);
+    console.log('[AD ACCOUNTS DEBUG] Ad accounts response:', response);
+    console.log('[AD ACCOUNTS DEBUG] Account count:', response?.length || 0);
     
     if (!response || !Array.isArray(response) || response.length === 0) {
-      console.warn('[CAMPAIGNS DEBUG] ⚠️ No ad accounts returned from Meta API');
+      console.warn('[AD ACCOUNTS DEBUG] ⚠️ No ad accounts returned from Meta API');
       throw new Error('No ad accounts found. Please check Meta permissions and token scopes.');
     }
 
@@ -44,17 +44,17 @@ export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
     if (storedAccountId && !accounts.some(acc => 
       acc.id.replace(/^act_/, '') === storedAccountId.replace(/^act_/, '')
     )) {
-      console.warn('[CAMPAIGNS DEBUG] Stored account ID not found in fetched accounts, clearing...');
+      console.warn('[AD ACCOUNTS DEBUG] Stored account ID not found in fetched accounts, clearing...');
       localStorage.removeItem('selected_ad_account');
     }
 
     accounts.forEach((acct, i) => {
-      console.log(`[CAMPAIGNS DEBUG] Account ${i + 1}: ID=${acct.id}, Name=${acct.name}`);
+      console.log(`[AD ACCOUNTS DEBUG] Account ${i + 1}: ID=${acct.id}, Name=${acct.name}`);
     });
 
     return accounts;
   } catch (error) {
-    console.error('[CAMPAIGNS DEBUG] Error in fetchAllAccounts:', error);
+    console.error('[AD ACCOUNTS DEBUG] Error in fetchAllAccounts:', error);
     throw error;
   }
 };

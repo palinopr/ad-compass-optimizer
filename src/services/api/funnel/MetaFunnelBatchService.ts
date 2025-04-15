@@ -3,8 +3,12 @@ import { BatchRequest } from '../batch/MetaBatchService';
 
 export class MetaFunnelBatchService {
   public static buildBatchRequests(adAccountId: string): BatchRequest[] {
+    // Ensure the account ID has the proper format
     const formattedId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
     
+    console.log('[META FUNNEL] Building batch requests for account:', formattedId);
+    
+    // Return properly formatted batch requests
     return [
       {
         method: 'GET',

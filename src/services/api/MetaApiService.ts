@@ -10,8 +10,14 @@ export class MetaApiService extends BaseApiService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Meta API Connection Test Failed:', errorData);
-        return { success: false, error: errorData?.error?.message || 'Connection test failed' };
+        const error = errorData?.error || {};
+        console.error('Meta API Connection Test Failed:', {
+          message: error.message || 'Connection test failed',
+          code: error.code,
+          type: error.type,
+          status: response.status
+        });
+        return { success: false, error: error.message || 'Connection test failed' };
       }
 
       const data = await response.json();
@@ -26,14 +32,29 @@ export class MetaApiService extends BaseApiService {
   public static async fetchAdAccounts(token: string): Promise<MetaAdAccount[]> {
     try {
       this.validateToken(token, 'fetchAdAccounts');
-      const response = await fetch(
-        `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`
-      );
+      
+      // Use GET request with proper fields
+      const url = `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`;
+      
+      console.log('[AD ACCOUNT FETCH] Request URL:', url.replace(token, 'REDACTED'));
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Meta API Error fetching ad accounts:', errorData);
-        throw new Error(errorData?.error?.message || 'Failed to fetch ad accounts');
+        const error = errorData?.error || {};
+        console.error('Meta API Error fetching ad accounts:', {
+          message: error.message || `HTTP error ${response.status}`,
+          code: error.code,
+          type: error.type,
+          status: response.status
+        });
+        throw new Error(error.message || 'Failed to fetch ad accounts');
       }
 
       const data = await response.json();
@@ -58,14 +79,31 @@ export class MetaApiService extends BaseApiService {
   public static async fetchAdAccountDetails(token: string, accountId: string): Promise<MetaAdAccount> {
     try {
       this.validateToken(token, 'fetchAdAccountDetails');
-      const response = await fetch(
-        `${this.BASE_URL}/${this.API_VERSION}/${accountId}?fields=name,account_id,account_status,currency&access_token=${token}`
-      );
+      
+      // Ensure accountId has act_ prefix
+      const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+      
+      const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}?fields=name,account_id,account_status,currency&access_token=${token}`;
+      
+      console.log('[AD ACCOUNT FETCH] Request URL for details:', url.replace(token, 'REDACTED'));
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error(`Meta API Error fetching ad account details for ${accountId}:`, errorData);
-        throw new Error(errorData?.error?.message || `Failed to fetch ad account details for ${accountId}`);
+        const error = errorData?.error || {};
+        console.error(`Meta API Error fetching ad account details for ${accountId}:`, {
+          message: error.message || `HTTP error ${response.status}`,
+          code: error.code,
+          type: error.type,
+          status: response.status
+        });
+        throw new Error(error.message || `Failed to fetch ad account details for ${accountId}`);
       }
 
       return await response.json();

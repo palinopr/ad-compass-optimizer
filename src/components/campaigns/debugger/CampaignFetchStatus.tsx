@@ -196,6 +196,20 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
             <div className="mt-3 text-xs border border-red-200 rounded-md p-2 bg-red-50">
               <h4 className="font-medium text-red-700 mb-1">Error Details:</h4>
               
+              {errorDetails.code && (
+                <div className="flex justify-between">
+                  <span className="text-red-800">Error Code:</span>
+                  <span className="font-mono">{errorDetails.code}</span>
+                </div>
+              )}
+              
+              {errorDetails.type && (
+                <div className="flex justify-between mt-1">
+                  <span className="text-red-800">Error Type:</span>
+                  <span className="font-mono">{errorDetails.type}</span>
+                </div>
+              )}
+              
               {errorDetails.status && (
                 <div className="flex justify-between">
                   <span className="text-red-800">HTTP Status:</span>
@@ -210,20 +224,6 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
                 </div>
               )}
               
-              {(errorDetails.code || errorDetails.details?.code) && (
-                <div className="flex justify-between mt-1">
-                  <span className="text-red-800">Error Code:</span>
-                  <span className="font-mono">{errorDetails.code || errorDetails.details?.code}</span>
-                </div>
-              )}
-              
-              {(errorDetails.type || errorDetails.details?.type) && (
-                <div className="flex justify-between mt-1">
-                  <span className="text-red-800">Error Type:</span>
-                  <span className="font-mono">{errorDetails.type || errorDetails.details?.type}</span>
-                </div>
-              )}
-              
               {errorDetails.timestamp && (
                 <div className="flex justify-between mt-1">
                   <span className="text-red-800">Time:</span>
@@ -231,21 +231,28 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
                 </div>
               )}
               
-              {(errorDetails.fbTraceId || errorDetails.details?.fbTraceId) && (
+              {errorDetails.fbTraceId && (
                 <div className="flex justify-between mt-1">
                   <span className="text-red-800">FB Trace:</span>
-                  <span className="font-mono text-xs truncate">{errorDetails.fbTraceId || errorDetails.details?.fbTraceId}</span>
+                  <span className="font-mono text-xs truncate">{errorDetails.fbTraceId}</span>
                 </div>
               )}
               
-              {errorDetails.rawResponse && (
-                <div className="flex flex-col mt-2">
-                  <span className="text-red-800">Raw Response:</span>
-                  <pre className="font-mono text-[10px] mt-1 bg-red-100 p-1 rounded overflow-auto max-h-32 whitespace-pre-wrap">
-                    {typeof errorDetails.rawResponse === 'string' 
-                      ? errorDetails.rawResponse.substring(0, 500) + (errorDetails.rawResponse.length > 500 ? '...' : '') 
-                      : JSON.stringify(errorDetails.rawResponse, null, 2)}
-                  </pre>
+              {(errorDetails.details?.code || errorDetails.details?.type) && (
+                <div className="mt-2 border-t border-red-200 pt-1">
+                  <span className="text-red-800 font-medium">API Details:</span>
+                  {errorDetails.details.code && (
+                    <div className="flex justify-between mt-1">
+                      <span>Code:</span>
+                      <span className="font-mono">{errorDetails.details.code}</span>
+                    </div>
+                  )}
+                  {errorDetails.details.type && (
+                    <div className="flex justify-between">
+                      <span>Type:</span>
+                      <span className="font-mono">{errorDetails.details.type}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -253,18 +260,17 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
           
           {/* Display API headers for debugging */}
           {responseHeaders && Object.keys(responseHeaders).length > 0 && (
-            <div className="mt-3 border border-gray-200 rounded-md p-2 bg-gray-50 text-xs">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-gray-700">API Headers:</h4>
-                <Badge variant="outline" className="text-[10px] h-4">debug</Badge>
+            <details className="mt-3 border border-gray-200 rounded-md p-2 bg-gray-50 text-xs">
+              <summary className="font-medium text-gray-700 cursor-pointer">API Headers</summary>
+              <div className="mt-1 space-y-1">
+                {Object.entries(responseHeaders).map(([key, value]: [string, any]) => (
+                  <div key={key} className="flex flex-col">
+                    <span className="text-gray-500 text-[10px]">{key}:</span>
+                    <span className="font-mono text-[10px] break-words truncate">{String(value)}</span>
+                  </div>
+                ))}
               </div>
-              {Object.entries(responseHeaders).map(([key, value]: [string, any]) => (
-                <div key={key} className="flex flex-col mt-1">
-                  <span className="text-gray-500 text-[10px]">{key}:</span>
-                  <span className="font-mono text-[10px] break-words truncate">{String(value)}</span>
-                </div>
-              ))}
-            </div>
+            </details>
           )}
         </div>
       </CardContent>

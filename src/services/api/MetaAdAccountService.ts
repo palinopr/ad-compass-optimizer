@@ -24,7 +24,7 @@ export class MetaAdAccountService extends BaseApiService {
       this.validateToken(token, 'fetchAdAccounts');
       validateAdAccountPermissions();
       
-      // Consistent use of v17.0 for Meta API
+      // Using GET request with proper fields parameter
       const response = await fetch(
         `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`
       );
@@ -33,7 +33,15 @@ export class MetaAdAccountService extends BaseApiService {
       
       if (!response.ok) {
         const errorJson = await response.json();
-        const errorMsg = errorJson?.error?.message || `HTTP error ${response.status}`;
+        const error = errorJson.error || {};
+        const errorMsg = error.message || `HTTP error ${response.status}`;
+        console.error('[AD ACCOUNT FETCH] Error:', {
+          message: errorMsg,
+          code: error.code,
+          type: error.type,
+          subcode: error.error_subcode,
+          status: response.status
+        });
         displayApiError(errorMsg, JSON.stringify(errorJson?.error || errorJson, null, 2));
         throw new Error(errorMsg);
       }
@@ -46,13 +54,20 @@ export class MetaAdAccountService extends BaseApiService {
       }
       
       // Map the response to our MetaAdAccount format
-      return json.data.map((account: any) => ({
+      const accounts = json.data.map((account: any) => ({
         name: account.name || 'Unnamed Account',
         account_id: account.account_id,
         account_status: account.account_status || 0,
         currency: account.currency,
         id: account.id
       }));
+      
+      console.log('[AD ACCOUNT FETCH] Processed accounts:', accounts.length);
+      accounts.forEach((acct, i) => {
+        console.log(`[AD ACCOUNT FETCH] Account ${i + 1}:`, acct.id, acct.name);
+      });
+      
+      return accounts;
     } catch (error) {
       return this.handleApiError(error, 'fetchAdAccounts');
     }
@@ -71,9 +86,12 @@ export class MetaAdAccountService extends BaseApiService {
       
       if (!response.ok) {
         const errorJson = await response.json();
+        const error = errorJson.error || {};
         throw {
-          message: errorJson?.error?.message || `HTTP error ${response.status}`,
+          message: error.message || `HTTP error ${response.status}`,
           status: response.status,
+          code: error.code,
+          type: error.type,
           data: errorJson
         };
       }

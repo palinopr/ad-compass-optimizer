@@ -13,7 +13,34 @@ export const parseApiError = async (apiErr: any): Promise<{
   let isRateLimitDetected = false;
   
   try {
-    if (apiErr?.response) {
+    // Handle direct error object from Meta API
+    if (apiErr?.error && typeof apiErr.error === 'object') {
+      const metaError = apiErr.error;
+      apiErrorMessage = `Meta API Error ${metaError.code || ''}: ${metaError.message || 'Unknown error'}`;
+      errorDetails = {
+        code: metaError.code,
+        type: metaError.type,
+        message: metaError.message,
+        subcode: metaError.error_subcode,
+        fbtraceId: metaError.fbtrace_id
+      };
+      
+      console.error('[GRAPH API ERROR] Details:', {
+        ...errorDetails,
+        raw: metaError
+      });
+      
+      // Check for rate limit in direct error object
+      if (metaError.code === 4 || 
+          metaError.code === 17 ||
+          (metaError.code >= 80000 && metaError.code <= 80014) ||
+          (metaError.message && typeof metaError.message === 'string' && 
+           metaError.message.toLowerCase().includes('rate limit'))) {
+        isRateLimitDetected = true;
+      }
+    }
+    // Handle axios-style response error
+    else if (apiErr?.response) {
       try {
         console.error('[GRAPH API ERROR] Full response:', {
           status: apiErr.response.status,
@@ -52,26 +79,24 @@ export const parseApiError = async (apiErr: any): Promise<{
       }
     }
     
-    // Direct error object handling (for fetch API errors)
-    if (apiErr?.error && typeof apiErr.error === 'object') {
-      const metaError = apiErr.error;
-      apiErrorMessage = `Meta API Error ${metaError.code || ''}: ${metaError.message || 'Unknown error'}`;
+    // Handle direct code/message properties (custom error object)
+    if (apiErr?.code && apiErr?.message && !errorDetails) {
       errorDetails = {
-        code: metaError.code,
-        type: metaError.type,
-        message: metaError.message,
-        subcode: metaError.error_subcode,
-        fbtraceId: metaError.fbtrace_id
+        code: apiErr.code,
+        type: apiErr.type || 'unknown',
+        message: apiErr.message,
+        subcode: apiErr.subcode,
+        fbtraceId: apiErr.fbtraceId
       };
-      
-      // Check for rate limit in direct error object
-      if (metaError.code === 4 || 
-          metaError.code === 17 ||
-          (metaError.code >= 80000 && metaError.code <= 80014) ||
-          (metaError.message && typeof metaError.message === 'string' && 
-           metaError.message.toLowerCase().includes('rate limit'))) {
-        isRateLimitDetected = true;
-      }
+    }
+    
+    // If we still don't have details, create a generic error
+    if (!errorDetails) {
+      errorDetails = {
+        message: apiErrorMessage,
+        type: 'unknown',
+        code: apiErr?.status || 'unknown'
+      };
     }
   } catch (e) {
     console.error('[GRAPH API ERROR] Exception in parseApiError:', e);

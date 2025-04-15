@@ -148,11 +148,23 @@ export function useCampaignFetcher() {
         data = await MetaFunnelService.fetchFunnelData(token, adAccountId);
       } catch (fetchErr: any) {
         console.error('[CAMPAIGNS DEBUG] Error fetching funnel data:', fetchErr);
+        
+        // Store detailed error information
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
+            message: fetchErr?.message || 'Unknown error',
+            code: fetchErr?.code,
+            type: fetchErr?.type,
+            timestamp: new Date().toISOString()
+          }));
+        }
+        
         // Re-throw as a standardized error
         throw {
           message: fetchErr.message || 'Error fetching campaign data',
           status: fetchErr.status || 500,
           code: fetchErr.code,
+          type: fetchErr.type,
           name: fetchErr.name
         };
       }
@@ -195,6 +207,8 @@ export function useCampaignFetcher() {
           localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
             message: err?.message || String(err),
             status: err?.status || err?.code || 'unknown',
+            code: err?.code,
+            type: err?.type,
             timestamp: new Date().toISOString(),
             details: {
               fbTraceId: err?.fbtraceId || err?.error?.fbtrace_id,

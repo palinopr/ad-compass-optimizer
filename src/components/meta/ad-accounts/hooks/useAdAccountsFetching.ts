@@ -76,18 +76,15 @@ export function useAdAccountsFetching() {
         
         setAdAccounts(validAccounts);
         
-        // If we have a stored account ID that isn't in our valid accounts list, select the first account
+        // If we have accounts but no account selected yet, select the first one
         try {
           const storedAccountId = localStorage.getItem('selected_ad_account');
-          if (storedAccountId && validAccounts.length > 0) {
-            const accountExists = validAccounts.some(acc => 
-              acc.id.replace(/^act_/, '') === storedAccountId.replace(/^act_/, '')
-            );
-            
-            if (!accountExists) {
-              console.warn('[META] Stored account not found in valid accounts, updating to first account');
+          if (validAccounts.length > 0) {
+            if (!storedAccountId) {
+              // No account selected yet, select the first one
               const firstAccount = validAccounts[0];
               const accountId = firstAccount.id.replace(/^act_/, '');
+              console.log('[META] No account selected, setting to first account:', accountId);
               localStorage.setItem('selected_ad_account', accountId);
               
               // Dispatch account change event
@@ -95,6 +92,24 @@ export function useAdAccountsFetching() {
                 detail: { accountId } 
               });
               window.dispatchEvent(event);
+            } else {
+              // Check if selected account exists in the fetched accounts
+              const accountExists = validAccounts.some(acc => 
+                acc.id.replace(/^act_/, '') === storedAccountId.replace(/^act_/, '')
+              );
+              
+              if (!accountExists) {
+                console.warn('[META] Stored account not found in valid accounts, updating to first account');
+                const firstAccount = validAccounts[0];
+                const accountId = firstAccount.id.replace(/^act_/, '');
+                localStorage.setItem('selected_ad_account', accountId);
+                
+                // Dispatch account change event
+                const event = new CustomEvent('ad-account-changed', { 
+                  detail: { accountId } 
+                });
+                window.dispatchEvent(event);
+              }
             }
           }
         } catch (e) {
