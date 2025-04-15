@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Info, ChevronDown, ChevronUp } from 'lucide-react';
@@ -8,6 +7,7 @@ import MetaApiCallLogs from './MetaApiCallLogs';
 import AdAccountDebug from './AdAccountDebug';
 import CampaignFetchStatus from './CampaignFetchStatus';
 import MockModeStatus from './MockModeStatus';
+import CampaignFetchLogs from './CampaignFetchLogs';
 
 interface DebuggerPanelProps {
   campaigns: any[];
@@ -60,13 +60,14 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({
                   isLoading={isLoading}
                   error={error}
                 />
+                <CampaignFetchLogs />
               </div>
               <div>
                 <AdAccountDebug selectedAccount={selectedAccount} />
+                <MetaApiCallLogs />
+                <MockModeStatus />
               </div>
             </div>
-            <MetaApiCallLogs />
-            <MockModeStatus />
           </CardContent>
         </CollapsibleContent>
       </Card>

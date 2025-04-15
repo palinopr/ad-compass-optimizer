@@ -3,6 +3,7 @@ import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
 import { CampaignThrottling } from './campaign/throttling';
 import { MockApiService } from './mock/MockApiService';
+import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
 
 export interface MetaCampaign {
   id: string;
@@ -39,103 +40,43 @@ export class MetaCampaignService extends BaseApiService {
     }
 
     try {
-      console.log(`[CAMPAIGN FETCH] Starting campaign fetch for ad account: ${adAccountId}...`);
-      console.log(`[CAMPAIGN FETCH] Token: ${token.substring(0, 8)}...${token.substring(token.length - 8)}`);
-      
+      CampaignFetchLogger.logAttempt(adAccountId);
+    
       this.validateToken(token, 'fetchCampaigns');
-      
+    
       if (!adAccountId) {
         throw new Error('Ad Account ID is required');
       }
 
-      // Skip throttling check in mock mode and log it clearly
-      if (this.isMockMode()) {
-        console.log('🎭 Mock mode active - bypassing throttling checks');
-      } else {
-        console.log('Real API mode - checking throttling status');
+      if (!this.isMockMode()) {
         CampaignThrottling.checkThrottling(adAccountId);
       }
-      
-      // Track the fetch attempt for diagnostics
+
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
-      
-      // Use the funnel service to get campaign data via batch API
-      console.log('[CAMPAIGN FETCH] Making API call via MetaFunnelService...');
-      
+    
       try {
         const response = await MetaFunnelService.fetchFunnelData(token, adAccountId);
-        
-        console.log('[CAMPAIGN FETCH] MetaFunnelService Response:', {
-          campaignsCount: response.campaigns.length,
-          adsetsCount: response.adsets.length,
-          adsCount: response.ads.length,
-          status: 'success'
-        });
-        
-        // Log response details
-        console.log(`[CAMPAIGN FETCH] Success! Received ${response.campaigns.length} campaigns`);
-        
-        // Store metadata for diagnostics
+        await CampaignFetchLogger.logResponse(response, adAccountId);
+      
         localStorage.setItem('last_campaign_count', response.campaigns.length.toString());
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.removeItem('last_empty_result');
-        
+      
         return response.campaigns;
       } catch (fetchError: any) {
-        // Enhanced error logging for the API call
-        console.error(`[CAMPAIGN FETCH] Error in MetaFunnelService.fetchFunnelData:`, fetchError);
-        
-        // Extract and log the raw response if available
-        if (fetchError?.response) {
-          console.log(`[CAMPAIGN FETCH] Status:`, fetchError.response.status, fetchError.response.statusText);
-          console.log(`[CAMPAIGN FETCH] Headers:`, Object.fromEntries([...fetchError.response.headers.entries()]));
-          
-          try {
-            const responseText = await fetchError.response.text();
-            console.log(`[CAMPAIGN FETCH] Raw Body:`, responseText);
-            
-            try {
-              const parsed = JSON.parse(responseText);
-              console.log(`[CAMPAIGN FETCH] Parsed JSON:`, parsed);
-              
-              // Check specifically for Meta API errors
-              if (parsed.error) {
-                console.error(`[CAMPAIGN FETCH] Meta API Error:`, {
-                  code: parsed.error.code,
-                  message: parsed.error.message,
-                  type: parsed.error.type,
-                  fbtraceId: parsed.error.fbtrace_id
-                });
-              }
-            } catch (jsonErr) {
-              console.error(`[CAMPAIGN FETCH] ❌ JSON parse error:`, jsonErr);
-              console.error(`[CAMPAIGN FETCH] Unparseable response body:`, responseText);
-            }
-          } catch (textErr) {
-            console.error(`[CAMPAIGN FETCH] ❌ Failed to read response body:`, textErr);
-          }
-        } else {
-          console.error(`[CAMPAIGN FETCH] No response object in error:`, fetchError);
-        }
-        
-        // Rethrow the error after logging
+        CampaignFetchLogger.logError(fetchError, adAccountId);
         throw fetchError;
       }
     } catch (error: any) {
       console.error(`[CAMPAIGN FETCH] Error fetching campaigns for ad account ${adAccountId}:`, error);
-      console.error(`[CAMPAIGN FETCH] Error details:`, error?.response ? {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        headers: Object.fromEntries([...error.response.headers.entries()]),
-      } : 'No response details available');
-      
+    
       localStorage.setItem('last_campaign_fetch_success', 'false');
       localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
         message: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       }));
-      
+    
       throw error;
     }
   }
