@@ -38,6 +38,7 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
     if (adAccounts.length === 0) return 'No accounts available';
 
     const account = adAccounts.find(account => {
+      // Normalize IDs for comparison
       const normalizedId = account.id.replace(/^act_/, '');
       const normalizedSelected = selectedAccount?.replace(/^act_/, '') || '';
       return normalizedId === normalizedSelected;

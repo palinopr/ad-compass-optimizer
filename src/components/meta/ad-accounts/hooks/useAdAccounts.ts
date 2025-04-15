@@ -7,44 +7,11 @@ export const useAdAccounts = () => {
   const { 
     adAccounts, 
     isLoading, 
-    error,
-    errorRef, 
-    fetchAdAccounts,
-    setAdAccounts 
+    error, 
+    fetchAdAccounts
   } = useAdAccountsFetching();
   
   const [selectedAccount, setSelectedAccount] = useState<string>('');
-  const [retryCount, setRetryCount] = useState(0);
-  
-  // Set up initial fetch on load
-  useEffect(() => {
-    console.log('[META] Initializing useAdAccounts hook');
-    
-    // Initial fetch with retry logic on failure
-    const performInitialFetch = async () => {
-      try {
-        await fetchAdAccounts();
-      } catch (err) {
-        console.error('[META] Failed to fetch ad accounts on initial load:', err);
-        
-        if (retryCount < 2) {
-          console.log(`[META] Retrying fetch (attempt ${retryCount + 1})...`);
-          setRetryCount(prev => prev + 1);
-          setTimeout(performInitialFetch, 1000);
-        }
-      }
-    };
-    
-    performInitialFetch();
-    
-    // Set up event listeners for account refresh
-    window.addEventListener('refresh-ad-accounts', fetchAdAccounts);
-    
-    // Clean up event listeners on unmount
-    return () => {
-      window.removeEventListener('refresh-ad-accounts', fetchAdAccounts);
-    };
-  }, [fetchAdAccounts, retryCount]);
   
   // Initialize selected account from localStorage
   useEffect(() => {
@@ -64,39 +31,38 @@ export const useAdAccounts = () => {
       setSelectedAccount(accountId);
       localStorage.setItem('selected_ad_account', accountId);
       
-      // Show toast notification
       toast({
         title: "Ad Account Selected",
         description: `${firstAccount.name} has been automatically selected.`
       });
+
+      // Trigger campaign refresh
+      window.dispatchEvent(new CustomEvent('ad-account-changed', { 
+        detail: { accountId } 
+      }));
     }
   }, [adAccounts, selectedAccount]);
   
-  // Handle account change
   const handleAccountChange = useCallback((value: string) => {
     console.log('[META] Account selection changed to:', value);
     
-    // Normalize account ID (remove 'act_' prefix if present)
     const accountId = value.replace(/^act_/, '');
-    
-    // Update state and localStorage
     setSelectedAccount(accountId);
     localStorage.setItem('selected_ad_account', accountId);
     
-    // Update selected_ad_accounts for consistency
-    localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
+    const selectedAccountObj = adAccounts.find(acc => acc.id === value);
     
-    // Show toast notification
     toast({
-      title: "Ad Account Selected",
-      description: "Your ad account selection has been updated."
+      title: "Ad Account Changed",
+      description: selectedAccountObj ? 
+        `Switched to ${selectedAccountObj.name}` : 
+        "Ad account selection updated"
     });
     
-    // Dispatch event for other components
     window.dispatchEvent(new CustomEvent('ad-account-changed', { 
       detail: { accountId } 
     }));
-  }, []);
+  }, [adAccounts]);
 
   return {
     adAccounts,
