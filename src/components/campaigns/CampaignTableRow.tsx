@@ -42,7 +42,78 @@ const mapStatusToDisplay = (apiStatus: string): string => {
   }
 };
 
+// Helper to format currency values
+const formatCurrency = (value: string | undefined): string => {
+  if (!value || value === '-') return '-';
+  
+  // If it's already formatted with a dollar sign, return as is
+  if (value.startsWith('$')) return value;
+  
+  // Try to parse as a number
+  const numValue = parseFloat(value);
+  if (isNaN(numValue)) return '-';
+  
+  // Format as USD
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(numValue);
+};
+
 const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status }) => {
+  // For debugging - log campaign structure if insights are missing
+  React.useEffect(() => {
+    if (!campaign.insights || Object.keys(campaign.insights).length === 0) {
+      console.warn(`[CAMPAIGN ROW] Campaign "${campaign.name}" is missing insights data:`, campaign);
+    }
+  }, [campaign]);
+
+  // Format budget value
+  const getBudgetDisplay = (): string => {
+    if (campaign.budget) return formatCurrency(campaign.budget);
+    if (campaign.daily_budget) return formatCurrency(campaign.daily_budget) + '/day';
+    if (campaign.lifetime_budget) return formatCurrency(campaign.lifetime_budget) + ' (lifetime)';
+    return '-';
+  };
+  
+  // Get spend with fallback
+  const getSpendDisplay = (): string => {
+    const spend = campaign.spend || campaign.insights?.spend;
+    return formatCurrency(spend);
+  };
+  
+  // Get results with fallback
+  const getResultsDisplay = (): string => {
+    if (campaign.results) return campaign.results;
+    
+    // Try to extract from insights actions
+    if (campaign.insights?.actions && Array.isArray(campaign.insights.actions)) {
+      const purchaseAction = campaign.insights.actions.find(
+        a => a.action_type === 'purchase' || a.action_type === 'omni_purchase'
+      );
+      if (purchaseAction) return purchaseAction.value;
+    }
+    
+    return '-';
+  };
+  
+  // Get CPA with fallback
+  const getCpaDisplay = (): string => {
+    if (campaign.insights?.cpa) return formatCurrency(campaign.insights.cpa);
+    
+    // Try to extract from cost_per_action_type
+    if (campaign.insights?.cost_per_action_type && Array.isArray(campaign.insights.cost_per_action_type)) {
+      const purchaseCost = campaign.insights.cost_per_action_type.find(
+        c => c.action_type === 'purchase' || c.action_type === 'omni_purchase'
+      );
+      if (purchaseCost) return formatCurrency(purchaseCost.value);
+    }
+    
+    return '-';
+  };
+
   return (
     <TableRow>
       <TableCell className="font-medium">{campaign.name}</TableCell>
@@ -57,17 +128,16 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status })
           {mapStatusToDisplay(campaign.status)}
         </Badge>
       </TableCell>
-      <TableCell>{campaign.budget}</TableCell>
-      <TableCell>{campaign.spend}</TableCell>
-      <TableCell>{campaign.results}</TableCell>
-      <TableCell>{campaign.insights?.cpa || '-'}</TableCell>
+      <TableCell>{getBudgetDisplay()}</TableCell>
+      <TableCell>{getSpendDisplay()}</TableCell>
+      <TableCell>{getResultsDisplay()}</TableCell>
+      <TableCell>{getCpaDisplay()}</TableCell>
       <TableCell>
-        {campaign.insights?.roas !== '-' && campaign.insights?.roas && (
+        {campaign.insights?.roas && campaign.insights.roas !== '-' ? (
           <span className={parseFloat(campaign.insights.roas) >= 4 ? 'text-green-600 font-medium' : ''}>
             {campaign.insights.roas}
           </span>
-        )}
-        {(!campaign.insights?.roas || campaign.insights?.roas === '-') && '-'}
+        ) : '-'}
       </TableCell>
       <TableCell className="text-right">
         <DropdownMenu>
