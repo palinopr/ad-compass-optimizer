@@ -13,7 +13,7 @@ export type CampaignFilters = {
 export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   const [filters, setFilters] = useState<CampaignFilters>({
     dateRange: null,
-    datePreset: 'last_28d',  // Using last_28d consistently
+    datePreset: 'last_28d',  // Using last_28d as the default (Meta API compatible)
     status: null,
     search: '',
   });
@@ -22,7 +22,7 @@ export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   useEffect(() => {
     const today = new Date();
     const twentyEightDaysAgo = new Date();
-    twentyEightDaysAgo.setDate(today.getDate() - 28); // Using 28 days consistently
+    twentyEightDaysAgo.setDate(today.getDate() - 28);
     setFilters(prev => ({
       ...prev,
       dateRange: { from: twentyEightDaysAgo, to: today }
@@ -30,7 +30,20 @@ export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   }, []);
 
   const setDateRange = useCallback((dateRange: DateRange, preset: string) => {
-    setFilters(prev => ({ ...prev, dateRange, datePreset: preset }));
+    // Map legacy presets to Meta API compatible values
+    let apiPreset = preset;
+    switch (preset) {
+      case 'last30days':
+      case 'last_30d':
+        apiPreset = 'last_28d';
+        break;
+      case 'last7days':
+        apiPreset = 'last_7d';
+        break;
+    }
+    
+    console.log(`[CAMPAIGN FILTERS] Setting date preset: ${apiPreset} (original: ${preset})`);
+    setFilters(prev => ({ ...prev, dateRange, datePreset: apiPreset }));
   }, []);
 
   const setStatusFilter = useCallback((status: string | null) => {

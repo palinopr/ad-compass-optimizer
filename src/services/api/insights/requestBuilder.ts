@@ -1,3 +1,4 @@
+
 /**
  * Builder for Meta Insights API requests
  */
@@ -14,12 +15,22 @@ export class InsightsRequestBuilder {
     if (options.timeRange) {
       params.append('time_range', JSON.stringify(options.timeRange));
     } else if (options.datePreset) {
-      // Ensure we always use last_28d when last_30d or last30days was provided
+      // Map any legacy date presets to Meta API compatible values
       let datePreset = options.datePreset;
-      if (datePreset === 'last_30d' || datePreset === 'last30days') {
-        console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_28d"`);
-        datePreset = 'last_28d';
+      
+      // Mapping legacy values to supported Meta API values
+      switch (datePreset) {
+        case 'last_30d':
+        case 'last30days':
+          console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_28d"`);
+          datePreset = 'last_28d';
+          break;
+        case 'last7days':
+          console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_7d"`);
+          datePreset = 'last_7d';
+          break;
       }
+      
       params.append('date_preset', datePreset);
     } else {
       // Default to last_28d if no time range specified (updated from last_30d)

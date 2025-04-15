@@ -21,6 +21,7 @@ export const fetchCampaignInsights = async (
     console.log(`[INSIGHTS FETCH] Fetching insights for campaign ${campaignId}`);
     
     // Use the MetaInsightsService to fetch campaign insights
+    // Using the Meta API compatible date_preset value - last_28d
     const response = await fetch(
       `https://graph.facebook.com/v17.0/${campaignId}/insights?fields=actions,cost_per_action_type,website_purchase_roas&date_preset=last_28d&access_token=${token}`,
       {

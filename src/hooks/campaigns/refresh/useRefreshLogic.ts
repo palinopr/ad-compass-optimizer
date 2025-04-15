@@ -67,7 +67,7 @@ export const useRefreshLogic = (status?: string) => {
         };
       }
 
-      // Log the actual fetch request
+      // Log the actual fetch request with the correct date_preset
       console.log(`[REFRESH LOGIC] Fetching data for act_${selectedAdAccount} with date_preset=last_28d`);
       
       // Update last refresh time

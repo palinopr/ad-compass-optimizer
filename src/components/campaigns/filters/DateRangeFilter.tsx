@@ -8,8 +8,22 @@ interface DateRangeFilterProps {
 }
 
 const DateRangeFilter = ({ datePreset, onDateRangeChange }: DateRangeFilterProps) => {
-  // If the outdated preset is passed, replace it with the correct one
-  const actualPreset = datePreset === 'last30days' ? 'last_28d' : datePreset;
+  // Map legacy presets to compatible Meta API presets
+  const mapLegacyPreset = (preset: string): string => {
+    switch (preset) {
+      case 'last30days': 
+        return 'last_28d';
+      case 'last_30d': 
+        return 'last_28d';
+      case 'last7days': 
+        return 'last_7d';
+      default: 
+        return preset;
+    }
+  };
+  
+  // Apply preset mapping
+  const actualPreset = mapLegacyPreset(datePreset);
   
   return (
     <DateRangeSelector 

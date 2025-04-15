@@ -72,7 +72,7 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
   // Reset filters when ad account changes
   useEffect(() => {
     const handleAccountChange = () => {
-      // Reset all filters to default values
+      // Reset all filters to default values but use Meta API compatible presets
       setDateRange(null, 'last_28d');
       setStatusFilter(null);
       setSearchQuery('');

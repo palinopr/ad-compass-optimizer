@@ -24,16 +24,26 @@ export type DateRange = {
 
 export type PresetOption = {
   label: string;
-  value: 'today' | 'yesterday' | 'last7days' | 'last_28d' | 'custom';
+  value: string;
 };
 
+// Updated presets to match Meta API accepted values
 const presets: PresetOption[] = [
   { label: 'Today', value: 'today' },
   { label: 'Yesterday', value: 'yesterday' },
-  { label: 'Last 7 days', value: 'last7days' },
-  { label: 'Last 28 days', value: 'last_28d' }, // Updated from last30days to last_28d
+  { label: 'Last 7 days', value: 'last_7d' },
+  { label: 'Last 28 days', value: 'last_28d' },
+  { label: 'This month', value: 'this_month' },
+  { label: 'Last month', value: 'last_month' },
   { label: 'Custom range', value: 'custom' },
 ];
+
+// Mapping to help with backward compatibility
+const legacyPresetMapping: Record<string, string> = {
+  'last30days': 'last_28d',
+  'last_30d': 'last_28d',
+  'last7days': 'last_7d'
+};
 
 interface DateRangeSelectorProps {
   onChange: (dateRange: DateRange, preset: string) => void;
@@ -50,20 +60,21 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     // Initialize with last 28 days as default
     const today = new Date();
     const twentyEightDaysAgo = new Date();
-    twentyEightDaysAgo.setDate(today.getDate() - 28); // Updated from 30 to 28
+    twentyEightDaysAgo.setDate(today.getDate() - 28);
     return { from: twentyEightDaysAgo, to: today };
   });
 
   // Handle backward compatibility for old preset values
   useEffect(() => {
-    // If initialPreset is 'last30days', convert it to 'last_28d'
-    const normalizedPreset = initialPreset === 'last30days' ? 'last_28d' : initialPreset;
-    handlePresetChange(normalizedPreset);
+    // Map legacy presets to new Meta API compatible presets
+    let normalizedPreset = initialPreset;
     
-    // Log the preset conversion for debugging
-    if (initialPreset === 'last30days') {
-      console.log('[DATE PRESET] Converting legacy "last30days" to "last_28d"');
+    if (legacyPresetMapping[initialPreset]) {
+      normalizedPreset = legacyPresetMapping[initialPreset];
+      console.log(`[DATE PRESET] Converting legacy "${initialPreset}" to "${normalizedPreset}"`);
     }
+    
+    handlePresetChange(normalizedPreset);
   }, [initialPreset]);
 
   const handlePresetChange = (preset: string) => {
@@ -87,21 +98,34 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         endOfYesterday.setHours(23, 59, 59, 999); // End of yesterday
         newRange = { from: startOfYesterday, to: endOfYesterday };
         break;
-      case 'last7days':
+      case 'last7days': // Legacy support
+      case 'last_7d':
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(today.getDate() - 7);
         sevenDaysAgo.setHours(0, 0, 0, 0); // Start of 7 days ago
         newRange = { from: sevenDaysAgo, to: today };
+        preset = 'last_7d'; // Ensure we use the correct preset value
         break;
-      case 'last30days': // Handle legacy case
+      case 'last30days': // Legacy support
+      case 'last_30d': // Legacy support
       case 'last_28d':
         const twentyEightDaysAgo = new Date();
-        twentyEightDaysAgo.setDate(today.getDate() - 28); // Updated from 30 to 28
+        twentyEightDaysAgo.setDate(today.getDate() - 28);
         twentyEightDaysAgo.setHours(0, 0, 0, 0); // Start of 28 days ago
         newRange = { from: twentyEightDaysAgo, to: today };
-        
-        // Always use the new format
-        preset = 'last_28d';
+        preset = 'last_28d'; // Ensure we use the correct preset value
+        break;
+      case 'this_month':
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        newRange = { from: startOfMonth, to: today };
+        break;
+      case 'last_month':
+        const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        startOfLastMonth.setHours(0, 0, 0, 0);
+        const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+        endOfLastMonth.setHours(23, 59, 59, 999);
+        newRange = { from: startOfLastMonth, to: endOfLastMonth };
         break;
       case 'custom':
         // Keep existing date range for custom
@@ -110,7 +134,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         break;
     }
 
-    console.log(`Date preset selected: ${preset}`, newRange);
+    console.log(`[DATE PRESET] Date preset selected: ${preset}`, newRange);
     setSelectedPreset(preset);
     setDateRange(newRange);
     onChange(newRange, preset);
