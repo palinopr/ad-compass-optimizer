@@ -3,13 +3,11 @@ import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
 import { useFetchState } from './fetch-hooks/useFetchState';
-import { useTokenValidation } from './fetch-hooks/useTokenValidation';
 import { toast } from '@/hooks/use-toast';
 import { debounce } from 'lodash';
-import { getCachedCampaigns, storeCampaignsInCache } from './fetch-utils/campaignCache';
-import { BaseApiService } from '@/services/api/BaseApiService';
-import { mockFunnelData } from '@/services/api/mock/mockCampaignData';
-import { runFinalDiagnosticCheck } from '@/utils/campaign-diagnostics/finalDiagnosticCheck';
+import { MetaFunnelService } from '@/services/api/MetaFunnelService';
+import { isMockMode, handleMockData } from './fetch-utils/mockModeUtils';
+import { handleSuccessfulFetch, logFetchDetails, prepareFetchRequest } from './fetch-utils/campaignFetchUtils';
 
 export function useCampaignFetcher() {
   const { error, errorDetails, handleError, clearErrors } = useErrorHandler();
@@ -25,11 +23,6 @@ export function useCampaignFetcher() {
     handleFetchFailure,
     consecutiveFailures
   } = useFetchState();
-  const { validateToken } = useTokenValidation();
-  
-  const isMockMode = () => {
-    return localStorage.getItem("USE_MOCK_MODE") === "true";
-  };
 
   const fetchCampaignData = useCallback(async (
     token: string,
@@ -49,17 +42,10 @@ export function useCampaignFetcher() {
     
     if (mockMode) {
       console.log('🎭 Mock mode: Returning mock campaign data');
-      
-      let campaigns = [...mockFunnelData.campaigns];
-      
-      if (status && status !== 'all') {
-        campaigns = campaigns.filter(campaign => 
-          campaign.status?.toLowerCase() === status.toLowerCase()
-        );
-      }
-      
-      handleFetchSuccess(true); // Pass true to indicate mock mode
-      return { campaigns, error: null };
+      const mockData = MetaFunnelService.getMockFunnelData();
+      handleMockData(mockData, adAccountId);
+      handleFetchSuccess(true);
+      return { campaigns: mockData.campaigns, error: null };
     }
     
     if (!canFetch()) {
@@ -71,104 +57,26 @@ export function useCampaignFetcher() {
       };
     }
 
-    if (!forceRefresh) {
-      const { campaigns, isFresh } = getCachedCampaigns(adAccountId);
-      if (campaigns && isFresh) {
-        console.log(`[CAMPAIGNS TAB] Using cached campaigns for account ${adAccountId}`);
-        return { 
-          campaigns, 
-          error: null
-        };
-      }
-    }
-    
     startFetch();
     clearErrors();
     
     try {
       console.log('[CAMPAIGNS TAB] Starting API fetch for account:', adAccountId);
       
-      const tokenValidation = validateToken();
-      console.log('[CAMPAIGNS TAB] Token validation:', tokenValidation);
-      
-      if (!tokenValidation.isValid) {
-        console.error('[CAMPAIGNS TAB] Token validation failed:', tokenValidation.error);
-        return { campaigns: [], error: tokenValidation.error };
+      const { error: prepError } = await prepareFetchRequest(token, adAccountId, mockMode);
+      if (prepError) {
+        return { campaigns: [], error: prepError };
       }
 
-      // Run diagnostic check in production mode
-      if (!isMockMode()) {
-        console.log('[CAMPAIGNS TAB] Running diagnostic check...');
-        const diagnosticResult = await runFinalDiagnosticCheck();
-        if (!diagnosticResult.success) {
-          console.error('[CAMPAIGNS TAB] Diagnostic check failed:', diagnosticResult.error);
-          throw new Error(diagnosticResult.error);
-        }
-      }
+      logFetchDetails(adAccountId, token);
 
-      console.log('[CAMPAIGNS TAB] Preparing to call API with:', {
-        adAccountId,
-        tokenLength: token.length,
-        tokenStart: token.substring(0, 5) + '...',
-        tokenEnd: '...' + token.substring(token.length - 5),
-        endpoint: `/act_${adAccountId}/campaigns`
-      });
-
-      const MetaCampaignService = (await import('@/services/api/MetaCampaignService')).default;
-      console.log('[CAMPAIGNS TAB] Calling MetaCampaignService.fetchCampaigns...');
-      const campaigns = await MetaCampaignService.fetchCampaigns(token, adAccountId);
+      const data = await MetaFunnelService.fetchFunnelData(token, adAccountId);
+      handleSuccessfulFetch(data.campaigns, mountedRef, increaseCooldown);
       
-      console.log('[CAMPAIGNS TAB] Fetch successful:', {
-        campaignCount: campaigns.length,
-        adAccountId,
-        timestamp: new Date().toISOString(),
-        firstCampaignId: campaigns.length > 0 ? campaigns[0].id : 'none'
-      });
-      
-      if (mountedRef.current) {
-        storeCampaignsInCache(campaigns, adAccountId);
-        
-        localStorage.setItem('last_campaign_count', campaigns.length.toString());
-        localStorage.setItem('last_campaign_fetch_success', 'true');
-        
-        if (campaigns.length > 0) {
-          toast({
-            title: "Campaign Data Loaded Successfully",
-            description: `Found ${campaigns.length} campaigns.`,
-            variant: "default",
-          });
-        }
-
-        const appUsage = BaseApiService.lastResponseHeaders['x-app-usage'];
-        if (appUsage) {
-          try {
-            const usage = JSON.parse(appUsage);
-            if (usage.call_count > 80 || usage.total_cputime > 80 || usage.total_time > 80) {
-              toast({
-                title: "⚠️ Approaching Meta Rate Limit",
-                description: "Please refresh less frequently to avoid rate limiting.",
-                variant: "destructive",
-                duration: 10000,
-              });
-              
-              localStorage.setItem('last_rate_limit_warning', new Date().toISOString());
-              increaseCooldown();
-            }
-          } catch (e) {
-            console.error('Error parsing Meta API usage headers:', e);
-          }
-        }
-      }
-
-      handleFetchSuccess(false); // Pass false to indicate live API mode
-      return { campaigns, error: null };
+      handleFetchSuccess(false);
+      return { campaigns: data.campaigns, error: null };
     } catch (err: any) {
-      console.error('[CAMPAIGNS TAB] Fetch error details:', {
-        error: err,
-        message: err?.message,
-        stack: err?.stack?.substring(0, 200) || 'No stack',
-        adAccountId
-      });
+      logFetchDetails(adAccountId, token, err);
       
       if (err?.status === 429 || 
           (err?.message && err.message.toLowerCase().includes('rate limit')) ||
@@ -189,7 +97,7 @@ export function useCampaignFetcher() {
     } finally {
       endFetch();
     }
-  }, [canFetch, startFetch, endFetch, clearErrors, handleError, validateToken, mountedRef, increaseCooldown, handleFetchSuccess, handleFetchFailure]);
+  }, [canFetch, startFetch, endFetch, clearErrors, handleError, mountedRef, increaseCooldown, handleFetchSuccess, handleFetchFailure]);
 
   const debouncedFetchCampaignData = useCallback(
     debounce(fetchCampaignData, 1000),
