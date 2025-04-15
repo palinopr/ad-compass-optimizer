@@ -1,15 +1,17 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
 import { useToast } from '@/hooks/use-toast';
 import { AdAccount } from '../types';
+import { fetchAllAccounts } from '../utils/fetchUtils';
 
 export function useAdAccountsFetching() {
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const errorRef = useRef<HTMLDivElement>(null);
 
   const fetchAdAccounts = async () => {
     try {
@@ -19,13 +21,14 @@ export function useAdAccountsFetching() {
       const token = metaAuthService.getAccessToken();
       if (!token) {
         setError('Not authenticated with Meta');
+        setIsLoading(false);
         return;
       }
 
       console.log('[META] Fetching ad accounts...');
-      const accounts = await MetaApiService.fetchAdAccounts(token);
+      const accounts = await fetchAllAccounts(token);
       
-      console.log('[META] Fetched accounts:', accounts);
+      console.log('[AD ACCOUNTS] Response:', accounts);
       
       if (accounts.length === 0) {
         setError('No ad accounts found. Please check your Meta permissions.');
@@ -63,7 +66,7 @@ export function useAdAccountsFetching() {
     adAccounts,
     isLoading,
     error,
-    errorRef: null,
+    errorRef,
     fetchAdAccounts,
     setAdAccounts
   };

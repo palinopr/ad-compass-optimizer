@@ -14,6 +14,7 @@ import RefreshControls from '@/components/campaigns/refresh/RefreshControls';
 import EmptyStateMessage from '@/components/campaigns/EmptyStateMessage';
 import MockDiagnosticPanel from '@/components/campaigns/diagnostic-components/MockDiagnosticPanel';
 import CampaignTroubleshooter from '@/components/campaigns/troubleshooter/CampaignTroubleshooter';
+import AdAccountSection from '@/components/meta/integration/AdAccountSection';
 
 const Campaigns = () => {
   const {
@@ -61,6 +62,8 @@ const Campaigns = () => {
               refreshConnection={refreshConnection}
               resetConnection={resetConnection}
             />
+            
+            {isAuthenticated && <AdAccountSection isAuthenticated={isAuthenticated} />}
             
             {debugMode && localStorage.getItem("USE_MOCK_MODE") === "true" && (
               <MockDiagnosticPanel 
