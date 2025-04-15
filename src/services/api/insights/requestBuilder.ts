@@ -94,7 +94,7 @@ export class InsightsRequestBuilder {
       case 'account':
         return ['account_name', ...commonFields];
       case 'campaign':
-        return ['campaign_name', ...commonFields];
+        return ['campaign_name', ...commonFields, 'website_purchase_roas'];
       case 'adset':
         return ['adset_name', ...commonFields];
       case 'ad':

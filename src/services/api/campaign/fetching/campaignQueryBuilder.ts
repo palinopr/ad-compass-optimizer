@@ -22,7 +22,7 @@ export class CampaignQueryBuilder {
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.4-endpoint-fix';
+    return '1.0.5-insights-fields';
   }
   
   // Adding timestamp to ensure no cache is used
