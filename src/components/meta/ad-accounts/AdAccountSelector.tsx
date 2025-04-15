@@ -20,21 +20,16 @@ const AdAccountSelector = () => {
   } = useAdAccounts();
 
   const handleResetConnection = () => {
-    // Log reconnect attempt for diagnostics
     console.log('[META DEBUG] 🔁 Reconnect Meta Account triggered by user');
     
-    // Show toast notification
     toast({
       title: "🔁 Reconnecting Meta Account",
       description: "We're resetting your session. Please re-authenticate shortly."
     });
 
-    // Clear Meta-related data
     metaAuthService.logout();
     localStorage.removeItem('selected_ad_account');
     localStorage.removeItem('selected_ad_accounts');
-    
-    // Force page refresh to reinitialize connection flow
     window.location.reload();
   };
 
