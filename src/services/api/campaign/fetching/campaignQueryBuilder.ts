@@ -3,17 +3,16 @@ import { CAMPAIGN_FIELDS } from './config/queryFields';
 import { AccountValidator } from './utils/accountValidator';
 
 export class CampaignQueryBuilder {
-  // Re-implemented to ensure the 28-day window change is properly applied
   static buildCampaignQuery(): string {
+    // Use the defined fields from config
     const basicFields = CAMPAIGN_FIELDS.BASIC.join(',');
     const insightFields = CAMPAIGN_FIELDS.INSIGHTS.join(',');
     
-    // Always explicitly use last_28d date preset for campaign insights
-    // This ensures consistent usage throughout the application
+    // Explicitly include insights block with date_preset
     const datePreset = 'last_28d';
     const query = `${basicFields},insights.date_preset(${datePreset}){${insightFields}}`;
     
-    // Force log the parameter usage to ensure it's visible in console
+    // Log the query for debugging
     console.log(`[CAMPAIGN QUERY] Built query with date preset: ${datePreset}`);
     console.log(`[CAMPAIGN QUERY] Full query string: ${query}`);
     
@@ -57,3 +56,4 @@ export class CampaignQueryBuilder {
     return true;
   }
 }
+
