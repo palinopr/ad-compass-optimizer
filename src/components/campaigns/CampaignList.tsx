@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
@@ -11,6 +10,7 @@ import CampaignDebugInfo from './CampaignDebugInfo';
 import { useCampaignListState } from '@/hooks/campaigns/useCampaignListState';
 import { useCampaignMetrics } from '@/hooks/campaigns/useCampaignMetrics';
 import MockApiControls from './diagnostic-components/MockApiControls';
+import EmptyState from './states/EmptyState';
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
@@ -57,17 +57,16 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
 
-  // If no campaigns and no error, show a clean status message
   if (campaigns.length === 0 && !error) {
+    const selectedAccount = localStorage.getItem('selected_ad_account');
+    const accountText = selectedAccount ? ` in account ${selectedAccount}` : '';
+    
     return (
-      <Card className="p-6">
-        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-          <Info className="h-4 w-4" />
-          <p>
-            ✅ Meta account connected. No campaigns found for {selectedAccount || 'current ad account'}.
-          </p>
-        </div>
-      </Card>
+      <EmptyState
+        icon="📭"
+        title="No campaigns found"
+        description={`There are no ${status} campaigns${accountText}. Campaigns will appear here once they are created.`}
+      />
     );
   }
 
