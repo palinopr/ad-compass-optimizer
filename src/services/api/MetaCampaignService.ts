@@ -8,7 +8,8 @@ import { PaginationHandler } from './campaign/fetching/paginationHandler';
 import { CampaignQueryBuilder } from './campaign/fetching/campaignQueryBuilder';
 import { ErrorStorage } from './campaign/error/errorStorage';
 
-export { MetaCampaign };
+// Change from "export { MetaCampaign }" to "export type { MetaCampaign }"
+export type { MetaCampaign };
 
 export class MetaCampaignService extends BaseApiService {
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
@@ -113,3 +114,4 @@ export class MetaCampaignService extends BaseApiService {
     }
   }
 }
+
