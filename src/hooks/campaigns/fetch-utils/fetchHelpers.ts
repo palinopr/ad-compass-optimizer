@@ -1,6 +1,5 @@
-
 import { MetaCampaign, MetaCampaignService } from '@/services/api/MetaCampaignService';
-import { handleApiError } from './errorHandler';
+import { handleApiError } from './error-handling/campaignErrorHandler';
 
 /**
  * Helper functions for fetching campaign data
