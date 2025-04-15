@@ -58,8 +58,8 @@ export class MetaCampaignService extends BaseApiService {
       // Check if we should throttle the request
       CampaignThrottling.checkThrottling(formattedAccountId);
 
-      // Build the proper GET URL with fields including insights and effective_status
-      const fields = 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
+      // Update date_preset from last_30_days to last_7d in insights request
+      const fields = 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_7d){impressions,clicks,spend,actions,cost_per_action_type}';
       const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
