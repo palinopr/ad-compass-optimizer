@@ -9,7 +9,18 @@ export function useAdAccountSelection() {
   const getSelectedAdAccount = useCallback(() => {
     try {
       // First check for direct account selection
-      const selectedAccountId = localStorage.getItem('selected_ad_account');
+      let selectedAccountId;
+      
+      try {
+        selectedAccountId = localStorage.getItem('selected_ad_account');
+      } catch (e) {
+        console.error('Error accessing localStorage:', e);
+        return {
+          hasAccount: false,
+          error: 'Error accessing localStorage',
+          errorDetails: { error: e }
+        };
+      }
       
       if (selectedAccountId) {
         // Format it properly for API calls (with or without 'act_' prefix)
@@ -26,7 +37,18 @@ export function useAdAccountSelection() {
       }
       
       // If no direct selection, check for selected accounts array
-      const selectedAccountsStr = localStorage.getItem('selected_ad_accounts');
+      let selectedAccountsStr;
+      try {
+        selectedAccountsStr = localStorage.getItem('selected_ad_accounts');
+      } catch (e) {
+        console.error('Error accessing localStorage for accounts array:', e);
+        return {
+          hasAccount: false,
+          error: 'Error accessing localStorage',
+          errorDetails: { error: e }
+        };
+      }
+      
       if (selectedAccountsStr) {
         try {
           const selectedAccounts = JSON.parse(selectedAccountsStr);
@@ -38,7 +60,11 @@ export function useAdAccountSelection() {
               : `act_${accountId}`;
               
             // Also save it as the selected_ad_account for consistency
-            localStorage.setItem('selected_ad_account', accountId);
+            try {
+              localStorage.setItem('selected_ad_account', accountId);
+            } catch (e) {
+              console.error('Error setting localStorage item:', e);
+            }
             
             return {
               hasAccount: true,
@@ -75,10 +101,25 @@ export function useAdAccountSelection() {
   // This function will switch to a specific account and notify the system
   const switchToAccount = useCallback((accountId: string) => {
     try {
+      if (!accountId) {
+        console.error('Invalid account ID provided to switchToAccount');
+        return false;
+      }
+      
       // Store the account ID
       const cleanAccountId = accountId.replace(/^act_/, '');
-      localStorage.setItem('selected_ad_account', cleanAccountId);
-      localStorage.setItem('selected_ad_accounts', JSON.stringify([cleanAccountId]));
+      try {
+        localStorage.setItem('selected_ad_account', cleanAccountId);
+        localStorage.setItem('selected_ad_accounts', JSON.stringify([cleanAccountId]));
+      } catch (e) {
+        console.error('Error setting localStorage:', e);
+        toast({
+          title: "Storage Error",
+          description: "Could not save account selection. Please check browser permissions.",
+          variant: "destructive"
+        });
+        return false;
+      }
       
       // Show loading toast
       toast({
@@ -88,16 +129,24 @@ export function useAdAccountSelection() {
       });
       
       // Dispatch the account change event
-      const event = new CustomEvent('ad-account-changed', { 
-        detail: { accountId: cleanAccountId } 
-      });
-      window.dispatchEvent(event);
+      try {
+        const event = new CustomEvent('ad-account-changed', { 
+          detail: { accountId: cleanAccountId } 
+        });
+        window.dispatchEvent(event);
+      } catch (e) {
+        console.error('Error dispatching account change event:', e);
+      }
       
       // Trigger campaign data refresh
-      const refreshEvent = new CustomEvent('campaign-data-refresh', {
-        detail: { force: true }
-      });
-      window.dispatchEvent(refreshEvent);
+      try {
+        const refreshEvent = new CustomEvent('campaign-data-refresh', {
+          detail: { force: true }
+        });
+        window.dispatchEvent(refreshEvent);
+      } catch (e) {
+        console.error('Error dispatching refresh event:', e);
+      }
       
       return true;
     } catch (e) {
