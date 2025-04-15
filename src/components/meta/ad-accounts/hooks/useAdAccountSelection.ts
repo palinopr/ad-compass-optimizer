@@ -11,17 +11,25 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
   // Initialize selection from localStorage or default to first account
   useEffect(() => {
     try {
+      // Get stored account and validate it exists in available accounts
       const storedAccountId = localStorage.getItem('selected_ad_account');
-      if (storedAccountId && adAccounts.some(acc => acc.id.replace(/^act_/, '') === storedAccountId.replace(/^act_/, ''))) {
+      console.log('[META] Checking stored account selection:', storedAccountId);
+      console.log('[META] Available accounts:', adAccounts.length);
+      
+      if (storedAccountId && adAccounts.some(acc => 
+        acc && acc.id && acc.id.replace(/^act_/, '') === storedAccountId.replace(/^act_/, '')
+      )) {
         console.log('[META] Using stored account selection:', storedAccountId);
         setSelectedAccount(storedAccountId);
       } else if (adAccounts.length > 0) {
-        // Default to first valid account
+        // Default to first valid account if stored one is invalid or not found
         const firstAccount = adAccounts[0];
-        const accountId = firstAccount.id.replace(/^act_/, '');
-        console.log('[META] No valid stored account, defaulting to first account:', accountId);
-        setSelectedAccount(accountId);
-        localStorage.setItem('selected_ad_account', accountId);
+        if (firstAccount && firstAccount.id) {
+          const accountId = firstAccount.id.replace(/^act_/, '');
+          console.log('[META] No valid stored account, defaulting to first account:', accountId);
+          setSelectedAccount(accountId);
+          localStorage.setItem('selected_ad_account', accountId);
+        }
       }
     } catch (e) {
       console.error('[META] Error initializing account selection:', e);
@@ -38,7 +46,7 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
     try {
       // Validate account exists in fetched accounts
       const accountExists = adAccounts.some(acc => 
-        acc.id.replace(/^act_/, '') === value.replace(/^act_/, '')
+        acc && acc.id && acc.id.replace(/^act_/, '') === value.replace(/^act_/, '')
       );
 
       if (!accountExists) {
@@ -63,6 +71,7 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
       
       // Update localStorage
       localStorage.setItem('selected_ad_account', accountId);
+      localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
       
       // Show toast notification
       toast({
@@ -75,12 +84,14 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
         detail: { accountId } 
       });
       window.dispatchEvent(event);
+      console.log('[META] Dispatched ad-account-changed event');
 
       // Trigger campaign data refresh
       const refreshEvent = new CustomEvent('campaign-data-refresh', {
         detail: { force: true }
       });
       window.dispatchEvent(refreshEvent);
+      console.log('[META] Dispatched campaign-data-refresh event');
 
     } catch (err) {
       console.error('[META] Error in account change handler:', err);

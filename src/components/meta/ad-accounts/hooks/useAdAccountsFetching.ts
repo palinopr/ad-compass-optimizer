@@ -47,6 +47,7 @@ export function useAdAccountsFetching() {
         if (!Array.isArray(accounts)) {
           setError('Invalid response from API');
           setAdAccounts([]);
+          setIsLoading(false);
           return;
         }
         
@@ -61,13 +62,44 @@ export function useAdAccountsFetching() {
 
         // Log each account before updating state
         accounts.forEach((account, idx) => {
-          console.log(`[META AD ACCOUNTS] Account ${idx + 1}:`, {
-            id: account.id,
-            name: account.name,
-          });
+          if (account && account.id) {
+            console.log(`[META AD ACCOUNTS] Account ${idx + 1}:`, {
+              id: account.id,
+              name: account.name,
+            });
+          }
         });
 
-        setAdAccounts(accounts);
+        // Filter out any invalid accounts (missing id or name)
+        const validAccounts = accounts.filter(acc => acc && acc.id);
+        console.log(`[META AD ACCOUNTS] Valid accounts: ${validAccounts.length} of ${accounts.length}`);
+        
+        setAdAccounts(validAccounts);
+        
+        // If we have a stored account ID that isn't in our valid accounts list, select the first account
+        try {
+          const storedAccountId = localStorage.getItem('selected_ad_account');
+          if (storedAccountId && validAccounts.length > 0) {
+            const accountExists = validAccounts.some(acc => 
+              acc.id.replace(/^act_/, '') === storedAccountId.replace(/^act_/, '')
+            );
+            
+            if (!accountExists) {
+              console.warn('[META] Stored account not found in valid accounts, updating to first account');
+              const firstAccount = validAccounts[0];
+              const accountId = firstAccount.id.replace(/^act_/, '');
+              localStorage.setItem('selected_ad_account', accountId);
+              
+              // Dispatch account change event
+              const event = new CustomEvent('ad-account-changed', { 
+                detail: { accountId } 
+              });
+              window.dispatchEvent(event);
+            }
+          }
+        } catch (e) {
+          console.error('[META] Error handling account validation:', e);
+        }
       }
     } catch (err: any) {
       console.error('[META] Error fetching ad accounts:', err);

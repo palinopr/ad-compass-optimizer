@@ -13,6 +13,7 @@ export function useAdAccountSelection() {
       
       try {
         selectedAccountId = localStorage.getItem('selected_ad_account');
+        console.log('[META] Retrieved selected account from localStorage:', selectedAccountId);
       } catch (e) {
         console.error('Error accessing localStorage:', e);
         return {
@@ -28,7 +29,7 @@ export function useAdAccountSelection() {
           ? selectedAccountId 
           : `act_${selectedAccountId}`;
           
-        console.log(`Selected ad account: ${formattedAccountId}`);
+        console.log(`[META] Selected ad account: ${formattedAccountId}`);
         
         return {
           hasAccount: true,
@@ -62,6 +63,7 @@ export function useAdAccountSelection() {
             // Also save it as the selected_ad_account for consistency
             try {
               localStorage.setItem('selected_ad_account', accountId);
+              console.log(`[META] Updated selected_ad_account in localStorage to ${accountId}`);
             } catch (e) {
               console.error('Error setting localStorage item:', e);
             }
@@ -102,15 +104,18 @@ export function useAdAccountSelection() {
   const switchToAccount = useCallback((accountId: string) => {
     try {
       if (!accountId) {
-        console.error('Invalid account ID provided to switchToAccount');
+        console.error('[META] Invalid account ID provided to switchToAccount');
         return false;
       }
       
       // Store the account ID
       const cleanAccountId = accountId.replace(/^act_/, '');
+      console.log(`[META] Switching to account: ${cleanAccountId}`);
+      
       try {
         localStorage.setItem('selected_ad_account', cleanAccountId);
         localStorage.setItem('selected_ad_accounts', JSON.stringify([cleanAccountId]));
+        console.log('[META] Saved account selection to localStorage');
       } catch (e) {
         console.error('Error setting localStorage:', e);
         toast({
@@ -134,6 +139,7 @@ export function useAdAccountSelection() {
           detail: { accountId: cleanAccountId } 
         });
         window.dispatchEvent(event);
+        console.log('[META] Dispatched ad-account-changed event');
       } catch (e) {
         console.error('Error dispatching account change event:', e);
       }
@@ -144,6 +150,7 @@ export function useAdAccountSelection() {
           detail: { force: true }
         });
         window.dispatchEvent(refreshEvent);
+        console.log('[META] Dispatched campaign-data-refresh event');
       } catch (e) {
         console.error('Error dispatching refresh event:', e);
       }

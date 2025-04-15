@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Check, ChevronsUpDown, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,8 +43,14 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
         return [];
       }
       
+      // Ensure each account has valid ID and name
       const validAccounts = adAccounts.filter(account => account && account.id);
       console.log('[META AD ACCOUNTS] Valid accounts:', validAccounts.length);
+      
+      if (validAccounts.length === 0) {
+        setError('No valid ad accounts found. Please check your Meta permissions.');
+        return [];
+      }
       
       if (selectedAccount && !validAccounts.some(acc => 
         acc.id.replace(/^act_/, '') === selectedAccount.replace(/^act_/, '')
@@ -69,9 +76,14 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
       if (!safeAccounts || safeAccounts.length === 0) return 'No accounts available';
 
       const account = safeAccounts.find(account => {
-        const normalizedId = account.id.replace(/^act_/, '');
-        const normalizedSelected = selectedAccount?.replace(/^act_/, '') || '';
-        return normalizedId === normalizedSelected;
+        try {
+          const normalizedId = account.id.replace(/^act_/, '');
+          const normalizedSelected = selectedAccount?.replace(/^act_/, '') || '';
+          return normalizedId === normalizedSelected;
+        } catch (err) {
+          console.error('[META] Error comparing account IDs:', err);
+          return false;
+        }
       });
 
       return account ? `${account.name} (${account.id})` : 'Select an ad account';
@@ -85,9 +97,28 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
   const handleAccountSelect = React.useCallback((accountId: string) => {
     try {
       console.log('[META] Account selected:', accountId);
+      
+      // Validate account ID before proceeding
+      if (!accountId) {
+        console.error('[META] Empty account ID selected');
+        setError('Invalid account selection');
+        return;
+      }
+      
+      // Trigger parent component's onChange handler
       onChange(accountId);
       setOpen(false);
       setError(null);
+      
+      // Dispatch event to trigger campaign fetch
+      try {
+        const event = new CustomEvent('campaign-data-refresh', {
+          detail: { force: true }
+        });
+        window.dispatchEvent(event);
+      } catch (eventErr) {
+        console.error('[META] Error dispatching refresh event:', eventErr);
+      }
     } catch (err) {
       console.error('[META] Error selecting account:', err);
       setError('Failed to select account. Please try again.');
