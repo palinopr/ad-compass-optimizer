@@ -42,6 +42,14 @@ class CampaignFetchLogger {
 
   static async logResponse(response: Response, accountId: string, queryParams?: string): Promise<void> {
     try {
+      const responseData = await response.clone().json().catch(() => null);
+      console.log('[CAMPAIGN FETCH] Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        data: responseData
+      });
+
       const log = await ResponseParser.parseResponse(response, accountId, queryParams);
       LogStorage.addLog(log as CampaignFetchLog);
       LogEventEmitter.emitLogUpdate(log as CampaignFetchLog);
@@ -51,7 +59,13 @@ class CampaignFetchLogger {
   }
 
   static logError(error: any, accountId: string): void {
-    console.error('[CAMPAIGN FETCH] ❌ Error:', error);
+    console.error('[CAMPAIGN FETCH] Error:', {
+      message: error?.message,
+      code: error?.code,
+      type: error?.type,
+      response: error?.response?.data,
+      raw: error
+    });
     
     const log: CampaignFetchLog = {
       timestamp: new Date().toISOString(),
@@ -60,7 +74,7 @@ class CampaignFetchLogger {
     };
 
     localStorage.setItem('last_campaign_fetch_error', JSON.stringify(log.error));
-    console.log('[CAMPAIGN FETCH] ❌ Error details stored in localStorage');
+    console.log('[CAMPAIGN FETCH] Error details stored in localStorage');
 
     LogStorage.addLog(log);
     LogEventEmitter.emitLogUpdate(log);

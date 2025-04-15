@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { isRateLimitError, markRateLimited } from './rateLimit';
 
@@ -11,8 +10,6 @@ export const handleApiError = async (apiErr: any): Promise<{
   isRateLimit: boolean;
 }> => {
   console.error('[API ERROR DEBUG] API error during campaign fetch:', apiErr);
-  console.error('[API ERROR DEBUG] Error type:', typeof apiErr);
-  console.error('[API ERROR DEBUG] Error properties:', Object.keys(apiErr));
   
   // Record failed fetch for diagnostics
   localStorage.setItem('last_campaign_fetch_success', 'false');
@@ -24,93 +21,49 @@ export const handleApiError = async (apiErr: any): Promise<{
   // Extract Facebook API errors from response
   if (apiErr?.response) {
     try {
-      console.log('[API ERROR DEBUG] Found response object, attempting to parse');
+      console.error('[GRAPH API ERROR] Full response:', {
+        status: apiErr.response.status,
+        data: apiErr.response.data,
+        headers: apiErr.response.headers
+      });
       
-      // Log raw response details first
-      console.log(`[CAMPAIGN FETCH] Status:`, apiErr.response.status, apiErr.response.statusText);
+      const errorData = apiErr.response.data?.error || apiErr.response.data;
       
-      // Safely log headers if available
-      if (apiErr.response.headers) {
-        try {
-          console.log(`[CAMPAIGN FETCH] Headers:`, Object.fromEntries([...apiErr.response.headers.entries()]));
-        } catch (headerErr) {
-          console.error('[CAMPAIGN FETCH] Could not log headers:', headerErr);
-        }
+      if (errorData) {
+        apiErrorMessage = `Meta API Error ${errorData.code}: ${errorData.message}`;
+        errorDetails = {
+          code: errorData.code,
+          type: errorData.type,
+          message: errorData.message,
+          subcode: errorData.error_subcode,
+          fbtraceId: errorData.fbtrace_id
+        };
+        
+        // Enhanced logging for debugging
+        console.error('[GRAPH API ERROR] Details:', {
+          ...errorDetails,
+          raw: errorData
+        });
       }
       
-      // Get the raw response text
-      const responseText = await apiErr.response.text();
-      console.log(`[CAMPAIGN FETCH] Raw Body:`, responseText);
-      
-      try {
-        const parsed = JSON.parse(responseText);
-        console.log(`[CAMPAIGN FETCH] Parsed JSON:`, parsed);
-        
-        // Store the complete error details
-        errorDetails = parsed;
-        
-        // Check for specific Meta API errors
-        if (parsed.error) {
-          apiErrorMessage = `Meta API Error ${parsed.error.code}: ${parsed.error.message}`;
-          console.error(`[CAMPAIGN FETCH] Meta API Error:`, {
-            code: parsed.error.code,
-            message: parsed.error.message,
-            type: parsed.error.type,
-            fbtraceId: parsed.error.fbtrace_id
-          });
-          
-          // Add specific error context based on code
-          if (parsed.error.code === 190) {
-            apiErrorMessage += "\nYour access token has expired or is invalid.";
-          } else if (parsed.error.code === 200) {
-            apiErrorMessage += "\nPermission denied - check app permissions.";
-          } else if (parsed.error.code === 100) {
-            apiErrorMessage += "\nInvalid parameter in request.";
-          }
-          
-          // Check for rate limit errors
-          if (parsed.error.code === 4 || 
-              parsed.error.code === 17 ||
-              (parsed.error.code >= 80000 && parsed.error.code <= 80014) ||
-              parsed.error.message?.toLowerCase().includes('rate limit')) {
-            isRateLimitDetected = true;
-          }
-        }
-      } catch (jsonErr) {
-        console.error(`[CAMPAIGN FETCH] ❌ JSON parse error:`, jsonErr);
-        apiErrorMessage = "Failed to load campaigns. Check console for full error details.";
+      // Check for rate limit errors
+      if (errorData?.code === 4 || 
+          errorData?.code === 17 ||
+          (errorData?.code >= 80000 && errorData?.code <= 80014) ||
+          errorData?.message?.toLowerCase().includes('rate limit')) {
+        isRateLimitDetected = true;
       }
-    } catch (textErr) {
-      console.error(`[CAMPAIGN FETCH] ❌ Failed to read response body:`, textErr);
-    }
-  } else if (apiErr instanceof Error) {
-    // Handle plain Error objects
-    apiErrorMessage = apiErr.message;
-    errorDetails = {
-      name: apiErr.name,
-      message: apiErr.message,
-      stack: apiErr.stack
-    };
-    
-    // Check if it's a network error
-    if (apiErr.message.includes('Network Error') || 
-        apiErr.message.includes('Failed to fetch')) {
-      apiErrorMessage = 'Network error when connecting to Meta API. Please check your internet connection.';
-    }
-    
-    // Check if it's a rate limit error based on message content
-    if (isRateLimitError(apiErr)) {
-      isRateLimitDetected = true;
+    } catch (parseErr) {
+      console.error('[GRAPH API ERROR] Failed to parse error response:', parseErr);
     }
   }
   
-  // Store error details for diagnostics
+  // Store full error details for diagnostics
   localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
     message: apiErrorMessage,
-    timestamp: new Date().toISOString(),
     details: errorDetails,
-    status: apiErr?.response?.status || apiErr?.status || 'unknown',
-    code: errorDetails?.error?.code || apiErr?.code
+    timestamp: new Date().toISOString(),
+    raw: apiErr?.response?.data || apiErr
   }));
   
   return { 
