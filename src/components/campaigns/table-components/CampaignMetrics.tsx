@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { CampaignExtraStats } from '@/hooks/campaigns/fetch-utils/campaignInsightsFetcher';
+import { CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
 
 const formatCurrency = (value: string | undefined): string => {
   if (!value || value === '-') return '-';
@@ -42,7 +41,6 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   extraStats,
   insights
 }) => {
-  // Log detailed metrics data for debugging
   React.useEffect(() => {
     const availableData = {
       budget: getBudgetDisplay(),
@@ -54,17 +52,14 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
       hasExtraStats: !!extraStats
     };
     
-    // Store insights presence for synchronization checks
     if (insights && (insights.spend || insights.cpa || insights.roas)) {
       localStorage.setItem('has_valid_campaign_insights', 'true');
     }
     
-    // Only log if there's a potential issue with the data
     if (availableData.spend === '-' || availableData.results === '-' || 
         availableData.cpa === '-' || availableData.roas === '-') {
       console.log('[CAMPAIGN METRICS] Available data for rendering:', availableData);
       
-      // Log details of what we received
       if (insights) {
         console.log('[CAMPAIGN METRICS] Raw insights:', {
           spend: insights.spend || 'missing',
@@ -87,13 +82,11 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   };
   
   const getSpendDisplay = (): string => {
-    // Check all possible sources for spend data in order of priority
     const spendValue = spend || insights?.spend || extraStats?.spend;
     return formatCurrency(spendValue);
   };
 
   const getResultsDisplay = (): string => {
-    // Prioritize extraStats.results if available and valid
     if (extraStats?.results && extraStats.results !== '-') {
       return extraStats.results;
     }
@@ -101,7 +94,6 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   };
   
   const getCpaDisplay = (): string => {
-    // Use insights.cpa directly if available, then fall back to extraStats
     if (insights?.cpa && insights.cpa !== '-') {
       return formatCurrency(insights.cpa);
     }
@@ -112,7 +104,6 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   };
   
   const getRoasDisplay = (): string => {
-    // Use insights.roas directly if available, then fall back to extraStats
     if (insights?.roas && insights.roas !== '-') {
       return insights.roas;
     }
