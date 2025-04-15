@@ -1,6 +1,10 @@
+import { ErrorStorage } from './errorStorage';
 
 export class ErrorHandler {
-  static async handleErrorResponse(response: Response): Promise<never> {
+  /**
+   * Handle error responses from Meta API
+   */
+  public static async handleErrorResponse(response: Response): Promise<never> {
     const errorData = await response.json();
     console.error('[GRAPH API ERROR] Response:', {
       status: response.status,

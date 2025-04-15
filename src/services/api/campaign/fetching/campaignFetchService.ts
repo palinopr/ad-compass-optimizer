@@ -5,7 +5,7 @@ import { ErrorStorage } from '../../campaign/error/errorStorage';
 import { BaseApiService } from '../../BaseApiService';
 import { CampaignProcessor } from './campaignProcessor';
 import { PaginationHandler } from './paginationHandler';
-import { ErrorHandler } from '../../campaign/error/errorhandler';
+import { ErrorHandler } from '../../campaign/error/errorHandler';
 
 export class CampaignFetchService extends BaseApiService {
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
