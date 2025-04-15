@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { CampaignThrottling } from './campaign/throttling';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
@@ -56,8 +57,8 @@ export class MetaCampaignService extends BaseApiService {
       // Check if we should throttle the request
       CampaignThrottling.checkThrottling(adAccountId);
 
-      // Build the proper GET URL with core fields first - removing insights temporarily to ensure campaigns load
-      const fields = 'name,status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time';
+      // Build the proper GET URL with fields including insights
+      const fields = 'id,name,status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
       const url = `${this.BASE_URL}/${this.API_VERSION}/act_${cleanAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
@@ -84,6 +85,13 @@ export class MetaCampaignService extends BaseApiService {
         });
         
         const error = errorData?.error || {};
+        console.error('[GRAPH API ERROR] Details:', {
+          message: error.message || 'Unknown error',
+          type: error.type || 'Unknown type',
+          code: error.code || 'Unknown code',
+          subcode: error.error_subcode
+        });
+        
         throw {
           message: error.message || `HTTP error! status: ${response.status}`,
           code: error.code,

@@ -8,11 +8,11 @@ export class MetaFunnelBatchService {
     
     console.log('[META FUNNEL] Building batch requests for account:', formattedId);
     
-    // Simplify fields to fetch basic campaign data first without insights to ensure it works
+    // Include insights data with core campaign fields to fetch metrics
     return [
       {
         method: 'GET',
-        relative_url: `${formattedId}/campaigns?fields=id,name,objective,status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget`,
+        relative_url: `${formattedId}/campaigns?fields=id,name,objective,status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}`,
         name: 'campaigns'
       },
       {

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,30 +49,42 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
   };
 
   const getMetricDisplay = (value: string | undefined) => {
-    return value || '-';
+    if (!value) return '-';
+    return value;
   };
 
-  const renderMetrics = (item: any) => (
-    <div className="grid grid-cols-4 gap-4 text-sm text-gray-600">
-      <div>
-        <span className="font-medium">Spend:</span> {getMetricDisplay(item.insights?.spend || item.spend)}
+  const renderMetrics = (item: any) => {
+    // Use the most accurate data source, cascading from specific to general
+    const spend = getMetricDisplay(
+      item.insights?.spend || 
+      (typeof item.spend === 'string' ? item.spend : undefined)
+    );
+    
+    const impressions = getMetricDisplay(item.insights?.impressions);
+    const clicks = getMetricDisplay(item.insights?.clicks);
+    
+    return (
+      <div className="grid grid-cols-4 gap-4 text-sm text-gray-600">
+        <div>
+          <span className="font-medium">Spend:</span> {spend}
+        </div>
+        <div>
+          <span className="font-medium">Status:</span>{' '}
+          <span className={item.status === 'ACTIVE' ? 'text-green-600' : 'text-gray-500'}>
+            {item.status?.toLowerCase()}
+          </span>
+        </div>
+        <div>
+          <span className="font-medium">Impressions:</span>{' '}
+          {impressions}
+        </div>
+        <div>
+          <span className="font-medium">Clicks:</span>{' '}
+          {clicks}
+        </div>
       </div>
-      <div>
-        <span className="font-medium">Status:</span>{' '}
-        <span className={item.status === 'ACTIVE' ? 'text-green-600' : 'text-gray-500'}>
-          {item.status?.toLowerCase()}
-        </span>
-      </div>
-      <div>
-        <span className="font-medium">Impressions:</span>{' '}
-        {getMetricDisplay(item.insights?.impressions)}
-      </div>
-      <div>
-        <span className="font-medium">Clicks:</span>{' '}
-        {getMetricDisplay(item.insights?.clicks)}
-      </div>
-    </div>
-  );
+    );
+  };
 
   console.log('[FUNNEL VIEW] Campaigns data:', campaigns);
 

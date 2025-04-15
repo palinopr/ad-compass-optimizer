@@ -21,6 +21,7 @@ const FunnelViewContainer = () => {
   const [funnelError, setFunnelError] = useState<string | null>(null);
   const [lastFetchedAdAccount, setLastFetchedAdAccount] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [rawApiResponse, setRawApiResponse] = useState<any>(null);
 
   const {
     filteredData,
@@ -85,16 +86,21 @@ const FunnelViewContainer = () => {
       
       // If ad account hasn't changed and we have data, skip refetching
       if (formattedAccount === lastFetchedAdAccount && 
-          funnelData.campaigns.length > 0) {
+          funnelData.campaigns.length > 0 &&
+          retryCount === 0) {
         return;
       }
 
       try {
         setIsFetchingFunnel(true);
         console.log('[FUNNEL] Fetching funnel data for account:', formattedAccount);
+        
         const data = await MetaFunnelService.fetchFunnelData(token, formattedAccount);
+        setRawApiResponse(data); // Store raw response for debugging
         
         console.log(`[FUNNEL] Received funnel data with ${data.campaigns.length} campaigns`);
+        console.log('[FUNNEL] First campaign sample:', data.campaigns[0]);
+        
         setFunnelData(data);
         setLastFetchedAdAccount(formattedAccount);
         setFunnelError(null);
@@ -113,8 +119,23 @@ const FunnelViewContainer = () => {
         }
       } catch (err: any) {
         console.error('[FUNNEL] Error fetching funnel data:', err);
-        setFunnelError(err instanceof Error ? err.message : 
-                     (err?.error?.message || 'Failed to fetch funnel data'));
+        
+        // Enhanced error logging
+        if (err?.error) {
+          console.error('[FUNNEL] API Error details:', {
+            message: err.error.message,
+            code: err.error.code,
+            type: err.error.type,
+            subcode: err.error.error_subcode
+          });
+        }
+        
+        // Extract more detailed error information for display
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : (err?.error?.message || 'Failed to fetch funnel data');
+        
+        setFunnelError(errorMessage);
                      
         // Log detailed error information
         if (err?.error) {
@@ -177,6 +198,11 @@ const FunnelViewContainer = () => {
               <div className="text-red-500">
                 <p className="font-medium">Error loading campaigns:</p>
                 <p>{funnelError}</p>
+                {rawApiResponse && (
+                  <div className="mt-2 text-left text-xs p-2 bg-gray-100 rounded overflow-auto max-h-32">
+                    <pre>{JSON.stringify(rawApiResponse, null, 2)}</pre>
+                  </div>
+                )}
               </div>
             ) : (
               <p>No campaigns found. Try refreshing or selecting a different account.</p>
