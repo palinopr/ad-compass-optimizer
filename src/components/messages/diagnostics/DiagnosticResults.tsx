@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Shield, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -5,8 +6,8 @@ import { ComprehensiveDiagnosticResult } from '@/utils/meta-diagnostics/types';
 
 interface DiagnosticResultsProps {
   diagnosticResults: ComprehensiveDiagnosticResult | null;
-  proxyTestResult: any;
-  handleFullPageRefresh: () => void;
+  proxyTestResult?: any;
+  handleFullPageRefresh?: () => void;
 }
 
 const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
@@ -70,7 +71,7 @@ const DiagnosticResults: React.FC<DiagnosticResultsProps> = ({
         </div>
       )}
 
-      {hasCorsIssues && (
+      {hasCorsIssues && handleFullPageRefresh && (
         <div className="mt-3 border-t pt-2">
           <h5 className="font-medium text-xs mb-1 flex items-center">
             <Shield className="h-3 w-3 mr-1 text-red-600" />

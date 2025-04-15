@@ -157,13 +157,15 @@ export function useConnectionFlow() {
   // Function to restart the flow
   const handleRestart = () => {
     setCurrentStep(ConnectionStep.LOGIN);
+    setSelectedBusinessId(null);
+    setAdAccounts([]);
+    setSelectedAccounts([]);
     setErrorMessage(null);
   };
 
   return {
     currentStep,
     userData,
-    selectedBusinessId,
     adAccounts,
     selectedAccounts,
     errorMessage,
