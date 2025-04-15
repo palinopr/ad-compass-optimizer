@@ -1,35 +1,22 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { MetaAdAccountService } from '@/services/api/MetaAdAccountService';
 
 export function useAdAccountSelection() {
   const [adAccounts, setAdAccounts] = useState<any[]>([]);
   
-  // Get the selected ad account
-  const getSelectedAdAccount = useCallback(() => {
+  // Get the selected ad account with fallback
+  const getSelectedAdAccount = useCallback(async () => {
     try {
       // First check for direct account selection
-      let selectedAccountId;
-      
-      try {
-        selectedAccountId = localStorage.getItem('selected_ad_account');
-        console.log('[META] Retrieved selected account from localStorage:', selectedAccountId);
-      } catch (e) {
-        console.error('Error accessing localStorage:', e);
-        return {
-          hasAccount: false,
-          error: 'Error accessing localStorage',
-          errorDetails: { error: e }
-        };
-      }
+      let selectedAccountId = localStorage.getItem('selected_ad_account');
       
       if (selectedAccountId) {
-        // Format it properly for API calls (with or without 'act_' prefix)
         const formattedAccountId = selectedAccountId.startsWith('act_') 
           ? selectedAccountId 
           : `act_${selectedAccountId}`;
           
-        console.log(`[META] Selected ad account: ${formattedAccountId}`);
+        console.log(`[META] Using explicitly selected ad account: ${formattedAccountId}`);
         
         return {
           hasAccount: true,
@@ -37,63 +24,51 @@ export function useAdAccountSelection() {
         };
       }
       
-      // If no direct selection, check for selected accounts array
-      let selectedAccountsStr;
-      try {
-        selectedAccountsStr = localStorage.getItem('selected_ad_accounts');
-      } catch (e) {
-        console.error('Error accessing localStorage for accounts array:', e);
+      // If no account is selected, try to get the first active account
+      console.log('[META] No account selected, attempting to find first active account...');
+      
+      const token = localStorage.getItem('meta_access_token');
+      if (!token) {
         return {
           hasAccount: false,
-          error: 'Error accessing localStorage',
-          errorDetails: { error: e }
+          error: 'No Meta access token found',
+          errorDetails: { code: 'NO_TOKEN' }
         };
       }
       
-      if (selectedAccountsStr) {
-        try {
-          const selectedAccounts = JSON.parse(selectedAccountsStr);
-          if (selectedAccounts && selectedAccounts.length > 0) {
-            // Use the first one
-            const accountId = selectedAccounts[0];
-            const formattedAccountId = accountId.startsWith('act_') 
-              ? accountId 
-              : `act_${accountId}`;
-              
-            // Also save it as the selected_ad_account for consistency
-            try {
-              localStorage.setItem('selected_ad_account', accountId);
-              console.log(`[META] Updated selected_ad_account in localStorage to ${accountId}`);
-            } catch (e) {
-              console.error('Error setting localStorage item:', e);
-            }
-            
-            return {
-              hasAccount: true,
-              adAccountId: formattedAccountId
-            };
-          }
-        } catch (e) {
-          console.error('Error parsing selected accounts:', e);
-        }
+      const accounts = await MetaAdAccountService.fetchAdAccounts(token);
+      const activeAccount = accounts.find(acc => acc.account_status === 1);
+      
+      if (activeAccount) {
+        const accountId = activeAccount.id.replace(/^act_/, '');
+        console.log(`[META] Found active account ${accountId}, setting as default`);
+        
+        // Store this account as selected
+        localStorage.setItem('selected_ad_account', accountId);
+        localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
+        
+        return {
+          hasAccount: true,
+          adAccountId: `act_${accountId}`,
+          isDefaultAccount: true
+        };
       }
       
-      // If no account is found, note this in an error
       return {
         hasAccount: false,
-        error: 'No ad account selected. Please select an ad account first.',
+        error: 'No active ad accounts found',
         errorDetails: {
-          code: 'NO_AD_ACCOUNT',
+          code: 'NO_ACTIVE_ACCOUNTS',
           isAccountError: true
         }
       };
     } catch (e) {
-      console.error('Error getting selected ad account:', e);
+      console.error('[META] Error getting selected ad account:', e);
       return {
         hasAccount: false,
         error: `Error getting ad account: ${String(e)}`,
         errorDetails: {
-          code: 'AD_ACCOUNT_ERROR', 
+          code: 'AD_ACCOUNT_ERROR',
           error: e
         }
       };

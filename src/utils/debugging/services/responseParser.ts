@@ -6,7 +6,7 @@ import { parseResponseBody } from './parsers/responseBodyParser';
 
 class ResponseParser {
   static async parseResponse(response: Response, accountId: string, queryParams?: string): Promise<Partial<CampaignFetchLog>> {
-    const responseText = await parseResponseBody(response);
+    const { text: responseText, error: parsedError } = await parseResponseBody(response);
     let parsedJson;
     let campaignPreviews = [];
     
@@ -27,10 +27,13 @@ class ResponseParser {
       statusText: response.statusText,
       responseBody: responseText,
       parsedJson,
+      error: parsedError ? JSON.stringify(parsedError, null, 2) : undefined,
+      errorDetails: parsedError,
       insightsData: parsedJson?.data ? hasInsightsData(parsedJson.data) : false,
       datePreset: parseDatePreset(queryParams),
       queryParams,
-      campaignPreviews
+      campaignPreviews,
+      requestTimestamp: new Date().toISOString()
     };
   }
 }
