@@ -60,6 +60,9 @@ class CampaignFetchLogger {
           headers[key] = value;
         });
         log.headers = headers;
+        
+        // Store headers in localStorage for debugging
+        localStorage.setItem('last_campaign_fetch_headers', JSON.stringify(headers));
       } catch (err) {
         console.error('[CAMPAIGN FETCH] ❌ Error extracting headers:', err);
       }
@@ -85,6 +88,9 @@ class CampaignFetchLogger {
               subcode: json.error.error_subcode,
               fbTraceId: json.error.fbtrace_id
             };
+            
+            // Store error details in localStorage
+            localStorage.setItem('last_campaign_fetch_error', JSON.stringify(log.errorDetails));
           }
           
           // Extract campaign previews for debugging
@@ -145,6 +151,9 @@ class CampaignFetchLogger {
         fbTraceId: error?.fbtraceId || error?.error?.fbtrace_id
       }
     };
+
+    // Store error details in localStorage
+    localStorage.setItem('last_campaign_fetch_error', JSON.stringify(log.errorDetails));
 
     LogStorage.addLog(log);
     LogEventEmitter.emitLogUpdate(log);

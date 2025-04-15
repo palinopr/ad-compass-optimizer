@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Database, AlertCircle, RefreshCw } from 'lucide-react';
+import { Database, AlertCircle, RefreshCw, Archive } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 interface CampaignFetchStatusProps {
   campaigns: any[];
@@ -21,6 +22,20 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
   const [lastManualFetchTime, setLastManualFetchTime] = useState<string | null>(null);
   const [lastFetchAccountId, setLastFetchAccountId] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<any>(null);
+  const [responseHeaders, setResponseHeaders] = useState<any>(null);
+  
+  // Function to force a fetch refresh
+  const forceFetch = () => {
+    try {
+      const event = new CustomEvent('force-campaign-refresh', {
+        detail: { timestamp: new Date().toISOString(), manual: true }
+      });
+      window.dispatchEvent(event);
+      console.log('[CAMPAIGN FETCH] Manual refresh triggered');
+    } catch (e) {
+      console.error('[CAMPAIGN FETCH] Error triggering manual refresh:', e);
+    }
+  };
   
   useEffect(() => {
     // Load fetch history from local storage
@@ -28,6 +43,7 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
     const manualFetchTime = localStorage.getItem('last_manual_campaign_fetch');
     const storedAttempts = localStorage.getItem('campaign_fetch_attempts');
     const storedError = localStorage.getItem('last_campaign_fetch_error');
+    const storedHeaders = localStorage.getItem('last_campaign_fetch_headers');
     
     if (storedFetchTime) {
       setLastFetchTime(storedFetchTime);
@@ -46,6 +62,14 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
         setErrorDetails(JSON.parse(storedError));
       } catch (e) {
         console.error('Error parsing stored error:', e);
+      }
+    }
+    
+    if (storedHeaders) {
+      try {
+        setResponseHeaders(JSON.parse(storedHeaders));
+      } catch (e) {
+        console.error('Error parsing stored headers:', e);
       }
     }
     
@@ -85,6 +109,16 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
         }
       } else {
         setErrorDetails(null);
+      }
+      
+      // Get updated headers if any
+      const storedHeaders = localStorage.getItem('last_campaign_fetch_headers');
+      if (storedHeaders) {
+        try {
+          setResponseHeaders(JSON.parse(storedHeaders));
+        } catch (e) {
+          console.error('Error parsing stored headers:', e);
+        }
       }
     };
     
@@ -141,6 +175,19 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
             </div>
           )}
 
+          <div className="mt-2">
+            <Button 
+              onClick={forceFetch}
+              variant="outline"
+              size="sm"
+              disabled={isLoading}
+              className="w-full flex gap-2 items-center justify-center"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Force Fetch Now
+            </Button>
+          </div>
+
           {isLoading && (
             <div className="flex items-center gap-2 text-blue-600 text-xs mt-2">
               <RefreshCw className="h-3 w-3 animate-spin" />
@@ -194,6 +241,22 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
                   <span className="font-mono text-xs truncate">{errorDetails.fbTraceId || errorDetails.details?.fbTraceId}</span>
                 </div>
               )}
+            </div>
+          )}
+          
+          {/* Display API headers for debugging */}
+          {responseHeaders && Object.keys(responseHeaders).length > 0 && (
+            <div className="mt-3 border border-gray-200 rounded-md p-2 bg-gray-50 text-xs">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-gray-700">API Headers:</h4>
+                <Badge variant="outline" className="text-[10px] h-4">debug</Badge>
+              </div>
+              {Object.entries(responseHeaders).map(([key, value]: [string, any]) => (
+                <div key={key} className="flex flex-col mt-1">
+                  <span className="text-gray-500 text-[10px]">{key}:</span>
+                  <span className="font-mono text-[10px] break-words truncate">{String(value)}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -30,6 +31,7 @@ export interface MetaCampaign {
 export class MetaCampaignService extends BaseApiService {
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
     try {
+      // Log the fetch attempt
       CampaignFetchLogger.logAttempt(adAccountId);
     
       this.validateToken(token, 'fetchCampaigns');
@@ -40,16 +42,25 @@ export class MetaCampaignService extends BaseApiService {
       
       // Validate account ID format - ensure it begins with act_ but doesn't have duplication
       if (!/^act_\d+$/.test(adAccountId)) {
+        console.error(`[CAMPAIGN FETCH] Invalid ad account ID format: ${adAccountId}`);
         throw new Error(`Invalid ad account ID format: ${adAccountId}`);
       }
 
       // Remove any act_ prefix for the API call since we'll add it in the endpoint
       const cleanAccountId = adAccountId.replace(/^act_/, '');
       
+      // Check throttling
       CampaignThrottling.checkThrottling(adAccountId);
 
+      // Record fetch attempt in localStorage
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
+      
+      // Update fetch attempts counter
+      const attempts = parseInt(localStorage.getItem('campaign_fetch_attempts') || '0', 10);
+      localStorage.setItem('campaign_fetch_attempts', (attempts + 1).toString());
+      
+      console.log(`[CAMPAIGN FETCH] 🔄 Fetching campaigns for account ${adAccountId}, attempt #${attempts + 1}`);
     
       try {
         // Correctly format the endpoint with the account ID
@@ -57,9 +68,9 @@ export class MetaCampaignService extends BaseApiService {
         
         // Include insights fields in the campaign request with date_preset
         const datePreset = 'last_30d';
-        const fields = 'id,name,objective,status,spend,results,cost_per_result,budget,daily_budget,lifetime_budget,start_time,end_time,created_time,updated_time,insights.date_preset(last_30d){impressions,clicks,cpc,ctr,spend,cost_per_action_type,actions}';
+        const fields = 'id,name,objective,status,effective_status,spend,results,cost_per_result,budget_remaining,daily_budget,lifetime_budget,start_time,end_time,created_time,updated_time,insights.date_preset(last_30d){impressions,clicks,cpc,ctr,spend,cost_per_action_type,actions}';
         
-        const queryParams = `fields=${fields}&date_preset=${datePreset}&access_token=${token}`;
+        const queryParams = `fields=${encodeURIComponent(fields)}&date_preset=${datePreset}&effective_status=["ACTIVE","PAUSED","ARCHIVED"]&access_token=${token}`;
         const fullUrl = `${this.BASE_URL}/${this.API_VERSION}${endpoint}?${queryParams}`;
         
         console.log(`[CAMPAIGN FETCH] Fetching campaigns from: ${endpoint}`);
@@ -72,22 +83,33 @@ export class MetaCampaignService extends BaseApiService {
         const response = await fetch(
           fullUrl,
           {
+            method: 'GET',  // Explicitly set to GET for clarity
             headers: {
               'Content-Type': 'application/json',
             }
           }
         );
 
+        // Store response headers for rate limit checking
+        this.lastResponseHeaders = {};
+        response.headers.forEach((value, key) => {
+          this.lastResponseHeaders[key] = value;
+        });
+
+        // Log the full response for debugging
         await CampaignFetchLogger.logResponse(response, adAccountId, fields);
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          console.error(`[CAMPAIGN FETCH] Error response: ${response.status} ${response.statusText}`, errorText);
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
         
         if (!data || !data.data) {
-          throw new Error('Invalid response format');
+          console.error('[CAMPAIGN FETCH] Invalid response format:', data);
+          throw new Error('Invalid response format from Meta API');
         }
 
         console.log(`[CAMPAIGN FETCH] Received ${data.data.length} campaigns with insights data`);
