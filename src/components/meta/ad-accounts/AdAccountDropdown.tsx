@@ -32,6 +32,13 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
   
+  // Select first account if none selected and accounts are available
+  React.useEffect(() => {
+    if (!selectedAccount && adAccounts.length > 0) {
+      onChange(adAccounts[0].id.replace(/^act_/, ''));
+    }
+  }, [adAccounts, selectedAccount, onChange]);
+  
   // Find the selected account label to display
   const selectedAccountLabel = React.useMemo(() => {
     if (isLoading) return 'Loading accounts...';
@@ -61,12 +68,6 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
     }, 10);
   }, [onChange]);
 
-  // Prevent any click event from propagating up and potentially causing navigation
-  const stopPropagation = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -76,8 +77,6 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
           aria-expanded={open}
           className="w-full justify-between bg-white"
           disabled={isLoading}
-          type="button" // Explicitly set button type to prevent form submission
-          onClick={stopPropagation}
         >
           {isLoading ? (
             <div className="flex items-center">
@@ -103,8 +102,6 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
                 value={account.id}
                 onSelect={() => handleSelect(account.id)}
                 className="cursor-pointer"
-                onMouseDown={stopPropagation}
-                onClick={stopPropagation}
               >
                 <Check
                   className={cn(

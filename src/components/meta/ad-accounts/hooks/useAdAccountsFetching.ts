@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { metaAuthService, MetaAuthService } from '@/services/MetaAuthService';
 import { AdAccount } from '../types';
@@ -18,7 +17,14 @@ export function useAdAccountsFetching() {
   useEffect(() => {
     if (isMockMode()) {
       console.log('🎭 Mock mode: Using mock ad accounts');
-      setAdAccounts([getMockAdAccount()]);
+      const mockAccount = getMockAdAccount();
+      setAdAccounts([mockAccount]);
+      
+      // Set as selected account if none exists
+      const currentSelected = localStorage.getItem('selected_ad_account');
+      if (!currentSelected) {
+        localStorage.setItem('selected_ad_account', mockAccount.id.replace(/^act_/, ''));
+      }
     }
   }, []);
   
@@ -145,6 +151,18 @@ export function useAdAccountsFetching() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Auto-select first account if no account is selected
+    if (adAccounts.length > 0) {
+      const currentSelected = localStorage.getItem('selected_ad_account');
+      if (!currentSelected) {
+        const firstAccount = adAccounts[0];
+        console.log('Auto-selecting first account:', firstAccount.id);
+        localStorage.setItem('selected_ad_account', firstAccount.id.replace(/^act_/, ''));
+      }
+    }
+  }, [adAccounts]);
 
   return {
     adAccounts,
