@@ -1,8 +1,7 @@
-
 export class CampaignQueryBuilder {
   static buildCampaignQuery(): string {
-    // Update date_preset from last_30_days to last_30d in insights request
-    return 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30d){impressions,clicks,spend,actions,cost_per_action_type}';
+    // Update date_preset from last_30_days to last_28d in insights request
+    return 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_28d){impressions,clicks,spend,actions,cost_per_action_type}';
   }
 
   static validateAdAccountId(adAccountId: string): boolean {
