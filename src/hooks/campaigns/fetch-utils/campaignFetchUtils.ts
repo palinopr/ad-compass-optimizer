@@ -1,3 +1,4 @@
+
 import { toast } from '@/hooks/use-toast';
 import { BaseApiService } from '@/services/api/BaseApiService';
 import { validateToken } from './tokenUtils';
@@ -147,12 +148,12 @@ export const logFetchDetails = (
     tokenStart: token?.substring(0, 5) + '...',
     tokenEnd: '...' + token?.substring(token?.length - 5),
     endpoint: `/${formattedId}/campaigns`,
-    url: `${API_BASE_URL}/${API_VERSION}/${formattedId}/campaigns`,
+    url: `${BaseApiService.BASE_URL}/${BaseApiService.API_VERSION}/${formattedId}/campaigns`,
   });
 
   // Log the full URL format (without actual token) for debugging
   console.log('[CAMPAIGNS] Full URL format:', 
-    `${API_BASE_URL}/${API_VERSION}/${formattedId}/campaigns` +
+    `${BaseApiService.BASE_URL}/${BaseApiService.API_VERSION}/${formattedId}/campaigns` +
     `?fields=name,status,daily_budget,effective_status,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}` +
     `&access_token=[REDACTED]`
   );
