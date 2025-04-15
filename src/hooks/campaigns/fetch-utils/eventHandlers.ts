@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 /**
@@ -57,6 +56,27 @@ export const triggerCampaignRefresh = (
     toast({
       title: "Refresh Error",
       description: "Failed to trigger campaign refresh",
+      variant: "destructive",
+    });
+  }
+};
+
+// Add the new triggerDisplayRefresh function
+export const triggerDisplayRefresh = (): void => {
+  try {
+    console.log('[UI] Triggering display refresh');
+    
+    const event = new CustomEvent('campaign-display-refresh', {
+      detail: {
+        timestamp: new Date().toISOString()
+      }
+    });
+    window.dispatchEvent(event);
+  } catch (e) {
+    console.error('[UI REFRESH] Error triggering display refresh:', e);
+    toast({
+      title: "Refresh Error",
+      description: "Failed to trigger UI refresh",
       variant: "destructive",
     });
   }
