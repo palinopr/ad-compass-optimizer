@@ -1,4 +1,3 @@
-
 export interface ErrorDetails {
   code: string | number;
   type: string;
@@ -6,6 +5,10 @@ export interface ErrorDetails {
   subcode?: string | number;
   fbtraceId?: string;
   timestamp: string;
+  requestUrl?: string;
+  httpStatus?: number;
+  rawResponse?: string;
+  rateLimitInfo?: string;
 }
 
 export interface CampaignFetchLog {

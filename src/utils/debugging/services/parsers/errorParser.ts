@@ -14,12 +14,25 @@ export const parseMetaError = (error: any): ErrorDetails => {
   // Handle nested error objects from Meta API
   const metaError = error.error || error;
   
-  return {
+  // Enhanced error parsing
+  const errorDetails: ErrorDetails = {
     code: metaError.code || error.status || defaultError.code,
     type: metaError.type || defaultError.type,
     message: metaError.message || String(error) || defaultError.message,
     subcode: metaError.error_subcode,
     fbtraceId: metaError.fbtrace_id,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    requestUrl: error.requestUrl, // Store the request URL if available
+    httpStatus: error.status || error.httpStatus,
+    rawResponse: error.rawResponse, // Store raw response for debugging
+    rateLimitInfo: error.rateLimitInfo // Store rate limit info if present
   };
+
+  // Log full error details to console for debugging
+  console.error('[META API ERROR]', {
+    ...errorDetails,
+    stack: error.stack
+  });
+
+  return errorDetails;
 };

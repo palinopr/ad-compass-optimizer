@@ -7,6 +7,20 @@ import { parseMetaError } from './parsers/errorParser';
 
 class ResponseParser {
   static async parseResponse(response: Response, accountId: string, queryParams?: string): Promise<Partial<CampaignFetchLog>> {
+    // Store full request details
+    const requestDetails = {
+      url: response.url,
+      method: response.method,
+      headers: Object.fromEntries(response.headers.entries()),
+      status: response.status,
+      statusText: response.statusText
+    };
+
+    console.log('[CAMPAIGN FETCH] Request details:', {
+      ...requestDetails,
+      url: response.url.replace(/access_token=([^&]+)/, 'access_token=REDACTED')
+    });
+
     const { text: responseText, error: parsedError } = await parseResponseBody(response);
     let parsedJson;
     let campaignPreviews = [];
@@ -19,11 +33,27 @@ class ResponseParser {
         campaignPreviews = parseCampaignPreviews(parsedJson.data);
       }
       
-      if (!response.ok && parsedError) {
-        error = parseMetaError(parsedError);
+      // Enhanced error handling
+      if (!response.ok || parsedJson.error) {
+        error = parseMetaError({
+          ...parsedJson.error || parsedError,
+          status: response.status,
+          requestUrl: response.url,
+          rawResponse: responseText,
+          httpStatus: response.status,
+          rateLimitInfo: response.headers.get('x-business-use-case-usage') || 
+                        response.headers.get('x-app-usage')
+        });
       }
     } catch (err) {
-      console.error('[CAMPAIGN FETCH] ❌ Failed to parse JSON:', err);
+      console.error('[CAMPAIGN FETCH] Failed to parse response:', err);
+      error = parseMetaError({
+        message: 'Failed to parse API response',
+        code: 'PARSE_ERROR',
+        type: 'ClientError',
+        rawResponse: responseText,
+        originalError: err
+      });
     }
 
     return {
@@ -38,7 +68,8 @@ class ResponseParser {
       datePreset: parseDatePreset(queryParams),
       queryParams,
       campaignPreviews,
-      requestTimestamp: new Date().toISOString()
+      requestTimestamp: new Date().toISOString(),
+      requestDetails // Include full request details
     };
   }
 }
