@@ -8,8 +8,10 @@
  */
 export interface InsightFilterOptions {
   datePreset?: 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 
-               'last_3_months' | 'last_6_months' | 'this_quarter' | 'lifetime' | 
-               'last_30d' | 'last_14d' | 'last_7d' | 'last_28d' | 'last30days' | 'last7days' | 'maximum';
+               'this_quarter' | 'lifetime' | 'last_3d' | 'last_7d' | 'last_14d' |
+               'last_28d' | 'last_30d' | 'last_90d' | 'last_week_mon_sun' | 'last_week_sun_sat' | 
+               'last_quarter' | 'last_year' | 'this_week_mon_today' | 'this_week_sun_today' | 
+               'this_year' | 'maximum';
   timeRange?: {
     since: string; // YYYY-MM-DD format
     until: string; // YYYY-MM-DD format

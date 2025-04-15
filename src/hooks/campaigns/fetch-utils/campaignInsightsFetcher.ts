@@ -2,6 +2,7 @@
 import { MetaInsightsService } from '@/services/api/insights/MetaInsightsService';
 import { toast } from '@/hooks/use-toast';
 import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
+import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 // Interface for the extra stats we'll add to each campaign
 export interface CampaignExtraStats {
@@ -9,32 +10,6 @@ export interface CampaignExtraStats {
   cpa: string;
   roas: string;
 }
-
-/**
- * Maps a date preset to a valid Meta API date_preset
- */
-const mapToValidDatePreset = (preset: string = 'last_28d'): string => {
-  const mapping: Record<string, string> = {
-    'last30days': 'last_28d',
-    'last_30d': 'last_28d',
-    'last7days': 'last_7d'
-  };
-  
-  // Return the mapped value if exists, otherwise use the original (if valid) or last_28d
-  const validPresets = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 
-                      'last_month', 'last_3_months', 'last_6_months', 'this_quarter',
-                      'lifetime', 'last_30d', 'last_14d', 'last_7d', 'last_28d', 'maximum'];
-  
-  if (mapping[preset]) {
-    return mapping[preset];
-  }
-  
-  if (validPresets.includes(preset)) {
-    return preset;
-  }
-  
-  return 'last_28d';
-};
 
 /**
  * Fetches detailed insights for a single campaign
@@ -45,6 +20,7 @@ export const fetchCampaignInsights = async (
   datePreset: string = 'last_28d'
 ): Promise<CampaignExtraStats | null> => {
   try {
+    // Map legacy or invalid presets to valid Meta API values
     const validDatePreset = mapToValidDatePreset(datePreset);
     console.log(`[INSIGHTS FETCH] Fetching insights for campaign ${campaignId} with date_preset=${validDatePreset}`);
     
@@ -138,8 +114,12 @@ export const fetchInsightsForCampaigns = async (
   token: string,
   datePreset: string = 'last_28d'
 ): Promise<MetaCampaign[]> => {
+  // Map legacy or invalid presets to valid Meta API values
   const validDatePreset = mapToValidDatePreset(datePreset);
   console.log(`[INSIGHTS FETCH] Starting batch insights fetch for ${campaigns.length} campaigns with date_preset=${validDatePreset}`);
+  
+  // Create a map to prevent duplicate fetches for the same campaign ID
+  const processedCampaignIds = new Map<string, boolean>();
   let successCount = 0;
   
   // Create a copy of campaigns to update
@@ -153,7 +133,15 @@ export const fetchInsightsForCampaigns = async (
     // Process each batch concurrently
     await Promise.all(batch.map(async (campaign, index) => {
       const campaignIndex = i + index;
+      
+      // Skip if we've already processed this campaign ID
+      if (processedCampaignIds.has(campaign.id)) {
+        console.log(`[INSIGHTS FETCH] Skipping duplicate campaign ID: ${campaign.id}`);
+        return;
+      }
+      
       try {
+        processedCampaignIds.set(campaign.id, true);
         const extraStats = await fetchCampaignInsights(campaign.id, token, validDatePreset);
         
         if (extraStats) {

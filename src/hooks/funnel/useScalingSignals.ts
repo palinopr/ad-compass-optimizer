@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { MetaInsightsService } from '@/services/api/MetaInsightsService';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 export type ScalingSignal = {
   status: 'eligible' | 'slow-scale' | 'watch' | 'pause';
@@ -33,14 +34,35 @@ export const useScalingSignals = (itemId: string, targetCPA?: number) => {
         const token = metaAuthService.getAccessToken();
         if (!token) throw new Error('No access token available');
 
-        // Fetch last 7 days of performance data
-        const response = await MetaInsightsService.fetchInsights(token, itemId, {
-          datePreset: 'last_7d',
-          fields: ['spend', 'cpa', 'actions']
-        });
+        // Fetch performance data with fallback logic
+        let data;
+        try {
+          // First try with last_7d preset
+          const response = await MetaInsightsService.fetchInsights(token, itemId, {
+            datePreset: 'last_7d',
+            fields: ['spend', 'cpa', 'actions']
+          });
 
-        const data = response.data;
-        if (!data || data.length === 0) throw new Error('No data available');
+          if (!response.data || response.data.length === 0) {
+            throw new Error('No data available with last_7d preset');
+          }
+          
+          data = response.data;
+        } catch (initialError) {
+          console.error('[SCALING SIGNALS] Error with last_7d preset, trying maximum:', initialError);
+          
+          // Fall back to maximum preset
+          const fallbackResponse = await MetaInsightsService.fetchInsights(token, itemId, {
+            datePreset: 'maximum',
+            fields: ['spend', 'cpa', 'actions']
+          });
+          
+          if (!fallbackResponse.data || fallbackResponse.data.length === 0) {
+            throw new Error('No data available even with maximum preset');
+          }
+          
+          data = fallbackResponse.data;
+        }
 
         // Calculate metrics
         const cpaTrend = data.map(day => parseFloat(day.cpa) || 0);

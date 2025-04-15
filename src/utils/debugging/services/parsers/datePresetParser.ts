@@ -79,6 +79,7 @@ export const mapToValidDatePreset = (preset?: string): string => {
   
   // If it's a legacy preset, map it
   if (mapping[preset]) {
+    console.log(`[DATE PRESET MAPPING] Mapped legacy preset '${preset}' to '${mapping[preset]}'`);
     return mapping[preset];
   }
   
@@ -88,6 +89,7 @@ export const mapToValidDatePreset = (preset?: string): string => {
   }
   
   // Default fallback
+  console.warn(`[DATE PRESET MAPPING] Unrecognized preset '${preset}', using default 'last_28d'`);
   return 'last_28d';
 };
 

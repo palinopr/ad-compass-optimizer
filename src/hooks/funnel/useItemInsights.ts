@@ -38,6 +38,11 @@ export const useItemInsights = () => {
           ? await MetaInsightsService.fetchCampaignInsights(token, itemId, options)
           : await MetaInsightsService.fetchAdSetInsights(token, itemId, options);
 
+        // Check if we have meaningful data
+        if (!response.data || response.data.length === 0) {
+          throw new Error('No insights data available with the current date preset');
+        }
+
         // Transform the data for charting
         const transformedData = {
           spend: response.data.map((d: any) => ({
