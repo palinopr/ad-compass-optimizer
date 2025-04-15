@@ -9,11 +9,12 @@ import { PaginationHandler } from './paginationHandler';
 import { ErrorHandler } from '../../campaign/error/errorHandler';
 
 export class CampaignFetchService extends BaseApiService {
-  public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
+  public static async fetchCampaigns(token: string, adAccountId: string, datePreset?: string): Promise<MetaCampaign[]> {
     try {
       console.group('[CAMPAIGN FETCH] Authentication Check');
       console.log('Access Token:', token ? 'PRESENT' : 'MISSING');
       console.log('Ad Account ID:', adAccountId);
+      console.log('Date Preset:', datePreset || 'last_28d (default)');
       
       if (!token) {
         console.error('❌ No access token found');
@@ -35,10 +36,10 @@ export class CampaignFetchService extends BaseApiService {
       
       CampaignThrottling.checkThrottling(formattedAccountId);
 
-      // This is the important part - we're using the updated query builder that uses last_28d
-      const fields = CampaignQueryBuilder.buildCampaignQuery();
+      // Use the provided date preset or default to last_28d
+      const fields = CampaignQueryBuilder.buildCampaignQuery(datePreset || 'last_28d');
       
-      // Verify that the correct date preset is being used
+      // Verify that the date preset is valid
       CampaignQueryBuilder.verifyDatePreset(fields);
       
       console.log('[CAMPAIGN FETCH] Using query fields:', fields);

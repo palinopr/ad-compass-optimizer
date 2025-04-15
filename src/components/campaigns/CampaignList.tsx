@@ -51,6 +51,19 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     }
   }, []);
   
+  // Listen for date preset changes and trigger a refresh
+  useEffect(() => {
+    const handleDatePresetChange = () => {
+      console.log('[CAMPAIGN LIST] Date preset changed, refreshing campaigns');
+      refetchCampaigns(true);
+    };
+    
+    window.addEventListener('campaign-date-preset-changed', handleDatePresetChange);
+    return () => {
+      window.removeEventListener('campaign-date-preset-changed', handleDatePresetChange);
+    };
+  }, [refetchCampaigns]);
+  
   // Add safety timeout to exit loading state if stuck
   useEffect(() => {
     let safetyTimeout: number | undefined;
@@ -85,7 +98,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     isLoading, 
     hasError: !!error,
     campaignCount: campaigns.length,
-    filteredCount: filteredCampaigns.length
+    filteredCount: filteredCampaigns.length,
+    currentDatePreset: filters.datePreset
   });
 
   if (isLoading) {
@@ -148,7 +162,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         status={status}
         hasFilteredResults={filteredCampaigns.length > 0}
         onClearFilters={() => {
-          setDateRange(null, 'last30days');
+          setDateRange(null, 'last_28d');  // Updated to use last_28d
           setStatusFilter(null);
           setSearchQuery('');
         }}

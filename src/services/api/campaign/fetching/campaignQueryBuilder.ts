@@ -3,13 +3,12 @@ import { CAMPAIGN_FIELDS } from './config/queryFields';
 import { AccountValidator } from './utils/accountValidator';
 
 export class CampaignQueryBuilder {
-  static buildCampaignQuery(): string {
+  static buildCampaignQuery(datePreset = 'last_28d'): string {
     // Use the defined fields from config
     const basicFields = CAMPAIGN_FIELDS.BASIC.join(',');
     const insightFields = CAMPAIGN_FIELDS.INSIGHTS.join(',');
     
-    // Explicitly include insights block with date_preset
-    const datePreset = 'last_28d';
+    // Use the provided date preset (default to last_28d if not specified)
     const query = `${basicFields},insights.date_preset(${datePreset}){${insightFields}}`;
     
     // Log the query for debugging
@@ -22,7 +21,7 @@ export class CampaignQueryBuilder {
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.5-insights-fields';
+    return '1.0.6-insights-fields';
   }
   
   // Adding timestamp to ensure no cache is used
@@ -55,8 +54,12 @@ export class CampaignQueryBuilder {
     }
     
     const foundPreset = match[1];
-    if (foundPreset !== 'last_28d') {
-      console.error(`[CAMPAIGN QUERY] Incorrect date preset found: ${foundPreset}, should be last_28d`);
+    const validPresets = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 
+                        'last_3_months', 'last_6_months', 'this_quarter', 'lifetime', 
+                        'last_30d', 'last_14d', 'last_7d', 'last_28d'];
+    
+    if (!validPresets.includes(foundPreset)) {
+      console.error(`[CAMPAIGN QUERY] Invalid date preset found: ${foundPreset}`);
       return false;
     }
     

@@ -1,5 +1,5 @@
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { MetaFunnelService } from '@/services/api/MetaFunnelService';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -10,9 +10,22 @@ export const useRefreshLogic = (status?: string) => {
   const lastRefreshTimeRef = useRef(0);
   // Add a flag to prevent duplicate fetches in rapid succession
   const fetchInProgressRef = useRef(false);
+  // Track the current date preset
+  const [currentDatePreset, setCurrentDatePreset] = useState<string>('last_28d');
   
   useEffect(() => {
+    // Listen for date preset changes
+    const handleDatePresetChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.datePreset) {
+        console.log(`[REFRESH LOGIC] Date preset changed to: ${customEvent.detail.datePreset}`);
+        setCurrentDatePreset(customEvent.detail.datePreset);
+      }
+    };
+    
+    window.addEventListener('campaign-date-preset-changed', handleDatePresetChange);
     return () => {
+      window.removeEventListener('campaign-date-preset-changed', handleDatePresetChange);
       mountedRef.current = false;
     };
   }, []);
@@ -30,7 +43,11 @@ export const useRefreshLogic = (status?: string) => {
       }
       
       fetchInProgressRef.current = true;
-      console.log('[REFRESH LOGIC] fetchCampaigns called', { forceRefresh, status });
+      console.log('[REFRESH LOGIC] fetchCampaigns called', { 
+        forceRefresh, 
+        status,
+        datePreset: currentDatePreset 
+      });
       
       // Ensure we have a valid token
       const token = metaAuthService.getAccessToken();
@@ -68,7 +85,7 @@ export const useRefreshLogic = (status?: string) => {
       }
 
       // Log the actual fetch request with the correct date_preset
-      console.log(`[REFRESH LOGIC] Fetching data for act_${selectedAdAccount} with date_preset=last_28d`);
+      console.log(`[REFRESH LOGIC] Fetching data for act_${selectedAdAccount} with date_preset=${currentDatePreset}`);
       
       // Update last refresh time
       lastRefreshTimeRef.current = Date.now();
@@ -76,9 +93,10 @@ export const useRefreshLogic = (status?: string) => {
       localStorage.setItem('campaign_fetch_attempts', 
         ((parseInt(localStorage.getItem('campaign_fetch_attempts') || '0')) + 1).toString());
       localStorage.setItem('last_campaign_fetch_account', selectedAdAccount);
+      localStorage.setItem('last_campaign_fetch_date_preset', currentDatePreset);
       
-      // Fetch the data
-      const data = await MetaFunnelService.fetchFunnelData(token, selectedAdAccount);
+      // Fetch the data with the current date preset
+      const data = await MetaFunnelService.fetchFunnelData(token, selectedAdAccount, currentDatePreset);
       
       console.log(`[REFRESH LOGIC] Fetch successful, received ${data.campaigns.length} campaigns`);
       fetchInProgressRef.current = false;
@@ -93,12 +111,13 @@ export const useRefreshLogic = (status?: string) => {
         errorDetails: error
       };
     }
-  }, [status]);
+  }, [status, currentDatePreset]);
 
   return {
     fetchCampaigns,
     mountedRef,
     lastRefreshTimeRef,
-    fetchInProgress: fetchInProgressRef.current
+    fetchInProgress: fetchInProgressRef.current,
+    currentDatePreset
   };
 };

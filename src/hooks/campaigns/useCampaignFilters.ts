@@ -43,6 +43,13 @@ export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
     }
     
     console.log(`[CAMPAIGN FILTERS] Setting date preset: ${apiPreset} (original: ${preset})`);
+    
+    // Dispatch a custom event to notify that date preset has changed
+    const event = new CustomEvent('campaign-date-preset-changed', {
+      detail: { datePreset: apiPreset, dateRange }
+    });
+    window.dispatchEvent(event);
+    
     setFilters(prev => ({ ...prev, dateRange, datePreset: apiPreset }));
   }, []);
 
