@@ -5,9 +5,9 @@ export class CampaignProcessor {
   static processCampaigns(campaigns: any[]): MetaCampaign[] {
     console.log(`[CAMPAIGN FETCH] Processing ${campaigns.length} campaigns`);
     
-    // Analyze campaigns before returning them
+    // Log insights presence for debugging
     if (campaigns.length > 0) {
-      // Log the first campaign as sample (redact sensitive data)
+      // Log sample campaign structure
       const sampleCampaign = { ...campaigns[0] };
       console.log('[CAMPAIGN FETCH] Sample campaign structure:', 
         JSON.stringify({
@@ -44,41 +44,45 @@ export class CampaignProcessor {
           spend: campaign.insights.spend,
         };
 
-        // Calculate results from actions if available
+        // Extract results from actions array
         if (campaign.insights.actions && Array.isArray(campaign.insights.actions)) {
-          const results = campaign.insights.actions
-            .filter((a: any) => a.action_type === 'offsite_conversion' || 
-                               a.action_type === 'purchase' || 
-                               a.action_type === 'omni_purchase')
-            .reduce((sum: number, action: any) => sum + parseFloat(action.value || '0'), 0);
-          
-          normalizedCampaign.results = results.toString();
-        }
-        
-        // Get CPA from cost_per_action_type
-        if (campaign.insights.cost_per_action_type && Array.isArray(campaign.insights.cost_per_action_type)) {
-          const offsiteConversion = campaign.insights.cost_per_action_type.find(
-            (c: any) => c.action_type === 'offsite_conversion'
-          );
-          const purchase = campaign.insights.cost_per_action_type.find(
-            (c: any) => c.action_type === 'purchase' || c.action_type === 'omni_purchase'
+          const relevantAction = campaign.insights.actions.find(
+            (a: any) => a.action_type === 'offsite_conversion' || 
+                       a.action_type === 'purchase' || 
+                       a.action_type === 'omni_purchase'
           );
           
-          if (offsiteConversion || purchase) {
-            normalizedCampaign.insights.cpa = (offsiteConversion || purchase).value;
+          if (relevantAction) {
+            normalizedCampaign.results = relevantAction.value;
+            const actionType = relevantAction.action_type;
+            
+            // Find matching CPA for the same action type
+            if (campaign.insights.cost_per_action_type && Array.isArray(campaign.insights.cost_per_action_type)) {
+              const matchingCpa = campaign.insights.cost_per_action_type.find(
+                (c: any) => c.action_type === actionType
+              );
+              if (matchingCpa) {
+                normalizedCampaign.insights.cpa = matchingCpa.value;
+              }
+            }
           }
         }
         
-        // Calculate ROAS if we have both spend and results
-        const spend = parseFloat(campaign.insights.spend || '0');
-        const results = parseFloat(normalizedCampaign.results || '0');
-        
-        if (spend > 0 && results > 0) {
-          // Calculate estimated ROAS based on an average order value of 50
-          // This is a simplified calculation - in real scenarios this would come from actual conversion values
-          const estimatedRevenue = results * 50;
-          normalizedCampaign.insights.roas = `${(estimatedRevenue / spend).toFixed(2)}x`;
+        // Get ROAS if available
+        if (campaign.insights.website_purchase_roas && Array.isArray(campaign.insights.website_purchase_roas)) {
+          const websitePurchaseRoas = campaign.insights.website_purchase_roas[0];
+          if (websitePurchaseRoas?.value) {
+            normalizedCampaign.insights.roas = `${parseFloat(websitePurchaseRoas.value).toFixed(2)}x`;
+          }
         }
+        
+        // Log processed insights for this campaign
+        console.log(`[CAMPAIGN INSIGHTS] Campaign ${campaign.name}:`, {
+          clicks: normalizedCampaign.insights.clicks || 'missing',
+          results: normalizedCampaign.results || 'missing',
+          cpa: normalizedCampaign.insights.cpa || 'missing',
+          roas: normalizedCampaign.insights.roas || 'missing'
+        });
       }
       
       return normalizedCampaign;

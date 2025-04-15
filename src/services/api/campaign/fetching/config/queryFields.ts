@@ -18,6 +18,7 @@ export const CAMPAIGN_FIELDS = {
     'clicks',
     'spend',
     'actions',
-    'cost_per_action_type'
+    'cost_per_action_type',
+    'website_purchase_roas'
   ]
 } as const;
