@@ -1,22 +1,19 @@
 
-import { checkRateLimitStatus, markRateLimited } from '@/hooks/campaigns/fetch-utils/rateLimitStatus';
+import { RateLimitManager } from '../rate-limit/RateLimitManager';
 import { toast } from '@/hooks/use-toast';
 
 export class InsightsThrottling {
   private static readonly THROTTLE_STORAGE_KEY = 'meta_insights_throttle';
 
   public static checkThrottling(accountId: string = 'default'): void {
-    // Check if rate limited first
-    const rateStatus = checkRateLimitStatus(accountId);
-    if (rateStatus.isRateLimited) {
-      console.warn(`Meta API rate limited for account ${accountId}. Remaining: ${rateStatus.timeRemaining} minutes`);
-      toast({
-        title: "API Rate Limited",
-        description: `Meta API is rate limited. Try again in ${rateStatus.timeRemaining} minutes.`,
-        variant: "destructive",
-        duration: 5000,
-      });
-      throw new Error(`Rate limit active. Try again in ${rateStatus.timeRemaining} minutes.`);
+    // Check if rate limited via RateLimitManager first
+    if (RateLimitManager.isRateLimited()) {
+      const remainingTime = RateLimitManager.getRateLimitTimeRemaining();
+      const rateLimitInfo = RateLimitManager.getRateLimitInfo();
+      
+      console.warn(`[INSIGHTS] Rate limited (${rateLimitInfo.limitType}). Remaining: ${remainingTime}s`);
+      
+      throw new Error(`Rate limit active. Try again in ${Math.ceil(remainingTime! / 60)} minutes.`);
     }
 
     // Check for API throttling
@@ -30,12 +27,14 @@ export class InsightsThrottling {
         
         if (now < expiryTime) {
           const remainingSeconds = Math.ceil((expiryTime - now) / 1000);
-          console.warn(`API requests throttled for ${remainingSeconds} seconds`);
+          console.warn(`[INSIGHTS] API requests throttled for ${remainingSeconds} seconds`);
+          
           toast({
             title: "API Throttled",
-            description: `Too many requests. Please wait ${remainingSeconds} seconds.`,
+            description: "Paused to avoid Meta API limits. Please wait.",
             variant: "destructive",
           });
+          
           throw new Error(`API throttled. Try again in ${remainingSeconds} seconds.`);
         } else {
           localStorage.removeItem(throttleKey);
@@ -45,19 +44,25 @@ export class InsightsThrottling {
       if (e instanceof Error && e.message.includes('API throttled')) {
         throw e;
       }
-      console.error('Error checking insights throttling:', e);
+      console.error('[INSIGHTS] Error checking throttling:', e);
     }
   }
 
-  public static markThrottled(accountId: string = 'default', durationSeconds: number = 5): void {
+  public static markThrottled(accountId: string = 'default', durationSeconds: number = 60): void {
     try {
       const throttleKey = `${this.THROTTLE_STORAGE_KEY}_${accountId}`;
       const now = Date.now();
       const expiryTime = now + (durationSeconds * 1000);
       
       localStorage.setItem(throttleKey, JSON.stringify({ expiryTime }));
+      
+      toast({
+        title: "Pausing API Requests",
+        description: `Paused for ${durationSeconds} seconds to avoid Meta API limits`,
+        variant: "destructive",
+      });
     } catch (e) {
-      console.error('Error marking insights throttled:', e);
+      console.error('[INSIGHTS] Error marking throttled:', e);
     }
   }
 
@@ -82,27 +87,26 @@ export class InsightsThrottling {
           );
           
           if (hasHighUsage) {
-            console.warn('High API usage detected in response headers:', usage);
-            // Don't mark as throttled yet, but log for monitoring
+            console.warn('[INSIGHTS] High API usage detected:', usage);
+            this.markThrottled('default', 30); // 30-second throttling
           }
           
-          // If usage is critical (>95%), apply throttling
+          // If usage is critical (>95%), apply stronger throttling
           const hasCriticalUsage = Object.values(usage).some((metric: any) => 
             typeof metric === 'object' && 
             (metric.call_count > 95 || metric.total_cputime > 95 || metric.total_time > 95)
           );
           
           if (hasCriticalUsage) {
-            console.error('Critical API usage detected, applying throttling');
-            this.markThrottled('default', 30); // 30-second throttling
-            markRateLimited(2, 'default'); // Fixed: Pass arguments in correct order (minutes, accountId)
+            console.error('[INSIGHTS] Critical API usage detected');
+            RateLimitManager.setRateLimit(300); // 5-minute rate limit
           }
         } catch (e) {
-          console.error('Error parsing usage headers:', e);
+          console.error('[INSIGHTS] Error parsing usage headers:', e);
         }
       }
     } catch (e) {
-      console.error('Error monitoring response headers:', e);
+      console.error('[INSIGHTS] Error monitoring response headers:', e);
     }
   }
 
@@ -127,7 +131,7 @@ export class InsightsThrottling {
         errorResponse?.status === 429;
       
       if (isRateLimitError) {
-        console.warn('Rate limit error detected:', error);
+        console.warn('[INSIGHTS] Rate limit error detected:', error);
         
         // Extract retry after time if available
         let retryAfter = 
@@ -140,15 +144,17 @@ export class InsightsThrottling {
           retryAfter = parseInt(retryAfter, 10) || 5 * 60;
         }
         
-        // Mark as rate limited with the appropriate time
-        const minutesDuration = Math.ceil(retryAfter / 60); // Convert to minutes
-        markRateLimited(minutesDuration, 'default'); // Fixed: Pass arguments in correct order (minutes, accountId)
+        // Set rate limit with the appropriate time
+        RateLimitManager.setRateLimit(retryAfter, {
+          code: errorBody?.error?.code,
+          message: errorMessage
+        });
         
-        // Also apply throttling
+        // Also apply shorter throttling
         this.markThrottled('default', 30); 
       }
     } catch (e) {
-      console.error('Error checking for rate limiting:', e);
+      console.error('[INSIGHTS] Error checking for rate limiting:', e);
     }
   }
 }
