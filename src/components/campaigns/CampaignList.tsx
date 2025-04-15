@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
@@ -12,6 +11,7 @@ import { useCampaignListState } from '@/hooks/campaigns/useCampaignListState';
 import { useCampaignMetrics } from '@/hooks/campaigns/useCampaignMetrics';
 import MockApiControls from './diagnostic-components/MockApiControls';
 import EmptyState from './states/EmptyState';
+import AdAccountDiagnostics from './diagnostic-components/AdAccountDiagnostics';
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
@@ -72,6 +72,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
 
   return (
     <div>
+      <AdAccountDiagnostics />
       <CampaignFilterToolbar 
         filters={filters}
         onDateRangeChange={setDateRange}
