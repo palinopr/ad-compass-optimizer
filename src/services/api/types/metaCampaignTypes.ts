@@ -1,4 +1,3 @@
-
 // Define the CampaignExtraStats interface in this file to avoid circular dependencies
 export interface CampaignExtraStats {
   results: string;
