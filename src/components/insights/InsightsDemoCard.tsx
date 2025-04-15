@@ -9,13 +9,11 @@ import { InsightFilterOptions } from '@/services/api/MetaInsightsService';
 
 const InsightsDemoCard = () => {
   const { insights, isLoading, error, fetchAdAccountInsights } = useMetaInsights();
-  const { getSelectedAdAccount } = useAdAccountSelection();
+  const { selectedAccount } = useAdAccountSelection();
   const [dateRange, setDateRange] = useState('last_30d');
   
   const handleFetchInsights = async () => {
-    const accountResult = getSelectedAdAccount();
-    
-    if (!accountResult.hasAccount) {
+    if (!selectedAccount.hasAccount) {
       return;
     }
     
@@ -25,7 +23,7 @@ const InsightsDemoCard = () => {
       level: 'account'
     };
     
-    await fetchAdAccountInsights(accountResult.adAccountId, options);
+    await fetchAdAccountInsights(selectedAccount.adAccountId!, options);
   };
   
   return (

@@ -1,9 +1,19 @@
-import { useState, useCallback } from 'react';
+
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { MetaAdAccountService } from '@/services/api/MetaAdAccountService';
 
 export function useAdAccountSelection() {
   const [adAccounts, setAdAccounts] = useState<any[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<{
+    hasAccount: boolean;
+    adAccountId?: string;
+    error?: string;
+    errorDetails?: any;
+    isDefaultAccount?: boolean;
+  }>({
+    hasAccount: false
+  });
   
   // Get the selected ad account with fallback
   const getSelectedAdAccount = useCallback(async () => {
@@ -108,6 +118,12 @@ export function useAdAccountSelection() {
         duration: 2000
       });
       
+      // Update the selected account state
+      setSelectedAccount({
+        hasAccount: true,
+        adAccountId: `act_${cleanAccountId}`
+      });
+      
       // Dispatch the account change event
       try {
         const event = new CustomEvent('ad-account-changed', { 
@@ -144,8 +160,20 @@ export function useAdAccountSelection() {
     }
   }, []);
   
+  // Effect to initialize the selected account
+  useEffect(() => {
+    const initializeSelectedAccount = async () => {
+      const accountInfo = await getSelectedAdAccount();
+      setSelectedAccount(accountInfo);
+    };
+    
+    initializeSelectedAccount();
+  }, [getSelectedAdAccount]);
+  
+  // Return both the sync state and the async function
   return {
-    getSelectedAdAccount,
+    selectedAccount, // Synchronous state
+    getSelectedAdAccount, // Async function for refreshing
     switchToAccount
   };
 }

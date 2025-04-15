@@ -19,12 +19,11 @@ const ExternalMetaLink: React.FC<ExternalMetaLinkProps> = ({
   children,
   className = ''
 }) => {
-  const { getSelectedAdAccount } = useAdAccountSelection();
-  const account = getSelectedAdAccount();
+  const { selectedAccount } = useAdAccountSelection();
   
   // Extract just the numeric part of the account ID
-  const accountId = account.hasAccount 
-    ? account.adAccountId.replace('act_', '') 
+  const accountId = selectedAccount.hasAccount && selectedAccount.adAccountId
+    ? selectedAccount.adAccountId.replace('act_', '') 
     : null;
   
   // Generate the appropriate URL based on type
