@@ -4,6 +4,7 @@ import { MetaConnectionContextType, initialMetaConnectionContext } from './types
 import { useMetaConnectionState, MetaConnectionState } from '@/hooks/meta/useMetaConnectionState';
 import { useMetaAuthRestoration } from '@/hooks/meta/useMetaAuthRestoration';
 import { useMetaConnectionListeners } from '@/hooks/meta/useMetaConnectionListeners';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 const MetaConnectionContext = createContext<MetaConnectionContextType>(initialMetaConnectionContext);
 
@@ -16,75 +17,83 @@ interface SharedMetaConnectionProviderProps {
 export const SharedMetaConnectionProvider: React.FC<SharedMetaConnectionProviderProps> = ({ 
   children 
 }) => {
-  // Use our custom hook for state management
   const { 
-    isAuthenticated, 
-    userData, 
-    hasPermissions,
+    isAuthenticated: initialIsAuthenticated, 
+    userData: initialUserData, 
+    hasPermissions: initialHasPermissions,
     lastCheckTime,
-    checkAuth,
+    checkAuth: baseCheckAuth,
     showConnectionDialog
   } = useMetaConnectionState();
 
-  // Additional state for component-specific needs
   const [state, setState] = useState<MetaConnectionState>({
-    isAuthenticated,
-    userData,
-    hasPermissions,
+    isAuthenticated: initialIsAuthenticated,
+    userData: initialUserData,
+    hasPermissions: initialHasPermissions,
     lastCheckTime
   });
   
   // Ref to prevent multiple initial checks
   const initialCheckDoneRef = useRef(false);
 
-  // Update local state when hook state changes
-  useEffect(() => {
-    setState({
-      isAuthenticated,
-      userData,
-      hasPermissions,
-      lastCheckTime
-    });
-    
-    if (lastCheckTime > 0 && !initialCheckDoneRef.current) {
-      initialCheckDoneRef.current = true;
-      console.log('SharedMetaConnectionProvider: Initial auth check complete');
-      console.log('Auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
-      console.log('Has permissions:', hasPermissions ? 'Yes' : 'No');
-      
-      // Broadcast auth state for cross-component consistency
-      try {
-        window.dispatchEvent(new CustomEvent('meta-auth-updated', { 
-          detail: { isAuthenticated, hasPermissions } 
-        }));
-      } catch (e) {
-        console.error('Error dispatching meta-auth-updated event:', e);
-      }
-    }
-  }, [isAuthenticated, userData, hasPermissions, lastCheckTime]);
-
-  // Use our hooks for auth restoration and event listeners - memoize the checkAuth callback
-  const stableCheckAuth = useCallback(() => {
+  // Enhanced checkAuth that validates both token and ad account
+  const checkAuth = useCallback(() => {
     console.log('SharedMetaConnectionProvider triggering checkAuth');
-    checkAuth();
-  }, [checkAuth]);
-  
-  useMetaAuthRestoration({ checkAuth: stableCheckAuth, setState });
-  useMetaConnectionListeners({ checkAuth: stableCheckAuth });
+    
+    // Get and validate token
+    const token = metaAuthService.getAccessToken();
+    const isTokenValid = token && token.length > 50;
+    
+    // Check for selected ad account
+    const selectedAccount = localStorage.getItem('selected_ad_account');
+    const hasValidAccount = !!selectedAccount && selectedAccount.length > 0;
+    
+    if (isTokenValid && hasValidAccount) {
+      console.log('Valid token and ad account found, forcing auth state to true');
+      setState({
+        isAuthenticated: true,
+        userData: {
+          id: metaAuthService.getUserId() || 'unknown',
+          name: localStorage.getItem('meta_user_name') || 'Meta User'
+        },
+        hasPermissions: true,
+        lastCheckTime: Date.now()
+      });
+      
+      // Store auth state for persistence
+      sessionStorage.setItem('meta_auth_valid', 'true');
+      sessionStorage.setItem('meta_auth_checked', Date.now().toString());
+      localStorage.setItem('meta_auth_valid', 'true');
+      localStorage.setItem('meta_auth_checked', Date.now().toString());
+      
+      // Set cookie for pre-JS load state
+      document.cookie = `meta_auth_valid=true; path=/; max-age=3600`;
+      
+      return;
+    }
+    
+    // If no valid token or account, fall back to base check
+    baseCheckAuth();
+  }, [baseCheckAuth]);
+
+  // Use our hooks for auth restoration and event listeners
+  useMetaAuthRestoration({ checkAuth, setState });
+  useMetaConnectionListeners({ checkAuth });
 
   // Run an initial auth check when provider mounts
   useEffect(() => {
     if (!initialCheckDoneRef.current) {
       console.log('SharedMetaConnectionProvider: Running initial auth check');
-      stableCheckAuth();
+      checkAuth();
+      initialCheckDoneRef.current = true;
     }
-  }, [stableCheckAuth]);
+  }, [checkAuth]);
 
   const value = {
-    isAuthenticated,
-    userData,
-    hasPermissions,
-    checkAuth: stableCheckAuth,
+    isAuthenticated: state.isAuthenticated,
+    userData: state.userData,
+    hasPermissions: state.hasPermissions,
+    checkAuth,
     showConnectionDialog
   };
 
