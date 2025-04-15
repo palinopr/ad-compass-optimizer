@@ -69,7 +69,7 @@ export abstract class BaseMockService {
     }
   }
 
-  protected static async executeWithRateLimiting<T>(
+  public static async executeWithRateLimiting<T>(
     requestFn: () => Promise<T>, 
     options: { bypassQueue?: boolean, skipRateLimitCheck?: boolean } = {}
   ): Promise<T> {

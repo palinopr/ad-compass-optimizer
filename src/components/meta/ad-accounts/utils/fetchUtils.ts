@@ -2,6 +2,7 @@
 import { MetaApiService } from '@/services/MetaApiService';
 import { AdAccount } from '../types';
 import { getMockAdAccount } from './mockAccountData';
+import { RateLimitManager } from '@/services/api/rate-limit/RateLimitManager';
 
 export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
   // Return mock data if in mock mode
@@ -11,6 +12,13 @@ export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
   }
 
   try {
+    // Check if rate limited
+    if (RateLimitManager.isRateLimited() && !RateLimitManager.isRateLimitOverridden()) {
+      const remainingTime = RateLimitManager.getRateLimitTimeRemaining();
+      console.warn(`Meta API rate limited. Remaining time: ${remainingTime} seconds`);
+      throw new Error(`API rate limit in effect. Please retry after ${remainingTime} seconds.`);
+    }
+
     console.log('[META] Testing connection before fetching accounts...');
     const connectionTest = await MetaApiService.testConnection(token);
     if (!connectionTest.success) {

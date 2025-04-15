@@ -16,7 +16,7 @@ export class MetaConnectionMockService extends BaseMockService {
         picture: 'https://via.placeholder.com/50x50'
       };
     }
-    return this.executeWithRateLimiting(() => 
+    return BaseMockService.executeWithRateLimiting(() => 
       MetaUserService.fetchUserData(token)
     );
   }
@@ -32,7 +32,7 @@ export class MetaConnectionMockService extends BaseMockService {
         currency: 'USD'
       }];
     }
-    return this.executeWithRateLimiting(() => 
+    return BaseMockService.executeWithRateLimiting(() => 
       MetaAdAccountService.fetchAdAccounts(token)
     );
   }
@@ -48,7 +48,7 @@ export class MetaConnectionMockService extends BaseMockService {
         currency: 'USD'
       };
     }
-    return this.executeWithRateLimiting(() => 
+    return BaseMockService.executeWithRateLimiting(() => 
       MetaAdAccountService.fetchAdAccountDetails(token, accountId)
     );
   }
@@ -63,7 +63,7 @@ export class MetaConnectionMockService extends BaseMockService {
         hasAdAccess: true
       };
     }
-    return this.executeWithRateLimiting(() => 
+    return BaseMockService.executeWithRateLimiting(() => 
       MetaConnectionService.testConnection(token)
     , { bypassQueue: true });
   }
@@ -78,7 +78,7 @@ export class MetaConnectionMockService extends BaseMockService {
         created_time: '2023-01-01T00:00:00Z'
       }];
     }
-    return this.executeWithRateLimiting(() => 
+    return BaseMockService.executeWithRateLimiting(() => 
       MetaBusinessService.fetchBusinessManagers(token)
     );
   }
@@ -94,7 +94,7 @@ export class MetaConnectionMockService extends BaseMockService {
         currency: 'USD'
       }];
     }
-    return this.executeWithRateLimiting(() => 
+    return BaseMockService.executeWithRateLimiting(() => 
       MetaAdAccountService.fetchAdAccountsForBusiness(token, businessId)
     );
   }

@@ -13,7 +13,7 @@ export class MetaCampaignMockService extends BaseMockService {
       
       return mockCampaigns;
     }
-    return this.executeWithRateLimiting(() => 
+    return BaseMockService.executeWithRateLimiting(() => 
       MetaCampaignService.fetchCampaigns(token, adAccountId)
     );
   }
