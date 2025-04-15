@@ -54,6 +54,11 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
       hasExtraStats: !!extraStats
     };
     
+    // Store insights presence for synchronization checks
+    if (insights && (insights.spend || insights.cpa || insights.roas)) {
+      localStorage.setItem('has_valid_campaign_insights', 'true');
+    }
+    
     // Only log if there's a potential issue with the data
     if (availableData.spend === '-' || availableData.results === '-' || 
         availableData.cpa === '-' || availableData.roas === '-') {

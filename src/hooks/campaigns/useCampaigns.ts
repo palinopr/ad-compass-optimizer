@@ -20,6 +20,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   } = useCampaignFetchState();
 
   const [localForceRender, setLocalForceRender] = useState(0);
+  const [fetchCompleted, setFetchCompleted] = useState(false);
 
   const { fetchCampaigns, mountedRef } = useRefreshLogic(status);
   const { filteredCampaigns, filters } = useCampaignFilters(campaigns);
@@ -30,6 +31,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     setIsLoading(true);
     setError(null);
     setErrorDetails(null);
+    setFetchCompleted(false);
 
     const result = await fetchCampaigns(forceRefresh);
     
@@ -37,22 +39,37 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       if (result?.error) {
         setError(result.error);
         setErrorDetails(result.errorDetails);
-        // Exit loading state even on error to prevent stuck loading state
-        setIsLoading(false);
-      } else if (result && 'campaigns' in result && result.campaigns) {
+        // Store error details for better diagnostics
+        localStorage.setItem('last_campaign_fetch_error_details', JSON.stringify({
+          error: result.error,
+          timestamp: new Date().toISOString()
+        }));
+      } else if (result && 'campaigns' in result && Array.isArray(result.campaigns)) {
         console.log(`[CAMPAIGN FETCH] API returned ${result.campaigns.length} campaigns`);
         
-        // Exit loading state before updating campaigns
-        if (result.campaigns.length > 0) {
-          setIsLoading(false);
-        }
+        // Mark that API call completed successfully
+        localStorage.setItem('last_campaign_fetch_success', 'true');
+        localStorage.setItem('last_campaign_count', result.campaigns.length.toString());
         
+        // Update campaigns with the fetched data
         updateCampaigns(result.campaigns);
+        
+        // If we have campaigns, mark this in localStorage for synchronization checks
+        if (result.campaigns.length > 0) {
+          localStorage.setItem('has_campaigns_data', 'true');
+          localStorage.setItem('campaign_fetch_timestamp', Date.now().toString());
+        } else {
+          localStorage.setItem('has_campaigns_data', 'false');
+          console.log('[CAMPAIGN FETCH] API returned empty campaigns array');
+        }
       } else {
         console.warn('[CAMPAIGN FETCH] Fetch returned no campaigns and no error');
-        // Exit loading state to prevent stuck state
-        setIsLoading(false);
+        localStorage.setItem('has_campaigns_data', 'false');
       }
+      
+      // Always mark fetch as completed and exit loading state
+      setFetchCompleted(true);
+      setIsLoading(false);
     }
   }, [fetchCampaigns, mountedRef, 
       setIsLoading, setError, setErrorDetails, updateCampaigns]);
@@ -77,6 +94,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         if (isLoading && hasEverHadCampaignsRef?.current) {
           console.log('[CAMPAIGN FETCH] Safety timeout: forcing exit from loading state');
           setIsLoading(false);
+          setFetchCompleted(true);
         }
       }, 10000); // 10 second safety timeout
     }
@@ -106,6 +124,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     refetchCampaigns: handleFetchCampaigns,
     displayRefresh,
     forceRender: forceRender || localForceRender,
-    forceUiRefresh: exposedForceUiRefresh
+    forceUiRefresh: exposedForceUiRefresh,
+    fetchCompleted
   };
 }

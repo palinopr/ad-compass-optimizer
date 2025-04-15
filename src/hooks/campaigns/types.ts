@@ -6,25 +6,20 @@ export interface UseCampaignsResult {
   filteredCampaigns: MetaCampaign[];
   isLoading: boolean;
   error: string | null;
-  errorDetails?: any;
-  refetchCampaigns: (forceRefresh?: boolean) => void;
+  errorDetails: any;
+  refetchCampaigns: (forceRefresh?: boolean) => Promise<void>;
   displayRefresh: number;
   forceRender: number;
   forceUiRefresh: () => void;
+  fetchCompleted?: boolean;
 }
 
-export interface CampaignFilterOptions {
-  status?: string | null;
-  search?: string;
-  dateRange?: {
-    from: Date;
-    to: Date;
+export interface CampaignFilters {
+  dateRange: {
+    from: Date | undefined;
+    to: Date | undefined;
   };
-  dateRangeType?: string;
-}
-
-export interface DatePreset {
-  label: string;
-  value: string;
-  days: number;
+  datePreset: string | null; // API compatible preset
+  status: string | null;
+  searchQuery: string;
 }

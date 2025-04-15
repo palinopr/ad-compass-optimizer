@@ -23,6 +23,13 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status })
     // Only log when insights data is missing
     if (!campaign.insights || Object.keys(campaign.insights).length === 0) {
       console.warn(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) is missing insights data`);
+      
+      // Trigger state update notification to help debug UI rendering issues
+      localStorage.setItem('campaign_insight_missing', JSON.stringify({
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        timestamp: new Date().toISOString()
+      }));
     } else {
       // Log existing insights for tracking
       console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) insights data:`, {
@@ -33,6 +40,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status })
         roas: campaign.insights.roas || 'missing',
         hasExtraStats: !!campaign.extraStats
       });
+      
+      // Mark that we have valid insights data (used for synchronization checks)
+      localStorage.setItem('has_valid_campaign_insights', 'true');
     }
   }, [campaign]);
 

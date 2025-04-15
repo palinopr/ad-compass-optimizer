@@ -49,84 +49,84 @@ export const useRefreshLogic = (status?: string) => {
         datePreset: currentDatePreset 
       });
       
-      // Ensure we have a valid token
-      const token = metaAuthService.getAccessToken();
-      console.log('[REFRESH LOGIC] Token check:', token ? 'Token exists' : 'No token');
+      // Reset insights valid flag before new fetch
+      localStorage.setItem('has_valid_campaign_insights', 'false');
+      localStorage.setItem('has_campaigns_data', 'false');
       
-      // Get selected ad account
-      const selectedAdAccount = localStorage.getItem('selected_ad_account');
-      console.log('[REFRESH LOGIC] Selected account:', selectedAdAccount || 'None');
-      
-      // Validate that we have both token and account before proceeding
-      if (!token || !selectedAdAccount) {
-        console.error('[REFRESH LOGIC] Missing token or account');
-        fetchInProgressRef.current = false;
-        return { 
-          error: 'Missing authentication token or ad account', 
-          campaigns: [] 
-        };
-      }
-
-      // Check throttling (bypass if forceRefresh is true)
       try {
-        if (!forceRefresh) {
-          CampaignThrottling.checkThrottling(selectedAdAccount);
-        } else {
-          console.log('[REFRESH LOGIC] Force refresh - bypassing throttling');
+        // Ensure we have a valid token
+        const token = metaAuthService.getAccessToken();
+        console.log('[REFRESH LOGIC] Token check:', token ? 'Token exists' : 'No token');
+        
+        // Get selected ad account
+        const selectedAdAccount = localStorage.getItem('selected_ad_account');
+        console.log('[REFRESH LOGIC] Selected account:', selectedAdAccount || 'None');
+        
+        // Validate that we have both token and account before proceeding
+        if (!token || !selectedAdAccount) {
+          console.error('[REFRESH LOGIC] Missing token or account');
+          fetchInProgressRef.current = false;
+          return { 
+            error: 'Missing authentication token or ad account', 
+            campaigns: [] 
+          };
         }
-      } catch (throttleError: any) {
-        console.error('[REFRESH LOGIC] Throttled:', throttleError.message);
-        fetchInProgressRef.current = false;
-        return {
-          error: throttleError.message,
-          campaigns: [],
-          errorDetails: { throttled: true }
-        };
-      }
 
-      // Log the actual fetch request with the correct date_preset
-      console.log(`[REFRESH LOGIC] Fetching data for act_${selectedAdAccount} with date_preset=${currentDatePreset}`);
-      
-      // Update last refresh time
-      lastRefreshTimeRef.current = Date.now();
-      localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
-      localStorage.setItem('campaign_fetch_attempts', 
-        ((parseInt(localStorage.getItem('campaign_fetch_attempts') || '0')) + 1).toString());
-      localStorage.setItem('last_campaign_fetch_account', selectedAdAccount);
-      localStorage.setItem('last_campaign_fetch_date_preset', currentDatePreset);
-      
-      try {
+        // Check throttling (bypass if forceRefresh is true)
+        try {
+          if (!forceRefresh) {
+            CampaignThrottling.checkThrottling(selectedAdAccount);
+          } else {
+            console.log('[REFRESH LOGIC] Force refresh - bypassing throttling');
+          }
+        } catch (throttleError: any) {
+          console.error('[REFRESH LOGIC] Throttled:', throttleError.message);
+          fetchInProgressRef.current = false;
+          return {
+            error: throttleError.message,
+            campaigns: [],
+            errorDetails: { throttled: true }
+          };
+        }
+
+        // Log the actual fetch request with the correct date_preset
+        console.log(`[REFRESH LOGIC] Fetching data for act_${selectedAdAccount} with date_preset=${currentDatePreset}`);
+        
+        // Update last refresh time
+        lastRefreshTimeRef.current = Date.now();
+        localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
+        localStorage.setItem('campaign_fetch_attempts', 
+          ((parseInt(localStorage.getItem('campaign_fetch_attempts') || '0')) + 1).toString());
+        localStorage.setItem('last_campaign_fetch_account', selectedAdAccount);
+        localStorage.setItem('last_campaign_fetch_date_preset', currentDatePreset);
+        
         // Fetch the data with the current date preset
         const data = await MetaFunnelService.fetchFunnelData(token, selectedAdAccount, currentDatePreset);
         
         console.log(`[REFRESH LOGIC] Fetch successful, received ${data.campaigns.length} campaigns`);
         fetchInProgressRef.current = false;
+
+        // Store fetch completion information
+        localStorage.setItem('last_campaign_fetch_completed', new Date().toISOString());
+        localStorage.setItem('last_campaign_count', String(data.campaigns.length));
         
-        // If no campaigns and not already using maximum, try with maximum
-        if (data.campaigns.length === 0 && currentDatePreset !== 'maximum') {
-          console.log('[REFRESH LOGIC] No campaigns returned, trying with date_preset=maximum');
-          const maximumData = await MetaFunnelService.fetchFunnelData(token, selectedAdAccount, 'maximum');
-          console.log(`[REFRESH LOGIC] Maximum fetch returned ${maximumData.campaigns.length} campaigns`);
-          return { campaigns: maximumData.campaigns, error: null };
+        // Mark if we have data or empty result (both are valid fetch completions)
+        if (data.campaigns.length === 0) {
+          console.log('[REFRESH LOGIC] No campaigns returned from valid API response');
+          localStorage.setItem('has_campaigns_data', 'false');
+          localStorage.setItem('empty_campaigns_response', 'true');
+        } else {
+          localStorage.setItem('has_campaigns_data', 'true');
+          localStorage.setItem('empty_campaigns_response', 'false');
         }
         
         return { campaigns: data.campaigns, error: null };
       } catch (error: any) {
         console.error('[REFRESH LOGIC] Fetch error:', error);
-        
-        // Try with maximum preset if another preset failed and we're not already using maximum
-        if (currentDatePreset !== 'maximum') {
-          console.log('[REFRESH LOGIC] Error with current preset, trying with date_preset=maximum');
-          try {
-            const maximumData = await MetaFunnelService.fetchFunnelData(token, selectedAdAccount, 'maximum');
-            console.log(`[REFRESH LOGIC] Maximum fetch returned ${maximumData.campaigns.length} campaigns`);
-            fetchInProgressRef.current = false;
-            return { campaigns: maximumData.campaigns, error: null };
-          } catch (maximumError: any) {
-            console.error('[REFRESH LOGIC] Maximum fallback also failed:', maximumError);
-            // Continue to return the original error
-          }
-        }
+        localStorage.setItem('last_fetch_error', JSON.stringify({
+          message: error.message,
+          timestamp: new Date().toISOString()
+        }));
         
         fetchInProgressRef.current = false;
         return {
@@ -143,6 +143,11 @@ export const useRefreshLogic = (status?: string) => {
         campaigns: [],
         errorDetails: error
       };
+    } finally {
+      // Always ensure fetchInProgress is reset, even if there was an error
+      setTimeout(() => {
+        fetchInProgressRef.current = false;
+      }, 300);
     }
   }, [status, currentDatePreset]);
 

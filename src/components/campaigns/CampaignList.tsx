@@ -32,7 +32,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     setStatusFilter,
     setSearchQuery,
     refetchCampaigns,
-    effectiveIsAuthenticated
+    effectiveIsAuthenticated,
+    fetchCompleted
   } = useCampaignListState(status);
 
   const metrics = useCampaignMetrics(filteredCampaigns);
@@ -91,6 +92,24 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       }
     };
   }, [isLoading, refetchCampaigns]);
+  
+  // Track insight sync status to force UI refresh if needed
+  useEffect(() => {
+    if (fetchCompleted && campaigns.length > 0) {
+      // Set a timeout to check if insights were properly mapped after campaigns are loaded
+      const insightCheckTimeout = setTimeout(() => {
+        const hasValidInsights = localStorage.getItem('has_valid_campaign_insights') === 'true';
+        if (!hasValidInsights) {
+          console.log('[CAMPAIGN LIST] No valid insights detected after campaign load, forcing UI refresh');
+          refetchCampaigns(false);
+        } else {
+          console.log('[CAMPAIGN LIST] Valid insights confirmed after campaign load');
+        }
+      }, 1000);
+      
+      return () => clearTimeout(insightCheckTimeout);
+    }
+  }, [fetchCompleted, campaigns.length, refetchCampaigns]);
 
   // Log component render to track state changes
   console.log(`[CAMPAIGN LIST] Rendering with state:`, { 
@@ -99,7 +118,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     hasError: !!error,
     campaignCount: campaigns.length,
     filteredCount: filteredCampaigns.length,
-    currentDatePreset: filters.datePreset
+    currentDatePreset: filters.datePreset,
+    fetchCompleted
   });
 
   if (isLoading) {
@@ -123,7 +143,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
 
-  if (campaigns.length === 0 && !error) {
+  // Only show empty state if fetch is completed and no campaigns were found
+  if (fetchCompleted && campaigns.length === 0 && !error) {
     const selectedAccount = localStorage.getItem('selected_ad_account');
     const accountText = selectedAccount ? ` in account ${selectedAccount}` : '';
     

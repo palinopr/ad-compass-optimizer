@@ -26,7 +26,20 @@ export class CampaignProcessor {
       
       if (insightsCount === 0) {
         console.warn('[CAMPAIGN FETCH] ⚠️ No campaigns have insights data! Check date_preset parameter.');
+        // Mark this in localStorage for diagnostics
+        localStorage.setItem('has_valid_campaign_insights', 'false');
+        localStorage.setItem('missing_insights_timestamp', new Date().toISOString());
+      } else {
+        // Mark that we have insights data
+        localStorage.setItem('has_valid_campaign_insights', 'true');
+        localStorage.setItem('insights_count', String(insightsCount));
       }
+
+      // If we have any campaigns, store this fact for UI state checks
+      localStorage.setItem('has_campaigns_data', 'true');
+    } else {
+      // No campaigns were found at all
+      localStorage.setItem('has_campaigns_data', 'false');
     }
     
     return campaigns.map(campaign => {

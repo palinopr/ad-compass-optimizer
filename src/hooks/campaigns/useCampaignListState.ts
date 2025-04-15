@@ -15,6 +15,7 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     errorDetails, 
     displayRefresh, 
     forceRender,
+    fetchCompleted
   } = useCampaigns(status);
   
   const { filters, setDateRange, setStatusFilter, setSearchQuery, filteredCampaigns } = useCampaignFilters(campaigns);
@@ -42,7 +43,8 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
       tokenLength: tokenLength,
       selectedAdAccountId,
       authValid: authResult.isValid,
-      authError: authResult.error || 'No error'
+      authError: authResult.error || 'No error',
+      fetchCompleted
     });
     
     // Only trigger a fetch on first load if valid auth is detected AND hasn't been attempted yet
@@ -86,13 +88,14 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     };
   }, [setDateRange, setStatusFilter, setSearchQuery]);
 
+  // Update status message only when fetch is completed
   useEffect(() => {
-    if (campaigns.length === 0 && !isLoading) {
+    if (fetchCompleted && campaigns.length === 0 && !isLoading) {
       setStatusMessage("No campaigns exist in this ad account.");
     } else {
       setStatusMessage(null);
     }
-  }, [campaigns, isLoading]);
+  }, [campaigns, isLoading, fetchCompleted]);
 
   return {
     campaigns,
@@ -107,6 +110,7 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     setSearchQuery,
     refetchCampaigns,
     statusMessage,
-    setStatusMessage
+    setStatusMessage,
+    fetchCompleted
   };
 };
