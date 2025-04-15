@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
@@ -34,7 +35,6 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const metrics = useCampaignMetrics(filteredCampaigns);
   const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
   const debugMode = process.env.NODE_ENV !== 'production';
-  const selectedAccount = localStorage.getItem('selected_ad_account');
 
   if (isLoading) {
     return (
