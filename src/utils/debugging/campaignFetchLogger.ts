@@ -1,4 +1,3 @@
-
 interface CampaignFetchLog {
   timestamp: string;
   accountId: string;
@@ -10,6 +9,13 @@ interface CampaignFetchLog {
   insightsData?: boolean;
   datePreset?: string;
   queryParams?: string;
+  campaignPreviews?: Array<{
+    id: string;
+    name: string;
+    status: string;
+    spend: string;
+    results: string;
+  }>;
 }
 
 class CampaignFetchLogger {
@@ -17,9 +23,19 @@ class CampaignFetchLogger {
   private static maxLogs = 10;
 
   static logAttempt(accountId: string) {
+    if (!accountId) {
+      console.error('[CAMPAIGN FETCH] ❌ Missing account ID');
+      return;
+    }
+
+    // Verify we're not using a mock account
+    if (accountId.includes('mock')) {
+      console.error('[CAMPAIGN FETCH] ❌ Attempted to use mock account:', accountId);
+      return;
+    }
+
     console.log('[CAMPAIGN FETCH] 🔄 Fetching campaigns for:', accountId);
     
-    // Dispatch event to notify UI components
     if (typeof window !== 'undefined') {
       const event = new CustomEvent('campaign-fetch-attempt', { 
         detail: { accountId } 
@@ -32,18 +48,15 @@ class CampaignFetchLogger {
     try {
       const responseText = await response.clone().text();
       console.log('[CAMPAIGN FETCH] 📦 Raw Response:', response.status, response.statusText);
-      console.log('[CAMPAIGN FETCH] 📄 Response Body:', responseText);
-      console.log('[CAMPAIGN FETCH] 🔍 Query Parameters:', queryParams);
-
+      
       let parsedJson;
       let hasInsights = false;
       let datePreset = '';
+      let campaignPreviews = [];
       
       try {
         parsedJson = JSON.parse(responseText);
-        console.log('[CAMPAIGN FETCH] ✅ Parsed JSON:', parsedJson);
         
-        // Extract date_preset from query parameters
         if (queryParams) {
           const datePresetMatch = queryParams.match(/date_preset=([^&]+)/);
           if (datePresetMatch) {
@@ -51,20 +64,29 @@ class CampaignFetchLogger {
           }
         }
         
-        // Check if any campaigns have insights data
+        // Extract campaign previews for logging
         if (parsedJson && parsedJson.data && Array.isArray(parsedJson.data)) {
+          campaignPreviews = parsedJson.data.map(campaign => ({
+            id: campaign.id,
+            name: campaign.name,
+            status: campaign.status,
+            spend: campaign.spend || '$0.00',
+            results: campaign.results || '0'
+          }));
+
+          // Log campaign previews for debugging
+          console.log('[CAMPAIGN FETCH] 📊 Campaign Previews:', campaignPreviews);
+          
           const campaignsWithInsights = parsedJson.data.filter(
             (campaign: any) => campaign.insights && campaign.insights.data && campaign.insights.data.length > 0
           ).length;
           
           hasInsights = campaignsWithInsights > 0;
-          console.log(`[CAMPAIGN FETCH] 📊 Campaigns with insights data: ${campaignsWithInsights}/${parsedJson.data.length}`);
           
           if (campaignsWithInsights === 0) {
             console.warn('[CAMPAIGN FETCH] ⚠️ No insights data found in response');
           }
           
-          // Log first campaign insights for debugging
           if (hasInsights && parsedJson.data[0].insights) {
             console.log('[CAMPAIGN FETCH] 📊 Sample insights:', parsedJson.data[0].insights.data[0]);
           }
@@ -82,7 +104,8 @@ class CampaignFetchLogger {
         parsedJson,
         insightsData: hasInsights,
         datePreset,
-        queryParams
+        queryParams,
+        campaignPreviews
       };
 
       this.logs.unshift(log);
@@ -90,7 +113,6 @@ class CampaignFetchLogger {
         this.logs.pop();
       }
 
-      // Dispatch event for UI updates
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('campaign-fetch-log', { 
           detail: log 

@@ -10,10 +10,8 @@ const CampaignFetchLogs = () => {
   const [logs, setLogs] = useState<any[]>([]);
   
   useEffect(() => {
-    // Initialize with existing logs
     setLogs(CampaignFetchLogger.getLogs());
     
-    // Listen for new logs
     const handleNewLog = (event: CustomEvent) => {
       setLogs(prev => [event.detail, ...prev].slice(0, 10));
     };
@@ -30,19 +28,20 @@ const CampaignFetchLogs = () => {
         <CardTitle className="text-sm font-medium">Campaign Fetch Logs</CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[200px] rounded-md border p-2">
+        <ScrollArea className="h-[400px] rounded-md border p-2">
           {logs.length === 0 ? (
             <div className="text-sm text-gray-500 text-center py-4">
               No campaign fetch logs yet
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-4">
               {logs.map((log, index) => (
-                <div key={index} className="text-xs border-b pb-2">
+                <div key={index} className="text-xs border-b pb-4">
                   <div className="flex justify-between text-gray-500">
                     <span>{new Date(log.timestamp).toLocaleTimeString()}</span>
                     <span>Account: {log.accountId}</span>
                   </div>
+                  
                   {log.error ? (
                     <div className="text-red-500 mt-1">Error: {log.error}</div>
                   ) : (
@@ -59,28 +58,33 @@ const CampaignFetchLogs = () => {
                           </Badge>
                         )}
                       </div>
-                      {log.parsedJson && (
-                        <>
-                          <div className="mt-1">
-                            Campaigns: {log.parsedJson.data?.length || 0}
-                            {log.datePreset && (
-                              <span className="ml-2 text-gray-500">
-                                (Date: {log.datePreset})
-                              </span>
-                            )}
-                          </div>
-                          {!log.insightsData && (
-                            <div className="mt-1 text-amber-600 flex items-center text-[10px]">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              No insights data returned for the specified date range
+
+                      {log.campaignPreviews && log.campaignPreviews.length > 0 && (
+                        <div className="mt-2 space-y-2">
+                          <div className="text-gray-600 font-medium">Campaign Previews:</div>
+                          {log.campaignPreviews.map((campaign: any, idx: number) => (
+                            <div key={idx} className="pl-2 border-l-2 border-gray-200">
+                              <div className="grid grid-cols-2 gap-x-2 text-[10px]">
+                                <span className="text-gray-500">ID:</span>
+                                <span>{campaign.id}</span>
+                                <span className="text-gray-500">Name:</span>
+                                <span>{campaign.name}</span>
+                                <span className="text-gray-500">Status:</span>
+                                <span>{campaign.status}</span>
+                                <span className="text-gray-500">Spend:</span>
+                                <span>{campaign.spend}</span>
+                                <span className="text-gray-500">Results:</span>
+                                <span>{campaign.results}</span>
+                              </div>
                             </div>
-                          )}
-                          {log.queryParams && (
-                            <div className="mt-1 text-[10px] text-gray-500">
-                              Query: {log.queryParams}
-                            </div>
-                          )}
-                        </>
+                          ))}
+                        </div>
+                      )}
+
+                      {log.queryParams && (
+                        <div className="mt-2 text-[10px] text-gray-500">
+                          Query: {log.queryParams}
+                        </div>
                       )}
                     </>
                   )}
