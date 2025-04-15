@@ -43,10 +43,16 @@ export class MetaCampaignService extends BaseApiService {
       // Check if we should throttle the request
       CampaignThrottling.checkThrottling(formattedAccountId);
 
-      // Build query fields
+      // Build query fields and log them
       const fields = CampaignQueryBuilder.buildCampaignQuery();
+      console.group('[CAMPAIGN FETCH] Query Details');
+      console.log('Fields:', fields);
+      console.log('Date Preset:', 'last_28d');
+      console.groupEnd();
+      
       const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
+      // Log the full URL with redacted token
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
       
       const response = await fetch(url, {
