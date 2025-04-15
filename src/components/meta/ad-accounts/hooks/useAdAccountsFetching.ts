@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { metaAuthService, MetaAuthService } from '@/services/MetaAuthService';
 import { AdAccount } from '../types';
@@ -52,16 +53,16 @@ export function useAdAccountsFetching() {
     setError(null);
     
     try {
-      console.log('Fetching ad accounts...');
+      console.log('[AD ACCOUNT FETCH] Starting fetch operation...');
       const selectedAdAccounts = localStorage.getItem('selected_ad_accounts');
       let selectedIds: string[] = [];
       
       if (selectedAdAccounts) {
         try {
           selectedIds = JSON.parse(selectedAdAccounts);
-          console.log('Found selected ad accounts in storage:', selectedIds);
+          console.log('[AD ACCOUNT FETCH] Found selected ad accounts in storage:', selectedIds);
         } catch (e) {
-          console.error('Error parsing selected ad accounts:', e);
+          console.error('[AD ACCOUNT FETCH] Error parsing selected ad accounts:', e);
           localStorage.removeItem('selected_ad_accounts');
         }
       }
@@ -69,18 +70,20 @@ export function useAdAccountsFetching() {
       let fetchedAccounts: AdAccount[] = [];
       
       if (selectedIds.length > 0) {
+        console.log('[AD ACCOUNT FETCH] Fetching specific selected accounts:', selectedIds);
         fetchedAccounts = await fetchSelectedAccounts(selectedIds, accessToken);
         
         if (fetchedAccounts.length === 0) {
-          console.log('No valid accounts found from stored IDs, fetching all available accounts');
+          console.log('[AD ACCOUNT FETCH] No valid accounts found from stored IDs, fetching all available accounts');
           fetchedAccounts = await fetchAllAccounts(accessToken);
         }
       } else {
-        console.log('No stored accounts, fetching all available accounts');
+        console.log('[AD ACCOUNT FETCH] No stored accounts, fetching all available accounts');
         fetchedAccounts = await fetchAllAccounts(accessToken);
       }
       
-      console.log('Successfully fetched accounts:', fetchedAccounts.length);
+      console.log('[AD ACCOUNT FETCH] Successfully fetched accounts:', fetchedAccounts.length);
+      console.log('[AD ACCOUNT FETCH] Account details:', fetchedAccounts);
       setAdAccounts(fetchedAccounts);
       
     } catch (err) {

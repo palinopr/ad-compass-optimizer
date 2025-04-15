@@ -33,7 +33,17 @@ export class MetaAdAccountService extends BaseApiService {
       console.log('[AD ACCOUNT FETCH] Status:', response.status, response.statusText);
       
       const json = await parseApiResponse(response);
-      console.log('[AD ACCOUNT FETCH] Parsed JSON:', json);
+      console.log('[AD ACCOUNT FETCH] Raw Response JSON:', json);
+      
+      // Log number of ad accounts and their names
+      if (Array.isArray(json.data)) {
+        console.log(`[AD ACCOUNT FETCH] Total accounts: ${json.data.length}`);
+        json.data.forEach((acc, idx) => {
+          console.log(`[AD ACCOUNT ${idx}] ID: ${acc.account_id}, Name: ${acc.name}`);
+        });
+      } else {
+        console.warn('[AD ACCOUNT FETCH] Unexpected response format:', json);
+      }
       
       if (!response.ok) {
         const errorMsg = json?.error?.message || 'Unknown error while fetching ad accounts';
