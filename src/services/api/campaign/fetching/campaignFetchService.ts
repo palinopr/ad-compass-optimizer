@@ -37,6 +37,7 @@ export class CampaignFetchService extends BaseApiService {
       CampaignThrottling.checkThrottling(formattedAccountId);
 
       // Use the provided date preset or default to last_28d
+      // CampaignQueryBuilder.normalizePreset will validate/map the preset
       const fields = CampaignQueryBuilder.buildCampaignQuery(datePreset || 'last_28d');
       
       // Verify that the date preset is valid
@@ -60,7 +61,24 @@ export class CampaignFetchService extends BaseApiService {
         console.error('[CAMPAIGN FETCH] Error storing request info:', e);
       }
       
-      return await this.executeFetch(url);
+      const campaigns = await this.executeFetch(url);
+      
+      // If we get empty data and datePreset is not already maximum, try with maximum
+      if (campaigns.length === 0 && datePreset !== 'maximum') {
+        console.log('[CAMPAIGN FETCH] No campaigns returned, trying with date_preset=maximum');
+        // Rebuild query with maximum preset
+        const maximumFields = CampaignQueryBuilder.buildCampaignQuery('maximum');
+        const maximumUrl = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${maximumFields}&access_token=${token}`;
+        try {
+          return await this.executeFetch(maximumUrl);
+        } catch (maximumError) {
+          console.error('[CAMPAIGN FETCH] Error with maximum preset fallback:', maximumError);
+          // Return the original result if fallback fails
+          return campaigns;
+        }
+      }
+      
+      return campaigns;
     } catch (error) {
       console.error('[CAMPAIGN FETCH] Critical Error:', error);
       throw error;

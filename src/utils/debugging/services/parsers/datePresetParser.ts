@@ -24,35 +24,37 @@ export const parseDatePreset = (queryParams?: string): string | undefined => {
 };
 
 /**
+ * All valid Meta API date presets
+ */
+const validMetaPresets = [
+  'today',
+  'yesterday', 
+  'this_month', 
+  'last_month',
+  'this_quarter', 
+  'lifetime', 
+  'last_3d', 
+  'last_7d', 
+  'last_14d',
+  'last_28d', 
+  'last_30d', 
+  'last_90d',
+  'last_week_mon_sun', 
+  'last_week_sun_sat', 
+  'last_quarter', 
+  'last_year',
+  'this_week_mon_today', 
+  'this_week_sun_today', 
+  'this_year',
+  'maximum'
+];
+
+/**
  * Validates if a date preset is a valid Meta API value
  */
 export const isValidMetaDatePreset = (preset?: string): boolean => {
   if (!preset) return false;
-  
-  // Valid Meta API date presets
-  const validPresets = [
-    'today',
-    'yesterday', 
-    'this_month', 
-    'last_month',
-    'this_quarter', 
-    'lifetime', 
-    'last_3d', 
-    'last_7d', 
-    'last_14d',
-    'last_28d', 
-    'last_30d', 
-    'last_90d',
-    'last_week_mon_sun', 
-    'last_week_sun_sat', 
-    'last_quarter', 
-    'last_year',
-    'this_week_mon_today', 
-    'this_week_sun_today', 
-    'this_year'
-  ];
-  
-  return validPresets.includes(preset);
+  return validMetaPresets.includes(preset);
 };
 
 /**
@@ -68,5 +70,36 @@ export const mapToValidDatePreset = (preset?: string): string => {
     'last7days': 'last_7d',
   };
   
-  return mapping[preset] || preset;
+  // If it's a legacy preset, map it
+  if (mapping[preset]) {
+    return mapping[preset];
+  }
+  
+  // If it's already a valid preset, use it
+  if (isValidMetaDatePreset(preset)) {
+    return preset;
+  }
+  
+  // Default fallback
+  return 'last_28d';
+};
+
+/**
+ * Get a descriptive label for a date preset
+ */
+export const getDatePresetLabel = (preset: string): string => {
+  const labels: Record<string, string> = {
+    'today': 'Today',
+    'yesterday': 'Yesterday',
+    'last_7d': 'Last 7 days',
+    'last_14d': 'Last 14 days',
+    'last_28d': 'Last 28 days',
+    'last_30d': 'Last 30 days',
+    'this_month': 'This month',
+    'last_month': 'Last month',
+    'maximum': 'Maximum available data',
+    'lifetime': 'Lifetime'
+  };
+  
+  return labels[preset] || preset;
 };

@@ -11,16 +11,18 @@ interface DateRangeFilterProps {
 const DateRangeFilter = ({ datePreset, onDateRangeChange }: DateRangeFilterProps) => {
   // Map legacy presets to compatible Meta API presets
   const mapLegacyPreset = (preset: string): string => {
-    switch (preset) {
-      case 'last30days': 
-        return 'last_28d';
-      case 'last_30d': 
-        return 'last_28d';
-      case 'last7days': 
-        return 'last_7d';
-      default: 
-        return preset;
-    }
+    const presetMapping: Record<string, string> = {
+      'last30days': 'last_28d',
+      'last_30d': 'last_28d', 
+      'last7days': 'last_7d',
+      // No mapping needed for valid presets
+      'today': 'today',
+      'yesterday': 'yesterday',
+      'this_month': 'this_month',
+      'last_month': 'last_month'
+    };
+    
+    return presetMapping[preset] || preset;
   };
   
   // Apply preset mapping
@@ -28,12 +30,12 @@ const DateRangeFilter = ({ datePreset, onDateRangeChange }: DateRangeFilterProps
   
   useEffect(() => {
     console.log(`[DATE FILTER] Initialized with preset: ${actualPreset}`);
-  }, []);
+  }, [actualPreset]);
 
   // Handle date range changes
   const handleDateRangeChange = (range: any, preset: string) => {
     const mappedPreset = mapLegacyPreset(preset);
-    console.log(`[DATE FILTER] Changing date to: ${mappedPreset}`);
+    console.log(`[DATE FILTER] Changing date to: ${mappedPreset} (original: ${preset})`);
     
     // Show a toast notification
     if (preset !== datePreset) {

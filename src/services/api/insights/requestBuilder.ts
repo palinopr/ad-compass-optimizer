@@ -5,6 +5,43 @@
 import { InsightFilterOptions } from './types';
 
 export class InsightsRequestBuilder {
+  // Valid date presets according to Meta API
+  private static validDatePresets = [
+    'today', 'yesterday', 'this_week', 'last_week',
+    'this_month', 'last_month', 'last_3_months', 'last_6_months',
+    'this_quarter', 'lifetime', 'last_30d', 'last_14d',
+    'last_7d', 'last_28d', 'maximum'
+  ];
+
+  /**
+   * Map legacy values to supported Meta API values
+   */
+  private static mapLegacyDatePreset(preset: string): string {
+    if (!preset) return 'last_28d';
+
+    // Explicit mapping of legacy values to valid Meta API values
+    const mapping: Record<string, string> = {
+      'last30days': 'last_28d',
+      'last_30d': 'last_28d', 
+      'last7days': 'last_7d'
+    };
+
+    const mappedValue = mapping[preset];
+    if (mappedValue) {
+      console.log(`[INSIGHTS] Mapping legacy date preset '${preset}' to '${mappedValue}'`);
+      return mappedValue;
+    }
+
+    // If the preset is already valid, return it
+    if (this.validDatePresets.includes(preset)) {
+      return preset;
+    }
+
+    // Default to last_28d for unrecognized values
+    console.warn(`[INSIGHTS] Unrecognized date preset: ${preset}, using default 'last_28d'`);
+    return 'last_28d';
+  }
+
   /**
    * Build query parameters for insights requests
    */
@@ -15,21 +52,12 @@ export class InsightsRequestBuilder {
     if (options.timeRange) {
       params.append('time_range', JSON.stringify(options.timeRange));
     } else if (options.datePreset) {
-      // Map any legacy date presets to Meta API compatible values
-      let datePreset = options.datePreset;
-      
-      // Mapping legacy values to supported Meta API values using type-safe approach
-      if (datePreset === 'last_30d' || datePreset === 'last30days') {
-        console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_28d"`);
-        datePreset = 'last_28d';
-      } else if (datePreset === 'last7days') {
-        console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_7d"`);
-        datePreset = 'last_7d';
-      }
-      
-      params.append('date_preset', datePreset);
+      // Map and validate date preset
+      const validDatePreset = this.mapLegacyDatePreset(options.datePreset);
+      params.append('date_preset', validDatePreset);
+      console.log(`[INSIGHTS] Using validated date preset: ${validDatePreset}`);
     } else {
-      // Default to last_28d if no time range specified (updated from last_30d)
+      // Default to last_28d if no time range specified
       params.append('date_preset', 'last_28d');
       console.log('[INSIGHTS] Using default date preset: last_28d');
     }

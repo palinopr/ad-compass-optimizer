@@ -7,7 +7,9 @@
  * Represents filtering options for insights requests
  */
 export interface InsightFilterOptions {
-  datePreset?: 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'this_quarter' | 'lifetime' | 'last_30d' | 'last_14d' | 'last_7d' | 'last_28d' | 'last30days' | 'last7days';
+  datePreset?: 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 
+               'last_3_months' | 'last_6_months' | 'this_quarter' | 'lifetime' | 
+               'last_30d' | 'last_14d' | 'last_7d' | 'last_28d' | 'last30days' | 'last7days' | 'maximum';
   timeRange?: {
     since: string; // YYYY-MM-DD format
     until: string; // YYYY-MM-DD format

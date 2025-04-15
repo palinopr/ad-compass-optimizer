@@ -11,19 +11,46 @@ export interface CampaignExtraStats {
 }
 
 /**
+ * Maps a date preset to a valid Meta API date_preset
+ */
+const mapToValidDatePreset = (preset: string = 'last_28d'): string => {
+  const mapping: Record<string, string> = {
+    'last30days': 'last_28d',
+    'last_30d': 'last_28d',
+    'last7days': 'last_7d'
+  };
+  
+  // Return the mapped value if exists, otherwise use the original (if valid) or last_28d
+  const validPresets = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 
+                      'last_month', 'last_3_months', 'last_6_months', 'this_quarter',
+                      'lifetime', 'last_30d', 'last_14d', 'last_7d', 'last_28d', 'maximum'];
+  
+  if (mapping[preset]) {
+    return mapping[preset];
+  }
+  
+  if (validPresets.includes(preset)) {
+    return preset;
+  }
+  
+  return 'last_28d';
+};
+
+/**
  * Fetches detailed insights for a single campaign
  */
 export const fetchCampaignInsights = async (
   campaignId: string, 
-  token: string
+  token: string,
+  datePreset: string = 'last_28d'
 ): Promise<CampaignExtraStats | null> => {
   try {
-    console.log(`[INSIGHTS FETCH] Fetching insights for campaign ${campaignId}`);
+    const validDatePreset = mapToValidDatePreset(datePreset);
+    console.log(`[INSIGHTS FETCH] Fetching insights for campaign ${campaignId} with date_preset=${validDatePreset}`);
     
-    // Use the MetaInsightsService to fetch campaign insights
-    // Using the Meta API compatible date_preset value - last_28d
+    // Use the MetaInsightsService to fetch campaign insights with the valid date preset
     const response = await fetch(
-      `https://graph.facebook.com/v17.0/${campaignId}/insights?fields=actions,cost_per_action_type,website_purchase_roas&date_preset=last_28d&access_token=${token}`,
+      `https://graph.facebook.com/v17.0/${campaignId}/insights?fields=actions,cost_per_action_type,website_purchase_roas&date_preset=${validDatePreset}&access_token=${token}`,
       {
         method: 'GET',
         headers: {
@@ -35,6 +62,13 @@ export const fetchCampaignInsights = async (
     if (!response.ok) {
       const errorData = await response.json();
       console.error(`[INSIGHTS FETCH] Error fetching insights for campaign ${campaignId}:`, errorData);
+      
+      // Try with maximum as fallback if we get an error and didn't already use maximum
+      if (validDatePreset !== 'maximum') {
+        console.log(`[INSIGHTS FETCH] Retrying with date_preset=maximum for campaign ${campaignId}`);
+        return fetchCampaignInsights(campaignId, token, 'maximum');
+      }
+      
       return null;
     }
     
@@ -42,7 +76,14 @@ export const fetchCampaignInsights = async (
     
     // Check if we have data
     if (!data || !data.data || data.data.length === 0) {
-      console.log(`[INSIGHTS FETCH] No insights data available for campaign ${campaignId}`);
+      console.log(`[INSIGHTS FETCH] No insights data available for campaign ${campaignId} with date_preset=${validDatePreset}`);
+      
+      // Try with maximum as fallback if we didn't get data and didn't already use maximum
+      if (validDatePreset !== 'maximum') {
+        console.log(`[INSIGHTS FETCH] Retrying with date_preset=maximum for campaign ${campaignId}`);
+        return fetchCampaignInsights(campaignId, token, 'maximum');
+      }
+      
       return null;
     }
     
@@ -94,9 +135,11 @@ export const fetchCampaignInsights = async (
  */
 export const fetchInsightsForCampaigns = async (
   campaigns: MetaCampaign[], 
-  token: string
+  token: string,
+  datePreset: string = 'last_28d'
 ): Promise<MetaCampaign[]> => {
-  console.log(`[INSIGHTS FETCH] Starting batch insights fetch for ${campaigns.length} campaigns`);
+  const validDatePreset = mapToValidDatePreset(datePreset);
+  console.log(`[INSIGHTS FETCH] Starting batch insights fetch for ${campaigns.length} campaigns with date_preset=${validDatePreset}`);
   let successCount = 0;
   
   // Create a copy of campaigns to update
@@ -111,7 +154,7 @@ export const fetchInsightsForCampaigns = async (
     await Promise.all(batch.map(async (campaign, index) => {
       const campaignIndex = i + index;
       try {
-        const extraStats = await fetchCampaignInsights(campaign.id, token);
+        const extraStats = await fetchCampaignInsights(campaign.id, token, validDatePreset);
         
         if (extraStats) {
           // Update the campaign with the extra stats

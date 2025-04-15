@@ -3,25 +3,62 @@ import { CAMPAIGN_FIELDS } from './config/queryFields';
 import { AccountValidator } from './utils/accountValidator';
 
 export class CampaignQueryBuilder {
+  // Valid date presets according to Meta API
+  private static validDatePresets = [
+    'today', 'yesterday', 'this_week', 'last_week',
+    'this_month', 'last_month', 'last_3_months', 'last_6_months',
+    'this_quarter', 'lifetime', 'last_30d', 'last_14d',
+    'last_7d', 'last_28d', 'maximum'
+  ];
+
   static buildCampaignQuery(datePreset = 'last_28d'): string {
+    // Map legacy presets to Meta API compatible presets
+    let validDatePreset = this.normalizePreset(datePreset);
+    
     // Use the defined fields from config
     const basicFields = CAMPAIGN_FIELDS.BASIC.join(',');
     const insightFields = CAMPAIGN_FIELDS.INSIGHTS.join(',');
     
-    // Use the provided date preset (default to last_28d if not specified)
-    const query = `${basicFields},insights.date_preset(${datePreset}){${insightFields}}`;
+    // Build query with the validated date preset
+    const query = `${basicFields},insights.date_preset(${validDatePreset}){${insightFields}}`;
     
     // Log the query for debugging
-    console.log(`[CAMPAIGN QUERY] Built query with date preset: ${datePreset}`);
+    console.log(`[CAMPAIGN QUERY] Built query with date preset: ${validDatePreset}`);
     console.log(`[CAMPAIGN QUERY] Full query string: ${query}`);
     
     return query;
   }
 
+  // Map legacy or invalid presets to valid Meta API presets
+  static normalizePreset(datePreset: string): string {
+    if (!datePreset) return 'last_28d';
+
+    // Direct mapping for legacy presets
+    const legacyMapping: Record<string, string> = {
+      'last30days': 'last_28d',
+      'last_30d': 'last_28d',
+      'last7days': 'last_7d'
+    };
+
+    if (legacyMapping[datePreset]) {
+      console.log(`[CAMPAIGN QUERY] Mapping legacy preset '${datePreset}' to '${legacyMapping[datePreset]}'`);
+      return legacyMapping[datePreset];
+    }
+
+    // Validate preset is in the allowed list
+    if (this.validDatePresets.includes(datePreset)) {
+      return datePreset;
+    }
+
+    // Fall back to last_28d for unrecognized presets
+    console.warn(`[CAMPAIGN QUERY] Unrecognized date preset: ${datePreset}, using default 'last_28d'`);
+    return 'last_28d';
+  }
+
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.6-insights-fields';
+    return '1.0.7-all-presets-fix';
   }
   
   // Adding timestamp to ensure no cache is used
@@ -54,11 +91,8 @@ export class CampaignQueryBuilder {
     }
     
     const foundPreset = match[1];
-    const validPresets = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 
-                        'last_3_months', 'last_6_months', 'this_quarter', 'lifetime', 
-                        'last_30d', 'last_14d', 'last_7d', 'last_28d'];
     
-    if (!validPresets.includes(foundPreset)) {
+    if (!this.validDatePresets.includes(foundPreset)) {
       console.error(`[CAMPAIGN QUERY] Invalid date preset found: ${foundPreset}`);
       return false;
     }
