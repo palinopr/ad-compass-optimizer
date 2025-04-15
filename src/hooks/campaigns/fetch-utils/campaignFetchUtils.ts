@@ -49,9 +49,12 @@ export const checkApiUsage = (increaseCooldown: () => void) => {
 };
 
 export const validateAdAccount = (adAccountId: string | null): boolean => {
-  if (!adAccountId) return false;
+  if (!adAccountId) {
+    console.error('Missing ad account ID');
+    return false;
+  }
   
-  // Must start with act_ and contain only valid characters
+  // Must start with act_ and contain only digits
   const isValidFormat = /^act_\d+$/.test(adAccountId);
   if (!isValidFormat) {
     console.error('Invalid ad account format:', adAccountId);
@@ -67,12 +70,12 @@ export const logFetchDetails = (
   error?: any
 ) => {
   if (!validateAdAccount(adAccountId)) {
-    console.error('[CAMPAIGNS TAB] Invalid or missing ad account ID:', adAccountId);
-    throw new Error('Please select a valid ad account to load campaigns.');
+    console.error('[CAMPAIGNS] Invalid or missing ad account ID:', adAccountId);
+    throw new Error('🔴 Please select a valid ad account to load campaigns.');
   }
   
   if (error) {
-    console.error('[CAMPAIGNS TAB] Fetch error details:', {
+    console.error('[CAMPAIGNS] Fetch error details:', {
       error,
       message: error?.message,
       stack: error?.stack?.substring(0, 200) || 'No stack',
@@ -84,10 +87,10 @@ export const logFetchDetails = (
   // Get the last manual fetch time for logging
   const lastManualFetch = CampaignThrottling.getLastManualFetchTime();
   if (lastManualFetch) {
-    console.log(`[CAMPAIGNS TAB] Last manual fetch time: ${lastManualFetch}`);
+    console.log(`[CAMPAIGNS] Last manual fetch time: ${lastManualFetch}`);
   }
 
-  console.log('[CAMPAIGNS TAB] Preparing to call API with:', {
+  console.log('[CAMPAIGNS] Preparing to call API with:', {
     adAccountId,
     tokenLength: token?.length,
     tokenStart: token?.substring(0, 5) + '...',
@@ -102,21 +105,21 @@ export const prepareFetchRequest = async (
   adAccountId: string
 ) => {
   if (!validateAdAccount(adAccountId)) {
-    return { error: 'Please select a valid ad account to load campaigns.' };
+    return { error: '🔴 Please select a valid ad account to load campaigns.' };
   }
 
   const tokenValidation = validateToken(token);
-  console.log('[CAMPAIGNS TAB] Token validation:', tokenValidation);
+  console.log('[CAMPAIGNS] Token validation:', tokenValidation);
   
   if (!tokenValidation.isValid) {
-    console.error('[CAMPAIGNS TAB] Token validation failed:', tokenValidation.error);
+    console.error('[CAMPAIGNS] Token validation failed:', tokenValidation.error);
     return { error: tokenValidation.error };
   }
 
-  console.log('[CAMPAIGNS TAB] Running diagnostic check...');
+  console.log('[CAMPAIGNS] Running diagnostic check...');
   const diagnosticResult = await runFinalDiagnosticCheck();
   if (!diagnosticResult.success) {
-    console.error('[CAMPAIGNS TAB] Diagnostic check failed:', diagnosticResult.error);
+    console.error('[CAMPAIGNS] Diagnostic check failed:', diagnosticResult.error);
     throw new Error(diagnosticResult.error);
   }
 

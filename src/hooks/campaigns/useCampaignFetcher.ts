@@ -30,31 +30,27 @@ export function useCampaignFetcher() {
     forceRefresh: boolean = false
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
     console.log('[CAMPAIGNS DEBUG] Starting campaign fetch...');
-    console.log('[CAMPAIGNS DEBUG] Meta token:', token ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}` : 'NOT FOUND');
-    console.log('[CAMPAIGNS DEBUG] Selected Ad Account:', adAccountId);
-    console.log('[CAMPAIGNS DEBUG] Status filter:', status || 'all');
-    console.log('[CAMPAIGNS DEBUG] Force refresh:', forceRefresh);
     
-    // Validate account ID to prevent mock accounts in real mode
-    if (!adAccountId) {
-      console.error('[CAMPAIGNS DEBUG] Missing ad account ID');
+    // Validate token and account ID immediately
+    if (!token) {
+      console.error('[CAMPAIGNS DEBUG] Missing Meta access token');
       return { 
         campaigns: [], 
-        error: 'Missing ad account ID',
+        error: '🔴 Please authenticate with Meta to load campaigns.',
         errorDetails: { invalid: true }
       };
     }
 
-    // Prevent using mock accounts in real mode
-    if (!token && adAccountId.includes('mock')) {
-      console.error('[CAMPAIGNS DEBUG] Attempted to use mock account in real mode:', adAccountId);
+    // Validate ad account ID format
+    if (!adAccountId || !/^act_\d+$/.test(adAccountId)) {
+      console.error('[CAMPAIGNS DEBUG] Invalid or missing ad account ID:', adAccountId);
       return { 
         campaigns: [], 
-        error: 'Cannot use mock accounts in real mode',
+        error: '🔴 Please select a valid ad account to load campaigns.',
         errorDetails: { invalid: true }
       };
     }
-    
+
     if (!canFetch()) {
       console.log('[CAMPAIGNS DEBUG] Fetch blocked: already in progress or throttled');
       return { 
@@ -70,7 +66,6 @@ export function useCampaignFetcher() {
     try {
       console.log('[CAMPAIGNS DEBUG] Starting API fetch for account:', adAccountId);
       
-      // Fix here: Remove the third argument that was causing the TypeScript error
       const { error: prepError } = await prepareFetchRequest(token, adAccountId);
       if (prepError) {
         console.error('[CAMPAIGNS DEBUG] Preparation error:', prepError);
@@ -82,7 +77,6 @@ export function useCampaignFetcher() {
       console.log('[CAMPAIGNS DEBUG] Calling MetaFunnelService.fetchFunnelData...');
       const data = await MetaFunnelService.fetchFunnelData(token, adAccountId);
       console.log('[CAMPAIGNS DEBUG] Fetch successful, campaigns:', data.campaigns.length);
-      console.log('[CAMPAIGNS DEBUG] First campaign:', data.campaigns[0]);
       
       handleSuccessfulFetch(data.campaigns, mountedRef, increaseCooldown);
       

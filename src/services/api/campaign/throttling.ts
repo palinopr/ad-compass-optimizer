@@ -1,7 +1,4 @@
 
-/**
- * Throttling logic for Meta Campaign API requests
- */
 export class CampaignThrottling {
   private static readonly THROTTLE_KEY = 'meta_campaign_fetch_timestamp';
   private static readonly MIN_INTERVAL_MS = 30000; // 30 second cooldown
@@ -26,7 +23,11 @@ export class CampaignThrottling {
     const fetchTime = new Date().toISOString();
     localStorage.setItem(this.MANUAL_FETCH_KEY, fetchTime);
     console.log(`✅ Campaign fetch throttle check passed at ${fetchTime}`);
-    console.log(`✅ Using account: ${accountId || 'unknown'}`);
+    
+    if (accountId) {
+      console.log(`✅ Using account: ${accountId}`);
+      localStorage.setItem('last_campaign_fetch_account', accountId);
+    }
   }
 
   public static clearThrottling(): void {
