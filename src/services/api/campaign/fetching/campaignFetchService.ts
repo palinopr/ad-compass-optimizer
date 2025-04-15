@@ -6,7 +6,7 @@ import { ErrorStorage } from '../../campaign/error/errorStorage';
 import { BaseApiService } from '../../BaseApiService';
 import { CampaignProcessor } from './campaignProcessor';
 import { PaginationHandler } from './paginationHandler';
-import { ErrorHandler } from '../../campaign/error/ErrorHandler';
+import { ErrorHandler } from '../../campaign/error/errorHandler';
 
 export class CampaignFetchService extends BaseApiService {
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
@@ -62,7 +62,7 @@ export class CampaignFetchService extends BaseApiService {
     });
 
     if (!response.ok) {
-      // Use the separate ErrorHandler class
+      // Use the separate ErrorHandler class with correct casing
       await ErrorHandler.handleErrorResponse(response);
     }
 
