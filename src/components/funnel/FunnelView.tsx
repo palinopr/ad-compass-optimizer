@@ -73,6 +73,17 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
     </div>
   );
 
+  console.log('[FUNNEL VIEW] Campaigns data:', campaigns);
+
+  if (!campaigns || campaigns.length === 0) {
+    console.log('[FUNNEL VIEW] No campaigns to display');
+    return (
+      <div className="p-4 text-center text-gray-500">
+        No campaigns found. Please try refreshing the data.
+      </div>
+    );
+  }
+
   const renderAd = (ad: Ad) => (
     <div key={ad.id} className="pl-16 py-2 hover:bg-gray-50">
       <div className="flex items-center justify-between">

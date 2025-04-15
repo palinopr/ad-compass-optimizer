@@ -12,6 +12,7 @@ import { FunnelData } from '@/services/api/types/funnelTypes';
 import { useFunnelFilters } from '@/hooks/funnel/useFunnelFilters';
 import { toast } from '@/hooks/use-toast';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
+import { Button } from '@/components/ui/button';
 
 const FunnelViewContainer = () => {
   const { campaigns, isLoading: campaignsLoading, refetchCampaigns } = useCampaigns();
@@ -19,6 +20,7 @@ const FunnelViewContainer = () => {
   const [isFetchingFunnel, setIsFetchingFunnel] = useState(false);
   const [funnelError, setFunnelError] = useState<string | null>(null);
   const [lastFetchedAdAccount, setLastFetchedAdAccount] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const {
     filteredData,
@@ -32,12 +34,22 @@ const FunnelViewContainer = () => {
     setSearchQuery
   } = useFunnelFilters(funnelData);
 
+  // Function to manually force a refresh
+  const handleManualRefresh = () => {
+    console.log('[FUNNEL] Manually triggering refresh...');
+    setRetryCount(prev => prev + 1);
+    triggerCampaignRefresh(true);
+    toast({
+      title: "Refreshing campaigns",
+      description: "Fetching latest data from Meta..."
+    });
+  };
+
   useEffect(() => {
     const fetchFunnelData = async () => {
       // Safely get token and ad account ID
       let token: string | null = null;
       let selectedAdAccount: string | null = null;
-      let isMockMode = false;
       
       // Safe environment check
       if (typeof window !== 'undefined') {
@@ -46,86 +58,97 @@ const FunnelViewContainer = () => {
         try {
           if (typeof localStorage !== 'undefined') {
             selectedAdAccount = localStorage.getItem('selected_ad_account');
-            isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true" || 
-                       MetaFunnelService.isMockMode();
           }
         } catch (e) {
           console.error("Error accessing localStorage in FunnelViewContainer:", e);
         }
       }
       
-      if (!token && !isMockMode) {
-        setFunnelError('Missing access token or ad account');
+      // Log token and account for debugging
+      console.log('[FUNNEL] Fetch attempt with token:', token ? 'Valid token' : 'No token');
+      console.log('[FUNNEL] Selected ad account:', selectedAdAccount);
+      
+      if (!token) {
+        setFunnelError('Missing access token');
         return;
       }
 
-      if (!selectedAdAccount && !isMockMode) {
+      if (!selectedAdAccount) {
         setFunnelError('No ad account selected');
         return;
       }
       
+      // Always ensure ad account has act_ prefix
+      const formattedAccount = selectedAdAccount.startsWith('act_') 
+        ? selectedAdAccount 
+        : `act_${selectedAdAccount}`;
+      
       // If ad account hasn't changed and we have data, skip refetching
-      if (selectedAdAccount === lastFetchedAdAccount && 
-          funnelData.campaigns.length > 0 && 
-          !isMockMode) {
+      if (formattedAccount === lastFetchedAdAccount && 
+          funnelData.campaigns.length > 0) {
         return;
       }
 
       try {
         setIsFetchingFunnel(true);
-        console.log('[MOCK DEBUG] FunnelViewContainer: Fetching funnel data for account:', selectedAdAccount);
-        const data = await MetaFunnelService.fetchFunnelData(
-          token || 'mock-token', 
-          selectedAdAccount || 'act_mock_account'
-        );
+        console.log('[FUNNEL] Fetching funnel data for account:', formattedAccount);
+        const data = await MetaFunnelService.fetchFunnelData(token, formattedAccount);
         
-        console.log(`[MOCK DEBUG] FunnelViewContainer: Received funnel data with ${data.campaigns.length} campaigns`);
+        console.log(`[FUNNEL] Received funnel data with ${data.campaigns.length} campaigns`);
         setFunnelData(data);
-        setLastFetchedAdAccount(selectedAdAccount);
+        setLastFetchedAdAccount(formattedAccount);
+        setFunnelError(null);
         
-        // If in mock mode and we have data but campaigns state is empty or stale, trigger a refresh
-        if (isMockMode && data.campaigns.length > 0) {
-          console.log("[MOCK DEBUG] Ensuring campaign state is in sync with funnel data");
+        // If we have data but campaigns state is empty or stale, trigger a refresh
+        if (data.campaigns.length > 0) {
+          console.log("[FUNNEL] Ensuring campaign state is in sync with funnel data");
           
           // Small delay to ensure state updates happen after render
           setTimeout(() => {
             // Force UI refresh for the campaign components
             triggerCampaignRefresh(true);
           }, 500);
+        } else {
+          console.warn('[FUNNEL] No campaigns received from API');
         }
-        
-        setFunnelError(null);
-      } catch (err) {
-        console.error('[MOCK DEBUG] Error fetching funnel data:', err);
-        setFunnelError(err instanceof Error ? err.message : 'Failed to fetch funnel data');
+      } catch (err: any) {
+        console.error('[FUNNEL] Error fetching funnel data:', err);
+        setFunnelError(err instanceof Error ? err.message : 
+                     (err?.error?.message || 'Failed to fetch funnel data'));
+                     
+        // Log detailed error information
+        if (err?.error) {
+          console.error('[FUNNEL] Error details:', {
+            code: err.error.code,
+            type: err.error.type,
+            message: err.error.message
+          });
+        }
       } finally {
         setIsFetchingFunnel(false);
       }
     };
 
     fetchFunnelData();
-  }, [campaigns.length, refetchCampaigns, lastFetchedAdAccount, funnelData.campaigns.length]);
-
-  // Auto-trigger campaign fetch after a short delay if we have token and account ID
-  useEffect(() => {
-    const token = metaAuthService.getAccessToken();
-    const selectedAdAccount = localStorage.getItem('selected_ad_account');
-    
-    if (token && selectedAdAccount) {
-      console.log('[CAMPAIGN AUTO-FETCH] Token and account ID present, scheduling auto-fetch...');
-      
-      const timer = setTimeout(() => {
-        console.log('[CAMPAIGN AUTO-FETCH] Auto-triggering campaign fetch...');
-        triggerCampaignRefresh(true);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, []);
+  }, [campaigns.length, refetchCampaigns, lastFetchedAdAccount, retryCount]);
 
   return (
     <Card>
       <div className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Campaign Funnel</h2>
+          <Button 
+            variant="outline" 
+            onClick={handleManualRefresh} 
+            disabled={isFetchingFunnel || campaignsLoading}
+          >
+            {isFetchingFunnel || campaignsLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            Refresh Data
+          </Button>
+        </div>
+        
         <FunnelControls
           sortField={sortField}
           sortDirection={sortDirection}
@@ -136,21 +159,28 @@ const FunnelViewContainer = () => {
           onStatusFilterChange={setStatusFilter}
           onSearchChange={setSearchQuery}
         />
-        <FunnelView 
-          campaigns={filteredData.campaigns} 
-          adsets={filteredData.adsets} 
-          ads={filteredData.ads} 
-        />
         
-        {campaignsLoading || isFetchingFunnel ? (
-          <div className="flex justify-center my-4">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-          </div>
-        ) : null}
-        
-        {funnelError && (
-          <div className="p-4 text-center text-red-500 bg-red-50 rounded-md mt-4">
-            {funnelError}
+        {filteredData.campaigns.length > 0 ? (
+          <FunnelView 
+            campaigns={filteredData.campaigns} 
+            adsets={filteredData.adsets} 
+            ads={filteredData.ads} 
+          />
+        ) : (
+          <div className="bg-gray-50 p-6 rounded-md text-center">
+            {(campaignsLoading || isFetchingFunnel) ? (
+              <div className="flex flex-col items-center">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-500 mb-2" />
+                <p>Loading campaign data...</p>
+              </div>
+            ) : funnelError ? (
+              <div className="text-red-500">
+                <p className="font-medium">Error loading campaigns:</p>
+                <p>{funnelError}</p>
+              </div>
+            ) : (
+              <p>No campaigns found. Try refreshing or selecting a different account.</p>
+            )}
           </div>
         )}
       </div>

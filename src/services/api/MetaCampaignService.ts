@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { CampaignThrottling } from './campaign/throttling';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
@@ -57,8 +56,8 @@ export class MetaCampaignService extends BaseApiService {
       // Check if we should throttle the request
       CampaignThrottling.checkThrottling(adAccountId);
 
-      // Build the proper GET URL with correct fields parameter - now including insights fields
-      const fields = 'name,status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
+      // Build the proper GET URL with core fields first - removing insights temporarily to ensure campaigns load
+      const fields = 'name,status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time';
       const url = `${this.BASE_URL}/${this.API_VERSION}/act_${cleanAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
@@ -100,6 +99,9 @@ export class MetaCampaignService extends BaseApiService {
       }
 
       const data = await response.json();
+      
+      // Log raw response for debugging
+      console.log('[CAMPAIGN FETCH] Raw response:', JSON.stringify(data).substring(0, 500) + '...');
       
       if (!data || !data.data) {
         console.error('[CAMPAIGN FETCH] Invalid response format:', data);
@@ -172,13 +174,14 @@ export class MetaCampaignService extends BaseApiService {
         budget = `$${(parseInt(campaign.lifetime_budget) / 100).toFixed(2)} total`;
       }
       
+      // Default values for metrics to ensure UI always has values to display
       let results = '0';
       let spend = '$0.00';
       let impressions = '0';
       let clicks = '0';
       let cpa = '-';
       
-      // Process insights data if available
+      // Process insights data if available, but don't block if missing
       if (campaign.insights && campaign.insights.data && campaign.insights.data.length > 0) {
         const insightData = campaign.insights.data[0];
         
@@ -215,32 +218,24 @@ export class MetaCampaignService extends BaseApiService {
         if (purchaseAction) {
           results = purchaseAction.value;
         }
-        
-        campaign.insights = {
-          impressions,
-          clicks,
-          spend,
-          cpa,
-          actions: insightData.actions || [],
-          cost_per_action_type: insightData.cost_per_action_type || []
-        };
-      } else {
-        // Ensure insights object exists even if no data
-        campaign.insights = {
-          impressions: '0',
-          clicks: '0',
-          spend: '$0.00',
-          cpa: '-',
-          actions: [],
-          cost_per_action_type: []
-        };
       }
+      
+      // Always ensure insights object exists with default values
+      const insights = {
+        impressions: impressions || '0',
+        clicks: clicks || '0',
+        spend: spend || '$0.00',
+        cpa: cpa || '-',
+        actions: campaign.insights?.data?.[0]?.actions || [],
+        cost_per_action_type: campaign.insights?.data?.[0]?.cost_per_action_type || []
+      };
       
       return {
         ...campaign,
         budget,
         results,
-        spend: campaign.insights.spend
+        spend,
+        insights
       };
     });
   }
