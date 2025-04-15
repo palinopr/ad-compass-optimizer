@@ -5,6 +5,8 @@ export interface ErrorDetails {
   message: string;
   subcode?: string | number;
   fbtraceId?: string;
+  error_user_title?: string; // Adding this missing field
+  error_user_msg?: string;   // Adding this related field as well
   timestamp: string;
   requestUrl?: string;
   httpStatus?: number;
