@@ -7,7 +7,7 @@ export class CampaignQueryBuilder {
     const basicFields = CAMPAIGN_FIELDS.BASIC.join(',');
     const insightFields = CAMPAIGN_FIELDS.INSIGHTS.join(',');
     
-    // Use last_28d instead of last_30_days
+    // Use last_28d as the date preset, which is a valid Meta API value
     return `${basicFields},insights.date_preset(last_28d){${insightFields}}`;
   }
 

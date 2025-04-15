@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { CampaignThrottling } from './campaign/throttling';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
@@ -7,14 +6,33 @@ import { CampaignProcessor } from './campaign/fetching/campaignProcessor';
 import { PaginationHandler } from './campaign/fetching/paginationHandler';
 import { CampaignQueryBuilder } from './campaign/fetching/campaignQueryBuilder';
 import { ErrorStorage } from './campaign/error/errorStorage';
+import { metaAuthService } from '../MetaAuthService';
 
-// Change from "export { MetaCampaign }" to "export type { MetaCampaign }"
 export type { MetaCampaign };
 
 export class MetaCampaignService extends BaseApiService {
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
     try {
+      // Enhanced authentication and permission logging
+      console.group('[CAMPAIGN FETCH] Authentication Check');
+      console.log('Access Token:', token ? 'PRESENT' : 'MISSING');
+      console.log('Ad Account ID:', adAccountId);
+      
+      // Validate token existence
+      if (!token) {
+        console.error('❌ No access token found');
+        throw new Error('Missing Meta access token. Please re-authenticate.');
+      }
+
+      // Validate ad account ID
+      if (!adAccountId) {
+        console.error('❌ No ad account selected');
+        throw new Error('No ad account selected. Please choose an ad account.');
+      }
+      console.groupEnd();
+
       CampaignFetchLogger.logAttempt(adAccountId);
+      
       this.validateToken(token, 'fetchCampaigns');
       
       // Validate and format account ID
@@ -108,10 +126,9 @@ export class MetaCampaignService extends BaseApiService {
       }
       
       return CampaignProcessor.processCampaigns(allCampaigns);
-    } catch (error: any) {
-      console.error('[GRAPH API ERROR]:', error.response?.data || error);
+    } catch (error) {
+      console.error('[CAMPAIGN FETCH] Critical Error:', error);
       throw error;
     }
   }
 }
-
