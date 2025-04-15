@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2 } from 'lucide-react';
+import { Loader2, BarChart } from 'lucide-react';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
+import { Badge } from '@/components/ui/badge';
 
 const CampaignFetchLogs = () => {
   const [logs, setLogs] = useState<any[]>([]);
@@ -46,8 +47,17 @@ const CampaignFetchLogs = () => {
                     <div className="text-red-500 mt-1">Error: {log.error}</div>
                   ) : (
                     <>
-                      <div className="mt-1">
-                        Status: {log.status} {log.statusText}
+                      <div className="mt-1 flex justify-between items-center">
+                        <span>Status: {log.status} {log.statusText}</span>
+                        {typeof log.insightsData !== 'undefined' && (
+                          <Badge 
+                            variant={log.insightsData ? "default" : "outline"} 
+                            className={log.insightsData ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"}
+                          >
+                            <BarChart className="h-3 w-3 mr-1" />
+                            {log.insightsData ? "Insights ✓" : "No Insights"}
+                          </Badge>
+                        )}
                       </div>
                       {log.parsedJson && (
                         <div className="mt-1">

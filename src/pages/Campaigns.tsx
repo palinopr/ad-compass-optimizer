@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
@@ -15,6 +15,7 @@ import EmptyStateMessage from '@/components/campaigns/EmptyStateMessage';
 import AdAccountSection from '@/components/meta/integration/AdAccountSection';
 import { metaAuthService } from '@/services/MetaAuthService';
 import DebuggerPanel from '@/components/campaigns/debugger/DebuggerPanel';
+import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 
 // Import the API call logger to activate it
 import '@/utils/debugging/apiCallLogger';
@@ -37,11 +38,33 @@ const Campaigns = () => {
     isAuthSyncing
   } = useCampaignsPage();
 
-  const { campaigns, filteredCampaigns, error: campaignsError } = useCampaigns(activeTab);
+  const { campaigns, filteredCampaigns, error: campaignsError, refetchCampaigns } = useCampaigns(activeTab);
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
   
+  // Clear any mock data and ensure we're using real API data
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      // Clear any mock mode flags or cached mock data
+      localStorage.removeItem('USE_MOCK_MODE');
+      localStorage.removeItem('mock_campaigns_data');
+      localStorage.removeItem('mock_account_data');
+      
+      console.log('[CAMPAIGNS] Ensuring real API data is used, mock mode disabled');
+    }
+  }, []);
+  
+  // Ensure we fetch fresh data when the component mounts with insights
+  useEffect(() => {
+    if (isAuthenticated && hasAdAccount && selectedAdAccount) {
+      console.log(`[CAMPAIGN FETCH] Initial fetch for act_${selectedAdAccount} to ensure fresh data with insights`);
+      setTimeout(() => {
+        refetchCampaigns(true);
+      }, 1000);
+    }
+  }, [isAuthenticated, hasAdAccount, selectedAdAccount, refetchCampaigns]);
+  
   // Add console logs for debugging
-  React.useEffect(() => {
+  useEffect(() => {
     console.log('[CAMPAIGNS DEBUG] Component mounted');
     const token = metaAuthService.getAccessToken();
     console.log('[CAMPAIGNS DEBUG] Meta token:', token ? 'FOUND' : 'NOT FOUND');

@@ -1,37 +1,49 @@
 
-import { MetaCampaign } from '@/services/api/MetaCampaignService';
-
 /**
- * Utility functions for handling campaign-related events
+ * Event handlers for campaign-related events
  */
 
-export type CampaignRefreshEvent = CustomEvent<{ force?: boolean }>;
-
-/**
- * Dispatches an event to trigger campaign data refresh
- */
-export const triggerCampaignRefresh = (force: boolean = false): void => {
-  const event = new CustomEvent('campaign-data-refresh', { 
-    detail: { force } 
-  });
-  window.dispatchEvent(event);
-  console.log('Dispatched campaign-data-refresh event', { force });
+// Trigger a refresh of campaign data
+export const triggerCampaignRefresh = (
+  force: boolean = false, 
+  accountId?: string,
+  immediate: boolean = false
+): void => {
+  if (typeof window !== 'undefined') {
+    console.log(`[CAMPAIGN EVENT] Triggering campaign refresh. Force: ${force}, Immediate: ${immediate}, Account: ${accountId || 'current'}`);
+    
+    const event = new CustomEvent('campaign-data-refresh', {
+      detail: { 
+        force,
+        accountId,
+        immediate
+      }
+    });
+    
+    window.dispatchEvent(event);
+  }
 };
 
-/**
- * Dispatches an event to trigger display refresh without fetching new data
- */
+// Trigger a display-only refresh (no data fetching)
 export const triggerDisplayRefresh = (): void => {
-  const event = new CustomEvent('campaign-display-refresh');
-  window.dispatchEvent(event);
-  console.log('Dispatched campaign-display-refresh event');
+  if (typeof window !== 'undefined') {
+    const event = new CustomEvent('campaign-display-refresh');
+    window.dispatchEvent(event);
+  }
 };
 
-/**
- * Notifies the system about an ad account change
- */
-export const notifyAdAccountChange = (): void => {
-  const event = new CustomEvent('ad-account-changed');
-  window.dispatchEvent(event);
-  console.log('Dispatched ad-account-changed event');
+// Trigger a UI refresh (force re-render)
+export const triggerUIRefresh = (): void => {
+  if (typeof window !== 'undefined') {
+    const event = new CustomEvent('campaign-ui-refresh');
+    window.dispatchEvent(event);
+  }
+};
+
+// Clear campaign data
+export const clearCampaignData = (): void => {
+  if (typeof window !== 'undefined') {
+    const event = new CustomEvent('campaign-data-clear');
+    window.dispatchEvent(event);
+  }
 };

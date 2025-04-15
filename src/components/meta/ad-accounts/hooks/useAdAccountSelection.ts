@@ -34,6 +34,13 @@ export const useAdAccountSelection = (availableAccounts: any[] = []) => {
         console.log('[META] Setting default selected account:', accountId);
         setSelectedAccount(accountId);
         localStorage.setItem('selected_ad_account', accountId);
+        
+        // Trigger initial campaign fetch with insights for the default account
+        setTimeout(() => {
+          console.log(`[CAMPAIGN FETCH] Started for default account: act_${accountId}`);
+          CampaignFetchLogger.logAttempt(accountId);
+          triggerCampaignRefresh(true, accountId, true); 
+        }, 500);
       }
     }
   }, [availableAccounts, selectedAccount]);
@@ -45,6 +52,10 @@ export const useAdAccountSelection = (availableAccounts: any[] = []) => {
     try {
       const cleanAccountId = accountId.replace(/^act_/, '');
       console.log('[META] Changing account to:', cleanAccountId);
+      
+      // Remove any cached mock data
+      localStorage.removeItem('mock_campaigns_data');
+      localStorage.removeItem('mock_account_data');
       
       // Update state and localStorage
       setSelectedAccount(cleanAccountId);
@@ -68,8 +79,8 @@ export const useAdAccountSelection = (availableAccounts: any[] = []) => {
       });
       window.dispatchEvent(event);
       
-      // Force immediate campaign refresh
-      triggerCampaignRefresh(true);
+      // Force immediate campaign refresh with insights data
+      triggerCampaignRefresh(true, cleanAccountId, true);
     } catch (e) {
       console.error('[META] Error changing account:', e);
       toast({

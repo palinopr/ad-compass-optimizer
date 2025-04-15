@@ -7,6 +7,7 @@ interface CampaignFetchLog {
   responseBody?: string;
   parsedJson?: any;
   error?: string;
+  insightsData?: boolean;
 }
 
 class CampaignFetchLogger {
@@ -32,9 +33,25 @@ class CampaignFetchLogger {
       console.log('[CAMPAIGN FETCH] 📄 Response Body:', responseText);
 
       let parsedJson;
+      let hasInsights = false;
       try {
         parsedJson = JSON.parse(responseText);
         console.log('[CAMPAIGN FETCH] ✅ Parsed JSON:', parsedJson);
+        
+        // Check if any campaigns have insights data
+        if (parsedJson && parsedJson.data && Array.isArray(parsedJson.data)) {
+          const campaignsWithInsights = parsedJson.data.filter(
+            (campaign: any) => campaign.insights && campaign.insights.data && campaign.insights.data.length > 0
+          ).length;
+          
+          hasInsights = campaignsWithInsights > 0;
+          console.log(`[CAMPAIGN FETCH] 📊 Campaigns with insights data: ${campaignsWithInsights}/${parsedJson.data.length}`);
+          
+          // Log first campaign insights for debugging
+          if (hasInsights && parsedJson.data[0].insights) {
+            console.log('[CAMPAIGN FETCH] 📊 Sample insights:', parsedJson.data[0].insights.data[0]);
+          }
+        }
       } catch (err) {
         console.error('[CAMPAIGN FETCH] ❌ Failed to parse JSON:', err);
       }
@@ -45,7 +62,8 @@ class CampaignFetchLogger {
         status: response.status,
         statusText: response.statusText,
         responseBody: responseText,
-        parsedJson
+        parsedJson,
+        insightsData: hasInsights
       };
 
       this.logs.unshift(log);

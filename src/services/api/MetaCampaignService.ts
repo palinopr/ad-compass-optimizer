@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -57,7 +58,11 @@ export class MetaCampaignService extends BaseApiService {
     
       try {
         const endpoint = `/act_${adAccountId}/campaigns`;
-        const fields = 'id,name,objective,status,spend,results,cost_per_result,budget,daily_budget,lifetime_budget,start_time,end_time,created_time,updated_time';
+        // Include insights fields in the campaign request
+        const fields = 'id,name,objective,status,spend,results,cost_per_result,budget,daily_budget,lifetime_budget,start_time,end_time,created_time,updated_time,insights.date_preset(last_30d){impressions,clicks,cpc,ctr,spend,cost_per_action_type}';
+        
+        console.log(`[CAMPAIGN FETCH] Fetching campaigns with insights for act_${adAccountId}`);
+        console.log(`[CAMPAIGN FETCH] Fields requested: ${fields}`);
         
         const response = await fetch(
           `${this.BASE_URL}/${this.API_VERSION}${endpoint}?fields=${fields}&access_token=${token}`,
@@ -80,17 +85,36 @@ export class MetaCampaignService extends BaseApiService {
           throw new Error('Invalid response format');
         }
 
-        const campaigns = data.data.map((campaign: any) => ({
-          ...campaign,
-          spend: campaign.spend || '$0.00',
-          results: campaign.results || '0',
-          cost_per_result: campaign.cost_per_result || '$0.00',
-          budget: campaign.daily_budget ? 
-            `$${(parseInt(campaign.daily_budget) / 100).toFixed(2)}/day` : 
-            (campaign.lifetime_budget ? 
-              `$${(parseInt(campaign.lifetime_budget) / 100).toFixed(2)} total` : 
-              '-')
-        }));
+        console.log(`[CAMPAIGN FETCH] Received ${data.data.length} campaigns with insights data`);
+        
+        // Process campaign data including insights
+        const campaigns = data.data.map((campaign: any) => {
+          // Extract insights data if available
+          const insightsData = campaign.insights?.data?.[0] || {};
+          
+          // Log insights data for debugging
+          if (campaign.insights?.data?.length > 0) {
+            console.log(`[CAMPAIGN FETCH] Campaign ${campaign.id} has insights data:`, insightsData);
+          }
+          
+          return {
+            ...campaign,
+            spend: campaign.spend || '$0.00',
+            results: campaign.results || '0',
+            cost_per_result: campaign.cost_per_result || '$0.00',
+            budget: campaign.daily_budget ? 
+              `$${(parseInt(campaign.daily_budget) / 100).toFixed(2)}/day` : 
+              (campaign.lifetime_budget ? 
+                `$${(parseInt(campaign.lifetime_budget) / 100).toFixed(2)} total` : 
+                '-'),
+            insights: {
+              impressions: insightsData.impressions || '0',
+              clicks: insightsData.clicks || '0',
+              cpa: insightsData.cost_per_action_type?.[0]?.value || '$0.00',
+              roas: insightsData.roas || '0.00'
+            }
+          };
+        });
 
         localStorage.setItem('last_campaign_count', campaigns.length.toString());
         localStorage.setItem('last_campaign_fetch_success', 'true');
