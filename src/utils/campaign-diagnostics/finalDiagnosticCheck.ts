@@ -1,6 +1,7 @@
 
 import { metaAuthService } from '@/services/MetaAuthService';
 import { BaseApiService } from '@/services/api/BaseApiService';
+import { MetaApiService } from '@/services/api/MetaApiService';
 
 /**
  * Run a final diagnostic check before making API requests
@@ -28,7 +29,6 @@ export const runFinalDiagnosticCheck = async (): Promise<{ success: boolean; err
     
     // Test basic connection to Meta API
     try {
-      const MetaApiService = (await import('@/services/api/MetaApiService')).default;
       const result = await MetaApiService.testConnection(token);
       
       if (!result.success) {

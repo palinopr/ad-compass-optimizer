@@ -10,7 +10,7 @@ interface RateLimitStatus {
 /**
  * Check if the current account is rate limited
  */
-export const checkRateLimitStatus = (adAccountId: string): RateLimitStatus => {
+export const checkRateLimitStatus = (adAccountId: string = 'default'): RateLimitStatus => {
   try {
     const rlKey = `rate_limit_${adAccountId}`;
     const rateLimitData = localStorage.getItem(rlKey);
@@ -46,7 +46,7 @@ export const checkRateLimitStatus = (adAccountId: string): RateLimitStatus => {
 /**
  * Mark an account as rate limited
  */
-export const markRateLimited = (minutesDuration: number = 10, adAccountId: string): RateLimitStatus => {
+export const markRateLimited = (minutesDuration: number = 10, adAccountId: string = 'default'): RateLimitStatus => {
   try {
     const rlKey = `rate_limit_${adAccountId}`;
     const now = Date.now();
@@ -75,4 +75,48 @@ export const notifyRateLimit = (timeRemaining: number): void => {
     variant: "destructive",
     duration: 10000,
   });
+};
+
+/**
+ * Clear rate limit for an account
+ */
+export const clearRateLimit = (adAccountId: string = 'default'): void => {
+  try {
+    const rlKey = `rate_limit_${adAccountId}`;
+    localStorage.removeItem(rlKey);
+    console.log(`Rate limit cleared for account ${adAccountId}`);
+  } catch (e) {
+    console.error('Error clearing rate limit:', e);
+  }
+};
+
+/**
+ * Check if we should throttle fetch requests
+ */
+export const shouldThrottleFetch = (adAccountId: string = 'default'): boolean => {
+  // Check if currently rate limited
+  const { isRateLimited } = checkRateLimitStatus(adAccountId);
+  if (isRateLimited) {
+    return true;
+  }
+  
+  // Check for recent API fetch (within last 2 seconds)
+  try {
+    const lastFetchTime = localStorage.getItem(`last_api_fetch_time_${adAccountId}`);
+    if (lastFetchTime) {
+      const lastFetch = new Date(lastFetchTime).getTime();
+      const now = Date.now();
+      const timeSinceLastFetch = now - lastFetch;
+      
+      // If less than 2 seconds since last fetch, throttle
+      if (timeSinceLastFetch < 2000) {
+        console.log(`Throttling fetch for account ${adAccountId}: too soon after last fetch (${timeSinceLastFetch}ms)`);
+        return true;
+      }
+    }
+  } catch (e) {
+    console.error('Error checking fetch throttling:', e);
+  }
+  
+  return false;
 };

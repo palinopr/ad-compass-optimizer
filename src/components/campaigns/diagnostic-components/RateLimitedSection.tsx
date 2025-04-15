@@ -58,7 +58,9 @@ const RateLimitedSection: React.FC<RateLimitedSectionProps> = ({ rateLimitTimest
 
   // Check if we have cached data
   React.useEffect(() => {
-    const { campaigns } = getCachedCampaigns();
+    // Get the current selected ad account ID
+    const adAccountId = localStorage.getItem('selected_ad_account') || 'default';
+    const { campaigns } = getCachedCampaigns(adAccountId);
     setShowCachedData(!!campaigns && campaigns.length > 0);
   }, []);
 

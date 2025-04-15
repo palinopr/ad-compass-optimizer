@@ -63,7 +63,7 @@ export const serveCachedDataWithNotification = (campaigns: MetaCampaign[], isSta
     toast({
       title: "Using cached campaign data",
       description: "Fresh data couldn't be fetched. Showing most recent available data.",
-      variant: "secondary",
+      variant: "default",  // Changed from "secondary" to "default"
     });
   }
 };

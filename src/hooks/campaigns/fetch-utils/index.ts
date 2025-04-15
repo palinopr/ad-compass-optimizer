@@ -31,4 +31,3 @@ export {
   executeCampaignFetch,
   filterCampaignsByStatus
 } from './campaignFetch';
-

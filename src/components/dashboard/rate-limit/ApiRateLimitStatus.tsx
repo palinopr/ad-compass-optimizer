@@ -11,16 +11,17 @@ import { checkRateLimitStatus, clearRateLimit } from '@/hooks/campaigns/fetch-ut
 const ApiRateLimitStatus: React.FC = () => {
   const navigate = useNavigate();
   const [isClearing, setIsClearing] = React.useState(false);
-  const [rateLimitInfo, setRateLimitInfo] = React.useState(() => checkRateLimitStatus());
+  const adAccountId = localStorage.getItem('selected_ad_account') || 'default';
+  const [rateLimitInfo, setRateLimitInfo] = React.useState(() => checkRateLimitStatus(adAccountId));
   
   React.useEffect(() => {
     // Update rate limit info every 30 seconds
     const intervalId = setInterval(() => {
-      setRateLimitInfo(checkRateLimitStatus());
+      setRateLimitInfo(checkRateLimitStatus(adAccountId));
     }, 30000);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [adAccountId]);
   
   // Calculate progress value (0-100) based on time remaining
   const getProgressValue = () => {
@@ -40,7 +41,7 @@ const ApiRateLimitStatus: React.FC = () => {
     
     try {
       // Clear the rate limit flag
-      clearRateLimit();
+      clearRateLimit(adAccountId);
       
       toast({
         title: "Rate Limit Flag Cleared",
@@ -48,7 +49,7 @@ const ApiRateLimitStatus: React.FC = () => {
       });
       
       // Refresh rate limit info
-      setRateLimitInfo(checkRateLimitStatus());
+      setRateLimitInfo(checkRateLimitStatus(adAccountId));
       
       // Wait a moment before allowing another click
       setTimeout(() => setIsClearing(false), 1000);
