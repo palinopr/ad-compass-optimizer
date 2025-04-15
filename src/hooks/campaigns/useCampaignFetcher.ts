@@ -31,24 +31,6 @@ export function useCampaignFetcher() {
   ): Promise<{ campaigns: MetaCampaign[], error: string | null, errorDetails?: any }> => {
     console.log('[CAMPAIGNS DEBUG] Starting campaign fetch...');
 
-    // Track fetch attempt
-    if (typeof window !== 'undefined') {
-      try {
-        // Dispatch event to notify that a fetch attempt is being made
-        const fetchAttemptEvent = new CustomEvent('campaign-fetch-attempt', {
-          detail: { accountId: adAccountId, timestamp: new Date().toISOString() }
-        });
-        window.dispatchEvent(fetchAttemptEvent);
-        
-        // Record fetch attempt in localStorage for diagnostics
-        const attempts = parseInt(localStorage.getItem('campaign_fetch_attempts') || '0', 10);
-        localStorage.setItem('campaign_fetch_attempts', (attempts + 1).toString());
-        localStorage.setItem('last_manual_campaign_fetch', new Date().toISOString());
-      } catch (e) {
-        console.error('[CAMPAIGNS DEBUG] Error tracking fetch attempt:', e);
-      }
-    }
-    
     // Validate token and account ID immediately
     if (!token) {
       console.error('[CAMPAIGNS DEBUG] Missing Meta access token');
@@ -134,23 +116,6 @@ export function useCampaignFetcher() {
     } catch (err: any) {
       console.error('[CAMPAIGNS DEBUG] Fetch error:', err);
       logFetchDetails(adAccountId, token, err);
-      
-      // Store detailed error information
-      try {
-        localStorage.setItem('last_campaign_fetch_error', JSON.stringify({
-          message: err?.message || String(err),
-          status: err?.status || err?.code || 'unknown',
-          timestamp: new Date().toISOString(),
-          details: {
-            fbTraceId: err?.fbtraceId || err?.error?.fbtrace_id,
-            code: err?.code || err?.error?.code,
-            type: err?.type || err?.error?.type,
-            subcode: err?.error?.error_subcode
-          }
-        }));
-      } catch (e) {
-        console.error('[CAMPAIGNS DEBUG] Error storing error details:', e);
-      }
       
       if (err.name === 'ThrottleError') {
         toast({
