@@ -34,11 +34,6 @@ export class CampaignFetchService extends BaseApiService {
       CampaignThrottling.checkThrottling(formattedAccountId);
 
       const fields = CampaignQueryBuilder.buildCampaignQuery();
-      console.group('[CAMPAIGN FETCH] Query Details');
-      console.log('Fields:', fields);
-      console.log('Date Preset:', 'last_28d');
-      console.groupEnd();
-      
       const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
       
@@ -69,15 +64,11 @@ export class CampaignFetchService extends BaseApiService {
     const data = await response.json();
     ErrorStorage.storeRawSuccessResponse(data);
     
-    console.log('[CAMPAIGN FETCH] Raw response:', JSON.stringify(data).substring(0, 500) + '...');
-    
     if (!data || !data.data) {
       console.error('[CAMPAIGN FETCH] Invalid response format:', data);
       throw new Error('Invalid response format from Meta API');
     }
 
-    console.log(`[CAMPAIGN FETCH] Successfully received ${data.data.length} campaigns`);
-    
     let allCampaigns = [...data.data];
     
     if (data.paging && data.paging.next) {
@@ -91,37 +82,5 @@ export class CampaignFetchService extends BaseApiService {
     }
     
     return CampaignProcessor.processCampaigns(allCampaigns);
-  }
-
-  private static async handleErrorResponse(response: Response): Promise<never> {
-    const errorData = await response.json();
-    console.error('[GRAPH API ERROR] Response:', {
-      status: response.status,
-      data: errorData,
-      headers: Object.fromEntries(response.headers.entries())
-    });
-    
-    const error = errorData?.error || {};
-    console.error('[GRAPH API ERROR] Details:', {
-      message: error.message || 'Unknown error',
-      type: error.type || 'Unknown type',
-      code: error.code || 'Unknown code',
-      subcode: error.error_subcode
-    });
-    
-    ErrorStorage.storeRawErrorResponse(errorData);
-    
-    throw {
-      message: error.message || `HTTP error! status: ${response.status}`,
-      code: error.code,
-      type: error.type,
-      subcode: error.error_subcode,
-      status: response.status,
-      response: {
-        data: errorData,
-        status: response.status,
-        headers: Object.fromEntries(response.headers.entries())
-      }
-    };
   }
 }
