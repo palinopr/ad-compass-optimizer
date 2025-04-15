@@ -16,8 +16,17 @@ const CampaignStatusSection = ({ error, isFetching, campaignCount }: CampaignSta
   }
 
   return (
-    <div className="text-sm">
-      <p>Campaigns loaded: {campaignCount}</p>
+    <div className="text-sm space-y-2">
+      {campaignCount === 0 && !isFetching && !error ? (
+        <Alert>
+          <Bug className="h-4 w-4" />
+          <AlertDescription>
+            Empty response received from Meta API — no campaigns returned.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <p>Campaigns loaded: {campaignCount}</p>
+      )}
       {isFetching && <p>Fetching campaigns...</p>}
     </div>
   );
