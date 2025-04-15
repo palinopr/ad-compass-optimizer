@@ -56,7 +56,7 @@ export const useCampaignDiagnostics = () => {
       const tokenInfo = {
         exists: !!token,
         value: token ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}` : null,
-        type: token ? 'Live' : 'None'
+        type: token ? 'Live' as const : 'None' as const
       };
 
       try {
