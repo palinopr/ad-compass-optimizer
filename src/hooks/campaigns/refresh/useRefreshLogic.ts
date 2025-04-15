@@ -8,6 +8,8 @@ import { CampaignThrottling } from '@/services/api/campaign/throttling';
 export const useRefreshLogic = (status?: string) => {
   const mountedRef = useRef(true);
   const lastRefreshTimeRef = useRef(0);
+  // Add a flag to prevent duplicate fetches in rapid succession
+  const fetchInProgressRef = useRef(false);
   
   useEffect(() => {
     return () => {
@@ -17,6 +19,17 @@ export const useRefreshLogic = (status?: string) => {
   
   const fetchCampaigns = useCallback(async (forceRefresh = false) => {
     try {
+      // Return early if a fetch is already in progress to prevent duplicates
+      if (fetchInProgressRef.current && !forceRefresh) {
+        console.log('[REFRESH LOGIC] Fetch already in progress, skipping duplicate request');
+        return { 
+          error: 'A fetch is already in progress', 
+          campaigns: [],
+          errorDetails: { skipped: true }
+        };
+      }
+      
+      fetchInProgressRef.current = true;
       console.log('[REFRESH LOGIC] fetchCampaigns called', { forceRefresh, status });
       
       // Ensure we have a valid token
@@ -27,8 +40,10 @@ export const useRefreshLogic = (status?: string) => {
       const selectedAdAccount = localStorage.getItem('selected_ad_account');
       console.log('[REFRESH LOGIC] Selected account:', selectedAdAccount || 'None');
       
+      // Validate that we have both token and account before proceeding
       if (!token || !selectedAdAccount) {
         console.error('[REFRESH LOGIC] Missing token or account');
+        fetchInProgressRef.current = false;
         return { 
           error: 'Missing authentication token or ad account', 
           campaigns: [] 
@@ -44,6 +59,7 @@ export const useRefreshLogic = (status?: string) => {
         }
       } catch (throttleError: any) {
         console.error('[REFRESH LOGIC] Throttled:', throttleError.message);
+        fetchInProgressRef.current = false;
         return {
           error: throttleError.message,
           campaigns: [],
@@ -65,10 +81,12 @@ export const useRefreshLogic = (status?: string) => {
       const data = await MetaFunnelService.fetchFunnelData(token, selectedAdAccount);
       
       console.log(`[REFRESH LOGIC] Fetch successful, received ${data.campaigns.length} campaigns`);
+      fetchInProgressRef.current = false;
       return { campaigns: data.campaigns, error: null };
       
     } catch (error: any) {
       console.error('[REFRESH LOGIC] Fetch error:', error);
+      fetchInProgressRef.current = false;
       return {
         error: error.message || 'Failed to fetch campaigns',
         campaigns: [],
@@ -80,6 +98,7 @@ export const useRefreshLogic = (status?: string) => {
   return {
     fetchCampaigns,
     mountedRef,
-    lastRefreshTimeRef
+    lastRefreshTimeRef,
+    fetchInProgress: fetchInProgressRef.current
   };
 };

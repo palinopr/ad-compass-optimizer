@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizard';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
@@ -41,6 +41,8 @@ const Campaigns = () => {
 
   const { campaigns, filteredCampaigns, error: campaignsError, refetchCampaigns, isLoading } = useCampaigns(activeTab);
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
+  // Add a flag to track if the initial fetch has been triggered
+  const initialFetchTriggeredRef = useRef(false);
   
   // Clear any mock data and ensure we're using real API data
   useEffect(() => {
@@ -67,11 +69,14 @@ const Campaigns = () => {
     }
   }, []);
   
-  // Enhanced effect to ensure campaigns load after authentication and account selection
+  // Enhanced effect to ensure campaigns load ONCE after authentication and account selection
   useEffect(() => {
-    // Only execute if we have authentication and an account selected
-    if (isAuthenticated && hasAdAccount && selectedAdAccount) {
-      console.log(`[CAMPAIGN FETCH] Auth validated (token: ${isAuthenticated}, account: ${selectedAdAccount}), triggering fetch`);
+    // Only execute if we have authentication and an account selected AND fetch hasn't been triggered yet
+    if (isAuthenticated && hasAdAccount && selectedAdAccount && hasPermissions && !initialFetchTriggeredRef.current) {
+      console.log(`[CAMPAIGN FETCH] Full auth validated (token: ${isAuthenticated}, account: ${selectedAdAccount}, permissions: ${hasPermissions}), triggering fetch`);
+      
+      // Mark fetch as triggered to prevent duplicates
+      initialFetchTriggeredRef.current = true;
       
       // Immediate logging of auth state for debugging
       const token = metaAuthService.getAccessToken();
@@ -80,38 +85,35 @@ const Campaigns = () => {
         tokenLength: token ? token.length : 0,
         accountSelected: !!selectedAdAccount,
         isAuthenticated, 
-        hasAdAccount
+        hasAdAccount,
+        hasPermissions
       });
       
-      // First try with a short delay to let auth context fully resolve
+      // Single fetch attempt with slight delay
       setTimeout(() => {
         console.log('[CAMPAIGN FETCH] Initial fetch attempt for account:', selectedAdAccount);
         refetchCampaigns(true);
       }, 500);
-      
-      // Second attempt with a longer delay as a fallback
-      setTimeout(() => {
-        console.log('[CAMPAIGN FETCH] Follow-up fetch attempt for account:', selectedAdAccount);
-        if (!campaigns.length && !isLoading) {
-          console.log('[CAMPAIGN FETCH] No campaigns loaded yet, forcing refresh');
-          refetchCampaigns(true);
-        }
-      }, 2000);
     } else {
+      // Log why we're not fetching
       console.log('[CAMPAIGN FETCH] Prerequisites not met:', {
         isAuthenticated,
         hasAdAccount,
-        selectedAdAccount
+        selectedAdAccount,
+        hasPermissions,
+        initialFetchTriggered: initialFetchTriggeredRef.current
       });
     }
-  }, [isAuthenticated, hasAdAccount, selectedAdAccount, refetchCampaigns]);
+  }, [isAuthenticated, hasAdAccount, selectedAdAccount, hasPermissions, refetchCampaigns]);
   
-  // Listen for ad account changes and trigger fetch
+  // Listen for ad account changes and trigger fetch only if account changes
   useEffect(() => {
     const handleAccountChange = (event: Event) => {
       const customEvent = event as CustomEvent;
       if (customEvent.detail?.accountId) {
         console.log('[CAMPAIGNS] Ad account changed, triggering campaign refresh');
+        // Reset the fetch flag when account changes
+        initialFetchTriggeredRef.current = false;
         setTimeout(() => refetchCampaigns(true), 300);
       }
     };
@@ -174,14 +176,17 @@ const Campaigns = () => {
             {isAuthenticated && hasAdAccount && (
               <DebuggerPanel
                 campaigns={campaigns}
-                isLoading={false}
+                isLoading={isLoading}
                 error={campaignsError}
               />
             )}
             
             {isAuthenticated && hasAdAccount && <RefreshControls />}
             
-            <CampaignTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+            <CampaignTabs 
+              activeTab={activeTab} 
+              setActiveTab={setActiveTab} 
+            />
 
             {filteredCampaigns?.length === 0 && !showCreateWizard && (
               <EmptyStateMessage adAccountId={selectedAdAccount} />

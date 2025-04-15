@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { toast } from '@/hooks/use-toast';
@@ -11,6 +11,7 @@ export function useCampaignsPage() {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
   const [isAuthSyncing, setIsAuthSyncing] = useState(false);
   const { isAuthenticated, hasPermissions, checkAuth, showConnectionDialog: showContextDialog } = useMetaConnection();
+  const initialFetchCompletedRef = useRef(false);
   
   // Direct token check for more reliable auth state
   const token = metaAuthService.getAccessToken();
@@ -18,10 +19,13 @@ export function useCampaignsPage() {
   const directIsAuthenticated = !!token && token.length > 50;
   const hasAdAccount = !!selectedAdAccount && selectedAdAccount.length > 0;
   
-  // When any auth state changes, trigger a campaign refresh
+  // When any auth state changes, trigger a campaign refresh - but only once when everything is ready
   useEffect(() => {
-    if (directIsAuthenticated && hasAdAccount) {
-      console.log('[CAMPAIGNS PAGE] Auth state validated, triggering campaign refresh');
+    if (directIsAuthenticated && hasAdAccount && !initialFetchCompletedRef.current) {
+      console.log('[CAMPAIGNS PAGE] Auth state validated, triggering initial campaign refresh');
+      // Mark as completed to prevent further refreshes from this effect
+      initialFetchCompletedRef.current = true;
+      
       // Use a slight delay to ensure all auth contexts have settled
       setTimeout(() => {
         triggerCampaignRefresh(true);
@@ -37,13 +41,8 @@ export function useCampaignsPage() {
     
     setTimeout(() => {
       setIsAuthSyncing(false);
-      // Force campaign refresh after successful connection
-      triggerCampaignRefresh(true);
-      
-      toast({
-        title: "Connection Successful",
-        description: "You are now connected to your Meta account."
-      });
+      // Reset the fetch completed flag to allow a new fetch after reconnection
+      initialFetchCompletedRef.current = false;
     }, 500);
   }, [checkAuth]);
   
@@ -63,8 +62,8 @@ export function useCampaignsPage() {
     
     setTimeout(() => {
       setIsAuthSyncing(false);
-      // Also refresh campaigns after connection refresh
-      triggerCampaignRefresh(true);
+      // Reset the fetch completed flag to allow a new fetch after refresh
+      initialFetchCompletedRef.current = false;
     }, 500);
   }, [checkAuth]);
   

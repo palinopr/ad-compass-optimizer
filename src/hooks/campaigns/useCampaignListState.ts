@@ -45,7 +45,8 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
       authError: authResult.error || 'No error'
     });
     
-    if (directAuthCheck && !initialFetchAttemptedRef.current) {
+    // Only trigger a fetch on first load if valid auth is detected AND hasn't been attempted yet
+    if (directAuthCheck && !initialFetchAttemptedRef.current && !isLoading) {
       console.log('[CAMPAIGNS TAB] First load with valid auth detected, triggering fetch');
       initialFetchAttemptedRef.current = true;
       
@@ -66,15 +67,17 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
         hasAdAccountId: !!selectedAdAccountId
       });
     }
-  }, [effectiveIsAuthenticated, authResult, directAuthCheck, token, selectedAdAccountId, refetchCampaigns]);
+  }, [effectiveIsAuthenticated, authResult, directAuthCheck, token, selectedAdAccountId, refetchCampaigns, isLoading]);
 
   // Reset filters when ad account changes
   useEffect(() => {
     const handleAccountChange = () => {
       // Reset all filters to default values
-      setDateRange(null, 'last_28d'); // Updated to use last_28d
+      setDateRange(null, 'last_28d');
       setStatusFilter(null);
       setSearchQuery('');
+      // Reset the fetch attempted flag when account changes
+      initialFetchAttemptedRef.current = false;
     };
 
     window.addEventListener('ad-account-changed', handleAccountChange);
