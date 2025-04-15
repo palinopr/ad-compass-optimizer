@@ -18,17 +18,13 @@ export class InsightsRequestBuilder {
       // Map any legacy date presets to Meta API compatible values
       let datePreset = options.datePreset;
       
-      // Mapping legacy values to supported Meta API values
-      switch (datePreset) {
-        case 'last_30d':
-        case 'last30days':
-          console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_28d"`);
-          datePreset = 'last_28d';
-          break;
-        case 'last7days':
-          console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_7d"`);
-          datePreset = 'last_7d';
-          break;
+      // Mapping legacy values to supported Meta API values using type-safe approach
+      if (datePreset === 'last_30d' || datePreset === 'last30days') {
+        console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_28d"`);
+        datePreset = 'last_28d';
+      } else if (datePreset === 'last7days') {
+        console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_7d"`);
+        datePreset = 'last_7d';
       }
       
       params.append('date_preset', datePreset);
