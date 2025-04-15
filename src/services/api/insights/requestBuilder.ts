@@ -1,4 +1,3 @@
-
 /**
  * Builder for Meta Insights API requests
  */
