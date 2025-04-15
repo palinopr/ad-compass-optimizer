@@ -70,7 +70,8 @@ export function useCampaignFetcher() {
     try {
       console.log('[CAMPAIGNS DEBUG] Starting API fetch for account:', adAccountId);
       
-      const { error: prepError } = await prepareFetchRequest(token, adAccountId, false);
+      // Fix here: Remove the third argument that was causing the TypeScript error
+      const { error: prepError } = await prepareFetchRequest(token, adAccountId);
       if (prepError) {
         console.error('[CAMPAIGNS DEBUG] Preparation error:', prepError);
         return { campaigns: [], error: prepError };
