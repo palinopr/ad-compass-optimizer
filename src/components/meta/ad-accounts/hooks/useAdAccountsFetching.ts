@@ -13,6 +13,7 @@ export function useAdAccountsFetching() {
   const { toast } = useToast();
   const errorRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
+  const fetchAttemptedRef = useRef(false);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -23,8 +24,11 @@ export function useAdAccountsFetching() {
 
   const fetchAdAccounts = async () => {
     try {
+      if (!isMountedRef.current) return;
+      
       setIsLoading(true);
       setError(null);
+      fetchAttemptedRef.current = true;
 
       const token = metaAuthService.getAccessToken();
       if (!token) {
@@ -38,7 +42,7 @@ export function useAdAccountsFetching() {
       
       // Only update state if component is still mounted
       if (isMountedRef.current) {
-        console.log('[AD ACCOUNTS] Response:', accounts);
+        console.log('[META AD ACCOUNTS] Response processed:', accounts);
         
         if (!Array.isArray(accounts)) {
           setError('Invalid response from API');
@@ -54,6 +58,14 @@ export function useAdAccountsFetching() {
             variant: "destructive"
           });
         }
+
+        // Log each account before updating state
+        accounts.forEach((account, idx) => {
+          console.log(`[META AD ACCOUNTS] Account ${idx + 1}:`, {
+            id: account.id,
+            name: account.name,
+          });
+        });
 
         setAdAccounts(accounts);
       }
@@ -83,7 +95,9 @@ export function useAdAccountsFetching() {
 
   // Fetch accounts on mount
   useEffect(() => {
-    fetchAdAccounts();
+    if (!fetchAttemptedRef.current) {
+      fetchAdAccounts();
+    }
   }, []);
 
   return {

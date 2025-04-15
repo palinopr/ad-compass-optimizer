@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { AdAccount } from './types';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AdAccountDropdownProps {
   adAccounts: AdAccount[];
@@ -33,13 +34,27 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
   const [open, setOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Safe check for account data
+  const safeAccounts = React.useMemo(() => {
+    if (!adAccounts || !Array.isArray(adAccounts)) {
+      console.error('[META] Invalid ad accounts data:', adAccounts);
+      return [];
+    }
+    return adAccounts.filter(account => account && account.id);
+  }, [adAccounts]);
+
+  // Log account data for debugging
+  React.useEffect(() => {
+    console.log('[META AD ACCOUNTS] Dropdown received accounts:', safeAccounts);
+  }, [safeAccounts]);
+
   // Find the selected account label to display
   const selectedAccountLabel = React.useMemo(() => {
     try {
       if (isLoading) return 'Loading accounts...';
-      if (!adAccounts || adAccounts.length === 0) return 'No accounts available';
+      if (!safeAccounts || safeAccounts.length === 0) return 'No accounts available';
 
-      const account = adAccounts.find(account => {
+      const account = safeAccounts.find(account => {
         if (!account || !account.id) return false;
         // Normalize IDs for comparison
         const normalizedId = account.id.replace(/^act_/, '');
@@ -52,10 +67,11 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
       console.error('[META] Error getting account label:', err);
       return 'Select an ad account';
     }
-  }, [adAccounts, selectedAccount, isLoading]);
+  }, [safeAccounts, selectedAccount, isLoading]);
 
   const handleAccountSelect = React.useCallback((accountId: string) => {
     try {
+      console.log('[META] Account selected:', accountId);
       onChange(accountId);
       setOpen(false);
     } catch (err) {
@@ -67,9 +83,10 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
   return (
     <div>
       {error && (
-        <div className="text-sm text-red-500 mb-2">
-          {error}
-        </div>
+        <Alert className="mb-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -106,28 +123,34 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
             <CommandInput placeholder="Search ad accounts..." />
             <CommandEmpty>No ad accounts found.</CommandEmpty>
             <CommandGroup className="max-h-64 overflow-auto">
-              {Array.isArray(adAccounts) ? adAccounts.map((account) => (
-                <CommandItem
-                  key={account.id}
-                  value={account.id}
-                  onSelect={() => handleAccountSelect(account.id)}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedAccount?.replace(/^act_/, '') === account.id?.replace(/^act_/, '') 
-                        ? "opacity-100" 
-                        : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col">
-                    <span>{account.name}</span>
-                    <span className="text-xs text-muted-foreground">{account.id}</span>
-                  </div>
+              {Array.isArray(safeAccounts) && safeAccounts.length > 0 ? (
+                safeAccounts.map((account) => (
+                  account && account.id ? (
+                    <CommandItem
+                      key={account.id}
+                      value={account.id}
+                      onSelect={() => handleAccountSelect(account.id)}
+                      className="cursor-pointer"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedAccount?.replace(/^act_/, '') === account.id?.replace(/^act_/, '') 
+                            ? "opacity-100" 
+                            : "opacity-0"
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span>{account.name || 'Unnamed Account'}</span>
+                        <span className="text-xs text-muted-foreground">{account.id}</span>
+                      </div>
+                    </CommandItem>
+                  ) : null
+                ))
+              ) : (
+                <CommandItem disabled>
+                  {isLoading ? 'Loading accounts...' : 'No accounts available'}
                 </CommandItem>
-              )) : (
-                <CommandItem disabled>Error loading accounts</CommandItem>
               )}
             </CommandGroup>
           </Command>

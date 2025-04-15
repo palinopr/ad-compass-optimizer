@@ -12,37 +12,46 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
     try {
       const storedAccountId = localStorage.getItem('selected_ad_account');
       if (storedAccountId) {
-        console.log('Using stored account selection:', storedAccountId);
+        console.log('[META] Using stored account selection:', storedAccountId);
         setSelectedAccount(storedAccountId);
       }
     } catch (e) {
-      console.error('Error loading stored account:', e);
+      console.error('[META] Error loading stored account:', e);
     }
   }, []);
   
   // Safe event dispatcher that won't freeze the UI
   const safeDispatchEvent = useCallback((eventName: string, detail?: any) => {
-    console.log(`Dispatching ${eventName} event`);
+    console.log(`[META] Dispatching ${eventName} event`);
     try {
       // Use requestAnimationFrame to ensure UI updates first
-      requestAnimationFrame(() => {
-        const event = new CustomEvent(eventName, { detail });
-        window.dispatchEvent(event);
+      window.requestAnimationFrame(() => {
+        try {
+          const event = new CustomEvent(eventName, { detail });
+          window.dispatchEvent(event);
+        } catch (err) {
+          console.error(`[META] Inner error dispatching ${eventName} event:`, err);
+        }
       });
     } catch (err) {
-      console.error(`Error dispatching ${eventName} event:`, err);
+      console.error(`[META] Error dispatching ${eventName} event:`, err);
     }
   }, []);
   
   const handleAccountChange = useCallback((value: string) => {
+    if (!value) {
+      console.warn('[META] Empty account ID provided to handleAccountChange');
+      return;
+    }
+    
     try {
       // Prevent default event behavior to avoid page reloads
-      console.log('Account selection change initiated:', value);
+      console.log('[META] Account selection change initiated:', value);
       
       // Store without 'act_' prefix for consistency
       const accountId = value.replace(/^act_/, '');
       
-      console.log('Normalized account ID for storage:', accountId);
+      console.log('[META] Normalized account ID for storage:', accountId);
       
       // Update state
       setSelectedAccount(accountId);
@@ -59,7 +68,14 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
         description: "Your ad account selection has been updated."
       });
       
-      // Use the safe event dispatcher with a slight delay
+      // Find the selected account for logging
+      const selectedAccountDetails = adAccounts.find(acc => 
+        acc && acc.id && acc.id.replace(/^act_/, '') === accountId
+      );
+      
+      console.log('[META] Selected account details:', selectedAccountDetails || 'Not found in current list');
+      
+      // Use the safe event dispatcher with a slight delay to prevent UI freezing
       setTimeout(() => {
         safeDispatchEvent('ad-account-changed', { accountId });
         
@@ -74,27 +90,34 @@ export function useAdAccountSelection(adAccounts: AdAccount[]) {
         }, 100);
       }, 50);
     } catch (err) {
-      console.error('Error in account change handler:', err);
+      console.error('[META] Error in account change handler:', err);
       toast({
         title: "Error",
         description: "There was an error changing your ad account.",
         variant: "destructive"
       });
     }
-  }, [toast, safeDispatchEvent]);
+  }, [adAccounts, toast, safeDispatchEvent]);
   
   // Select first account if none selected but accounts are available
   useEffect(() => {
-    if (adAccounts.length > 0 && !selectedAccount) {
+    if (Array.isArray(adAccounts) && adAccounts.length > 0 && !selectedAccount) {
       try {
-        // Store without 'act_' prefix for consistency
-        const accountId = adAccounts[0].id.replace(/^act_/, '');
-        console.log(`Selecting first available account: ${accountId}`);
-        setSelectedAccount(accountId);
-        localStorage.setItem('selected_ad_account', accountId);
-        localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
+        const firstValidAccount = adAccounts.find(acc => acc && acc.id);
+        
+        if (firstValidAccount) {
+          // Store without 'act_' prefix for consistency
+          const accountId = firstValidAccount.id.replace(/^act_/, '');
+          console.log(`[META] Selecting first available account: ${accountId}`);
+          
+          setSelectedAccount(accountId);
+          localStorage.setItem('selected_ad_account', accountId);
+          localStorage.setItem('selected_ad_accounts', JSON.stringify([accountId]));
+        } else {
+          console.warn('[META] No valid accounts found in the list');
+        }
       } catch (e) {
-        console.error('Error selecting first account:', e);
+        console.error('[META] Error selecting first account:', e);
       }
     }
   }, [adAccounts, selectedAccount]);

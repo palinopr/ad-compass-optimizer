@@ -28,14 +28,11 @@ export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
     console.log('[META] Connection test successful, fetching ad accounts...');
     const response = await MetaApiService.fetchAdAccounts(token);
     
-    // Detailed logging of the API response
-    console.log('[AD ACCOUNTS RESPONSE]:', {
-      raw: response,
-      count: response.length,
-      data: response.map(acc => ({ id: acc.id, name: acc.name }))
-    });
-
-    if (!response || response.length === 0) {
+    // Enhanced logging for debugging
+    console.log('[META AD ACCOUNTS] Raw API response:', response);
+    console.log('[META AD ACCOUNTS] Account count:', response?.length || 0);
+    
+    if (!response || !Array.isArray(response) || response.length === 0) {
       console.warn('[META] ⚠️ No ad accounts returned from Meta API');
       throw new Error('No ad accounts found. Please check Meta permissions and token scopes.');
     }
