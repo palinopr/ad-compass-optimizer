@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useCampaigns } from '@/hooks/campaigns';
 import FunnelView from './FunnelView';
@@ -13,6 +12,7 @@ import { useFunnelFilters } from '@/hooks/funnel/useFunnelFilters';
 import { toast } from '@/hooks/use-toast';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 import { Button } from '@/components/ui/button';
+import { CampaignQueryBuilder } from '@/services/api/campaign/fetching/campaignQueryBuilder';
 
 const FunnelViewContainer = () => {
   const { campaigns, isLoading: campaignsLoading, refetchCampaigns } = useCampaigns();
@@ -24,6 +24,7 @@ const FunnelViewContainer = () => {
   const [rawApiResponse, setRawApiResponse] = useState<any>(null);
   const [lastRequestDetails, setLastRequestDetails] = useState<any>(null);
   const [showDebug, setShowDebug] = useState(true);
+  const [buildVersion, setBuildVersion] = useState<string>('');
 
   const {
     filteredData,
@@ -37,13 +38,35 @@ const FunnelViewContainer = () => {
     setSearchQuery
   } = useFunnelFilters(funnelData);
 
+  useEffect(() => {
+    const version = CampaignQueryBuilder.getVersion();
+    const timestamp = CampaignQueryBuilder.getBuildTimestamp();
+    setBuildVersion(version);
+    
+    console.log(`[FUNNEL] Running on build version: ${version} (${timestamp})`);
+    console.log(`[FUNNEL] Using date preset: ${CampaignQueryBuilder.buildCampaignQuery().match(/date_preset\(([^)]+)\)/)?.[1] || 'unknown'}`);
+    
+    localStorage.removeItem('campaign_query_cache');
+    localStorage.removeItem('campaign_data_cache');
+    
+    toast({
+      title: "Build Version",
+      description: `Running ${version} with last_28d date preset`,
+      duration: 5000
+    });
+    
+    setTimeout(() => {
+      triggerCampaignRefresh(true);
+    }, 500);
+  }, []);
+
   const handleManualRefresh = () => {
     console.log('[FUNNEL] Manually triggering refresh...');
     setRetryCount(prev => prev + 1);
     triggerCampaignRefresh(true);
     toast({
       title: "Refreshing campaigns",
-      description: "Fetching latest data from Meta..."
+      description: `Fetching latest data from Meta with last_28d preset (${buildVersion})...`
     });
   };
 
@@ -272,7 +295,6 @@ const FunnelViewContainer = () => {
         setIsFetchingFunnel(true);
         console.log('[FUNNEL] Fetching funnel data for account:', formattedAccount);
         
-        // Update this URL to use last_28d instead of last_30d
         const campaignsUrl = `https://graph.facebook.com/v17.0/${formattedAccount}/campaigns?fields=id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_28d){impressions,clicks,spend,actions,cost_per_action_type}&access_token=[REDACTED]`;
         console.log('[FUNNEL] API URL format:', campaignsUrl);
         
@@ -363,7 +385,12 @@ const FunnelViewContainer = () => {
     <Card>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Campaign Funnel</h2>
+          <div>
+            <h2 className="text-xl font-bold">Campaign Funnel</h2>
+            {buildVersion && (
+              <p className="text-xs text-gray-500">Build {buildVersion} - using last_28d date preset</p>
+            )}
+          </div>
           <div className="flex space-x-2">
             <Button 
               variant="outline" 
@@ -415,6 +442,7 @@ const FunnelViewContainer = () => {
                 <div><strong>Account ID:</strong> {lastRequestDetails.accountId}</div>
                 <div><strong>Timestamp:</strong> {new Date(lastRequestDetails.timestamp).toLocaleTimeString()}</div>
                 <div><strong>Token length:</strong> {lastRequestDetails.tokenLength} characters</div>
+                <div><strong>Date preset:</strong> last_28d (forced)</div>
               </div>
             )}
           </div>

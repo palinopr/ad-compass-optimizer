@@ -1,5 +1,4 @@
-
-// App.tsx - Updated implementation with version tracking for the last_28d fix (v1.0.1)
+// App.tsx - Updated implementation with version tracking for the last_28d fix (v1.0.2)
 
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -12,11 +11,13 @@ import { SharedMetaConnectionProvider } from '@/components/meta/SharedMetaConnec
 import { Toaster } from '@/components/ui/toaster';
 import FunnelViewContainer from '@/components/funnel/FunnelViewContainer';
 import { toast } from './hooks/use-toast';
+import { CampaignQueryBuilder } from './services/api/campaign/fetching/campaignQueryBuilder';
 
-// Version info for tracking deployments
-const APP_VERSION = '1.0.1';
+// Version info for tracking deployments - UPDATED for rebuild
+const APP_VERSION = '1.0.2';
 const LAST_UPDATED = '2025-04-15';
 const INCLUDES_28D_FIX = true;
+const REBUILD_TIMESTAMP = new Date().toISOString();
 
 // Enhanced global mock mode detection function with safeguards
 export const isMockMode = (): boolean => {
@@ -53,11 +54,39 @@ export const isMockMode = (): boolean => {
 
 function App() {
   const [isMockModeActive, setIsMockModeActive] = useState(false);
+  const [buildInfo, setBuildInfo] = useState('');
 
   // Log app version on startup
   useEffect(() => {
+    // Force cache clearing
+    if (typeof localStorage !== 'undefined') {
+      try {
+        // Clear any cache that might be storing old campaign query configuration
+        localStorage.removeItem('meta_api_cache');
+        localStorage.removeItem('campaign_query_cache');
+        localStorage.removeItem('last_campaign_fetch');
+      } catch (e) {
+        console.error("Error clearing cache:", e);
+      }
+    }
+    
     console.log(`[APP] Version ${APP_VERSION} (Last updated: ${LAST_UPDATED})`);
     console.log(`[APP] Includes 28-day window fix: ${INCLUDES_28D_FIX ? 'Yes' : 'No'}`);
+    console.log(`[APP] Rebuild timestamp: ${REBUILD_TIMESTAMP}`);
+    
+    // Get build info from query builder to confirm correct version is used
+    const queryBuilderVersion = CampaignQueryBuilder.getVersion();
+    const datePreset = CampaignQueryBuilder.buildCampaignQuery().match(/date_preset\(([^)]+)\)/)?.[1] || 'unknown';
+    setBuildInfo(`${queryBuilderVersion} (${datePreset})`);
+    
+    console.log(`[APP] Using CampaignQueryBuilder version: ${queryBuilderVersion}`);
+    console.log(`[APP] Date preset being used: ${datePreset}`);
+    
+    toast({
+      title: "Application Rebuilt",
+      description: `Using last_28d date preset (${queryBuilderVersion})`,
+      duration: 5000
+    });
   }, []);
 
   // Only run in browser environment
@@ -122,6 +151,11 @@ function App() {
         {isMockModeActive && (
           <div className="bg-yellow-400 text-black text-center py-1 text-sm font-medium">
             🎭 Mock Data Mode Active - Using Simulated Data
+          </div>
+        )}
+        {INCLUDES_28D_FIX && buildInfo && (
+          <div className="bg-green-100 text-green-800 text-center py-1 text-xs">
+            ✅ Rebuilt with last_28d fix ({buildInfo})
           </div>
         )}
         <Routes>
