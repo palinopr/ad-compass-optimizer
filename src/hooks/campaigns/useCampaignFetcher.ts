@@ -65,18 +65,22 @@ export function useCampaignFetcher() {
     }
 
     // Validate ad account ID format
-    if (!adAccountId || !/^act_\d+$/.test(adAccountId)) {
-      console.error('[CAMPAIGNS DEBUG] Invalid or missing ad account ID:', adAccountId);
+    if (!adAccountId) {
+      console.error('[CAMPAIGNS DEBUG] Missing ad account ID');
       return { 
         campaigns: [], 
         error: '🔴 Please select a valid ad account to load campaigns.',
-        errorDetails: { invalid: true, message: 'Invalid or missing ad account ID', status: 400 }
+        errorDetails: { invalid: true, message: 'Missing ad account ID', status: 400 }
       };
     }
 
+    // Ensure proper format with act_ prefix
+    const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+    console.log('[CAMPAIGNS DEBUG] Using formatted account ID:', formattedAccountId);
+
     // Check for throttling - only allow one request every 30 seconds unless forced
     try {
-      const lastFetchTime = localStorage.getItem(`last_api_fetch_time_${adAccountId}`);
+      const lastFetchTime = localStorage.getItem(`last_api_fetch_time_${formattedAccountId}`);
       if (!forceRefresh && lastFetchTime) {
         const lastFetch = new Date(lastFetchTime);
         const now = new Date();
@@ -113,11 +117,11 @@ export function useCampaignFetcher() {
     clearErrors();
     
     try {
-      console.log('[CAMPAIGNS DEBUG] Starting API fetch for account:', adAccountId);
+      console.log('[CAMPAIGNS DEBUG] Starting API fetch for account:', formattedAccountId);
       
       // Safe preparation
       try {
-        const { error: prepError } = await prepareFetchRequest(token, adAccountId);
+        const { error: prepError } = await prepareFetchRequest(token, formattedAccountId);
         if (prepError) {
           console.error('[CAMPAIGNS DEBUG] Preparation error:', prepError);
           return { 
@@ -136,7 +140,7 @@ export function useCampaignFetcher() {
       }
 
       try {
-        logFetchDetails(adAccountId, token);
+        logFetchDetails(formattedAccountId, token);
       } catch (logErr) {
         console.error('[CAMPAIGNS DEBUG] Error logging fetch details:', logErr);
         // Continue execution - this is non-critical
@@ -145,7 +149,7 @@ export function useCampaignFetcher() {
       console.log('[CAMPAIGNS DEBUG] Calling MetaFunnelService.fetchFunnelData...');
       let data;
       try {
-        data = await MetaFunnelService.fetchFunnelData(token, adAccountId);
+        data = await MetaFunnelService.fetchFunnelData(token, formattedAccountId);
       } catch (fetchErr: any) {
         console.error('[CAMPAIGNS DEBUG] Error fetching funnel data:', fetchErr);
         
@@ -185,7 +189,7 @@ export function useCampaignFetcher() {
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.setItem('last_campaign_count', String(data.campaigns.length));
         localStorage.setItem('last_campaign_fetch_time', new Date().toISOString());
-        localStorage.setItem(`last_api_fetch_time_${adAccountId}`, new Date().toISOString());
+        localStorage.setItem(`last_api_fetch_time_${formattedAccountId}`, new Date().toISOString());
       } catch (storageErr) {
         console.error('[CAMPAIGNS DEBUG] Error updating localStorage:', storageErr);
         // Continue execution - this is non-critical
@@ -196,7 +200,7 @@ export function useCampaignFetcher() {
       console.error('[CAMPAIGNS DEBUG] Fetch error:', err);
       
       try {
-        logFetchDetails(adAccountId, token, err);
+        logFetchDetails(formattedAccountId, token, err);
       } catch (e) {
         console.error('[CAMPAIGNS DEBUG] Error logging fetch details:', e);
       }
@@ -259,7 +263,7 @@ export function useCampaignFetcher() {
         };
       }
       
-      const { error, errorDetails } = handleError(err, adAccountId);
+      const { error, errorDetails } = handleError(err, formattedAccountId);
       handleFetchFailure();
       console.error('[CAMPAIGNS DEBUG] Error after handling:', error, errorDetails);
       

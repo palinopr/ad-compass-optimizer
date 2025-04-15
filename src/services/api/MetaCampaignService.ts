@@ -51,15 +51,15 @@ export class MetaCampaignService extends BaseApiService {
         throw new Error(`Invalid ad account ID format: ${adAccountId}`);
       }
 
-      // Ensure the ad account ID has the proper format, removing 'act_' prefix if present
-      const cleanAccountId = adAccountId.replace(/^act_/, '');
+      // Ensure the ad account ID has the proper format
+      const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
       
       // Check if we should throttle the request
       CampaignThrottling.checkThrottling(adAccountId);
 
       // Build the proper GET URL with fields including insights
       const fields = 'id,name,status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
-      const url = `${this.BASE_URL}/${this.API_VERSION}/act_${cleanAccountId}/campaigns?fields=${fields}&access_token=${token}`;
+      const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
       
