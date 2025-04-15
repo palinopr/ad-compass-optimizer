@@ -65,6 +65,9 @@ export const validateAdAccount = (adAccountId: string | null): boolean => {
     return false;
   }
   
+  // Store the original ID format for debugging
+  localStorage.setItem('last_requested_ad_account', String(adAccountId));
+  
   // Must start with act_ or be convertible to the act_ format
   const adAccountIdString = String(adAccountId);
   const formattedId = adAccountIdString.startsWith('act_') ? adAccountIdString : `act_${adAccountIdString}`;
@@ -72,9 +75,17 @@ export const validateAdAccount = (adAccountId: string | null): boolean => {
   // Basic validation that it's not completely invalid
   if (!/^act_\d+$/.test(formattedId)) {
     console.error('[CAMPAIGN FETCH] Invalid ad account format:', adAccountId);
+    localStorage.setItem('ad_account_validation_error', JSON.stringify({
+      adAccountId,
+      formattedId,
+      error: 'Invalid format - must contain only digits after act_ prefix',
+      timestamp: new Date().toISOString()
+    }));
     return false;
   }
   
+  // Store the formatted ID for debugging
+  localStorage.setItem('last_formatted_ad_account', formattedId);
   return true;
 };
 
@@ -101,6 +112,14 @@ export const logFetchDetails = (
       if (error.response?.data) {
         localStorage.setItem('raw_campaign_error_response', JSON.stringify(error.response.data));
       }
+      
+      // Save additional error context
+      localStorage.setItem('campaign_fetch_error_context', JSON.stringify({
+        adAccountId: adAccountId?.startsWith('act_') ? adAccountId : `act_${adAccountId}`,
+        timestamp: new Date().toISOString(),
+        errorMessage: error?.message || String(error),
+        errorType: error?.name || typeof error
+      }));
     } catch (e) {
       console.error('[CAMPAIGNS] Error saving error response to storage:', e);
     }
@@ -133,6 +152,14 @@ export const logFetchDetails = (
     `?fields=name,status,daily_budget,effective_status,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}` +
     `&access_token=[REDACTED]`
   );
+  
+  // Store request context for debugging
+  localStorage.setItem('campaign_fetch_request', JSON.stringify({
+    adAccountId: formattedId,
+    endpoint: `/${formattedId}/campaigns`,
+    timestamp: new Date().toISOString(),
+    tokenLength: token?.length || 0
+  }));
 };
 
 export const prepareFetchRequest = async (
