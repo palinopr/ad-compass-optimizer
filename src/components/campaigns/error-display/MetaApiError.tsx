@@ -13,7 +13,7 @@ const MetaApiError: React.FC<MetaApiErrorProps> = ({ error, hideRawResponse }) =
   if (!error) return null;
 
   const metaError = error.error || error;
-  const hasMetaApiDetails = metaError.code || metaError.type || metaError.error_subcode;
+  const hasMetaApiDetails = metaError.code || metaError.type || metaError.error_subcode || metaError.error_user_title;
 
   return (
     <Card className="p-4 space-y-4">
@@ -46,11 +46,29 @@ const MetaApiError: React.FC<MetaApiErrorProps> = ({ error, hideRawResponse }) =
                 <span>{metaError.error_subcode}</span>
               </div>
             )}
+            {metaError.error_user_title && (
+              <div className="contents">
+                <span className="text-muted-foreground">User Title:</span>
+                <span>{metaError.error_user_title}</span>
+              </div>
+            )}
+            {metaError.fbtrace_id && (
+              <div className="contents">
+                <span className="text-muted-foreground">FB Trace ID:</span>
+                <span className="font-mono text-xs">{metaError.fbtrace_id}</span>
+              </div>
+            )}
           </div>
           {metaError.message && (
             <div className="mt-2">
               <span className="text-muted-foreground">Message:</span>
               <p className="mt-1 p-2 bg-muted rounded-md">{metaError.message}</p>
+            </div>
+          )}
+          {metaError.error_user_msg && (
+            <div className="mt-2">
+              <span className="text-muted-foreground">User Message:</span>
+              <p className="mt-1 p-2 bg-muted rounded-md">{metaError.error_user_msg}</p>
             </div>
           )}
         </div>

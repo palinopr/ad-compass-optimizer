@@ -22,7 +22,9 @@ export const parseApiError = async (apiErr: any): Promise<{
         type: metaError.type,
         message: metaError.message,
         subcode: metaError.error_subcode,
-        fbtraceId: metaError.fbtrace_id
+        fbtraceId: metaError.fbtrace_id,
+        error_user_title: metaError.error_user_title,
+        error_user_msg: metaError.error_user_msg
       };
       
       console.error('[GRAPH API ERROR] Details:', {
@@ -57,7 +59,9 @@ export const parseApiError = async (apiErr: any): Promise<{
             type: errorData.type,
             message: errorData.message,
             subcode: errorData.error_subcode,
-            fbtraceId: errorData.fbtrace_id
+            fbtraceId: errorData.fbtrace_id,
+            error_user_title: errorData.error_user_title,
+            error_user_msg: errorData.error_user_msg
           };
           
           console.error('[GRAPH API ERROR] Details:', {
@@ -86,7 +90,9 @@ export const parseApiError = async (apiErr: any): Promise<{
         type: apiErr.type || 'unknown',
         message: apiErr.message,
         subcode: apiErr.subcode,
-        fbtraceId: apiErr.fbtraceId
+        fbtraceId: apiErr.fbtraceId,
+        error_user_title: apiErr.error_user_title,
+        error_user_msg: apiErr.error_user_msg
       };
     }
     
@@ -111,6 +117,22 @@ export const parseApiError = async (apiErr: any): Promise<{
         timestamp: new Date().toISOString(),
         raw: apiErr?.response?.data || apiErr
       }));
+      
+      // Store the raw error response for debugging
+      if (apiErr?.response?.data) {
+        localStorage.setItem('raw_campaign_error_response', JSON.stringify({
+          ...apiErr.response.data,
+          status: apiErr.response.status,
+          statusText: apiErr.response.statusText,
+          timestamp: new Date().toISOString(),
+          requestUrl: apiErr.response.config?.url
+        }));
+      } else if (apiErr?.error) {
+        localStorage.setItem('raw_campaign_error_response', JSON.stringify({
+          error: apiErr.error,
+          timestamp: new Date().toISOString()
+        }));
+      }
     }
   } catch (storageErr) {
     console.error('[GRAPH API ERROR] Error storing error details:', storageErr);

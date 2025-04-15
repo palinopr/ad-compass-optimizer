@@ -21,6 +21,8 @@ export const parseMetaError = (error: any): ErrorDetails => {
     message: metaError.message || String(error) || defaultError.message,
     subcode: metaError.error_subcode,
     fbtraceId: metaError.fbtrace_id,
+    error_user_title: metaError.error_user_title,
+    error_user_msg: metaError.error_user_msg,
     timestamp: new Date().toISOString(),
     requestUrl: error.requestUrl, // Store the request URL if available
     httpStatus: error.status || error.httpStatus,

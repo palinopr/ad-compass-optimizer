@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
+import MetaApiError from '../error-display/MetaApiError';
 
 interface CampaignFetchStatusProps {
   campaigns: any[];
@@ -53,6 +54,7 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
       const storedAttempts = localStorage.getItem('campaign_fetch_attempts');
       const storedError = localStorage.getItem('last_campaign_fetch_error');
       const storedHeaders = localStorage.getItem('last_campaign_fetch_headers');
+      const storedRawError = localStorage.getItem('raw_campaign_error_response');
       
       if (storedFetchTime) {
         setLastFetchTime(storedFetchTime);
@@ -71,6 +73,21 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
           setErrorDetails(JSON.parse(storedError));
         } catch (e) {
           console.error('Error parsing stored error:', e);
+        }
+      }
+      
+      if (storedRawError) {
+        try {
+          const parsedRawError = JSON.parse(storedRawError);
+          // Update errorDetails with raw error if not already set
+          if (!errorDetails || !errorDetails.raw) {
+            setErrorDetails(prev => ({
+              ...prev,
+              raw: parsedRawError
+            }));
+          }
+        } catch (e) {
+          console.error('Error parsing raw error:', e);
         }
       }
       
@@ -191,8 +208,16 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
             </Alert>
           )}
           
-          {/* Enhanced error details */}
+          {/* Fetch Error Details Section */}
           {errorDetails && (
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold mb-2">Fetch Error Details:</h3>
+              <MetaApiError error={errorDetails} />
+            </div>
+          )}
+          
+          {/* Enhanced error details */}
+          {errorDetails && errorDetails.raw && (
             <div className="mt-3 text-xs border border-red-200 rounded-md p-2 bg-red-50">
               <h4 className="font-medium text-red-700 mb-1">Error Details:</h4>
               
@@ -251,6 +276,12 @@ const CampaignFetchStatus: React.FC<CampaignFetchStatusProps> = ({
                     <div className="flex justify-between">
                       <span>Type:</span>
                       <span className="font-mono">{errorDetails.details.type}</span>
+                    </div>
+                  )}
+                  {errorDetails.details.error_user_title && (
+                    <div className="flex justify-between">
+                      <span>User Title:</span>
+                      <span className="font-mono">{errorDetails.details.error_user_title}</span>
                     </div>
                   )}
                 </div>
