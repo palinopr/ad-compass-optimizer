@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Check, ChevronsUpDown, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,8 +14,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { AdAccount } from './types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AdAccount } from './types';
 
 interface AdAccountDropdownProps {
   adAccounts: AdAccount[];
@@ -36,25 +35,31 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
 
   // Safe check for account data and validation
   const safeAccounts = React.useMemo(() => {
-    if (!adAccounts || !Array.isArray(adAccounts)) {
-      console.error('[META] Invalid ad accounts data:', adAccounts);
+    try {
+      if (!adAccounts || !Array.isArray(adAccounts)) {
+        console.error('[META] Invalid ad accounts data:', adAccounts);
+        setError('Failed to load ad accounts. Please try refreshing.');
+        return [];
+      }
+      
+      const validAccounts = adAccounts.filter(account => account && account.id);
+      console.log('[META AD ACCOUNTS] Valid accounts:', validAccounts.length);
+      
+      if (selectedAccount && !validAccounts.some(acc => 
+        acc.id.replace(/^act_/, '') === selectedAccount.replace(/^act_/, '')
+      )) {
+        console.warn('[META] Selected account not found in valid accounts:', selectedAccount);
+        setError('Selected account is not available. Please choose a valid account.');
+      } else {
+        setError(null);
+      }
+      
+      return validAccounts;
+    } catch (err) {
+      console.error('[META] Error processing accounts:', err);
+      setError('Failed to process ad accounts. Please try refreshing.');
       return [];
     }
-    
-    const validAccounts = adAccounts.filter(account => account && account.id);
-    console.log('[META AD ACCOUNTS] Valid accounts:', validAccounts.length);
-    
-    // Check if selected account is invalid
-    if (selectedAccount && !validAccounts.some(acc => 
-      acc.id.replace(/^act_/, '') === selectedAccount.replace(/^act_/, '')
-    )) {
-      console.warn('[META] Selected account not found in valid accounts:', selectedAccount);
-      setError('Selected account is not available. Please choose a valid account.');
-    } else {
-      setError(null);
-    }
-    
-    return validAccounts;
   }, [adAccounts, selectedAccount]);
 
   // Find the selected account label

@@ -1,53 +1,87 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
-import DiagnosticButton from '@/components/campaigns/DiagnosticButton';
-import { runLiveCampaignDiagnostic } from '@/utils/meta-diagnostics/liveCampaignDiagnostic';
-import MockModePanel from '@/components/campaigns/diagnostic-components/MockModePanel';
+import React from 'react';
+import { Card } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+
+interface TokenStatusInfo {
+  exists: boolean;
+  isValid: boolean;
+  expiresIn?: number;
+}
+
+interface CampaignStatusInfo {
+  isFetching: boolean;
+  error?: string;
+  campaignCount: number;
+}
 
 const CampaignTroubleshooter = () => {
-  const [debugResult, setDebugResult] = useState<string[]>([]);
+  const { toast } = useToast();
+  const [tokenStatus, setTokenStatus] = React.useState<TokenStatusInfo>({
+    exists: false,
+    isValid: false,
+  });
+  
+  const [campaignStatus, setCampaignStatus] = React.useState<CampaignStatusInfo>({
+    isFetching: false,
+    campaignCount: 0,
+  });
+
+  // Check token status on mount
+  React.useEffect(() => {
+    const token = localStorage.getItem('meta_access_token');
+    setTokenStatus({
+      exists: !!token,
+      isValid: token ? token.length > 50 : false,
+    });
+  }, []);
+
+  // Listen for campaign fetch events
+  React.useEffect(() => {
+    const handleCampaignUpdate = (event: CustomEvent) => {
+      const data = event.detail;
+      setCampaignStatus({
+        isFetching: false,
+        campaignCount: data.campaigns?.length || 0,
+        error: data.error,
+      });
+    };
+
+    window.addEventListener('campaign-data-update', handleCampaignUpdate as EventListener);
+    return () => {
+      window.removeEventListener('campaign-data-update', handleCampaignUpdate as EventListener);
+    };
+  }, []);
 
   return (
-    <div className="border-t border-gray-200 pt-6 mt-8">
-      <h3 className="text-sm font-medium text-center mb-2">Campaign Connection Troubleshooter</h3>
-      <div className="flex flex-col gap-2">
-        <DiagnosticButton />
-        
-        <p className="text-sm text-muted-foreground mb-2 text-center">
-          🛠 Need help? Click "Run Live Campaign Debugger" to verify token and ad account status.
-        </p>
-        
-        <div className="flex gap-2 justify-center">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => runLiveCampaignDiagnostic(setDebugResult)}
-          >
-            Run Live Campaign Debugger
-          </Button>
+    <Card className="mt-4 p-4 bg-gray-50">
+      <h3 className="text-sm font-medium mb-4">Campaign Status</h3>
+      
+      {/* Token Status */}
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center justify-between text-sm">
+          <span>Token Status:</span>
+          <span className={tokenStatus.exists ? 'text-green-600' : 'text-red-600'}>
+            {tokenStatus.exists ? 'FOUND' : 'NOT FOUND'}
+          </span>
         </div>
-        
-        <MockModePanel />
-        
-        {debugResult.length > 0 && (
-          <div className="mt-4 bg-muted p-3 rounded-md text-sm font-mono space-y-1">
-            {debugResult.map((line, i) => {
-              let color = 'text-muted-foreground';
-              if (line.includes('❌')) color = 'text-red-500';
-              else if (line.includes('⚠️')) color = 'text-yellow-600';
-              else if (line.includes('✅')) color = 'text-green-600';
-              return (
-                <div key={i} className={color}>
-                  {line}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* Campaign Status */}
+      {campaignStatus.error ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{campaignStatus.error}</AlertDescription>
+        </Alert>
+      ) : (
+        <div className="text-sm">
+          <p>Campaigns loaded: {campaignStatus.campaignCount}</p>
+          {campaignStatus.isFetching && <p>Fetching campaigns...</p>}
+        </div>
+      )}
+    </Card>
   );
 };
 
