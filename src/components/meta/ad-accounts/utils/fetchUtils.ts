@@ -21,7 +21,7 @@ export const fetchAllAccounts = async (token: string): Promise<AdAccount[]> => {
     const accounts = await MetaApiService.fetchAdAccounts(token);
     
     // Detailed logging of the API response
-    console.log('[META] Ad Accounts API Response:', accounts);
+    console.log('[AD ACCOUNTS RESPONSE]:', accounts);
     console.log('[META] Total accounts fetched:', accounts.length);
     
     accounts.forEach((acct, i) => {
@@ -60,6 +60,7 @@ export const fetchSelectedAccounts = async (selectedIds: string[], token: string
           const formattedId = id.startsWith('act_') ? id : `act_${id}`;
           console.log(`[META] Fetching details for account ${formattedId}`);
           const accountDetails = await MetaApiService.fetchAdAccountDetails(token, formattedId);
+          console.log(`[META] Details for account ${formattedId}:`, accountDetails);
           return accountDetails;
         } catch (error) {
           console.error(`[META] Error fetching details for account ${id}:`, error);

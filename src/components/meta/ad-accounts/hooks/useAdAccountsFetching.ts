@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { metaAuthService, MetaAuthService } from '@/services/MetaAuthService';
 import { AdAccount } from '../types';
@@ -90,6 +91,11 @@ export function useAdAccountsFetching() {
       
       console.log('[AD ACCOUNT FETCH] Successfully fetched accounts:', fetchedAccounts.length);
       console.log('[AD ACCOUNT FETCH] Account details:', fetchedAccounts);
+      
+      if (fetchedAccounts.length === 0) {
+        setError('⚠️ No ad accounts returned. Please check Meta permissions and token scopes.');
+      }
+      
       setAdAccounts(fetchedAccounts);
       
     } catch (err) {

@@ -1,11 +1,12 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Briefcase, RefreshCw } from 'lucide-react';
+import { Briefcase, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AdAccountDropdown from './ad-accounts/AdAccountDropdown';
 import { useAdAccounts } from './ad-accounts/hooks/useAdAccounts';
 import { toast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const AdAccountSelector = () => {
   const { 
@@ -49,6 +50,15 @@ const AdAccountSelector = () => {
               </code>
             </div>
           </div>
+        )}
+        
+        {adAccounts.length === 0 && !isLoading && !error && (
+          <Alert className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              ⚠️ No ad accounts returned. Please check Meta permissions and token scopes.
+            </AlertDescription>
+          </Alert>
         )}
         
         <AdAccountDropdown
