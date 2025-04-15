@@ -60,4 +60,94 @@ export class InsightsThrottling {
       console.error('Error marking insights throttled:', e);
     }
   }
+
+  /**
+   * Monitor response headers for rate limit signals
+   */
+  public static monitorResponseHeaders(response: Response): void {
+    try {
+      // Check for rate limit headers
+      const usageHeader = response.headers.get('x-business-use-case-usage') || 
+                        response.headers.get('x-app-usage') ||
+                        response.headers.get('x-ad-account-usage');
+      
+      if (usageHeader) {
+        try {
+          const usage = JSON.parse(usageHeader);
+          
+          // Check for high usage in any of the rate limit metrics
+          const hasHighUsage = Object.values(usage).some((metric: any) => 
+            typeof metric === 'object' && 
+            (metric.call_count > 80 || metric.total_cputime > 80 || metric.total_time > 80)
+          );
+          
+          if (hasHighUsage) {
+            console.warn('High API usage detected in response headers:', usage);
+            // Don't mark as throttled yet, but log for monitoring
+          }
+          
+          // If usage is critical (>95%), apply throttling
+          const hasCriticalUsage = Object.values(usage).some((metric: any) => 
+            typeof metric === 'object' && 
+            (metric.call_count > 95 || metric.total_cputime > 95 || metric.total_time > 95)
+          );
+          
+          if (hasCriticalUsage) {
+            console.error('Critical API usage detected, applying throttling');
+            this.markThrottled('default', 30); // 30-second throttling
+            markRateLimited('default', 2); // 2-minute rate limiting
+          }
+        } catch (e) {
+          console.error('Error parsing usage headers:', e);
+        }
+      }
+    } catch (e) {
+      console.error('Error monitoring response headers:', e);
+    }
+  }
+
+  /**
+   * Check if an error indicates rate limiting and handle accordingly
+   */
+  public static checkErrorForRateLimit(error: any): void {
+    try {
+      // Check error message for rate limit indicators
+      const errorMessage = error?.message || '';
+      const errorResponse = error?.response;
+      const errorBody = errorResponse?.data || error?.error || {};
+      
+      // Check for rate limit error codes or messages
+      const isRateLimitError = 
+        errorMessage.includes('rate limit') ||
+        errorMessage.includes('too many requests') ||
+        errorBody?.error?.code === 4 || // API rate limit code
+        errorBody?.error?.code === 17 || // User rate limit code
+        errorBody?.error?.code === 80003 || // Ad account rate limit
+        errorBody?.error?.code === 80004 || // Ad account rate limit
+        errorResponse?.status === 429;
+      
+      if (isRateLimitError) {
+        console.warn('Rate limit error detected:', error);
+        
+        // Extract retry after time if available
+        let retryAfter = 
+          error?.response?.headers?.['retry-after'] || 
+          error?.response?.headers?.get?.('retry-after') ||
+          5 * 60; // Default to 5 minutes
+        
+        // Convert to number if it's a string
+        if (typeof retryAfter === 'string') {
+          retryAfter = parseInt(retryAfter, 10) || 5 * 60;
+        }
+        
+        // Mark as rate limited with the appropriate time
+        markRateLimited('default', Math.ceil(retryAfter / 60)); // Convert to minutes
+        
+        // Also apply throttling
+        this.markThrottled('default', 30); 
+      }
+    } catch (e) {
+      console.error('Error checking for rate limiting:', e);
+    }
+  }
 }
