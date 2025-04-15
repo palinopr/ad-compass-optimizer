@@ -1,17 +1,19 @@
-
 import React from 'react';
 import { TableRow, TableCell } from '@/components/ui/table';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import CampaignStatusBadge from './table-components/CampaignStatusBadge';
 import CampaignMetrics from './table-components/CampaignMetrics';
 import CampaignActions from './table-components/CampaignActions';
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface CampaignTableRowProps {
   campaign: MetaCampaign;
   status: 'active' | 'draft' | 'archived';
+  loadedFromFallback?: boolean;
 }
 
-const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status }) => {
+const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, loadedFromFallback }) => {
   // Log detailed campaign data at render time for debugging
   React.useEffect(() => {
     // Basic validation check
@@ -57,7 +59,21 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status })
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{campaign.name}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          {campaign.name}
+          {campaign.loadedFromFallback && (
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <Info size={16} className="text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Partial Data: Limited campaign information available</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </TableCell>
       <TableCell>
         <CampaignStatusBadge status={campaign.status} />
       </TableCell>

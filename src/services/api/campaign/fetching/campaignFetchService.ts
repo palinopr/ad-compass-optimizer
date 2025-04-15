@@ -1,4 +1,3 @@
-
 import { MetaCampaign } from '../../types/metaCampaignTypes';
 import { CampaignThrottling } from '../../campaign/throttling';
 import { CampaignQueryBuilder } from './campaignQueryBuilder';
@@ -7,6 +6,7 @@ import { BaseApiService } from '../../BaseApiService';
 import { CampaignProcessor } from './campaignProcessor';
 import { PaginationHandler } from './paginationHandler';
 import { ErrorHandler } from '../../campaign/error/errorHandler';
+import { FallbackCampaignLoader } from './fallbackCampaignLoader';
 
 export class CampaignFetchService extends BaseApiService {
   public static async fetchCampaigns(token: string, adAccountId: string, datePreset?: string): Promise<MetaCampaign[]> {
@@ -14,7 +14,7 @@ export class CampaignFetchService extends BaseApiService {
       console.group('[CAMPAIGN FETCH] Authentication Check');
       console.log('Access Token:', token ? 'PRESENT' : 'MISSING');
       console.log('Ad Account ID:', adAccountId);
-      console.log('Date Preset:', datePreset || 'last_28d (default)');
+      console.log('Date Preset:', datePreset || 'last_28d');
       
       if (!token) {
         console.error('❌ No access token found');
@@ -63,26 +63,40 @@ export class CampaignFetchService extends BaseApiService {
       }
       
       // Execute the fetch and get campaigns
-      const campaigns = await this.executeFetch(url);
+      let campaigns = await this.executeFetch(url);
       
       // If we get empty data and datePreset is not already maximum, try with maximum
-      if (campaigns.length === 0 && datePreset !== 'maximum') {
-        console.log('[CAMPAIGN FETCH] No campaigns returned, trying with date_preset=maximum');
-        // Rebuild query with maximum preset
-        const maximumFieldsQuery = CampaignQueryBuilder.buildCampaignQuery('maximum');
-        const maximumUrl = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${maximumFieldsQuery}&limit=500&access_token=${token}`;
-        try {
-          return await this.executeFetch(maximumUrl);
-        } catch (maximumError) {
-          console.error('[CAMPAIGN FETCH] Error with maximum preset fallback:', maximumError);
-          // Return the original result if fallback fails
-          return campaigns;
+      if (campaigns.length === 0) {
+        console.log('[CAMPAIGN FETCH] No campaigns returned, attempting fallback...');
+        const fallbackCampaigns = await FallbackCampaignLoader.loadCampaignsFromInsights(token, formattedAccountId);
+        
+        if (fallbackCampaigns.length > 0) {
+          console.log(`[CAMPAIGN FETCH] Fallback successful, loaded ${fallbackCampaigns.length} campaigns`);
+          campaigns = fallbackCampaigns;
+          
+          // Store that we used fallback loader
+          localStorage.setItem('using_fallback_campaigns', 'true');
         }
+      } else {
+        localStorage.removeItem('using_fallback_campaigns');
       }
       
       return campaigns;
     } catch (error) {
       console.error('[CAMPAIGN FETCH] Critical Error:', error);
+      
+      // Try fallback on error
+      try {
+        console.log('[CAMPAIGN FETCH] Attempting fallback after error...');
+        const fallbackCampaigns = await FallbackCampaignLoader.loadCampaignsFromInsights(token, adAccountId);
+        if (fallbackCampaigns.length > 0) {
+          localStorage.setItem('using_fallback_campaigns', 'true');
+          return fallbackCampaigns;
+        }
+      } catch (fallbackError) {
+        console.error('[CAMPAIGN FETCH] Fallback also failed:', fallbackError);
+      }
+      
       throw error;
     }
   }
