@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Info } from 'lucide-react';
@@ -13,6 +13,7 @@ import { useCampaignMetrics } from '@/hooks/campaigns/useCampaignMetrics';
 import MockApiControls from './diagnostic-components/MockApiControls';
 import EmptyState from './states/EmptyState';
 import AdAccountDiagnostics from './diagnostic-components/AdAccountDiagnostics';
+import { metaAuthService } from '@/services/MetaAuthService';
 
 interface CampaignListProps {
   status: 'active' | 'draft' | 'archived';
@@ -30,12 +31,25 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     setDateRange,
     setStatusFilter,
     setSearchQuery,
-    refetchCampaigns
+    refetchCampaigns,
+    effectiveIsAuthenticated
   } = useCampaignListState(status);
 
   const metrics = useCampaignMetrics(filteredCampaigns);
   const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
   const debugMode = process.env.NODE_ENV !== 'production';
+  
+  // Force a fetch on component mount if authenticated but no campaigns loaded
+  useEffect(() => {
+    const token = metaAuthService.getAccessToken();
+    const selectedAdAccount = localStorage.getItem('selected_ad_account');
+    const hasAuth = token && token.length > 50 && selectedAdAccount;
+    
+    if (hasAuth && !isLoading && campaigns.length === 0) {
+      console.log('[CAMPAIGN LIST] Authenticated but no campaigns, forcing fetch');
+      refetchCampaigns(true);
+    }
+  }, []);
 
   if (isLoading) {
     return (
@@ -52,7 +66,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
           error={error} 
           onRetry={() => refetchCampaigns(true)}
           errorDetails={errorDetails}
-          isAuthenticated={true}
+          isAuthenticated={effectiveIsAuthenticated}
         />
       </Card>
     );

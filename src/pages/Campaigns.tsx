@@ -39,7 +39,7 @@ const Campaigns = () => {
     isAuthSyncing
   } = useCampaignsPage();
 
-  const { campaigns, filteredCampaigns, error: campaignsError, refetchCampaigns } = useCampaigns(activeTab);
+  const { campaigns, filteredCampaigns, error: campaignsError, refetchCampaigns, isLoading } = useCampaigns(activeTab);
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
   
   // Clear any mock data and ensure we're using real API data
@@ -58,20 +58,69 @@ const Campaigns = () => {
     // Run date preset verification
     if (process.env.NODE_ENV !== 'production') {
       setTimeout(() => {
-        DatePresetVerifier.verifyAllDatePresets();
+        try {
+          DatePresetVerifier.verifyAllDatePresets();
+        } catch (e) {
+          console.error('[DATE PRESET] Verification error:', e);
+        }
       }, 1000);
     }
   }, []);
   
-  // Ensure we fetch fresh data when the component mounts with insights
+  // Enhanced effect to ensure campaigns load after authentication and account selection
   useEffect(() => {
+    // Only execute if we have authentication and an account selected
     if (isAuthenticated && hasAdAccount && selectedAdAccount) {
-      console.log(`[CAMPAIGN FETCH] Initial fetch for act_${selectedAdAccount} to ensure fresh data with insights`);
+      console.log(`[CAMPAIGN FETCH] Auth validated (token: ${isAuthenticated}, account: ${selectedAdAccount}), triggering fetch`);
+      
+      // Immediate logging of auth state for debugging
+      const token = metaAuthService.getAccessToken();
+      console.log('[CAMPAIGN FETCH] Auth state check:', {
+        tokenExists: !!token,
+        tokenLength: token ? token.length : 0,
+        accountSelected: !!selectedAdAccount,
+        isAuthenticated, 
+        hasAdAccount
+      });
+      
+      // First try with a short delay to let auth context fully resolve
       setTimeout(() => {
+        console.log('[CAMPAIGN FETCH] Initial fetch attempt for account:', selectedAdAccount);
         refetchCampaigns(true);
-      }, 1000);
+      }, 500);
+      
+      // Second attempt with a longer delay as a fallback
+      setTimeout(() => {
+        console.log('[CAMPAIGN FETCH] Follow-up fetch attempt for account:', selectedAdAccount);
+        if (!campaigns.length && !isLoading) {
+          console.log('[CAMPAIGN FETCH] No campaigns loaded yet, forcing refresh');
+          refetchCampaigns(true);
+        }
+      }, 2000);
+    } else {
+      console.log('[CAMPAIGN FETCH] Prerequisites not met:', {
+        isAuthenticated,
+        hasAdAccount,
+        selectedAdAccount
+      });
     }
   }, [isAuthenticated, hasAdAccount, selectedAdAccount, refetchCampaigns]);
+  
+  // Listen for ad account changes and trigger fetch
+  useEffect(() => {
+    const handleAccountChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.accountId) {
+        console.log('[CAMPAIGNS] Ad account changed, triggering campaign refresh');
+        setTimeout(() => refetchCampaigns(true), 300);
+      }
+    };
+    
+    window.addEventListener('ad-account-changed', handleAccountChange as EventListener);
+    return () => {
+      window.removeEventListener('ad-account-changed', handleAccountChange as EventListener);
+    };
+  }, [refetchCampaigns]);
   
   // Add console logs for debugging
   useEffect(() => {

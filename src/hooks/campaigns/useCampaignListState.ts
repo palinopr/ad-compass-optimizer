@@ -24,24 +24,39 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const authResult = validateAuthentication();
   const effectiveIsAuthenticated = authResult.isValid;
+  const initialFetchAttemptedRef = useRef(false);
+  
+  // Direct token check to be absolutely sure
+  const token = metaAuthService.getAccessToken();
+  const selectedAdAccountId = localStorage.getItem('selected_ad_account');
+  const directAuthCheck = !!token && token.length > 50 && !!selectedAdAccountId;
   
   // Enhanced logging for campaigns tab connection state
   useEffect(() => {
-    const token = metaAuthService.getAccessToken();
-    const selectedAdAccountId = localStorage.getItem('selected_ad_account');
+    const tokenLength = token ? token.length : 0;
     
     console.log('[CAMPAIGNS TAB] Meta connection status:', {
       isAuthenticated: effectiveIsAuthenticated,
+      directAuthCheck,
       hasToken: !!token,
-      tokenLength: token ? token.length : 0,
+      tokenLength: tokenLength,
       selectedAdAccountId,
       authValid: authResult.isValid,
       authError: authResult.error || 'No error'
     });
     
+    if (directAuthCheck && !initialFetchAttemptedRef.current) {
+      console.log('[CAMPAIGNS TAB] First load with valid auth detected, triggering fetch');
+      initialFetchAttemptedRef.current = true;
+      
+      setTimeout(() => {
+        refetchCampaigns(true);
+      }, 300);
+    }
+    
     if (token && selectedAdAccountId) {
       console.log('[CAMPAIGNS TAB] Fetch would be triggered with:', {
-        token: `${token.substring(0, 10)}...${token.substring(token.length - 10)}`,
+        tokenLength: tokenLength,
         adAccountId: selectedAdAccountId,
         endpoint: `/act_${selectedAdAccountId}/campaigns`
       });
@@ -51,13 +66,13 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
         hasAdAccountId: !!selectedAdAccountId
       });
     }
-  }, [effectiveIsAuthenticated, authResult]);
+  }, [effectiveIsAuthenticated, authResult, directAuthCheck, token, selectedAdAccountId, refetchCampaigns]);
 
   // Reset filters when ad account changes
   useEffect(() => {
     const handleAccountChange = () => {
       // Reset all filters to default values
-      setDateRange(null, 'last30days');
+      setDateRange(null, 'last_28d'); // Updated to use last_28d
       setStatusFilter(null);
       setSearchQuery('');
     };
@@ -82,7 +97,7 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     isLoading,
     error,
     errorDetails,
-    effectiveIsAuthenticated,
+    effectiveIsAuthenticated: directAuthCheck, // Use the direct token check as most reliable
     filters,
     setDateRange,
     setStatusFilter,
