@@ -1,4 +1,3 @@
-
 import { MetaCampaign } from '../../types/metaCampaignTypes';
 import { CampaignThrottling } from '../../campaign/throttling';
 import { CampaignQueryBuilder } from './campaignQueryBuilder';
@@ -6,7 +5,7 @@ import { ErrorStorage } from '../../campaign/error/errorStorage';
 import { BaseApiService } from '../../BaseApiService';
 import { CampaignProcessor } from './campaignProcessor';
 import { PaginationHandler } from './paginationHandler';
-import { ErrorHandler } from '../../campaign/error/errorHandler';
+import { ErrorHandler } from '../../campaign/error/errorhandler';
 
 export class CampaignFetchService extends BaseApiService {
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
