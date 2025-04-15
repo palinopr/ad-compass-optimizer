@@ -21,6 +21,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
 
   const [localForceRender, setLocalForceRender] = useState(0);
   const [fetchCompleted, setFetchCompleted] = useState(false);
+  const [insightsFetchStatus, setInsightsFetchStatus] = useState<'pending' | 'success' | 'partial' | 'failed' | null>(null);
 
   const { fetchCampaigns, mountedRef } = useRefreshLogic(status);
   const { filteredCampaigns, filters } = useCampaignFilters(campaigns);
@@ -32,6 +33,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     setError(null);
     setErrorDetails(null);
     setFetchCompleted(false);
+    setInsightsFetchStatus('pending');
 
     const result = await fetchCampaigns(forceRefresh);
     
@@ -39,6 +41,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       if (result?.error) {
         setError(result.error);
         setErrorDetails(result.errorDetails);
+        setInsightsFetchStatus('failed');
         // Store error details for better diagnostics
         localStorage.setItem('last_campaign_fetch_error_details', JSON.stringify({
           error: result.error,
@@ -52,7 +55,26 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         localStorage.setItem('last_campaign_count', result.campaigns.length.toString());
         
         // Update campaigns with the fetched data
-        updateCampaigns(result.campaigns);
+        updateCampaigns(result.campaigns)
+          .then(insightsResult => {
+            // Update insights fetch status based on result
+            if (insightsResult && insightsResult.success) {
+              console.log('[CAMPAIGN FETCH] Insights fetch completed successfully');
+              setInsightsFetchStatus('success');
+              localStorage.setItem('has_valid_campaign_insights', 'true');
+            } else if (insightsResult && insightsResult.partial) {
+              console.log('[CAMPAIGN FETCH] Insights fetch partially completed');
+              setInsightsFetchStatus('partial');
+              localStorage.setItem('has_valid_campaign_insights', 'true');
+            } else {
+              console.log('[CAMPAIGN FETCH] Insights fetch failed');
+              setInsightsFetchStatus('failed');
+            }
+          })
+          .catch(() => {
+            console.error('[CAMPAIGN FETCH] Error during insights fetch');
+            setInsightsFetchStatus('failed');
+          });
         
         // If we have campaigns, mark this in localStorage for synchronization checks
         if (result.campaigns.length > 0) {
@@ -65,6 +87,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       } else {
         console.warn('[CAMPAIGN FETCH] Fetch returned no campaigns and no error');
         localStorage.setItem('has_campaigns_data', 'false');
+        setInsightsFetchStatus('failed');
       }
       
       // Always mark fetch as completed and exit loading state
@@ -95,6 +118,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           console.log('[CAMPAIGN FETCH] Safety timeout: forcing exit from loading state');
           setIsLoading(false);
           setFetchCompleted(true);
+          setInsightsFetchStatus('failed');
         }
       }, 10000); // 10 second safety timeout
     }
@@ -125,6 +149,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     displayRefresh,
     forceRender: forceRender || localForceRender,
     forceUiRefresh: exposedForceUiRefresh,
-    fetchCompleted
+    fetchCompleted,
+    insightsFetchStatus
   };
 }

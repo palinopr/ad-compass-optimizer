@@ -38,11 +38,20 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status })
         impressions: campaign.insights.impressions || 'missing',
         cpa: campaign.insights.cpa || 'missing',
         roas: campaign.insights.roas || 'missing',
-        hasExtraStats: !!campaign.extraStats
+        hasExtraStats: !!campaign.extraStats,
+        hasValidData: (
+          (campaign.insights.spend && campaign.insights.spend !== '-') || 
+          (campaign.insights.cpa && campaign.insights.cpa !== '-') || 
+          (campaign.insights.roas && campaign.insights.roas !== '-')
+        )
       });
       
       // Mark that we have valid insights data (used for synchronization checks)
-      localStorage.setItem('has_valid_campaign_insights', 'true');
+      if ((campaign.insights.spend && campaign.insights.spend !== '-') || 
+          (campaign.insights.cpa && campaign.insights.cpa !== '-') || 
+          (campaign.insights.roas && campaign.insights.roas !== '-')) {
+        localStorage.setItem('has_valid_campaign_insights', 'true');
+      }
     }
   }, [campaign]);
 

@@ -33,7 +33,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     setSearchQuery,
     refetchCampaigns,
     effectiveIsAuthenticated,
-    fetchCompleted
+    fetchCompleted,
+    insightsFetchStatus
   } = useCampaignListState(status);
 
   const metrics = useCampaignMetrics(filteredCampaigns);
@@ -95,8 +96,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   
   // Track insight sync status to force UI refresh if needed
   useEffect(() => {
-    if (fetchCompleted && campaigns.length > 0) {
-      // Set a timeout to check if insights were properly mapped after campaigns are loaded
+    if (fetchCompleted && campaigns.length > 0 && insightsFetchStatus !== 'success' && insightsFetchStatus !== 'partial') {
+      // Only force a refresh if we have campaigns but insights fetch was not successful
       const insightCheckTimeout = setTimeout(() => {
         const hasValidInsights = localStorage.getItem('has_valid_campaign_insights') === 'true';
         if (!hasValidInsights) {
@@ -109,7 +110,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       
       return () => clearTimeout(insightCheckTimeout);
     }
-  }, [fetchCompleted, campaigns.length, refetchCampaigns]);
+  }, [fetchCompleted, campaigns.length, refetchCampaigns, insightsFetchStatus]);
 
   // Log component render to track state changes
   console.log(`[CAMPAIGN LIST] Rendering with state:`, { 
@@ -119,7 +120,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     campaignCount: campaigns.length,
     filteredCount: filteredCampaigns.length,
     currentDatePreset: filters.datePreset,
-    fetchCompleted
+    fetchCompleted,
+    insightsFetchStatus
   });
 
   if (isLoading) {
@@ -130,7 +132,10 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
   
-  if (error && !isMockMode) {
+  // Only show error state if we have a genuine error and:
+  // 1. We don't have any campaigns OR
+  // 2. Insights fetch completely failed AND we're not in mock mode
+  if (error && !isMockMode && (campaigns.length === 0 || insightsFetchStatus === 'failed')) {
     return (
       <Card>
         <ErrorState 
@@ -143,7 +148,10 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
 
-  // Only show empty state if fetch is completed and no campaigns were found
+  // Only show empty state if:
+  // 1. Fetch is completed AND
+  // 2. No campaigns were found AND 
+  // 3. No error exists (meaning API returned empty array, not an error)
   if (fetchCompleted && campaigns.length === 0 && !error) {
     const selectedAccount = localStorage.getItem('selected_ad_account');
     const accountText = selectedAccount ? ` in account ${selectedAccount}` : '';

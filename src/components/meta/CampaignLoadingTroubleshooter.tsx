@@ -16,11 +16,13 @@ import ActionButtons from './troubleshooter/ActionButtons';
 interface CampaignLoadingTroubleshooterProps {
   errorDetails?: any;
   onRetry: () => void;
+  insightsFetchStatus?: 'pending' | 'success' | 'partial' | 'failed' | null;
 }
 
 const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps> = ({
   errorDetails,
-  onRetry
+  onRetry,
+  insightsFetchStatus
 }) => {
   const { isAuthenticated, checkAuth } = useMetaConnection();
   const { validateAuthentication } = useAuthCheck();
@@ -51,6 +53,7 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
     console.log('  Direct token check:', effectiveIsAuthenticated ? 'Valid token' : 'No valid token');
     console.log('  Context auth state:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
     console.log('  Auth validation result:', authResult.isValid ? 'Valid' : 'Invalid');
+    console.log('  Insights fetch status:', insightsFetchStatus || 'unknown');
     
     if (errorDetails) {
       console.log('Error details in troubleshooter:', errorDetails);
@@ -61,7 +64,21 @@ const CampaignLoadingTroubleshooter: React.FC<CampaignLoadingTroubleshooterProps
       console.log('Auth state mismatch in troubleshooter, refreshing context...');
       checkAuth();
     }
-  }, [effectiveIsAuthenticated, isAuthenticated, checkAuth, errorDetails, authResult]);
+  }, [effectiveIsAuthenticated, isAuthenticated, checkAuth, errorDetails, authResult, insightsFetchStatus]);
+
+  // Check if we have any successful insights data (suppress warning if we do)
+  const hasValidInsightsData = insightsFetchStatus === 'success' || insightsFetchStatus === 'partial';
+  const hasCampaignsData = localStorage.getItem('has_campaigns_data') === 'true';
+  
+  // Only show troubleshooter if:
+  // 1. We have actual API errors, AND
+  // 2. No campaign data exists, OR
+  // 3. Insights fetch completely failed (and wasn't partial or successful)
+  // This prevents false positives
+  if (hasValidInsightsData && hasCampaignsData) {
+    console.log('Suppressing troubleshooter - we have valid campaign/insights data');
+    return null;
+  }
 
   // Use the more reliable authentication status
   return (

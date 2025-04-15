@@ -12,14 +12,5 @@ export interface UseCampaignsResult {
   forceRender: number;
   forceUiRefresh: () => void;
   fetchCompleted?: boolean;
-}
-
-export interface CampaignFilters {
-  dateRange: {
-    from: Date | undefined;
-    to: Date | undefined;
-  };
-  datePreset: string | null; // API compatible preset
-  status: string | null;
-  searchQuery: string;
+  insightsFetchStatus?: 'pending' | 'success' | 'partial' | 'failed' | null;
 }

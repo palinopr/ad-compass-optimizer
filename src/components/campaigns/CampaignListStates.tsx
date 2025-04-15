@@ -19,12 +19,14 @@ export const ErrorState = ({
   error, 
   isAuthenticated, 
   onRetry, 
-  errorDetails 
+  errorDetails,
+  insightsFetchStatus
 }: { 
   error: string;
   isAuthenticated: boolean;
   onRetry: () => void;
   errorDetails?: any;
+  insightsFetchStatus?: 'pending' | 'success' | 'partial' | 'failed' | null;
 }) => {
   // Format error message for display
   const displayError = error.includes('\n') ? error.split('\n').map((line, i) => (
@@ -46,6 +48,7 @@ export const ErrorState = ({
       <CampaignLoadingTroubleshooter
         errorDetails={errorDetails}
         onRetry={onRetry}
+        insightsFetchStatus={insightsFetchStatus}
       />
     </div>
   );

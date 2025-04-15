@@ -15,7 +15,8 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     errorDetails, 
     displayRefresh, 
     forceRender,
-    fetchCompleted
+    fetchCompleted,
+    insightsFetchStatus
   } = useCampaigns(status);
   
   const { filters, setDateRange, setStatusFilter, setSearchQuery, filteredCampaigns } = useCampaignFilters(campaigns);
@@ -44,7 +45,8 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
       selectedAdAccountId,
       authValid: authResult.isValid,
       authError: authResult.error || 'No error',
-      fetchCompleted
+      fetchCompleted,
+      insightsFetchStatus: insightsFetchStatus || 'unknown'
     });
     
     // Only trigger a fetch on first load if valid auth is detected AND hasn't been attempted yet
@@ -69,7 +71,7 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
         hasAdAccountId: !!selectedAdAccountId
       });
     }
-  }, [effectiveIsAuthenticated, authResult, directAuthCheck, token, selectedAdAccountId, refetchCampaigns, isLoading]);
+  }, [effectiveIsAuthenticated, authResult, directAuthCheck, token, selectedAdAccountId, refetchCampaigns, isLoading, insightsFetchStatus]);
 
   // Reset filters when ad account changes
   useEffect(() => {
@@ -90,12 +92,20 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
 
   // Update status message only when fetch is completed
   useEffect(() => {
-    if (fetchCompleted && campaigns.length === 0 && !isLoading) {
+    // Only show empty state message when:
+    // 1. Fetch is complete AND
+    // 2. We have no campaigns AND
+    // 3. We're not loading AND
+    // 4. There's no error (API returned empty array, not an error)
+    if (fetchCompleted && campaigns.length === 0 && !isLoading && !error) {
+      console.log('[CAMPAIGNS TAB] Setting empty state message: No campaigns exist');
       setStatusMessage("No campaigns exist in this ad account.");
-    } else {
+    } else if (campaigns.length > 0 || (insightsFetchStatus === 'success' && campaigns.length > 0)) {
+      // Clear message if we have campaigns or insights fetch was successful
+      console.log('[CAMPAIGNS TAB] Clearing status message due to: campaigns=' + campaigns.length + ', insightsFetchStatus=' + insightsFetchStatus);
       setStatusMessage(null);
     }
-  }, [campaigns, isLoading, fetchCompleted]);
+  }, [campaigns, isLoading, fetchCompleted, error, insightsFetchStatus]);
 
   return {
     campaigns,
@@ -111,6 +121,7 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     refetchCampaigns,
     statusMessage,
     setStatusMessage,
-    fetchCompleted
+    fetchCompleted,
+    insightsFetchStatus
   };
 };

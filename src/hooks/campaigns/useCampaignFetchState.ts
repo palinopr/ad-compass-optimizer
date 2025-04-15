@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { fetchInsightsForCampaigns } from './fetch-utils/campaignInsightsFetcher';
@@ -171,15 +172,45 @@ export function useCampaignFetchState() {
         // Fetch additional insights for each campaign
         const enhancedCampaigns = await fetchInsightsForCampaigns(newCampaigns, token);
         
+        // Calculate how many campaigns received valid insights
+        const campaignsWithInsights = enhancedCampaigns.filter(
+          campaign => campaign.insights && 
+            ((campaign.insights.spend && campaign.insights.spend !== '-') || 
+             (campaign.insights.cpa && campaign.insights.cpa !== '-') || 
+             (campaign.insights.roas && campaign.insights.roas !== '-'))
+        );
+        
+        console.log(`[CAMPAIGN STATE] Insights fetch complete: ${campaignsWithInsights.length}/${enhancedCampaigns.length} campaigns have valid insights`);
+        
         // Update the campaigns with the enhanced data
         console.log(`[CAMPAIGN STATE] Updating campaigns with enhanced insights data`);
         setCampaigns(enhancedCampaigns);
         incrementDisplayRefresh();
         setForceRender(prev => prev + 1);
+        
+        // Determine insights fetch status
+        let insightsSuccess = false;
+        let insightsPartial = false;
+        
+        if (campaignsWithInsights.length === enhancedCampaigns.length && enhancedCampaigns.length > 0) {
+          insightsSuccess = true;
+          console.log('[CAMPAIGN STATE] All campaigns received insights data successfully');
+        } else if (campaignsWithInsights.length > 0) {
+          insightsPartial = true;
+          console.log('[CAMPAIGN STATE] Some campaigns received insights data');
+        } else {
+          console.log('[CAMPAIGN STATE] No campaigns received valid insights data');
+        }
+        
+        // Return insights fetch status
+        return { success: insightsSuccess, partial: insightsPartial };
       }
     } catch (error) {
       console.error('[CAMPAIGN STATE] Error fetching additional insights:', error);
+      return { success: false, partial: false, error };
     }
+    
+    return { success: false, partial: false };
   };
 
   const updateFetchMetadata = (metadata: Partial<FetchMetadata>) => {
