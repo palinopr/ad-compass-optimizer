@@ -43,9 +43,6 @@ class CampaignFetchLogger {
 
   static async logResponse(response: Response, accountId: string, queryParams?: string): Promise<void> {
     try {
-      // Clone the response so we can read the body
-      const clonedResponse = response.clone();
-      
       // Create base log entry
       const log: CampaignFetchLog = {
         timestamp: new Date().toISOString(),
@@ -72,6 +69,8 @@ class CampaignFetchLogger {
       
       // Try to parse the response body
       try {
+        // Clone the response so we can read the body
+        const clonedResponse = response.clone();
         const bodyText = await clonedResponse.text();
         log.responseBody = bodyText.substring(0, 1000); // Limit size for storage
         

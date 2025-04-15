@@ -26,6 +26,7 @@ export const triggerCampaignRefresh = (
       localStorage.removeItem('USE_MOCK_MODE');
       localStorage.removeItem('mock_campaigns_data');
       localStorage.removeItem('FORCE_MOCK_REFRESH');
+      localStorage.removeItem('USE_MOCK_META_API');
     }
 
     // Store the fetch request time
@@ -70,7 +71,9 @@ export const triggerCampaignRefresh = (
   }
 };
 
-// Add the new triggerDisplayRefresh function
+/**
+ * Trigger a UI display refresh without fetching new data
+ */
 export const triggerDisplayRefresh = (): void => {
   try {
     console.log('[UI] Triggering display refresh');

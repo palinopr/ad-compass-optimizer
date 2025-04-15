@@ -1,7 +1,5 @@
 
 import { BaseApiService } from './BaseApiService';
-import { InsightsThrottling } from './insights/throttling';
-import { MetaFunnelService } from './MetaFunnelService';
 import { CampaignThrottling } from './campaign/throttling';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
 
@@ -62,12 +60,6 @@ export class MetaCampaignService extends BaseApiService {
       
       console.log(`[CAMPAIGN FETCH] 🔄 Fetching campaigns for account ${adAccountId}, attempt #${attempts + 1}`);
       
-      // IMPORTANT: Clear any mock data to ensure we're using real API
-      localStorage.removeItem('USE_MOCK_MODE');
-      localStorage.removeItem('mock_campaigns_data');
-      localStorage.removeItem('mock_account_data');
-      localStorage.removeItem('FORCE_MOCK_REFRESH');
-    
       try {
         // Correctly format the endpoint with the account ID
         const endpoint = `/act_${cleanAccountId}/campaigns`;
@@ -76,8 +68,14 @@ export class MetaCampaignService extends BaseApiService {
         const datePreset = 'last_30d';
         const fields = 'id,name,objective,status,effective_status,spend,results,cost_per_result,budget_remaining,daily_budget,lifetime_budget,start_time,end_time,created_time,updated_time,insights.date_preset(last_30d){impressions,clicks,cpc,ctr,spend,cost_per_action_type,actions}';
         
-        const queryParams = `fields=${encodeURIComponent(fields)}&date_preset=${datePreset}&effective_status=["ACTIVE","PAUSED","ARCHIVED"]&access_token=${token}`;
-        const fullUrl = `${this.BASE_URL}/${this.API_VERSION}${endpoint}?${queryParams}`;
+        // Build URL with properly encoded query parameters
+        const queryParams = new URLSearchParams();
+        queryParams.append('fields', fields);
+        queryParams.append('date_preset', datePreset);
+        queryParams.append('effective_status', '["ACTIVE","PAUSED","ARCHIVED"]');
+        queryParams.append('access_token', token);
+        
+        const fullUrl = `${this.BASE_URL}/${this.API_VERSION}${endpoint}?${queryParams.toString()}`;
         
         console.log(`[CAMPAIGN FETCH] 🔍 Fetching campaigns from: ${endpoint}`);
         console.log(`[CAMPAIGN FETCH] Using date_preset: ${datePreset}`);
@@ -86,7 +84,7 @@ export class MetaCampaignService extends BaseApiService {
         const logUrl = `${this.BASE_URL}/${this.API_VERSION}${endpoint}?fields=${fields}&date_preset=${datePreset}`;
         CampaignFetchLogger.logRequest(adAccountId, logUrl);
         
-        console.log(`[CAMPAIGN FETCH] 🚀 Making API request to Meta Graph API...`);
+        console.log(`[CAMPAIGN FETCH] 🚀 Making GET request to Meta Graph API...`);
         const response = await fetch(
           fullUrl,
           {
@@ -104,12 +102,7 @@ export class MetaCampaignService extends BaseApiService {
         });
 
         // Log the full response for debugging
-        await CampaignFetchLogger.logResponse(response, adAccountId, fields);
-
-        // Clone the response to log raw payload while preserving the original
-        const clonedResponse = response.clone();
-        const rawData = await clonedResponse.text();
-        console.log(`[CAMPAIGN FETCH] 📥 Raw campaign fetch payload:`, rawData);
+        await CampaignFetchLogger.logResponse(response.clone(), adAccountId, fields);
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -152,11 +145,10 @@ export class MetaCampaignService extends BaseApiService {
 
         localStorage.setItem('last_campaign_count', campaigns.length.toString());
         localStorage.setItem('last_campaign_fetch_success', 'true');
-        localStorage.removeItem('last_empty_result');
       
         return campaigns;
       } catch (fetchError: any) {
-        console.error(`[CAMPAIGN FETCH] 🚨 Campaign fetch failed:`, fetchError.message);
+        console.error(`[CAMPAIGN FETCH] 🚨 Campaign fetch failed:`, fetchError);
         CampaignFetchLogger.logError(fetchError, adAccountId);
         throw fetchError;
       }

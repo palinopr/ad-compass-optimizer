@@ -54,8 +54,8 @@ export const useAdAccountSelection = (availableAccounts: any[] = []) => {
         
         // Clear any mock data to ensure we're using live API
         localStorage.removeItem('USE_MOCK_MODE');
+        localStorage.removeItem('USE_MOCK_META_API');
         localStorage.removeItem('mock_campaigns_data');
-        localStorage.removeItem('mock_account_data');
         
         // Trigger initial campaign fetch with insights for the default account
         setTimeout(() => {
@@ -76,10 +76,9 @@ export const useAdAccountSelection = (availableAccounts: any[] = []) => {
       console.log('[META] 🔄 Changing account to:', cleanAccountId);
       
       // Remove any cached data
-      localStorage.removeItem('mock_campaigns_data');
-      localStorage.removeItem('mock_account_data');
       localStorage.removeItem('campaigns_cache');
       localStorage.removeItem('USE_MOCK_MODE');
+      localStorage.removeItem('USE_MOCK_META_API');
       
       // Update state and localStorage
       setSelectedAccount(cleanAccountId);

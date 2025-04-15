@@ -46,8 +46,10 @@ const Campaigns = () => {
     if (typeof localStorage !== 'undefined') {
       // Clear any mock mode flags or cached mock data
       localStorage.removeItem('USE_MOCK_MODE');
+      localStorage.removeItem('USE_MOCK_META_API');
       localStorage.removeItem('mock_campaigns_data');
       localStorage.removeItem('mock_account_data');
+      localStorage.removeItem('FORCE_MOCK_REFRESH');
       
       console.log('[CAMPAIGNS] Ensuring real API data is used, mock mode disabled');
     }
@@ -102,7 +104,6 @@ const Campaigns = () => {
             
             {isAuthenticated && <AdAccountSection isAuthenticated={isAuthenticated} />}
             
-            {/* Add our new in-app debugger panel */}
             {isAuthenticated && hasAdAccount && (
               <DebuggerPanel
                 campaigns={campaigns}
