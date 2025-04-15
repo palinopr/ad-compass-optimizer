@@ -8,7 +8,7 @@ export class MetaFunnelBatchService {
     
     console.log('[META FUNNEL] Building batch requests for account:', formattedId);
     
-    // Include insights data with core campaign fields to fetch metrics
+    // Include only essential fields for the initial campaign fetch
     return [
       {
         method: 'GET',

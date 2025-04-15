@@ -4,7 +4,7 @@ import { useCampaigns } from '@/hooks/campaigns';
 import FunnelView from './FunnelView';
 import FunnelControls from './FunnelControls';
 import { Card } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { MetaFunnelService } from '@/services/api/MetaFunnelService';
 import { useState, useEffect } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -22,6 +22,7 @@ const FunnelViewContainer = () => {
   const [lastFetchedAdAccount, setLastFetchedAdAccount] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [rawApiResponse, setRawApiResponse] = useState<any>(null);
+  const [lastRequestDetails, setLastRequestDetails] = useState<any>(null);
 
   const {
     filteredData,
@@ -84,6 +85,14 @@ const FunnelViewContainer = () => {
         ? selectedAdAccount 
         : `act_${selectedAdAccount}`;
       
+      // Store request details for debugging
+      setLastRequestDetails({
+        endpoint: `${formattedAccount}/campaigns`,
+        accountId: formattedAccount,
+        tokenLength: token?.length || 0,
+        timestamp: new Date().toISOString()
+      });
+      
       // If ad account hasn't changed and we have data, skip refetching
       if (formattedAccount === lastFetchedAdAccount && 
           funnelData.campaigns.length > 0 &&
@@ -99,7 +108,9 @@ const FunnelViewContainer = () => {
         setRawApiResponse(data); // Store raw response for debugging
         
         console.log(`[FUNNEL] Received funnel data with ${data.campaigns.length} campaigns`);
-        console.log('[FUNNEL] First campaign sample:', data.campaigns[0]);
+        if (data.campaigns.length > 0) {
+          console.log('[FUNNEL] First campaign sample:', data.campaigns[0]);
+        }
         
         setFunnelData(data);
         setLastFetchedAdAccount(formattedAccount);
@@ -165,7 +176,9 @@ const FunnelViewContainer = () => {
           >
             {isFetchingFunnel || campaignsLoading ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : null}
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
             Refresh Data
           </Button>
         </div>
@@ -198,6 +211,14 @@ const FunnelViewContainer = () => {
               <div className="text-red-500">
                 <p className="font-medium">Error loading campaigns:</p>
                 <p>{funnelError}</p>
+                {lastRequestDetails && (
+                  <div className="mt-2 text-xs bg-gray-100 rounded p-2 text-left">
+                    <p><strong>Last request:</strong> {lastRequestDetails.endpoint}</p>
+                    <p><strong>Account ID:</strong> {lastRequestDetails.accountId}</p>
+                    <p><strong>Token length:</strong> {lastRequestDetails.tokenLength} characters</p>
+                    <p><strong>Timestamp:</strong> {lastRequestDetails.timestamp}</p>
+                  </div>
+                )}
                 {rawApiResponse && (
                   <div className="mt-2 text-left text-xs p-2 bg-gray-100 rounded overflow-auto max-h-32">
                     <pre>{JSON.stringify(rawApiResponse, null, 2)}</pre>
@@ -205,7 +226,17 @@ const FunnelViewContainer = () => {
                 )}
               </div>
             ) : (
-              <p>No campaigns found. Try refreshing or selecting a different account.</p>
+              <div>
+                <p>No campaigns found. Try refreshing or selecting a different account.</p>
+                <Button 
+                  variant="outline" 
+                  onClick={handleManualRefresh}
+                  className="mt-4"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
             )}
           </div>
         )}

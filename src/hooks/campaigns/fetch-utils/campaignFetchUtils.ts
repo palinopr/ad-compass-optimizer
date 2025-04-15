@@ -58,8 +58,11 @@ export const validateAdAccount = (adAccountId: string | null): boolean => {
     return false;
   }
   
-  // Must start with act_ and contain only digits after the prefix
-  const isValidFormat = /^act_\d+$/.test(adAccountId);
+  // Must start with act_ and contain only digits after the prefix, or be convertible
+  const adAccountIdString = String(adAccountId);
+  const formattedId = adAccountIdString.startsWith('act_') ? adAccountIdString : `act_${adAccountIdString}`;
+  const isValidFormat = /^act_\d+$/.test(formattedId);
+  
   if (!isValidFormat) {
     console.error('[CAMPAIGN FETCH] Invalid ad account format:', adAccountId);
     return false;
@@ -95,10 +98,12 @@ export const logFetchDetails = (
   }
 
   // Make sure we're using a valid account ID format for the API
-  const cleanAccountId = adAccountId?.replace(/^act_/, '');
+  const adAccountIdString = String(adAccountId);
+  const formattedId = adAccountIdString.startsWith('act_') ? adAccountIdString : `act_${adAccountIdString}`;
+  const cleanAccountId = formattedId.replace(/^act_/, '');
   
   console.log('[CAMPAIGNS] Preparing to call API with:', {
-    adAccountId,
+    adAccountId: formattedId,
     cleanAccountId,
     tokenLength: token?.length,
     tokenStart: token?.substring(0, 5) + '...',
@@ -120,7 +125,11 @@ export const prepareFetchRequest = async (
   token: string,
   adAccountId: string
 ) => {
-  if (!validateAdAccount(adAccountId)) {
+  // Always ensure ad account ID is properly formatted
+  const adAccountIdString = String(adAccountId);
+  const formattedId = adAccountIdString.startsWith('act_') ? adAccountIdString : `act_${adAccountIdString}`;
+  
+  if (!validateAdAccount(formattedId)) {
     return { error: '🔴 Please select a valid ad account to load campaigns.' };
   }
 
