@@ -16,7 +16,8 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     displayRefresh, 
     forceRender,
     fetchCompleted,
-    insightsFetchStatus
+    insightsFetchStatus,
+    forceUiRefresh
   } = useCampaigns(status);
   
   const { filters, setDateRange, setStatusFilter, setSearchQuery, filteredCampaigns } = useCampaignFilters(campaigns);
@@ -122,6 +123,7 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     statusMessage,
     setStatusMessage,
     fetchCompleted,
-    insightsFetchStatus
+    insightsFetchStatus,
+    forceUiRefresh // Expose the forceUiRefresh function from useCampaigns
   };
 };
