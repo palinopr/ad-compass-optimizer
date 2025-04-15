@@ -78,7 +78,7 @@ const AdAccountDebug: React.FC<AdAccountDebugProps> = ({ selectedAccount }) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <Alert variant="warning" className="bg-amber-50 text-amber-800 border-amber-200">
+          <Alert variant="destructive" className="bg-amber-50 text-amber-800 border-amber-200">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>No ad account selected.</AlertDescription>
           </Alert>

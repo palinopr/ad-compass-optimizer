@@ -31,10 +31,10 @@ const isMetaApiCall = (url: string): boolean => {
 // Wrap the fetch function
 window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
   // Convert input to string if it's a Request object
-  const url = typeof input === 'string' ? input : input.url;
+  const url = typeof input === 'string' ? input : input instanceof Request ? input.url : input.toString();
   
   // Check if this is a Meta API call
-  if (typeof url === 'string' && isMetaApiCall(url)) {
+  if (isMetaApiCall(url)) {
     // Create call log entry
     const call: ApiCall = {
       timestamp: new Date().toISOString(),
