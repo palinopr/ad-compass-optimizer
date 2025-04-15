@@ -1,3 +1,4 @@
+
 interface CampaignFetchLog {
   timestamp: string;
   accountId: string;
@@ -9,6 +10,7 @@ interface CampaignFetchLog {
   insightsData?: boolean;
   datePreset?: string;
   queryParams?: string;
+  requestUrl?: string;
   campaignPreviews?: Array<{
     id: string;
     name: string;
@@ -28,12 +30,6 @@ class CampaignFetchLogger {
       return;
     }
 
-    // Verify we're not using a mock account
-    if (accountId.includes('mock')) {
-      console.error('[CAMPAIGN FETCH] ❌ Attempted to use mock account:', accountId);
-      return;
-    }
-
     console.log('[CAMPAIGN FETCH] 🔄 Fetching campaigns for:', accountId);
     
     if (typeof window !== 'undefined') {
@@ -43,11 +39,32 @@ class CampaignFetchLogger {
       window.dispatchEvent(event);
     }
   }
+  
+  static logRequest(accountId: string, requestUrl: string) {
+    console.log('[CAMPAIGN FETCH] 🚀 Request URL:', requestUrl);
+    
+    const log: CampaignFetchLog = {
+      timestamp: new Date().toISOString(),
+      accountId,
+      requestUrl
+    };
+    
+    this.logs.unshift(log);
+    if (this.logs.length > this.maxLogs) {
+      this.logs.pop();
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('campaign-fetch-log', { 
+        detail: log 
+      }));
+    }
+  }
 
   static async logResponse(response: Response, accountId: string, queryParams?: string) {
     try {
       const responseText = await response.clone().text();
-      console.log('[CAMPAIGN FETCH] 📦 Raw Response:', response.status, response.statusText);
+      console.log('[CAMPAIGN FETCH] 📦 Response:', response.status, response.statusText);
       
       let parsedJson;
       let hasInsights = false;
@@ -108,14 +125,23 @@ class CampaignFetchLogger {
         campaignPreviews
       };
 
-      this.logs.unshift(log);
-      if (this.logs.length > this.maxLogs) {
-        this.logs.pop();
+      // Update existing request log or add new one
+      const existingLogIndex = this.logs.findIndex(l => 
+        l.accountId === accountId && l.timestamp > new Date(Date.now() - 5000).toISOString()
+      );
+      
+      if (existingLogIndex >= 0) {
+        this.logs[existingLogIndex] = { ...this.logs[existingLogIndex], ...log };
+      } else {
+        this.logs.unshift(log);
+        if (this.logs.length > this.maxLogs) {
+          this.logs.pop();
+        }
       }
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('campaign-fetch-log', { 
-          detail: log 
+          detail: existingLogIndex >= 0 ? this.logs[existingLogIndex] : log 
         }));
       }
 

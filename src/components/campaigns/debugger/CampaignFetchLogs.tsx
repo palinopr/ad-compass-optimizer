@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, BarChart, AlertCircle } from 'lucide-react';
+import { Loader2, BarChart, AlertCircle, Globe } from 'lucide-react';
 import CampaignFetchLogger from '@/utils/debugging/campaignFetchLogger';
 import { Badge } from '@/components/ui/badge';
 
@@ -41,6 +41,13 @@ const CampaignFetchLogs = () => {
                     <span>{new Date(log.timestamp).toLocaleTimeString()}</span>
                     <span>Account: {log.accountId}</span>
                   </div>
+                  
+                  {log.requestUrl && (
+                    <div className="mt-1 text-blue-600 break-all">
+                      <Globe className="h-3 w-3 inline mr-1" />
+                      {log.requestUrl}
+                    </div>
+                  )}
                   
                   {log.error ? (
                     <div className="text-red-500 mt-1">Error: {log.error}</div>

@@ -50,14 +50,14 @@ export const checkApiUsage = (increaseCooldown: () => void) => {
 
 export const validateAdAccount = (adAccountId: string | null): boolean => {
   if (!adAccountId) {
-    console.error('Missing ad account ID');
+    console.error('[CAMPAIGN FETCH] Missing ad account ID');
     return false;
   }
   
-  // Must start with act_ and contain only digits
+  // Must start with act_ and contain only digits after the prefix
   const isValidFormat = /^act_\d+$/.test(adAccountId);
   if (!isValidFormat) {
-    console.error('Invalid ad account format:', adAccountId);
+    console.error('[CAMPAIGN FETCH] Invalid ad account format:', adAccountId);
     return false;
   }
   
@@ -90,12 +90,16 @@ export const logFetchDetails = (
     console.log(`[CAMPAIGNS] Last manual fetch time: ${lastManualFetch}`);
   }
 
+  // Make sure we're using a valid account ID format for the API
+  const cleanAccountId = adAccountId?.replace(/^act_/, '');
+  
   console.log('[CAMPAIGNS] Preparing to call API with:', {
     adAccountId,
+    cleanAccountId,
     tokenLength: token?.length,
     tokenStart: token?.substring(0, 5) + '...',
     tokenEnd: '...' + token?.substring(token?.length - 5),
-    endpoint: `/act_${adAccountId}/campaigns`,
+    endpoint: `/act_${cleanAccountId}/campaigns`,
     lastManualFetch
   });
 };

@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -38,28 +39,39 @@ export class MetaCampaignService extends BaseApiService {
         throw new Error('Ad Account ID is required');
       }
       
-      // Validate account ID format
+      // Validate account ID format - ensure it begins with act_ but doesn't have duplication
       if (!/^act_\d+$/.test(adAccountId)) {
-        throw new Error('Invalid ad account ID format');
+        throw new Error(`Invalid ad account ID format: ${adAccountId}`);
       }
 
+      // Remove any act_ prefix for the API call since we'll add it in the endpoint
+      const cleanAccountId = adAccountId.replace(/^act_/, '');
+      
       CampaignThrottling.checkThrottling(adAccountId);
 
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_campaign_fetch_account', adAccountId);
     
       try {
-        const endpoint = `/act_${adAccountId}/campaigns`;
+        // Correctly format the endpoint with the account ID
+        const endpoint = `/act_${cleanAccountId}/campaigns`;
+        
         // Include insights fields in the campaign request with date_preset
         const datePreset = 'last_30d';
-        const fields = 'id,name,objective,status,spend,results,cost_per_result,budget,daily_budget,lifetime_budget,start_time,end_time,created_time,updated_time,insights.date_preset(last_30d){impressions,clicks,cpc,ctr,spend,cost_per_action_type}';
+        const fields = 'id,name,objective,status,spend,results,cost_per_result,budget,daily_budget,lifetime_budget,start_time,end_time,created_time,updated_time,insights.date_preset(last_30d){impressions,clicks,cpc,ctr,spend,cost_per_action_type,actions}';
         
         const queryParams = `fields=${fields}&date_preset=${datePreset}&access_token=${token}`;
-        console.log(`[CAMPAIGN FETCH] Fetching campaigns with insights for act_${adAccountId}`);
+        const fullUrl = `${this.BASE_URL}/${this.API_VERSION}${endpoint}?${queryParams}`;
+        
+        console.log(`[CAMPAIGN FETCH] Fetching campaigns from: ${endpoint}`);
         console.log(`[CAMPAIGN FETCH] Using date_preset: ${datePreset}`);
         
+        // Log the API request URL (without token for security)
+        const logUrl = `${this.BASE_URL}/${this.API_VERSION}${endpoint}?fields=${fields}&date_preset=${datePreset}`;
+        CampaignFetchLogger.logRequest(adAccountId, logUrl);
+        
         const response = await fetch(
-          `${this.BASE_URL}/${this.API_VERSION}${endpoint}?${queryParams}`,
+          fullUrl,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -67,7 +79,7 @@ export class MetaCampaignService extends BaseApiService {
           }
         );
 
-        await CampaignFetchLogger.logResponse(response, adAccountId, queryParams);
+        await CampaignFetchLogger.logResponse(response, adAccountId, fields);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -85,19 +97,6 @@ export class MetaCampaignService extends BaseApiService {
         const campaigns = data.data.map((campaign: any) => {
           // Extract insights data if available
           const insightsData = campaign.insights?.data?.[0] || {};
-          
-          // Log insights data for debugging
-          if (campaign.insights?.data?.length > 0) {
-            console.log(`[CAMPAIGN FETCH] Campaign ${campaign.id} has insights:`, {
-              id: campaign.id,
-              name: campaign.name,
-              status: campaign.status,
-              spend: campaign.spend || '$0.00',
-              results: campaign.results || '0',
-              impressions: insightsData.impressions || '0',
-              clicks: insightsData.clicks || '0'
-            });
-          }
           
           return {
             ...campaign,
