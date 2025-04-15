@@ -46,6 +46,23 @@ const FunnelViewContainer = () => {
     });
   };
 
+  const getFormattedAdAccountId = () => {
+    let selectedAdAccount = null;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        selectedAdAccount = localStorage.getItem('selected_ad_account');
+      }
+    } catch (e) {
+      console.error("Error accessing localStorage in FunnelViewContainer:", e);
+    }
+    
+    if (!selectedAdAccount) return null;
+    
+    return selectedAdAccount.startsWith('act_') 
+      ? selectedAdAccount
+      : `act_${selectedAdAccount}`;
+  };
+
   useEffect(() => {
     try {
       const storedResponse = localStorage.getItem('raw_campaign_response');
@@ -56,7 +73,7 @@ const FunnelViewContainer = () => {
           console.log('[FUNNEL DEBUG] Loaded stored API response:', parsed);
         } catch (e) {
           console.error('[FUNNEL DEBUG] Error parsing stored response:', e);
-          setRawApiResponse({ parseError: String(e) });
+          setRawApiResponse({ text: storedResponse });
         }
       }
       
@@ -80,36 +97,24 @@ const FunnelViewContainer = () => {
   useEffect(() => {
     const fetchFunnelData = async () => {
       let token: string | null = null;
-      let selectedAdAccount: string | null = null;
+      const formattedAccount = getFormattedAdAccountId();
       
       if (typeof window !== 'undefined') {
         token = metaAuthService.getAccessToken();
-        
-        try {
-          if (typeof localStorage !== 'undefined') {
-            selectedAdAccount = localStorage.getItem('selected_ad_account');
-          }
-        } catch (e) {
-          console.error("Error accessing localStorage in FunnelViewContainer:", e);
-        }
       }
       
       console.log('[FUNNEL] Fetch attempt with token:', token ? 'Valid token' : 'No token');
-      console.log('[FUNNEL] Selected ad account:', selectedAdAccount);
+      console.log('[FUNNEL] Selected ad account:', formattedAccount);
       
       if (!token) {
         setFunnelError('Missing access token');
         return;
       }
 
-      if (!selectedAdAccount) {
+      if (!formattedAccount) {
         setFunnelError('No ad account selected');
         return;
       }
-      
-      const formattedAccount = selectedAdAccount.startsWith('act_') 
-        ? selectedAdAccount 
-        : `act_${selectedAdAccount}`;
       
       setLastRequestDetails({
         endpoint: `${formattedAccount}/campaigns`,
@@ -128,13 +133,20 @@ const FunnelViewContainer = () => {
         setIsFetchingFunnel(true);
         console.log('[FUNNEL] Fetching funnel data for account:', formattedAccount);
         
+        const campaignsUrl = `https://graph.facebook.com/v17.0/${formattedAccount}/campaigns?fields=id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}&access_token=[REDACTED]`;
+        console.log('[FUNNEL] API URL format:', campaignsUrl);
+        
         const data = await MetaFunnelService.fetchFunnelData(token, formattedAccount);
         
         try {
           const storedResponse = localStorage.getItem('raw_campaign_response');
           if (storedResponse) {
-            const parsed = JSON.parse(storedResponse);
-            setRawApiResponse(parsed);
+            try {
+              const parsed = JSON.parse(storedResponse);
+              setRawApiResponse(parsed);
+            } catch (e) {
+              setRawApiResponse({ text: storedResponse });
+            }
           }
         } catch (e) {
           console.error('[FUNNEL] Error loading API response:', e);
@@ -174,8 +186,12 @@ const FunnelViewContainer = () => {
           try {
             const storedError = localStorage.getItem('raw_campaign_error_response');
             if (storedError) {
-              const parsedError = JSON.parse(storedError);
-              setRawApiResponse({ error: parsedError });
+              try {
+                const parsedError = JSON.parse(storedError);
+                setRawApiResponse({ error: parsedError });
+              } catch (e) {
+                setRawApiResponse({ text: storedError });
+              }
             }
           } catch (e) {
             console.error('[FUNNEL] Error loading API error:', e);
@@ -272,7 +288,13 @@ const FunnelViewContainer = () => {
                   <div className="mt-4 text-left">
                     <p className="font-medium text-black mb-2">Raw API Response:</p>
                     <div className="text-left text-xs p-2 bg-gray-100 rounded overflow-auto max-h-96">
-                      <pre className="whitespace-pre-wrap">{JSON.stringify(rawApiResponse, null, 2)}</pre>
+                      <pre className="whitespace-pre-wrap">
+                        {rawApiResponse.error ? 
+                          JSON.stringify(rawApiResponse.error, null, 2) : 
+                          rawApiResponse.text ?
+                            rawApiResponse.text :
+                            JSON.stringify(rawApiResponse, null, 2)}
+                      </pre>
                     </div>
                   </div>
                 )}
@@ -297,7 +319,11 @@ const FunnelViewContainer = () => {
           <div className="mt-4 border-t pt-4">
             <p className="font-medium mb-2">API Response Debug:</p>
             <div className="text-xs p-2 bg-gray-100 rounded overflow-auto max-h-96">
-              <pre className="whitespace-pre-wrap">{JSON.stringify(rawApiResponse, null, 2)}</pre>
+              <pre className="whitespace-pre-wrap">
+                {rawApiResponse.text ?
+                  rawApiResponse.text :
+                  JSON.stringify(rawApiResponse, null, 2)}
+              </pre>
             </div>
           </div>
         )}

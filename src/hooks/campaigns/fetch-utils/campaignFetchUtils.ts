@@ -27,6 +27,11 @@ export const handleSuccessfulFetch = (
     });
   } else {
     console.warn('[CAMPAIGN FETCH] No campaigns returned from API');
+    toast({
+      title: "No Campaigns Found",
+      description: "The API returned 0 campaigns for your account.",
+      variant: "default",
+    });
   }
 
   checkApiUsage(increaseCooldown);
@@ -60,12 +65,12 @@ export const validateAdAccount = (adAccountId: string | null): boolean => {
     return false;
   }
   
-  // Must start with act_ and contain only digits after the prefix, or be convertible
+  // Must start with act_ or be convertible to the act_ format
   const adAccountIdString = String(adAccountId);
   const formattedId = adAccountIdString.startsWith('act_') ? adAccountIdString : `act_${adAccountIdString}`;
-  const isValidFormat = /^act_\d+$/.test(formattedId);
   
-  if (!isValidFormat) {
+  // Basic validation that it's not completely invalid
+  if (!/^act_\d+$/.test(formattedId)) {
     console.error('[CAMPAIGN FETCH] Invalid ad account format:', adAccountId);
     return false;
   }
