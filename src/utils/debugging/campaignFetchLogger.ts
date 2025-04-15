@@ -1,8 +1,7 @@
-
 import { CampaignFetchLog } from './types/campaignLogTypes';
 import LogStorage from './services/logStorage';
 import LogEventEmitter from './services/logEventEmitter';
-import ResponseParser from './services/responseParser';
+import { parseMetaError } from './services/parsers/errorParser';
 
 class CampaignFetchLogger {
   static logAttempt(accountId: string): void {
@@ -53,16 +52,7 @@ class CampaignFetchLogger {
 
       if (!response.ok) {
         const errorData = await response.clone().json();
-        const error = errorData?.error || {};
-        
-        // Update error logging to use the new flexible error property
-        log.error = {
-          code: error.code,
-          type: error.type,
-          message: error.message,
-          subcode: error.error_subcode,
-          fbtraceId: error.fbtrace_id
-        };
+        log.error = parseMetaError(errorData);
         
         // Store error details for debugging panel
         try {
@@ -95,25 +85,14 @@ class CampaignFetchLogger {
   static logError(error: any, accountId: string): void {
     console.error('[CAMPAIGN FETCH] ❌ Error:', error);
     
-    // Create detailed error log
     const log: CampaignFetchLog = {
       timestamp: new Date().toISOString(),
       accountId,
-      error: error?.message || String(error),
-      errorDetails: {
-        status: error?.status || error?.code || 'unknown',
-        statusText: error?.statusText,
-        message: error?.message,
-        code: error?.code || error?.details?.error?.code,
-        type: error?.type || error?.details?.error?.type,
-        subcode: error?.error_subcode,
-        timestamp: new Date().toISOString(),
-        fbTraceId: error?.fbtraceId || error?.error?.fbtrace_id
-      }
+      error: parseMetaError(error)
     };
 
     // Store error details in localStorage
-    localStorage.setItem('last_campaign_fetch_error', JSON.stringify(log.errorDetails));
+    localStorage.setItem('last_campaign_fetch_error', JSON.stringify(log.error));
     console.log('[CAMPAIGN FETCH] ❌ Error details stored in localStorage');
 
     LogStorage.addLog(log);

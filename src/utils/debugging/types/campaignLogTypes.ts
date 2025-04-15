@@ -1,4 +1,13 @@
 
+export interface ErrorDetails {
+  code: string | number;
+  type: string;
+  message: string;
+  subcode?: string | number;
+  fbtraceId?: string;
+  timestamp: string;
+}
+
 export interface CampaignFetchLog {
   timestamp: string;
   requestTimestamp?: string;
@@ -7,29 +16,13 @@ export interface CampaignFetchLog {
   statusText?: string;
   responseBody?: string;
   parsedJson?: any;
-  error?: string | {
-    code?: string | number;
-    type?: string;
-    message?: string;
-    subcode?: string | number;
-    fbtraceId?: string;
-  };
-  errorDetails?: {
-    status?: number;
-    statusText?: string;
-    message?: string;
-    code?: string | number;
-    type?: string;
-    subcode?: string | number;
-    timestamp?: string;
-    fbTraceId?: string;
-  };
+  error?: ErrorDetails;
   insightsData?: boolean;
   datePreset?: string;
   queryParams?: string;
   requestUrl?: string;
   campaignPreviews?: CampaignPreview[];
-  headers?: Record<string, string>; // Add this property
+  headers?: Record<string, string>;
 }
 
 export interface CampaignPreview {
