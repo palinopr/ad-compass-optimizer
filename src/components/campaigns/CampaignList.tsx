@@ -34,7 +34,8 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     refetchCampaigns,
     effectiveIsAuthenticated,
     fetchCompleted,
-    insightsFetchStatus
+    insightsFetchStatus,
+    forceUiRefresh,
   } = useCampaignListState(status);
 
   const metrics = useCampaignMetrics(filteredCampaigns);
@@ -104,7 +105,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         const hasValidInsights = localStorage.getItem('has_valid_campaign_insights') === 'true';
         if (!hasValidInsights) {
           console.log('[CAMPAIGN LIST] No valid insights detected after campaign load, forcing UI refresh');
-          refetchCampaigns(false);
+          forceUiRefresh();
         } else {
           console.log('[CAMPAIGN LIST] Valid insights confirmed after campaign load');
         }
@@ -112,7 +113,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       
       return () => clearTimeout(insightCheckTimeout);
     }
-  }, [fetchCompleted, campaigns.length, refetchCampaigns, insightsFetchStatus]);
+  }, [fetchCompleted, campaigns.length, forceUiRefresh, insightsFetchStatus]);
   
   // Force render on successful campaign data load if we have valid campaigns
   useEffect(() => {
@@ -120,12 +121,13 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
       console.log('[CAMPAIGN LIST] Campaigns data loaded, forcing UI refresh');
       const forceRenderTimeout = setTimeout(() => {
         // Force a UI refresh to ensure all campaign data is properly displayed
+        forceUiRefresh();
         window.dispatchEvent(new Event('force-campaign-ui-refresh'));
       }, 300);
       
       return () => clearTimeout(forceRenderTimeout);
     }
-  }, [campaigns.length, fetchCompleted]);
+  }, [campaigns.length, fetchCompleted, forceUiRefresh]);
 
   // Log component render to track state changes
   console.log(`[CAMPAIGN LIST] Rendering with state:`, { 
@@ -213,6 +215,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
           setStatusFilter(null);
           setSearchQuery('');
         }}
+        key={`campaign-results-${campaigns.length}-${filteredCampaigns.length}`} // Force re-render
       />
       
       {debugMode && <MockApiControls onRefresh={() => refetchCampaigns(true)} />}

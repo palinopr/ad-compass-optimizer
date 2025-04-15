@@ -50,6 +50,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           error: result.error,
           timestamp: new Date().toISOString()
         }));
+        setIsLoading(false);
+        setFetchCompleted(true);
       } else if (result && 'campaigns' in result && Array.isArray(result.campaigns)) {
         console.log(`[CAMPAIGN FETCH] API returned ${result.campaigns.length} campaigns`);
         
@@ -72,7 +74,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
             localStorage.setItem('has_valid_campaign_insights', 'true');
             setInsightsFetchStatus('success');
             
-            // No need for additional insights fetch, they're already in the response
+            // Set campaigns directly for immediate rendering
+            setCampaigns(result.campaigns);
             setFetchCompleted(true);
             setIsLoading(false);
           } else {
@@ -97,18 +100,25 @@ export function useCampaigns(status?: string): UseCampaignsResult {
                 // Always mark fetch as completed and exit loading state
                 setFetchCompleted(true);
                 setIsLoading(false);
+                
+                // Force UI to refresh
+                setLocalForceRender(prev => prev + 1);
               })
               .catch((error) => {
                 console.error('[CAMPAIGN FETCH] Error during insights fetch:', error);
                 setInsightsFetchStatus('failed');
                 setFetchCompleted(true);
                 setIsLoading(false);
+                
+                // Force UI to refresh even with error
+                setLocalForceRender(prev => prev + 1);
               });
           }
         } else {
           console.log('[CAMPAIGN FETCH] API returned empty campaigns array');
           localStorage.setItem('has_campaigns_data', 'false');
           localStorage.setItem('empty_campaigns_response', 'true');
+          setCampaigns([]);  // Explicitly set empty array
           setFetchCompleted(true);
           setIsLoading(false);
           setInsightsFetchStatus(null);
@@ -117,11 +127,12 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         console.warn('[CAMPAIGN FETCH] Fetch returned no campaigns and no error');
         localStorage.setItem('has_campaigns_data', 'false');
         setInsightsFetchStatus('failed');
+        setCampaigns([]);  // Explicitly set empty array
         setFetchCompleted(true);
         setIsLoading(false);
       }
     }
-  }, [fetchCampaigns, mountedRef, setIsLoading, setError, setErrorDetails, updateCampaigns]);
+  }, [fetchCampaigns, mountedRef, setIsLoading, setError, setErrorDetails, updateCampaigns, setCampaigns]);
 
   // Create a function to explicitly force UI refresh
   const exposedForceUiRefresh = useCallback(() => {
@@ -129,7 +140,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     forceUiRefresh();
     setTimeout(() => {
       setLocalForceRender(prev => prev + 1);
-    }, 200);
+    }, 50); // Use a shorter timeout for faster UI refresh
   }, [forceUiRefresh]);
 
   // Add a safety check for stuck loading state
@@ -138,7 +149,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     
     if (isLoading) {
       timeoutId = window.setTimeout(() => {
-        // If we're still loading after 15 seconds, force exit loading state
+        // If we're still loading after 10 seconds, force exit loading state
         if (isLoading) {
           console.log('[CAMPAIGN FETCH] Safety timeout: forcing exit from loading state');
           setIsLoading(false);
@@ -151,8 +162,11 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           } else {
             setInsightsFetchStatus('failed');
           }
+          
+          // Force UI refresh
+          setLocalForceRender(prev => prev + 1);
         }
-      }, 15000); // 15 second safety timeout
+      }, 10000); // 10 second safety timeout (reduced from 15)
     }
     
     return () => {
@@ -161,6 +175,17 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       }
     };
   }, [isLoading, hasEverHadCampaignsRef, campaigns.length]);
+  
+  // Force a UI update whenever campaigns change
+  useEffect(() => {
+    if (campaigns.length > 0 && !isLoading) {
+      console.log(`[CAMPAIGN FETCH] Campaigns updated (${campaigns.length}), forcing UI refresh`);
+      // Small timeout to ensure state is settled
+      setTimeout(() => {
+        setLocalForceRender(prev => prev + 1);
+      }, 50);
+    }
+  }, [campaigns, isLoading]);
 
   // Set up event listeners for campaign refresh events
   useCampaignEventListeners(

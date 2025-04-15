@@ -13,12 +13,12 @@ interface CampaignFilteredResultsProps {
   onClearFilters: () => void;
 }
 
-const CampaignFilteredResults = ({
+const CampaignFilteredResults: React.FC<CampaignFilteredResultsProps> = ({
   campaigns,
   status,
   hasFilteredResults,
   onClearFilters
-}: CampaignFilteredResultsProps) => {
+}) => {
   // Cast status to the correct type for CampaignTable
   const campaignStatus = status as 'active' | 'draft' | 'archived';
   
@@ -32,7 +32,7 @@ const CampaignFilteredResults = ({
   });
 
   // Handle empty state with no filters
-  if (campaigns.length === 0) {
+  if (!campaigns || campaigns.length === 0) {
     // In mock mode, this shouldn't typically happen since we load mock data
     return (
       <Card>
@@ -59,14 +59,12 @@ const CampaignFilteredResults = ({
                 </a>
               </Button>
             )}
-            {!hasFilteredResults && campaigns.length === 0 && (
-              <Button 
-                variant="outline" 
-                onClick={onClearFilters}
-              >
-                Clear Filters
-              </Button>
-            )}
+            <Button 
+              variant="outline" 
+              onClick={onClearFilters}
+            >
+              Clear Filters
+            </Button>
           </div>
         </div>
       </Card>
@@ -76,7 +74,11 @@ const CampaignFilteredResults = ({
   // When we have campaigns to show
   return (
     <Card>
-      <CampaignTable campaigns={campaigns} status={campaignStatus} />
+      <CampaignTable 
+        campaigns={campaigns} 
+        status={campaignStatus} 
+        key={`campaign-table-${campaigns.length}`} // Force re-render when campaigns change
+      />
     </Card>
   );
 }

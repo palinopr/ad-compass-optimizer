@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CardContent } from '@/components/ui/card';
 import { 
   Table, 
@@ -17,6 +17,20 @@ interface CampaignTableProps {
 }
 
 const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'active' }) => {
+  // Log render information to help debug
+  useEffect(() => {
+    console.log(`[CAMPAIGN TABLE] Rendering with ${campaigns.length} campaigns`, 
+      campaigns.length > 0 ? { 
+        firstCampaign: {
+          id: campaigns[0].id,
+          name: campaigns[0].name,
+          hasInsights: !!campaigns[0].insights,
+          insightKeys: campaigns[0].insights ? Object.keys(campaigns[0].insights) : []
+        }
+      } : {}
+    );
+  }, [campaigns]);
+
   return (
     <CardContent className="p-0">
       <Table>
@@ -35,7 +49,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
         <TableBody>
           {campaigns.map((campaign) => (
             <CampaignTableRow 
-              key={campaign.id} 
+              key={campaign.id || Math.random().toString(36)} 
               campaign={campaign} 
               status={status}
             />

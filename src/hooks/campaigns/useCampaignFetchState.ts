@@ -1,6 +1,5 @@
-
 import { useRef, useState, useEffect } from 'react';
-import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { fetchInsightsForCampaigns } from './fetch-utils/campaignInsightsFetcher';
 import { metaAuthService } from '@/services/MetaAuthService';
 
@@ -67,6 +66,9 @@ export function useCampaignFetchState() {
           console.log('[CAMPAIGN STATE] Received campaigns, exiting loading state');
           setIsLoading(false);
         }
+        
+        // Ensure UI update by triggering force render
+        setForceRender(prev => prev + 1);
       }
     }
   }, [campaigns, isLoading]);
@@ -123,6 +125,9 @@ export function useCampaignFetchState() {
     
     setCampaigns(newCampaigns);
     
+    // Trigger UI refresh explicitly
+    setForceRender(prev => prev + 1);
+    
     // Mark that we've had campaigns if we're setting non-empty array
     if (newCampaigns.length > 0) {
       hasEverHadCampaignsRef.current = true;
@@ -158,6 +163,9 @@ export function useCampaignFetchState() {
     // First set the campaigns to show basic data immediately
     setCampaigns(newCampaigns);
     
+    // Immediately trigger a UI refresh
+    setForceRender(prev => prev + 1);
+    
     // Then fetch additional insights for each campaign
     try {
       const token = metaAuthService.getAccessToken();
@@ -167,7 +175,6 @@ export function useCampaignFetchState() {
         
         // Keep the UI responsive by setting campaigns before the detailed fetch
         incrementDisplayRefresh();
-        setForceRender(prev => prev + 1);
         
         // Fetch additional insights for each campaign
         const enhancedCampaigns = await fetchInsightsForCampaigns(newCampaigns, token);
@@ -185,6 +192,8 @@ export function useCampaignFetchState() {
         // Update the campaigns with the enhanced data
         console.log(`[CAMPAIGN STATE] Updating campaigns with enhanced insights data`);
         setCampaigns(enhancedCampaigns);
+        
+        // Force a render after insights update
         incrementDisplayRefresh();
         setForceRender(prev => prev + 1);
         
