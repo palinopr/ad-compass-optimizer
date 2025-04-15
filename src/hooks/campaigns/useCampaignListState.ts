@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from 'react';
 import { useCampaigns } from '@/hooks/campaigns';
 import { useCampaignFilters } from './useCampaignFilters';
@@ -14,7 +15,6 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     errorDetails, 
     displayRefresh, 
     forceRender,
-    localRenderKey
   } = useCampaigns(status);
   const { filters, setDateRange, setStatusFilter, setSearchQuery, filteredCampaigns } = useCampaignFilters(campaigns);
   const { isAuthenticated, checkAuth } = useMetaConnection();
@@ -46,7 +46,6 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
     setStatusFilter,
     setSearchQuery,
     refetchCampaigns,
-    localRenderKey,
     statusMessage,
     setStatusMessage
   };

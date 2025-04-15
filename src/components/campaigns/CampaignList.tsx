@@ -99,6 +99,11 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         campaigns={filteredCampaigns}
         status={status}
         hasFilteredResults={filteredCampaigns.length > 0}
+        onClearFilters={() => {
+          setDateRange(null, 'last30days');
+          setStatusFilter(null);
+          setSearchQuery('');
+        }}
       />
       
       {debugMode && <MockApiControls onRefresh={() => refetchCampaigns(true)} />}
