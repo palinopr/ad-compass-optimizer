@@ -3,7 +3,6 @@ import { useCampaigns } from '@/hooks/campaigns';
 import FunnelView from './FunnelView';
 import FunnelControls from './FunnelControls';
 import { Card } from '@/components/ui/card';
-import { Loader2, RefreshCw, Bug } from 'lucide-react';
 import { MetaFunnelService } from '@/services/api/MetaFunnelService';
 import { useState, useEffect } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -11,8 +10,11 @@ import { FunnelData } from '@/services/api/types/funnelTypes';
 import { useFunnelFilters } from '@/hooks/funnel/useFunnelFilters';
 import { toast } from '@/hooks/use-toast';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
-import { Button } from '@/components/ui/button';
 import { CampaignQueryBuilder } from '@/services/api/campaign/fetching/campaignQueryBuilder';
+import FunnelHeader from './header/FunnelHeader';
+import FunnelDebugPanel from './debug/FunnelDebugPanel';
+import FunnelEmptyState from './states/FunnelEmptyState';
+import FunnelApiResponse from './debug/FunnelApiResponse';
 
 const FunnelViewContainer = () => {
   const { campaigns, isLoading: campaignsLoading, refetchCampaigns } = useCampaigns();
@@ -384,68 +386,22 @@ const FunnelViewContainer = () => {
   return (
     <Card>
       <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-xl font-bold">Campaign Funnel</h2>
-            {buildVersion && (
-              <p className="text-xs text-gray-500">Build {buildVersion} - using last_28d date preset</p>
-            )}
-          </div>
-          <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDebug(!showDebug)}
-              className="flex items-center gap-2"
-            >
-              <Bug className="h-4 w-4" />
-              {showDebug ? "Hide Debug" : "Debug"}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleManualRefresh} 
-              disabled={isFetchingFunnel || campaignsLoading}
-            >
-              {isFetchingFunnel || campaignsLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Refresh Data
-            </Button>
-          </div>
-        </div>
+        <FunnelHeader
+          buildVersion={buildVersion}
+          showDebug={showDebug}
+          onToggleDebug={() => setShowDebug(!showDebug)}
+          onRefresh={handleManualRefresh}
+          isLoading={isFetchingFunnel || campaignsLoading}
+        />
         
         {showDebug && (
-          <div className="mb-4 bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h3 className="text-sm font-medium mb-2">Debug Tools</h3>
-            <div className="flex space-x-2">
-              <Button 
-                variant="secondary" 
-                size="sm"
-                onClick={testDirectApiCall}
-                disabled={isFetchingFunnel}
-              >
-                Test API Connection
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={verifyPermissions}
-              >
-                Verify Permissions
-              </Button>
-            </div>
-            
-            {lastRequestDetails && (
-              <div className="mt-3 text-xs text-gray-600">
-                <div><strong>Last request:</strong> {lastRequestDetails.endpoint}</div>
-                <div><strong>Account ID:</strong> {lastRequestDetails.accountId}</div>
-                <div><strong>Timestamp:</strong> {new Date(lastRequestDetails.timestamp).toLocaleTimeString()}</div>
-                <div><strong>Token length:</strong> {lastRequestDetails.tokenLength} characters</div>
-                <div><strong>Date preset:</strong> last_28d (forced)</div>
-              </div>
-            )}
-          </div>
+          <FunnelDebugPanel
+            lastRequestDetails={lastRequestDetails}
+            isLoading={isFetchingFunnel}
+            testDirectApiCall={testDirectApiCall}
+            verifyPermissions={verifyPermissions}
+            buildVersion={buildVersion}
+          />
         )}
         
         <FunnelControls
@@ -466,66 +422,18 @@ const FunnelViewContainer = () => {
             ads={filteredData.ads} 
           />
         ) : (
-          <div className="bg-gray-50 p-6 rounded-md text-center">
-            {(campaignsLoading || isFetchingFunnel) ? (
-              <div className="flex flex-col items-center">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500 mb-2" />
-                <p>Loading campaign data...</p>
-              </div>
-            ) : funnelError ? (
-              <div className="text-red-500">
-                <p className="font-medium">Error loading campaigns:</p>
-                <p>{funnelError}</p>
-                {lastRequestDetails && (
-                  <div className="mt-2 text-xs bg-gray-100 rounded p-2 text-left">
-                    <p><strong>Last request:</strong> {lastRequestDetails.endpoint}</p>
-                    <p><strong>Account ID:</strong> {lastRequestDetails.accountId}</p>
-                    <p><strong>Token length:</strong> {lastRequestDetails.tokenLength} characters</p>
-                    <p><strong>Timestamp:</strong> {lastRequestDetails.timestamp}</p>
-                  </div>
-                )}
-                {showDebug && rawApiResponse && (
-                  <div className="mt-4 text-left">
-                    <p className="font-medium text-black mb-2">Raw API Response:</p>
-                    <div className="text-left text-xs p-2 bg-gray-100 rounded overflow-auto max-h-96">
-                      <pre className="whitespace-pre-wrap">
-                        {rawApiResponse.error ? 
-                          JSON.stringify(rawApiResponse.error, null, 2) : 
-                          rawApiResponse.text ?
-                            rawApiResponse.text :
-                            JSON.stringify(rawApiResponse, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div>
-                <p>No campaigns found. Try refreshing or selecting a different account.</p>
-                <Button 
-                  variant="outline" 
-                  onClick={handleManualRefresh}
-                  className="mt-4"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Try Again
-                </Button>
-              </div>
-            )}
-          </div>
+          <FunnelEmptyState
+            isLoading={campaignsLoading || isFetchingFunnel}
+            error={funnelError}
+            lastRequestDetails={lastRequestDetails}
+            rawApiResponse={rawApiResponse}
+            showDebug={showDebug}
+            onRefresh={handleManualRefresh}
+          />
         )}
         
         {showDebug && rawApiResponse && filteredData.campaigns.length > 0 && (
-          <div className="mt-4 border-t pt-4">
-            <p className="font-medium mb-2">API Response Debug:</p>
-            <div className="text-xs p-2 bg-gray-100 rounded overflow-auto max-h-96">
-              <pre className="whitespace-pre-wrap">
-                {rawApiResponse.text ?
-                  rawApiResponse.text :
-                  JSON.stringify(rawApiResponse, null, 2)}
-              </pre>
-            </div>
-          </div>
+          <FunnelApiResponse rawApiResponse={rawApiResponse} />
         )}
       </div>
     </Card>
