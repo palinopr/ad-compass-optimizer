@@ -1,7 +1,6 @@
 
 import React from 'react';
 import ConnectionButtons from './ConnectionButtons';
-import CampaignConnectionStatus from './CampaignConnectionStatus';
 
 interface ConnectionSectionProps {
   isAuthenticated: boolean;
@@ -18,7 +17,6 @@ const ConnectionSection: React.FC<ConnectionSectionProps> = ({
 }) => {
   return (
     <div className="space-y-4">
-      <CampaignConnectionStatus />
       <ConnectionButtons
         isAuthenticated={isAuthenticated}
         isAuthSyncing={isAuthSyncing}

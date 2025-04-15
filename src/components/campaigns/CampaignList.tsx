@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Info } from 'lucide-react';
 import CampaignFilterToolbar from './CampaignFilterToolbar';
 import CampaignMetrics from './CampaignMetrics';
-import { LoadingState, ErrorState, EmptyState } from './CampaignListStates';
+import { LoadingState, ErrorState } from './CampaignListStates';
 import CampaignFilteredResults from './CampaignFilteredResults';
 import CampaignDebugInfo from './CampaignDebugInfo';
 import { useCampaignListState } from '@/hooks/campaigns/useCampaignListState';
@@ -32,9 +32,9 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   } = useCampaignListState(status);
 
   const metrics = useCampaignMetrics(filteredCampaigns);
-  
   const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
   const debugMode = process.env.NODE_ENV !== 'production';
+  const selectedAccount = localStorage.getItem('selected_ad_account');
 
   if (isLoading) {
     return (
@@ -57,19 +57,15 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
 
-  // If no campaigns and no error, show status message
+  // If no campaigns and no error, show a clean status message
   if (campaigns.length === 0 && !error) {
     return (
-      <Card className="p-6 text-center">
-        <div className="flex flex-col items-center justify-center">
-          <Info className="h-12 w-12 text-blue-500 mb-4" />
-          <p className="text-gray-600">{statusMessage || "No campaigns found"}</p>
-          <button 
-            onClick={() => refetchCampaigns(true)} 
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-          >
-            Refresh Campaigns
-          </button>
+      <Card className="p-6">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <Info className="h-4 w-4" />
+          <p>
+            ✅ Meta account connected. No campaigns found for {selectedAccount || 'current ad account'}.
+          </p>
         </div>
       </Card>
     );

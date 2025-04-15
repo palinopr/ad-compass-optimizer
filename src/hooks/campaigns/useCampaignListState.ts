@@ -28,7 +28,7 @@ export const useCampaignListState = (status: 'active' | 'draft' | 'archived') =>
 
   useEffect(() => {
     if (campaigns.length === 0 && !isLoading) {
-      setStatusMessage("✅ Connected, but no campaigns exist in this ad account.");
+      setStatusMessage("No campaigns exist in this ad account.");
     } else {
       setStatusMessage(null);
     }
