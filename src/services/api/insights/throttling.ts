@@ -95,7 +95,7 @@ export class InsightsThrottling {
           if (hasCriticalUsage) {
             console.error('Critical API usage detected, applying throttling');
             this.markThrottled('default', 30); // 30-second throttling
-            markRateLimited('default', 2); // 2-minute rate limiting
+            markRateLimited(2, 'default'); // Fixed: Pass arguments in correct order (minutes, accountId)
           }
         } catch (e) {
           console.error('Error parsing usage headers:', e);
@@ -141,7 +141,8 @@ export class InsightsThrottling {
         }
         
         // Mark as rate limited with the appropriate time
-        markRateLimited('default', Math.ceil(retryAfter / 60)); // Convert to minutes
+        const minutesDuration = Math.ceil(retryAfter / 60); // Convert to minutes
+        markRateLimited(minutesDuration, 'default'); // Fixed: Pass arguments in correct order (minutes, accountId)
         
         // Also apply throttling
         this.markThrottled('default', 30); 
