@@ -1,132 +1,64 @@
 
-import React from 'react';
-import { Check, ChevronsUpDown, Loader2, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import React, { useState } from 'react';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AdAccount } from './types';
 
 interface AdAccountDropdownProps {
   adAccounts: AdAccount[];
-  selectedAccount: string;
+  selectedAccount: string | null;
   isLoading: boolean;
-  onChange: (value: string) => void;
+  onChange: (accountId: string) => void;
 }
 
-const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
-  adAccounts,
-  selectedAccount,
-  isLoading,
-  onChange,
+const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({ 
+  adAccounts, 
+  selectedAccount, 
+  isLoading, 
+  onChange 
 }) => {
-  const [open, setOpen] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Safe check for account data and validation
-  const safeAccounts = React.useMemo(() => {
+  // Safe handler to avoid crashes
+  const handleAccountChange = (value: string) => {
     try {
-      if (!adAccounts || !Array.isArray(adAccounts)) {
-        console.error('[META] Invalid ad accounts data:', adAccounts);
-        setError('Failed to load ad accounts. Please try refreshing.');
-        return [];
-      }
-      
-      // Ensure each account has valid ID and name
-      const validAccounts = adAccounts.filter(account => account && account.id);
-      console.log('[META AD ACCOUNTS] Valid accounts:', validAccounts.length);
-      
-      if (validAccounts.length === 0) {
-        setError('No valid ad accounts found. Please check your Meta permissions.');
-        return [];
-      }
-      
-      if (selectedAccount && !validAccounts.some(acc => 
-        acc.id.replace(/^act_/, '') === selectedAccount.replace(/^act_/, '')
-      )) {
-        console.warn('[META] Selected account not found in valid accounts:', selectedAccount);
-        setError('Selected account is not available. Please choose a valid account.');
-      } else {
-        setError(null);
-      }
-      
-      return validAccounts;
-    } catch (err) {
-      console.error('[META] Error processing accounts:', err);
-      setError('Failed to process ad accounts. Please try refreshing.');
-      return [];
-    }
-  }, [adAccounts, selectedAccount]);
-
-  // Find the selected account label
-  const selectedAccountLabel = React.useMemo(() => {
-    try {
-      if (isLoading) return 'Loading accounts...';
-      if (!safeAccounts || safeAccounts.length === 0) return 'No accounts available';
-
-      const account = safeAccounts.find(account => {
-        try {
-          const normalizedId = account.id.replace(/^act_/, '');
-          const normalizedSelected = selectedAccount?.replace(/^act_/, '') || '';
-          return normalizedId === normalizedSelected;
-        } catch (err) {
-          console.error('[META] Error comparing account IDs:', err);
-          return false;
-        }
-      });
-
-      return account ? `${account.name} (${account.id})` : 'Select an ad account';
-    } catch (err) {
-      console.error('[META] Error getting account label:', err);
-      return 'Select an ad account';
-    }
-  }, [safeAccounts, selectedAccount, isLoading]);
-
-  // Handle account selection
-  const handleAccountSelect = React.useCallback((accountId: string) => {
-    try {
-      console.log('[META] Account selected:', accountId);
-      
-      // Validate account ID before proceeding
-      if (!accountId) {
-        console.error('[META] Empty account ID selected');
-        setError('Invalid account selection');
+      if (!value) {
+        console.warn('[META] Empty value in ad account dropdown');
+        setError('Invalid selection');
         return;
       }
-      
-      // Trigger parent component's onChange handler
-      onChange(accountId);
-      setOpen(false);
       setError(null);
-      
-      // Dispatch event to trigger campaign fetch
-      try {
-        const event = new CustomEvent('campaign-data-refresh', {
-          detail: { force: true }
-        });
-        window.dispatchEvent(event);
-      } catch (eventErr) {
-        console.error('[META] Error dispatching refresh event:', eventErr);
-      }
+      onChange(value);
     } catch (err) {
-      console.error('[META] Error selecting account:', err);
-      setError('Failed to select account. Please try again.');
+      console.error('[META] Error in account dropdown change:', err);
+      setError('Failed to change account');
     }
-  }, [onChange]);
+  };
+
+  // Safety check for malformed adAccounts data
+  const isValidAdAccountsList = Array.isArray(adAccounts) && 
+    adAccounts.every(account => account && typeof account === 'object' && account.id);
+
+  if (!isValidAdAccountsList && !isLoading) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Invalid ad accounts data. Please refresh the page or reconnect your Meta account.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
-    <div className="w-full">
+    <div>
       {error && (
         <Alert variant="destructive" className="mb-2">
           <AlertCircle className="h-4 w-4" />
@@ -134,58 +66,43 @@ const AdAccountDropdown: React.FC<AdAccountDropdownProps> = ({
         </Alert>
       )}
       
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between bg-white"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <div className="flex items-center">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading accounts...
-              </div>
-            ) : (
-              <>
-                {selectedAccountLabel}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0 bg-white z-50">
-          <Command>
-            <CommandInput placeholder="Search ad accounts..." />
-            <CommandEmpty>No ad accounts found.</CommandEmpty>
-            <CommandGroup className="max-h-64 overflow-auto">
-              {safeAccounts.map((account) => (
-                <CommandItem
-                  key={account.id}
-                  value={account.id}
-                  onSelect={() => handleAccountSelect(account.id)}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedAccount?.replace(/^act_/, '') === account.id?.replace(/^act_/, '') 
-                        ? "opacity-100" 
-                        : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col">
-                    <span>{account.name || 'Unnamed Account'}</span>
-                    <span className="text-xs text-muted-foreground">{account.id}</span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <Select
+        value={selectedAccount || ''}
+        onValueChange={handleAccountChange}
+        disabled={isLoading || adAccounts.length === 0}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder={
+            isLoading 
+              ? 'Loading ad accounts...' 
+              : adAccounts.length === 0 
+                ? 'No ad accounts found' 
+                : 'Select an ad account'
+          }>
+            {selectedAccount && adAccounts.find(acc => 
+              acc.id.replace(/^act_/, '') === selectedAccount.replace(/^act_/, '')
+            )?.name}
+            {isLoading && <RefreshCw className="ml-2 h-4 w-4 animate-spin inline-block" />}
+          </SelectValue>
+        </SelectTrigger>
+
+        <SelectContent>
+          {isValidAdAccountsList ? (
+            adAccounts.map((account) => (
+              <SelectItem 
+                key={account.id.replace(/^act_/, '')} 
+                value={account.id.replace(/^act_/, '')}
+              >
+                {account.name} ({account.id.replace(/^act_/, '')})
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value="error" disabled>
+              Error loading accounts
+            </SelectItem>
+          )}
+        </SelectContent>
+      </Select>
     </div>
   );
 };

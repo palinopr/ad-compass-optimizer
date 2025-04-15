@@ -12,9 +12,12 @@ import { useCampaigns } from '@/hooks/campaigns';
 import ConnectionSection from '@/components/campaigns/connection/ConnectionSection';
 import RefreshControls from '@/components/campaigns/refresh/RefreshControls';
 import EmptyStateMessage from '@/components/campaigns/EmptyStateMessage';
-import CampaignTroubleshooter from '@/components/campaigns/troubleshooter/CampaignTroubleshooter';
 import AdAccountSection from '@/components/meta/integration/AdAccountSection';
 import { metaAuthService } from '@/services/MetaAuthService';
+import DebuggerPanel from '@/components/campaigns/debugger/DebuggerPanel';
+
+// Import the API call logger to activate it
+import '@/utils/debugging/apiCallLogger';
 
 const Campaigns = () => {
   const {
@@ -76,6 +79,15 @@ const Campaigns = () => {
             
             {isAuthenticated && <AdAccountSection isAuthenticated={isAuthenticated} />}
             
+            {/* Add our new in-app debugger panel */}
+            {isAuthenticated && hasAdAccount && (
+              <DebuggerPanel
+                campaigns={campaigns}
+                isLoading={false}
+                error={campaignsError}
+              />
+            )}
+            
             {isAuthenticated && hasAdAccount && <RefreshControls />}
             
             <CampaignTabs activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -83,9 +95,6 @@ const Campaigns = () => {
             {filteredCampaigns?.length === 0 && !showCreateWizard && (
               <EmptyStateMessage adAccountId={selectedAdAccount} />
             )}
-            
-            {/* Simple Campaign Troubleshooter */}
-            <CampaignTroubleshooter />
           </>
         )}
       </div>
