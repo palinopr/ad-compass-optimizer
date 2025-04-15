@@ -21,4 +21,3 @@ export const CAMPAIGN_FIELDS = {
     'cost_per_action_type'
   ]
 } as const;
-

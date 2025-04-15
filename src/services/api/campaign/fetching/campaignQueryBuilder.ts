@@ -22,7 +22,7 @@ export class CampaignQueryBuilder {
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.3-28d-fix-REBUILD';
+    return '1.0.4-endpoint-fix';
   }
   
   // Adding timestamp to ensure no cache is used
@@ -30,8 +30,16 @@ export class CampaignQueryBuilder {
     return new Date().toISOString();
   }
 
-  static validateAdAccountId = AccountValidator.validate;
-  static formatAccountId = AccountValidator.format;
+  static validateAdAccountId(adAccountId: string): boolean {
+    if (!adAccountId) {
+      throw new Error('Ad Account ID is required');
+    }
+    return AccountValidator.validate(adAccountId);
+  }
+  
+  static formatAccountId(adAccountId: string): string {
+    return AccountValidator.format(adAccountId);
+  }
   
   // Force rebuild by including unused function that will be different on every build
   static forceRebuild(): string {
@@ -56,4 +64,3 @@ export class CampaignQueryBuilder {
     return true;
   }
 }
-

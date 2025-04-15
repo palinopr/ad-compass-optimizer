@@ -28,6 +28,7 @@ export class CampaignFetchService extends BaseApiService {
       
       this.validateToken(token, 'fetchCampaigns');
       
+      // Ensure the account ID is properly formatted
       CampaignQueryBuilder.validateAdAccountId(adAccountId);
       const formattedAccountId = CampaignQueryBuilder.formatAccountId(adAccountId);
       console.log(`[CAMPAIGN FETCH] Using formatted account ID: ${formattedAccountId}`);
@@ -42,6 +43,7 @@ export class CampaignFetchService extends BaseApiService {
       
       console.log('[CAMPAIGN FETCH] Using query fields:', fields);
 
+      // Ensure we're using the properly formatted account ID in the URL
       const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       // Log the actual URL that will be used (with token redacted)
@@ -65,6 +67,10 @@ export class CampaignFetchService extends BaseApiService {
   }
 
   private static async executeFetch(url: string): Promise<MetaCampaign[]> {
+    // Log the actual request URL (with sensitive parts redacted)
+    const redactedForLogging = url.replace(/access_token=[^&]+/, 'access_token=REDACTED');
+    console.log(`[CAMPAIGN FETCH] Executing fetch to: ${redactedForLogging}`);
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -78,6 +84,7 @@ export class CampaignFetchService extends BaseApiService {
     });
 
     if (!response.ok) {
+      console.error(`[CAMPAIGN FETCH] API request failed with status: ${response.status}`);
       // Use the separate ErrorHandler class with correct casing
       await ErrorHandler.handleErrorResponse(response);
     }
