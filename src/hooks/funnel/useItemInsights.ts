@@ -51,7 +51,7 @@ export const useItemInsights = () => {
       ];
 
       // Create base options
-      let baseOptions: InsightFilterOptions = {
+      let baseOptions: Omit<InsightFilterOptions, 'datePreset'> = {
         fields: commonFields,
       };
 
@@ -73,17 +73,24 @@ export const useItemInsights = () => {
           : MetaInsightsService.fetchAdSetInsights(token, itemId, timeRangeOptions));
       } else {
         // For other presets, use date_preset
-        baseOptions.datePreset = validDatePreset as InsightFilterOptions['datePreset'];
+        const standardOptions: InsightFilterOptions = {
+          ...baseOptions,
+          datePreset: validDatePreset as InsightFilterOptions['datePreset']
+        };
         
         // Primary request with date_preset
         requests.push(() => itemType === 'campaign' 
-          ? MetaInsightsService.fetchCampaignInsights(token, itemId, baseOptions)
-          : MetaInsightsService.fetchAdSetInsights(token, itemId, baseOptions));
+          ? MetaInsightsService.fetchCampaignInsights(token, itemId, standardOptions)
+          : MetaInsightsService.fetchAdSetInsights(token, itemId, standardOptions));
       }
 
       // Add maximum fallback for all cases
+      const maximumOptions: InsightFilterOptions = { 
+        ...baseOptions, 
+        datePreset: 'maximum' 
+      };
+      
       requests.push(() => {
-        const maximumOptions = { ...baseOptions, datePreset: 'maximum' };
         return itemType === 'campaign'
           ? MetaInsightsService.fetchCampaignInsights(token, itemId, maximumOptions)
           : MetaInsightsService.fetchAdSetInsights(token, itemId, maximumOptions);
