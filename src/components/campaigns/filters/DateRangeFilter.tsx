@@ -8,10 +8,13 @@ interface DateRangeFilterProps {
 }
 
 const DateRangeFilter = ({ datePreset, onDateRangeChange }: DateRangeFilterProps) => {
+  // If the outdated preset is passed, replace it with the correct one
+  const actualPreset = datePreset === 'last30days' ? 'last_28d' : datePreset;
+  
   return (
     <DateRangeSelector 
       onChange={onDateRangeChange} 
-      initialPreset={datePreset}
+      initialPreset={actualPreset}
     />
   );
 };

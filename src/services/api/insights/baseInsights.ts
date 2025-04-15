@@ -29,6 +29,16 @@ export class BaseInsightsService extends BaseApiService {
       // Build URL
       const url = `${this.BASE_URL}/${this.API_VERSION}/${objectId}/insights?${params.toString()}`;
       
+      // Log the final URL with the token redacted
+      const maskedUrl = url.replace(token, 'REDACTED');
+      console.log(`[INSIGHTS] Final request URL: ${maskedUrl}`);
+      
+      // Extract and log date preset for debugging
+      const datePreset = options.datePreset || params.get('date_preset');
+      if (datePreset) {
+        console.log(`[INSIGHTS] Using date preset: ${datePreset}`);
+      }
+      
       // Make the request with appropriate headers to improve client identification
       const response = await fetch(url, {
         headers: {

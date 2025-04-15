@@ -1,3 +1,4 @@
+
 import { MetaCampaign } from '../../types/metaCampaignTypes';
 import { CampaignThrottling } from '../../campaign/throttling';
 import { CampaignQueryBuilder } from './campaignQueryBuilder';
@@ -35,10 +36,26 @@ export class CampaignFetchService extends BaseApiService {
 
       // This is the important part - we're using the updated query builder that uses last_28d
       const fields = CampaignQueryBuilder.buildCampaignQuery();
+      
+      // Verify that the correct date preset is being used
+      CampaignQueryBuilder.verifyDatePreset(fields);
+      
       console.log('[CAMPAIGN FETCH] Using query fields:', fields);
 
       const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
-      console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
+      
+      // Log the actual URL that will be used (with token redacted)
+      const redactedUrl = url.replace(token, 'REDACTED');
+      console.log(`[CAMPAIGN FETCH] Request URL: ${redactedUrl}`);
+      
+      // Store the URL for debugging
+      try {
+        localStorage.setItem('last_campaign_request_url', redactedUrl);
+        localStorage.setItem('last_campaign_request_timestamp', new Date().toISOString());
+        localStorage.setItem('last_campaign_request_date_preset', fields.match(/date_preset\(([^)]+)\)/)?.[1] || 'unknown');
+      } catch (e) {
+        console.error('[CAMPAIGN FETCH] Error storing request info:', e);
+      }
       
       return await this.executeFetch(url);
     } catch (error) {

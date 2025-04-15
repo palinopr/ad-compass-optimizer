@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useCampaigns } from '@/hooks/campaigns';
 import FunnelView from './FunnelView';
@@ -27,6 +28,7 @@ const FunnelViewContainer = () => {
   const [lastRequestDetails, setLastRequestDetails] = useState<any>(null);
   const [showDebug, setShowDebug] = useState(true);
   const [buildVersion, setBuildVersion] = useState<string>('');
+  const [datePreset, setDatePreset] = useState<string>('last_28d');
 
   const {
     filteredData,
@@ -45,15 +47,21 @@ const FunnelViewContainer = () => {
     const timestamp = CampaignQueryBuilder.getBuildTimestamp();
     setBuildVersion(version);
     
-    console.log(`[FUNNEL] Running on build version: ${version} (${timestamp})`);
-    console.log(`[FUNNEL] Using date preset: ${CampaignQueryBuilder.buildCampaignQuery().match(/date_preset\(([^)]+)\)/)?.[1] || 'unknown'}`);
+    // Extract date preset directly from query
+    const queryWithDatePreset = CampaignQueryBuilder.buildCampaignQuery();
+    const extractedDatePreset = queryWithDatePreset.match(/date_preset\(([^)]+)\)/)?.[1] || 'unknown';
+    setDatePreset(extractedDatePreset);
     
+    console.log(`[FUNNEL] Running on build version: ${version} (${timestamp})`);
+    console.log(`[FUNNEL] Using date preset: ${extractedDatePreset}`);
+    
+    // Force clear all caches to ensure we use the fresh config
     localStorage.removeItem('campaign_query_cache');
     localStorage.removeItem('campaign_data_cache');
     
     toast({
       title: "Build Version",
-      description: `Running ${version} with last_28d date preset`,
+      description: `Running ${version} with ${extractedDatePreset} date preset`,
       duration: 5000
     });
     
@@ -68,7 +76,7 @@ const FunnelViewContainer = () => {
     triggerCampaignRefresh(true);
     toast({
       title: "Refreshing campaigns",
-      description: `Fetching latest data from Meta with last_28d preset (${buildVersion})...`
+      description: `Fetching latest data from Meta with ${datePreset} preset (${buildVersion})...`
     });
   };
 
@@ -284,7 +292,8 @@ const FunnelViewContainer = () => {
         endpoint: `${formattedAccount}/campaigns`,
         accountId: formattedAccount,
         tokenLength: token?.length || 0,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        datePreset: datePreset
       });
       
       if (formattedAccount === lastFetchedAdAccount && 
@@ -297,7 +306,8 @@ const FunnelViewContainer = () => {
         setIsFetchingFunnel(true);
         console.log('[FUNNEL] Fetching funnel data for account:', formattedAccount);
         
-        const campaignsUrl = `https://graph.facebook.com/v17.0/${formattedAccount}/campaigns?fields=id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_28d){impressions,clicks,spend,actions,cost_per_action_type}&access_token=[REDACTED]`;
+        // Important: Log the exact API URL format that will be used with the correct datePreset
+        const campaignsUrl = `https://graph.facebook.com/v17.0/${formattedAccount}/campaigns?fields=id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(${datePreset}){impressions,clicks,spend,actions,cost_per_action_type}&access_token=[REDACTED]`;
         console.log('[FUNNEL] API URL format:', campaignsUrl);
         
         const data = await MetaFunnelService.fetchFunnelData(token, formattedAccount);
@@ -381,7 +391,7 @@ const FunnelViewContainer = () => {
     };
 
     fetchFunnelData();
-  }, [campaigns.length, refetchCampaigns, lastFetchedAdAccount, retryCount]);
+  }, [campaigns.length, refetchCampaigns, lastFetchedAdAccount, retryCount, datePreset]);
 
   return (
     <Card>
@@ -392,6 +402,7 @@ const FunnelViewContainer = () => {
           onToggleDebug={() => setShowDebug(!showDebug)}
           onRefresh={handleManualRefresh}
           isLoading={isFetchingFunnel || campaignsLoading}
+          datePreset={datePreset}
         />
         
         {showDebug && (
@@ -401,6 +412,7 @@ const FunnelViewContainer = () => {
             testDirectApiCall={testDirectApiCall}
             verifyPermissions={verifyPermissions}
             buildVersion={buildVersion}
+            datePreset={datePreset}
           />
         )}
         

@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Bug, RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw, Code, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface FunnelHeaderProps {
   buildVersion: string;
@@ -9,43 +10,56 @@ interface FunnelHeaderProps {
   onToggleDebug: () => void;
   onRefresh: () => void;
   isLoading: boolean;
+  datePreset?: string;
 }
 
-const FunnelHeader: React.FC<FunnelHeaderProps> = ({
-  buildVersion,
-  showDebug,
-  onToggleDebug,
-  onRefresh,
-  isLoading
-}) => {
+const FunnelHeader = ({ 
+  buildVersion, 
+  showDebug, 
+  onToggleDebug, 
+  onRefresh, 
+  isLoading,
+  datePreset = 'last_28d'
+}: FunnelHeaderProps) => {
   return (
-    <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 mb-4">
       <div>
-        <h2 className="text-xl font-bold">Campaign Funnel</h2>
-        {buildVersion && (
-          <p className="text-xs text-gray-500">Build {buildVersion} - using last_28d date preset</p>
-        )}
+        <h2 className="text-2xl font-bold">Campaign Funnel View</h2>
+        <div className="flex flex-wrap gap-2 mt-1">
+          <Badge variant="outline" className="text-xs">
+            Build: {buildVersion}
+          </Badge>
+          <Badge variant="secondary" className="text-xs bg-green-100">
+            Date Preset: {datePreset}
+          </Badge>
+        </div>
       </div>
-      <div className="flex space-x-2">
+      <div className="flex flex-shrink-0 space-x-2">
         <Button 
           variant="outline" 
+          size="sm" 
           onClick={onToggleDebug}
-          className="flex items-center gap-2"
         >
-          <Bug className="h-4 w-4" />
-          {showDebug ? "Hide Debug" : "Debug"}
+          {showDebug ? (
+            <>
+              <EyeOff className="h-4 w-4 mr-1" />
+              Hide Debug
+            </>
+          ) : (
+            <>
+              <Code className="h-4 w-4 mr-1" />
+              Show Debug
+            </>
+          )}
         </Button>
-        <Button 
-          variant="outline" 
-          onClick={onRefresh} 
+        <Button
+          variant="default"
+          size="sm"
+          onClick={onRefresh}
           disabled={isLoading}
         >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-2" />
-          )}
-          Refresh Data
+          <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
     </div>

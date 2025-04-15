@@ -24,14 +24,14 @@ export type DateRange = {
 
 export type PresetOption = {
   label: string;
-  value: 'today' | 'yesterday' | 'last7days' | 'last30days' | 'custom';
+  value: 'today' | 'yesterday' | 'last7days' | 'last_28d' | 'custom';
 };
 
 const presets: PresetOption[] = [
   { label: 'Today', value: 'today' },
   { label: 'Yesterday', value: 'yesterday' },
   { label: 'Last 7 days', value: 'last7days' },
-  { label: 'Last 30 days', value: 'last30days' },
+  { label: 'Last 28 days', value: 'last_28d' }, // Updated from last30days to last_28d
   { label: 'Custom range', value: 'custom' },
 ];
 
@@ -42,21 +42,28 @@ interface DateRangeSelectorProps {
 
 const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ 
   onChange,
-  initialPreset = 'last30days' 
+  initialPreset = 'last_28d' // Default to last_28d
 }) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(initialPreset);
   const [dateRange, setDateRange] = useState<DateRange>(() => {
-    // Initialize with last 30 days as default
+    // Initialize with last 28 days as default
     const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    return { from: thirtyDaysAgo, to: today };
+    const twentyEightDaysAgo = new Date();
+    twentyEightDaysAgo.setDate(today.getDate() - 28); // Updated from 30 to 28
+    return { from: twentyEightDaysAgo, to: today };
   });
 
-  // Apply initial preset on first mount
+  // Handle backward compatibility for old preset values
   useEffect(() => {
-    handlePresetChange(initialPreset);
+    // If initialPreset is 'last30days', convert it to 'last_28d'
+    const normalizedPreset = initialPreset === 'last30days' ? 'last_28d' : initialPreset;
+    handlePresetChange(normalizedPreset);
+    
+    // Log the preset conversion for debugging
+    if (initialPreset === 'last30days') {
+      console.log('[DATE PRESET] Converting legacy "last30days" to "last_28d"');
+    }
   }, [initialPreset]);
 
   const handlePresetChange = (preset: string) => {
@@ -86,11 +93,15 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         sevenDaysAgo.setHours(0, 0, 0, 0); // Start of 7 days ago
         newRange = { from: sevenDaysAgo, to: today };
         break;
-      case 'last30days':
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(today.getDate() - 30);
-        thirtyDaysAgo.setHours(0, 0, 0, 0); // Start of 30 days ago
-        newRange = { from: thirtyDaysAgo, to: today };
+      case 'last30days': // Handle legacy case
+      case 'last_28d':
+        const twentyEightDaysAgo = new Date();
+        twentyEightDaysAgo.setDate(today.getDate() - 28); // Updated from 30 to 28
+        twentyEightDaysAgo.setHours(0, 0, 0, 0); // Start of 28 days ago
+        newRange = { from: twentyEightDaysAgo, to: today };
+        
+        // Always use the new format
+        preset = 'last_28d';
         break;
       case 'custom':
         // Keep existing date range for custom

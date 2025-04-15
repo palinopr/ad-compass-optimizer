@@ -13,7 +13,7 @@ export type CampaignFilters = {
 export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   const [filters, setFilters] = useState<CampaignFilters>({
     dateRange: null,
-    datePreset: 'last_28d',  // Updated from 'last30days'
+    datePreset: 'last_28d',  // Using last_28d consistently
     status: null,
     search: '',
   });
@@ -22,7 +22,7 @@ export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   useEffect(() => {
     const today = new Date();
     const twentyEightDaysAgo = new Date();
-    twentyEightDaysAgo.setDate(today.getDate() - 28); // Updated from 30 to 28
+    twentyEightDaysAgo.setDate(today.getDate() - 28); // Using 28 days consistently
     setFilters(prev => ({
       ...prev,
       dateRange: { from: twentyEightDaysAgo, to: today }

@@ -15,10 +15,17 @@ export class InsightsRequestBuilder {
     if (options.timeRange) {
       params.append('time_range', JSON.stringify(options.timeRange));
     } else if (options.datePreset) {
-      params.append('date_preset', options.datePreset);
+      // Ensure we always use last_28d when last_30d or last30days was provided
+      let datePreset = options.datePreset;
+      if (datePreset === 'last_30d' || datePreset === 'last30days') {
+        console.log(`[INSIGHTS] Converting legacy date preset "${datePreset}" to "last_28d"`);
+        datePreset = 'last_28d';
+      }
+      params.append('date_preset', datePreset);
     } else {
-      // Default to last 30 days if no time range specified
-      params.append('date_preset', 'last_30d');
+      // Default to last_28d if no time range specified (updated from last_30d)
+      params.append('date_preset', 'last_28d');
+      console.log('[INSIGHTS] Using default date preset: last_28d');
     }
     
     // Add fields parameter

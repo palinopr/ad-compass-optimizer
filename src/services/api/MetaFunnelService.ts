@@ -104,7 +104,7 @@ export class MetaFunnelService {
       
       // If batch fails or returns no campaigns, try direct API call
       console.log('[META FUNNEL] Attempting direct API call to fetch campaigns');
-      const fields = 'id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
+      const fields = 'id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_28d){impressions,clicks,spend,actions,cost_per_action_type}';
       const url = `${API_BASE_URL}/${API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log('[META FUNNEL] Direct API URL:', url.replace(token, 'REDACTED'));

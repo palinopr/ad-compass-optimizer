@@ -16,6 +16,7 @@ import AdAccountSection from '@/components/meta/integration/AdAccountSection';
 import { metaAuthService } from '@/services/MetaAuthService';
 import DebuggerPanel from '@/components/campaigns/debugger/DebuggerPanel';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
+import { DatePresetVerifier } from '@/utils/debugging/DatePresetVerifier';
 
 // Import the API call logger to activate it
 import '@/utils/debugging/apiCallLogger';
@@ -53,6 +54,13 @@ const Campaigns = () => {
       
       console.log('[CAMPAIGNS] Ensuring real API data is used, mock mode disabled');
     }
+    
+    // Run date preset verification
+    if (process.env.NODE_ENV !== 'production') {
+      setTimeout(() => {
+        DatePresetVerifier.verifyAllDatePresets();
+      }, 1000);
+    }
   }, []);
   
   // Ensure we fetch fresh data when the component mounts with insights
@@ -77,6 +85,16 @@ const Campaigns = () => {
       hasPermissions, 
       hasAdAccount 
     });
+    
+    // Check if the CampaignQueryBuilder is correctly configured
+    try {
+      const { CampaignQueryBuilder } = require('@/services/api/campaign/fetching/campaignQueryBuilder');
+      const campaignQuery = CampaignQueryBuilder.buildCampaignQuery();
+      const datePreset = campaignQuery.match(/date_preset\(([^)]+)\)/)?.[1];
+      console.log('[CAMPAIGNS DEBUG] CampaignQueryBuilder is using date preset:', datePreset);
+    } catch (e) {
+      console.error('[CAMPAIGNS DEBUG] Error checking CampaignQueryBuilder:', e);
+    }
   }, [isAuthenticated, hasPermissions, hasAdAccount, campaigns.length, selectedAdAccount]);
 
   return (

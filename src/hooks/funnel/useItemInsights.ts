@@ -19,9 +19,11 @@ export const useItemInsights = () => {
       }
 
       const options: InsightFilterOptions = {
-        datePreset: 'last_30d',
+        datePreset: 'last_28d', // Updated from last_30d to last_28d
         fields: ['spend', 'ctr', 'impressions'],
       };
+
+      console.log(`[INSIGHTS] Fetching ${itemType} insights using date preset: ${options.datePreset}`);
 
       const response = itemType === 'campaign' 
         ? await MetaInsightsService.fetchCampaignInsights(token, itemId, options)
