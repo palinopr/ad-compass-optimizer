@@ -44,4 +44,22 @@ export class MetaAdAccountService extends BaseApiService {
       return this.handleApiError(error, 'fetchAdAccounts');
     }
   }
+
+  public static async fetchAdAccountDetails(token: string, accountId: string): Promise<MetaAdAccount> {
+    try {
+      this.validateToken(token, 'fetchAdAccountDetails');
+      
+      // Ensure accountId has act_ prefix
+      const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+      
+      const response = await fetch(
+        `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}?fields=name,account_id,account_status,currency&access_token=${token}`
+      );
+      
+      const data = await this.processApiResponse(response, 'fetchAdAccountDetails');
+      return data;
+    } catch (error) {
+      return this.handleApiError(error, 'fetchAdAccountDetails');
+    }
+  }
 }

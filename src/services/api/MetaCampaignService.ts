@@ -9,9 +9,9 @@ export interface MetaCampaign {
   status: string;
   daily_budget?: string;
   lifetime_budget?: string;
-  budget?: string;
-  spend?: string;
-  results?: string;
+  budget?: string; // Derived field
+  spend?: string; // Derived field
+  results?: string; // Derived field
   cost_per_result?: string;
   created_time?: string;
   updated_time?: string;
@@ -22,8 +22,8 @@ export interface MetaCampaign {
     impressions: string;
     clicks: string;
     spend: string;
-    cpa?: string;
-    roas?: string;
+    cpa?: string; // Derived field
+    roas?: string; // Derived field
     cost_per_action_type: Array<{
       action_type: string;
       value: string;
