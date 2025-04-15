@@ -74,7 +74,7 @@ export function useCampaignFetcher() {
         toast({
           title: "Campaign Fetch Throttled",
           description: err.message,
-          variant: "warning",
+          variant: "default",
           duration: 5000,
         });
         return { campaigns: [], error: err.message };
