@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { MetaInsightsService, InsightFilterOptions } from '@/services/api/MetaInsightsService';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -54,37 +55,51 @@ export const useItemInsights = () => {
         fields: commonFields,
       };
 
-      // Handle today/yesterday using time_range instead of date_preset
+      // Prepare requests array for batching
+      const requests: (() => Promise<any>)[] = [];
+      
+      // For today/yesterday, use time_range with time_increment=1 instead of date_preset
       if (['today', 'yesterday'].includes(validDatePreset)) {
         const timeRange = getDateRange(validDatePreset);
-        baseOptions = {
+        const timeRangeOptions: InsightFilterOptions = {
           ...baseOptions,
           timeRange,
           timeIncrement: 1
         };
+        
+        // Primary request with time_range
+        requests.push(() => itemType === 'campaign' 
+          ? MetaInsightsService.fetchCampaignInsights(token, itemId, timeRangeOptions)
+          : MetaInsightsService.fetchAdSetInsights(token, itemId, timeRangeOptions));
       } else {
+        // For other presets, use date_preset
         baseOptions.datePreset = validDatePreset as InsightFilterOptions['datePreset'];
+        
+        // Primary request with date_preset
+        requests.push(() => itemType === 'campaign' 
+          ? MetaInsightsService.fetchCampaignInsights(token, itemId, baseOptions)
+          : MetaInsightsService.fetchAdSetInsights(token, itemId, baseOptions));
       }
 
-      // Execute primary request
-      const primaryRequest = () => itemType === 'campaign' 
-        ? MetaInsightsService.fetchCampaignInsights(token, itemId, baseOptions)
-        : MetaInsightsService.fetchAdSetInsights(token, itemId, baseOptions);
+      // Add maximum fallback for all cases
+      requests.push(() => {
+        const maximumOptions = { ...baseOptions, datePreset: 'maximum' };
+        return itemType === 'campaign'
+          ? MetaInsightsService.fetchCampaignInsights(token, itemId, maximumOptions)
+          : MetaInsightsService.fetchAdSetInsights(token, itemId, maximumOptions);
+      });
 
-      // Execute request with throttling
-      const response = await InsightsRequestThrottler.throttleRequests([primaryRequest]);
-      const validResponse = response[0];
+      // Execute requests with throttling
+      const results = await InsightsRequestThrottler.throttleRequests(requests);
+      
+      // Find first valid response with data
+      const validResponse = results.find(response => response?.data?.length > 0) || results[0];
 
-      if (!validResponse || !validResponse.data?.length) {
-        // Try maximum as last resort
-        console.log('[INSIGHTS] No data from primary request, trying maximum preset');
-        const maximumResponse = await (itemType === 'campaign'
-          ? MetaInsightsService.fetchCampaignInsights(token, itemId, { ...baseOptions, datePreset: 'maximum' })
-          : MetaInsightsService.fetchAdSetInsights(token, itemId, { ...baseOptions, datePreset: 'maximum' }));
-        
-        transformAndSetInsights(maximumResponse);
-      } else {
+      if (validResponse) {
         transformAndSetInsights(validResponse);
+      } else {
+        console.error('[INSIGHTS] No data from any fetch attempt');
+        setError('No insights data available');
       }
 
     } catch (err: any) {
