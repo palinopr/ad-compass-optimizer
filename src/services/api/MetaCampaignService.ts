@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { InsightsThrottling } from './insights/throttling';
 import { MetaFunnelService } from './MetaFunnelService';
@@ -30,7 +31,12 @@ export interface MetaCampaign {
 
 export class MetaCampaignService extends BaseApiService {
   private static isMockMode(): boolean {
-    return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+    try {
+      return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+    } catch (e) {
+      console.error("Error checking mock mode:", e);
+      return false;
+    }
   }
 
   public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
@@ -46,6 +52,12 @@ export class MetaCampaignService extends BaseApiService {
     
       if (!adAccountId) {
         throw new Error('Ad Account ID is required');
+      }
+      
+      // Reject mock account IDs in real mode
+      if (adAccountId.includes('mock')) {
+        console.error('[CAMPAIGN FETCH] Cannot use mock account ID in real mode');
+        throw new Error('Invalid account ID: mock accounts cannot be used in real mode');
       }
 
       if (!this.isMockMode()) {

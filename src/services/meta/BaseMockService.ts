@@ -3,6 +3,7 @@ import { MockApiService } from '../api/mock/MockApiService';
 import { RateLimitManager } from '../api/rate-limit/RateLimitManager';
 import { RequestQueueManager } from '../api/queue/RequestQueueManager';
 import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
+import { CampaignThrottling } from '../api/campaign/throttling';
 
 export abstract class BaseMockService {
   protected static readonly API_VERSION = 'v17.0';
@@ -69,6 +70,7 @@ export abstract class BaseMockService {
     }
   }
 
+  // Updated to use proper throttling logic instead of a non-existent method
   public static async executeWithRateLimiting<T>(
     requestFn: () => Promise<T>, 
     options: { bypassQueue?: boolean, skipRateLimitCheck?: boolean } = {}
@@ -78,45 +80,41 @@ export abstract class BaseMockService {
       return Promise.resolve({} as T);
     }
 
-    if (!options.skipRateLimitCheck && RateLimitManager.isRateLimited() && !RateLimitManager.isRateLimitOverridden()) {
-      const remainingTime = RateLimitManager.getRateLimitTimeRemaining();
-      console.log(`API is rate limited. Remaining time: ${remainingTime} seconds`);
+    // Check throttling using CampaignThrottling
+    try {
+      CampaignThrottling.checkThrottling();
+    } catch (throttleError: any) {
+      console.warn('API request throttled:', throttleError.message);
       
       if (options.bypassQueue) {
-        throw new Error(`API rate limit in effect. Please retry after ${remainingTime} seconds.`);
+        throw throttleError;
       }
       
+      // Queue the request if not bypassing queue
       return RequestQueueManager.addToQueue(requestFn);
     }
     
     try {
       return await requestFn();
     } catch (error: any) {
-      if (this.isRateLimitError(error)) {
-        const { retryAfter, code, message } = this.handleRateLimitError(error);
-        RateLimitManager.setRateLimit(retryAfter, { code, message });
+      // Check if it's a rate limit error
+      const isRateLimit = error?.code === 4 || 
+                          error?.code === 17 || 
+                          error?.status === 429 ||
+                          (error?.message && error?.message.toLowerCase().includes('rate limit'));
+      
+      if (isRateLimit) {
+        console.warn('Rate limit detected:', error.message || 'Rate limit error');
         
         if (options.bypassQueue) {
           throw error;
         }
         
+        // Queue the request
         return RequestQueueManager.addToQueue(requestFn);
       }
       
       throw error;
     }
-  }
-
-  private static isRateLimitError(error: any): boolean {
-    return error?.code === 4 || error?.code === 17 || error?.code === 32 ||
-           (error?.code >= 80000 && error?.code <= 80014);
-  }
-
-  private static handleRateLimitError(error: any): { retryAfter: number, code: number, message: string } {
-    return {
-      retryAfter: error.retryAfter || 60,
-      code: error.code,
-      message: error.message || 'Rate limit exceeded'
-    };
   }
 }

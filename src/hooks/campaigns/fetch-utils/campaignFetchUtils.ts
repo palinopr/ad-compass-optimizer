@@ -3,6 +3,7 @@ import { toast } from '@/hooks/use-toast';
 import { BaseApiService } from '@/services/api/BaseApiService';
 import { validateToken } from './tokenUtils';
 import { runFinalDiagnosticCheck } from '@/utils/campaign-diagnostics/finalDiagnosticCheck';
+import { CampaignThrottling } from '@/services/api/campaign/throttling';
 
 export const handleSuccessfulFetch = (
   campaigns: any[],
@@ -52,6 +53,11 @@ export const logFetchDetails = (
   token: string | null,
   error?: any
 ) => {
+  // Check for mock accounts
+  if (adAccountId && adAccountId.includes('mock')) {
+    console.warn('[CAMPAIGNS TAB] ⚠️ Attempted to use mock account:', adAccountId);
+  }
+  
   if (error) {
     console.error('[CAMPAIGNS TAB] Fetch error details:', {
       error,
@@ -62,12 +68,19 @@ export const logFetchDetails = (
     return;
   }
 
+  // Get the last manual fetch time for logging
+  const lastManualFetch = CampaignThrottling.getLastManualFetchTime();
+  if (lastManualFetch) {
+    console.log(`[CAMPAIGNS TAB] Last manual fetch time: ${lastManualFetch}`);
+  }
+
   console.log('[CAMPAIGNS TAB] Preparing to call API with:', {
     adAccountId,
     tokenLength: token?.length,
     tokenStart: token?.substring(0, 5) + '...',
     tokenEnd: '...' + token?.substring(token?.length - 5),
-    endpoint: `/act_${adAccountId}/campaigns`
+    endpoint: `/act_${adAccountId}/campaigns`,
+    lastManualFetch
   });
 };
 
@@ -76,6 +89,12 @@ export const prepareFetchRequest = async (
   adAccountId: string,
   isMockMode: boolean
 ) => {
+  // Check for mock accounts in real mode
+  if (!isMockMode && adAccountId && adAccountId.includes('mock')) {
+    console.error('[CAMPAIGNS TAB] Cannot use mock account in real mode:', adAccountId);
+    return { error: 'Cannot use mock account in real mode' };
+  }
+
   if (!isMockMode) {
     const tokenValidation = validateToken(token);
     console.log('[CAMPAIGNS TAB] Token validation:', tokenValidation);

@@ -10,7 +10,16 @@ export class CampaignThrottling {
   private static readonly MANUAL_FETCH_KEY = 'last_manual_campaign_fetch';
 
   public static isMockMode(): boolean {
-    return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+    try {
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return false;
+      }
+      
+      return MockApiService.isMockMetaApiMode() || localStorage.getItem("USE_MOCK_MODE") === "true";
+    } catch (e) {
+      console.error("Error checking mock mode in throttling:", e);
+      return false;
+    }
   }
 
   public static checkThrottling(accountId?: string): void {
@@ -25,15 +34,19 @@ export class CampaignThrottling {
     
     if (now - lastFetch < this.MIN_INTERVAL_MS) {
       const remainingSeconds = Math.ceil((this.MIN_INTERVAL_MS - (now - lastFetch)) / 1000);
-      const error = new Error('⏳ Please wait 30 seconds between refreshes to avoid API limits');
+      const error = new Error(`⏳ Please wait ${remainingSeconds} seconds between refreshes to avoid API limits`);
       error.name = 'ThrottleError';
       throw error;
     }
     
     // Store the fetch timestamp
     localStorage.setItem(this.THROTTLE_KEY, now.toString());
-    localStorage.setItem(this.MANUAL_FETCH_KEY, new Date().toISOString());
-    console.log('✅ Campaign fetch throttle check passed');
+    
+    // Record the manual fetch time with ISO string format for display
+    const fetchTime = new Date().toISOString();
+    localStorage.setItem(this.MANUAL_FETCH_KEY, fetchTime);
+    console.log(`✅ Campaign fetch throttle check passed at ${fetchTime}`);
+    console.log(`✅ Using account: ${accountId || 'unknown'}`);
   }
 
   public static clearThrottling(): void {

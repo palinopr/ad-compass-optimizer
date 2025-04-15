@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -33,6 +34,26 @@ export function useCampaignFetcher() {
     console.log('[CAMPAIGNS DEBUG] Selected Ad Account:', adAccountId);
     console.log('[CAMPAIGNS DEBUG] Status filter:', status || 'all');
     console.log('[CAMPAIGNS DEBUG] Force refresh:', forceRefresh);
+    
+    // Validate account ID to prevent mock accounts in real mode
+    if (!adAccountId) {
+      console.error('[CAMPAIGNS DEBUG] Missing ad account ID');
+      return { 
+        campaigns: [], 
+        error: 'Missing ad account ID',
+        errorDetails: { invalid: true }
+      };
+    }
+
+    // Prevent using mock accounts in real mode
+    if (!token && adAccountId.includes('mock')) {
+      console.error('[CAMPAIGNS DEBUG] Attempted to use mock account in real mode:', adAccountId);
+      return { 
+        campaigns: [], 
+        error: 'Cannot use mock accounts in real mode',
+        errorDetails: { invalid: true }
+      };
+    }
     
     if (!canFetch()) {
       console.log('[CAMPAIGNS DEBUG] Fetch blocked: already in progress or throttled');
