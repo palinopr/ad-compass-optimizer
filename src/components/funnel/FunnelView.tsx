@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,7 +54,7 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
   const renderMetrics = (item: any) => (
     <div className="grid grid-cols-4 gap-4 text-sm text-gray-600">
       <div>
-        <span className="font-medium">Spend:</span> {getMetricDisplay(item.spend)}
+        <span className="font-medium">Spend:</span> {getMetricDisplay(item.insights?.spend || item.spend)}
       </div>
       <div>
         <span className="font-medium">Status:</span>{' '}
@@ -68,8 +67,8 @@ const FunnelView: React.FC<FunnelViewProps> = ({ campaigns, adsets, ads }) => {
         {getMetricDisplay(item.insights?.impressions)}
       </div>
       <div>
-        <span className="font-medium">CTR:</span>{' '}
-        {getMetricDisplay(item.insights?.ctr)}
+        <span className="font-medium">Clicks:</span>{' '}
+        {getMetricDisplay(item.insights?.clicks)}
       </div>
     </div>
   );

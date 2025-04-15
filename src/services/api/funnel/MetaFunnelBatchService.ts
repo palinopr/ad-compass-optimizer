@@ -8,21 +8,21 @@ export class MetaFunnelBatchService {
     
     console.log('[META FUNNEL] Building batch requests for account:', formattedId);
     
-    // Return properly formatted batch requests
+    // Return properly formatted batch requests with insights fields included
     return [
       {
         method: 'GET',
-        relative_url: `${formattedId}/campaigns?fields=id,name,objective,status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget`,
+        relative_url: `${formattedId}/campaigns?fields=id,name,objective,status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}`,
         name: 'campaigns'
       },
       {
         method: 'GET',
-        relative_url: `${formattedId}/adsets?fields=id,name,campaign_id,status`,
+        relative_url: `${formattedId}/adsets?fields=id,name,campaign_id,status,insights.date_preset(last_30_days){impressions,clicks,spend}`,
         name: 'adsets'
       },
       {
         method: 'GET',
-        relative_url: `${formattedId}/ads?fields=id,name,adset_id,status`,
+        relative_url: `${formattedId}/ads?fields=id,name,adset_id,status,insights.date_preset(last_30_days){impressions,clicks,spend}`,
         name: 'ads'
       }
     ];

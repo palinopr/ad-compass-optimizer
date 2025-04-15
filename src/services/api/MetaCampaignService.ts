@@ -57,7 +57,7 @@ export class MetaCampaignService extends BaseApiService {
       // Check if we should throttle the request
       CampaignThrottling.checkThrottling(adAccountId);
 
-      // Build the proper GET URL with correct fields parameter
+      // Build the proper GET URL with correct fields parameter - now including insights fields
       const fields = 'name,status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
       const url = `${this.BASE_URL}/${this.API_VERSION}/act_${cleanAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
@@ -173,18 +173,39 @@ export class MetaCampaignService extends BaseApiService {
       }
       
       let results = '0';
-      let spend = campaign.insights?.spend || '$0.00';
+      let spend = '$0.00';
+      let impressions = '0';
+      let clicks = '0';
+      let cpa = '-';
       
-      if (campaign.insights?.data?.[0]) {
+      // Process insights data if available
+      if (campaign.insights && campaign.insights.data && campaign.insights.data.length > 0) {
         const insightData = campaign.insights.data[0];
         
+        // Format impressions with commas
+        if (insightData.impressions) {
+          const impressionsVal = parseInt(insightData.impressions);
+          impressions = impressionsVal.toLocaleString();
+        }
+        
+        // Format clicks with commas
+        if (insightData.clicks) {
+          const clicksVal = parseInt(insightData.clicks);
+          clicks = clicksVal.toLocaleString();
+        }
+        
+        // Format spend as currency
+        if (insightData.spend) {
+          const spendVal = parseFloat(insightData.spend);
+          spend = `$${spendVal.toFixed(2)}`;
+        }
+        
         // Calculate CPA
-        let cpa = '-';
         const purchaseCpa = insightData.cost_per_action_type?.find(
           (item: any) => item.action_type === 'purchase'
         );
         if (purchaseCpa) {
-          cpa = purchaseCpa.value;
+          cpa = `$${parseFloat(purchaseCpa.value).toFixed(2)}`;
         }
         
         // Calculate results (purchases)
@@ -196,9 +217,22 @@ export class MetaCampaignService extends BaseApiService {
         }
         
         campaign.insights = {
-          ...insightData,
+          impressions,
+          clicks,
+          spend,
           cpa,
-          spend: insightData.spend || '$0.00'
+          actions: insightData.actions || [],
+          cost_per_action_type: insightData.cost_per_action_type || []
+        };
+      } else {
+        // Ensure insights object exists even if no data
+        campaign.insights = {
+          impressions: '0',
+          clicks: '0',
+          spend: '$0.00',
+          cpa: '-',
+          actions: [],
+          cost_per_action_type: []
         };
       }
       
@@ -206,7 +240,7 @@ export class MetaCampaignService extends BaseApiService {
         ...campaign,
         budget,
         results,
-        spend
+        spend: campaign.insights.spend
       };
     });
   }
