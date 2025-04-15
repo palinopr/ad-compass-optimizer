@@ -24,22 +24,31 @@ export const useItemInsights = () => {
       }
 
       // Map any legacy presets to valid Meta API values
-      const validDatePreset = mapToValidDatePreset(datePreset) as InsightFilterOptions['datePreset'];
+      const validDatePreset = mapToValidDatePreset(datePreset);
+      console.log(`[INSIGHTS] Using validated date preset: ${validDatePreset}`);
 
       const options: InsightFilterOptions = {
-        datePreset: validDatePreset,
-        fields: ['spend', 'ctr', 'impressions'],
+        datePreset: validDatePreset as InsightFilterOptions['datePreset'],
+        fields: [
+          'spend',
+          'ctr',
+          'impressions',
+          'actions',
+          'cost_per_action_type',
+          'website_purchase_roas'
+        ],
       };
 
-      console.log(`[INSIGHTS] Fetching ${itemType} insights using date preset: ${options.datePreset}`);
-
       try {
+        console.log(`[INSIGHTS] Fetching ${itemType} insights using date preset: ${options.datePreset}`);
+        
         const response = itemType === 'campaign' 
           ? await MetaInsightsService.fetchCampaignInsights(token, itemId, options)
           : await MetaInsightsService.fetchAdSetInsights(token, itemId, options);
 
         // Check if we have meaningful data
         if (!response.data || response.data.length === 0) {
+          console.log('[INSIGHTS] No data with current preset, trying maximum');
           throw new Error('No insights data available with the current date preset');
         }
 
@@ -61,12 +70,19 @@ export const useItemInsights = () => {
 
         setInsights(transformedData);
       } catch (err) {
-        console.error(`[INSIGHTS] Error with date preset ${validDatePreset}, trying maximum:`, err);
+        console.log(`[INSIGHTS] Error with date preset ${validDatePreset}, trying maximum:`, err);
         
         // Try with maximum preset if original request failed
         const fallbackOptions: InsightFilterOptions = {
           datePreset: 'maximum',
-          fields: ['spend', 'ctr', 'impressions'],
+          fields: [
+            'spend',
+            'ctr',
+            'impressions',
+            'actions',
+            'cost_per_action_type',
+            'website_purchase_roas'
+          ],
         };
         
         console.log(`[INSIGHTS] Falling back to maximum preset for ${itemType} ${itemId}`);
@@ -75,7 +91,6 @@ export const useItemInsights = () => {
           ? await MetaInsightsService.fetchCampaignInsights(token, itemId, fallbackOptions)
           : await MetaInsightsService.fetchAdSetInsights(token, itemId, fallbackOptions);
         
-        // Transform the data for charting
         const transformedData = {
           spend: fallbackResponse.data.map((d: any) => ({
             date: d.date_start,

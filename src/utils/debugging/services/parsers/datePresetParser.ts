@@ -75,6 +75,8 @@ export const mapToValidDatePreset = (preset?: string): string => {
     'last30days': 'last_28d',
     'last_30d': 'last_28d',
     'last7days': 'last_7d',
+    'today': 'today',          // Explicit mapping for clarity
+    'yesterday': 'yesterday'   // Explicit mapping for clarity
   };
   
   // If it's a legacy preset, map it
