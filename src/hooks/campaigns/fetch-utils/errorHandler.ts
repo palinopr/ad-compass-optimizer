@@ -30,57 +30,30 @@ export const handleApiError = async (apiErr: any): Promise<{
       // Store the complete error details
       errorDetails = responseData;
       
-      // Check for rate limit errors - now checking more Meta rate limit error codes
-      // Meta error codes: 4 (app rate limit), 17 (user rate limit), 80000-80014 (BUC rate limits)
-      if (responseData.error && 
-          (responseData.error.code === 4 || 
-           responseData.error.code === 17 ||
-           (responseData.error.code >= 80000 && responseData.error.code <= 80014) ||
-           responseData.error.message?.includes('rate limit') || 
-           responseData.error.message?.includes('request limit') ||
-           responseData.error.message?.includes('too many calls'))) {
+      // Check for specific Meta API errors
+      if (responseData.error) {
+        apiErrorMessage = `Meta API Error ${responseData.error.code}: ${responseData.error.message}`;
         
-        console.log('[API ERROR DEBUG] Rate limit error detected - code:', responseData.error.code);
-        markRateLimited();
-        
-        // Parse estimated time to regain access if available in headers
-        let waitTime = "5-10 minutes";
-        if (responseData.headers && 
-            responseData.headers['x-business-use-case-usage'] || 
-            responseData.headers['x-app-usage']) {
-          try {
-            // Try to extract estimated time from business use case header
-            const usageData = JSON.parse(responseData.headers['x-business-use-case-usage'] || '{}');
-            const businessId = Object.keys(usageData)[0];
-            if (businessId && usageData[businessId][0]?.estimated_time_to_regain_access) {
-              waitTime = `${usageData[businessId][0].estimated_time_to_regain_access} minutes`;
-            }
-          } catch (headerErr) {
-            console.error('[API ERROR DEBUG] Failed to parse rate limit headers:', headerErr);
-          }
+        // Add specific error context based on code
+        if (responseData.error.code === 190) {
+          apiErrorMessage += "\nYour access token has expired or is invalid.";
+        } else if (responseData.error.code === 200) {
+          apiErrorMessage += "\nPermission denied - check app permissions.";
+        } else if (responseData.error.code === 100) {
+          apiErrorMessage += "\nInvalid parameter in request.";
         }
         
-        apiErrorMessage = `Meta API rate limit reached. Please wait ${waitTime} before trying again.`;
-        isRateLimitDetected = true;
-      }
-      else if (responseData.error && responseData.error.message) {
-        apiErrorMessage = responseData.error.message;
-        
-        // Add more context based on error code
-        if (responseData.error.code === 200) {
-          apiErrorMessage += " (Permission error)";
-        } else if (responseData.error.code === 100) {
-          apiErrorMessage += " (Invalid parameter)";
-        } else if (responseData.error.code === 190) {
-          apiErrorMessage += " (Invalid/expired access token)";
-        } else if (responseData.error.code === 294) {
-          apiErrorMessage += " (Ad account access denied)";
-        } else if (responseData.error.code === 2601) {
-          apiErrorMessage += " (App Review required)";
+        // Check for rate limit errors
+        if (responseData.error.code === 4 || 
+            responseData.error.code === 17 ||
+            (responseData.error.code >= 80000 && responseData.error.code <= 80014) ||
+            responseData.error.message?.toLowerCase().includes('rate limit')) {
+          isRateLimitDetected = true;
         }
       }
     } catch (jsonErr) {
       console.error('[API ERROR DEBUG] Failed to parse API error response:', jsonErr);
+      apiErrorMessage = "Failed to load campaigns. Check console for full error.";
       
       // Try to get raw text
       try {
@@ -91,17 +64,6 @@ export const handleApiError = async (apiErr: any): Promise<{
         console.error('[API ERROR DEBUG] Failed to get response text:', textErr);
       }
     }
-  } else {
-    console.error('[API ERROR DEBUG] No response object found in error');
-    // Store whatever error data we have
-    errorDetails = {
-      errorType: typeof apiErr,
-      errorObject: apiErr instanceof Error ? { 
-        name: apiErr.name, 
-        message: apiErr.message, 
-        stack: apiErr.stack 
-      } : apiErr
-    };
   }
   
   // Store error details for diagnostics

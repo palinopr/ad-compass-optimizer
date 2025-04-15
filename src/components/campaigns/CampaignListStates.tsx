@@ -4,6 +4,7 @@ import { CircleX, AlertCircle, FileX, RefreshCw, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CampaignLoadingTroubleshooter from '@/components/meta/CampaignLoadingTroubleshooter';
 import { Link } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export const LoadingState = () => (
   <div className="flex flex-col items-center justify-center p-12 text-gray-500">
@@ -25,8 +26,23 @@ export const ErrorState = ({
   onRetry: () => void;
   errorDetails?: any;
 }) => {
+  // Format error message for display
+  const displayError = error.includes('\n') ? error.split('\n').map((line, i) => (
+    <React.Fragment key={i}>
+      {line}
+      <br />
+    </React.Fragment>
+  )) : error;
+
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-4">
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription className="mt-2 whitespace-pre-line font-mono text-sm">
+          {displayError}
+        </AlertDescription>
+      </Alert>
+      
       <CampaignLoadingTroubleshooter
         errorDetails={errorDetails}
         onRetry={onRetry}
