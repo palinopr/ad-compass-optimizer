@@ -1,70 +1,55 @@
 
-import { MetaCampaignService } from '@/services/api/MetaCampaignService';
-import { toast } from '@/hooks/use-toast';
+import { metaAuthService } from '@/services/MetaAuthService';
+import { BaseApiService } from '@/services/api/BaseApiService';
 
-export const runFinalDiagnosticCheck = async () => {
-  console.log('\n=== 🔍 [FINAL CHECK] Campaign Diagnostic ===\n');
-  
-  // Check token and auth status
-  const token = localStorage.getItem('meta_access_token');
-  const selectedAccount = localStorage.getItem('selected_ad_account');
-  const isMockMode = localStorage.getItem('USE_MOCK_MODE') === 'true';
-  
-  console.log(`[FINAL CHECK] Auth Token: ${token ? '✅ Present' : '❌ Missing'}`);
-  console.log(`[FINAL CHECK] Token Length: ${token?.length || 0} chars`);
-  console.log(`[FINAL CHECK] Ad Account: ${selectedAccount || 'Not Selected'}`);
-  console.log(`[FINAL CHECK] Mock Mode: ${isMockMode ? '⚠️ Active' : '✅ Disabled'}`);
-  
-  if (!token || !selectedAccount) {
-    console.error('[FINAL CHECK] ❌ Missing required credentials');
-    return {
-      success: false,
-      error: 'Missing credentials'
-    };
-  }
-
+/**
+ * Run a final diagnostic check before making API requests
+ * This helps prevent known error conditions
+ */
+export const runFinalDiagnosticCheck = async (): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Attempt to fetch campaigns
-    const startTime = performance.now();
-    const result = await MetaCampaignService.fetchCampaigns(token, selectedAccount);
-    const endTime = performance.now();
+    // Check token
+    const token = metaAuthService.getAccessToken();
+    if (!token || token.length < 50) {
+      return { 
+        success: false, 
+        error: 'No valid Meta access token found' 
+      };
+    }
     
-    console.log('\n[FINAL CHECK] API Response:');
-    console.log(`Source: ${isMockMode ? 'Mock API' : 'Live Meta API'}`);
-    console.log(`Status: Success`);
-    console.log(`Campaigns Found: ${result.length}`);
-    console.log(`Response Time: ${Math.round(endTime - startTime)}ms`);
+    // Check selected ad account
+    const adAccountId = localStorage.getItem('selected_ad_account');
+    if (!adAccountId) {
+      return { 
+        success: false, 
+        error: 'No ad account selected' 
+      };
+    }
     
-    // Log success state
-    toast({
-      title: "✅ Diagnostic Complete",
-      description: `Found ${result.length} campaigns in ${Math.round(endTime - startTime)}ms`,
-    });
-
-    return {
-      success: true,
-      campaignCount: result.length,
-      responseTime: Math.round(endTime - startTime)
-    };
-  } catch (error: any) {
-    console.error('\n[FINAL CHECK] ❌ Error:', error);
-    console.error('Error Details:', error?.response ? {
-      status: error.response.status,
-      statusText: error.response.statusText,
-      message: error.message
-    } : error);
+    // Test basic connection to Meta API
+    try {
+      const MetaApiService = (await import('@/services/api/MetaApiService')).default;
+      const result = await MetaApiService.testConnection(token);
+      
+      if (!result.success) {
+        return { 
+          success: false, 
+          error: result.error || 'Connection test failed' 
+        };
+      }
+    } catch (e: any) {
+      return { 
+        success: false, 
+        error: `API connection failed: ${e.message}` 
+      };
+    }
     
-    toast({
-      title: "❌ Diagnostic Failed",
-      description: error?.message || "Failed to fetch campaigns",
-      variant: "destructive"
-    });
-
-    return {
-      success: false,
-      error: error?.message || 'Unknown error',
-      details: error
+    // All checks passed
+    return { success: true };
+  } catch (e: any) {
+    return { 
+      success: false, 
+      error: `Diagnostic check failed: ${e.message}` 
     };
   }
 };
-
