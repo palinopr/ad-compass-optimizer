@@ -4,7 +4,7 @@ import { useCampaigns } from '@/hooks/campaigns';
 import FunnelView from './FunnelView';
 import FunnelControls from './FunnelControls';
 import { Card } from '@/components/ui/card';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, Bug } from 'lucide-react';
 import { MetaFunnelService } from '@/services/api/MetaFunnelService';
 import { useState, useEffect } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -23,6 +23,7 @@ const FunnelViewContainer = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [rawApiResponse, setRawApiResponse] = useState<any>(null);
   const [lastRequestDetails, setLastRequestDetails] = useState<any>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   const {
     filteredData,
@@ -46,6 +47,31 @@ const FunnelViewContainer = () => {
       description: "Fetching latest data from Meta..."
     });
   };
+
+  // Load raw API response for debugging
+  useEffect(() => {
+    try {
+      const storedResponse = localStorage.getItem('raw_campaign_response');
+      if (storedResponse) {
+        const parsed = JSON.parse(storedResponse);
+        setRawApiResponse(parsed);
+      }
+      
+      const storedError = localStorage.getItem('raw_campaign_error_response');
+      if (storedError) {
+        try {
+          const parsedError = JSON.parse(storedError);
+          if (!rawApiResponse) {
+            setRawApiResponse({ error: parsedError });
+          }
+        } catch (e) {
+          console.error('[FUNNEL DEBUG] Error parsing error response:', e);
+        }
+      }
+    } catch (e) {
+      console.error('[FUNNEL DEBUG] Error loading stored API response:', e);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchFunnelData = async () => {
@@ -105,7 +131,14 @@ const FunnelViewContainer = () => {
         console.log('[FUNNEL] Fetching funnel data for account:', formattedAccount);
         
         const data = await MetaFunnelService.fetchFunnelData(token, formattedAccount);
-        setRawApiResponse(data); // Store raw response for debugging
+        
+        // Store raw response for debugging
+        try {
+          localStorage.setItem('raw_campaign_response', JSON.stringify(data));
+          setRawApiResponse(data);
+        } catch (e) {
+          console.error('[FUNNEL] Error storing API response:', e);
+        }
         
         console.log(`[FUNNEL] Received funnel data with ${data.campaigns.length} campaigns`);
         if (data.campaigns.length > 0) {
@@ -139,6 +172,14 @@ const FunnelViewContainer = () => {
             type: err.error.type,
             subcode: err.error.error_subcode
           });
+          
+          // Store error response for debugging
+          try {
+            localStorage.setItem('raw_campaign_error_response', JSON.stringify(err));
+            setRawApiResponse({ error: err.error || err });
+          } catch (e) {
+            console.error('[FUNNEL] Error storing API error:', e);
+          }
         }
         
         // Extract more detailed error information for display
@@ -169,18 +210,28 @@ const FunnelViewContainer = () => {
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Campaign Funnel</h2>
-          <Button 
-            variant="outline" 
-            onClick={handleManualRefresh} 
-            disabled={isFetchingFunnel || campaignsLoading}
-          >
-            {isFetchingFunnel || campaignsLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Refresh Data
-          </Button>
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDebug(!showDebug)}
+              className="flex items-center gap-2"
+            >
+              <Bug className="h-4 w-4" />
+              {showDebug ? "Hide Debug" : "Debug"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleManualRefresh} 
+              disabled={isFetchingFunnel || campaignsLoading}
+            >
+              {isFetchingFunnel || campaignsLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Refresh Data
+            </Button>
+          </div>
         </div>
         
         <FunnelControls
@@ -219,9 +270,12 @@ const FunnelViewContainer = () => {
                     <p><strong>Timestamp:</strong> {lastRequestDetails.timestamp}</p>
                   </div>
                 )}
-                {rawApiResponse && (
-                  <div className="mt-2 text-left text-xs p-2 bg-gray-100 rounded overflow-auto max-h-32">
-                    <pre>{JSON.stringify(rawApiResponse, null, 2)}</pre>
+                {showDebug && rawApiResponse && (
+                  <div className="mt-4 text-left">
+                    <p className="font-medium text-black mb-2">Raw API Response:</p>
+                    <div className="text-left text-xs p-2 bg-gray-100 rounded overflow-auto max-h-96">
+                      <pre className="whitespace-pre-wrap">{JSON.stringify(rawApiResponse, null, 2)}</pre>
+                    </div>
                   </div>
                 )}
               </div>
@@ -238,6 +292,16 @@ const FunnelViewContainer = () => {
                 </Button>
               </div>
             )}
+          </div>
+        )}
+        
+        {/* Debug section for raw API response */}
+        {showDebug && rawApiResponse && filteredData.campaigns.length > 0 && (
+          <div className="mt-4 border-t pt-4">
+            <p className="font-medium mb-2">API Response Debug:</p>
+            <div className="text-xs p-2 bg-gray-100 rounded overflow-auto max-h-96">
+              <pre className="whitespace-pre-wrap">{JSON.stringify(rawApiResponse, null, 2)}</pre>
+            </div>
           </div>
         )}
       </div>

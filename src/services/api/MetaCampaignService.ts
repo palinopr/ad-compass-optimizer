@@ -7,6 +7,7 @@ export interface MetaCampaign {
   id: string;
   name: string;
   status: string;
+  effective_status?: string;
   daily_budget?: string;
   lifetime_budget?: string;
   budget?: string; // Derived field
@@ -57,8 +58,8 @@ export class MetaCampaignService extends BaseApiService {
       // Check if we should throttle the request
       CampaignThrottling.checkThrottling(adAccountId);
 
-      // Build the proper GET URL with fields including insights
-      const fields = 'id,name,status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
+      // Build the proper GET URL with fields including insights and effective_status
+      const fields = 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}';
       const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fields}&access_token=${token}`;
       
       console.log(`[CAMPAIGN FETCH] Request URL: ${url.replace(token, 'REDACTED')}`);
@@ -92,6 +93,13 @@ export class MetaCampaignService extends BaseApiService {
           subcode: error.error_subcode
         });
         
+        // Store raw response for debugging
+        try {
+          localStorage.setItem('raw_campaign_error_response', JSON.stringify(errorData));
+        } catch (e) {
+          console.error('[CAMPAIGN FETCH] Error storing raw error response:', e);
+        }
+        
         throw {
           message: error.message || `HTTP error! status: ${response.status}`,
           code: error.code,
@@ -107,6 +115,13 @@ export class MetaCampaignService extends BaseApiService {
       }
 
       const data = await response.json();
+      
+      // Store raw response for debugging
+      try {
+        localStorage.setItem('raw_campaign_response', JSON.stringify(data));
+      } catch (e) {
+        console.error('[CAMPAIGN FETCH] Error storing raw response:', e);
+      }
       
       // Log raw response for debugging
       console.log('[CAMPAIGN FETCH] Raw response:', JSON.stringify(data).substring(0, 500) + '...');

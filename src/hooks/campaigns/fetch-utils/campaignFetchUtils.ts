@@ -88,6 +88,15 @@ export const logFetchDetails = (
       stack: error?.stack?.substring(0, 200) || 'No stack',
       adAccountId
     });
+    
+    // Save raw error response for debugging if available
+    try {
+      if (error.response?.data) {
+        localStorage.setItem('raw_campaign_error_response', JSON.stringify(error.response.data));
+      }
+    } catch (e) {
+      console.error('[CAMPAIGNS] Error saving error response to storage:', e);
+    }
     return;
   }
 
@@ -108,15 +117,15 @@ export const logFetchDetails = (
     tokenLength: token?.length,
     tokenStart: token?.substring(0, 5) + '...',
     tokenEnd: '...' + token?.substring(token?.length - 5),
-    endpoint: `/act_${cleanAccountId}/campaigns`,
-    url: `${API_BASE_URL}/${API_VERSION}/act_${cleanAccountId}/campaigns`,
+    endpoint: `/${formattedId}/campaigns`,
+    url: `${API_BASE_URL}/${API_VERSION}/${formattedId}/campaigns`,
     lastManualFetch
   });
 
   // Log the full URL format (without actual token) for debugging
   console.log('[CAMPAIGNS] Full URL format:', 
-    `${API_BASE_URL}/${API_VERSION}/act_${cleanAccountId}/campaigns` +
-    `?fields=name,status,daily_budget,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}` +
+    `${API_BASE_URL}/${API_VERSION}/${formattedId}/campaigns` +
+    `?fields=name,status,daily_budget,effective_status,insights.date_preset(last_30_days){impressions,clicks,spend,actions,cost_per_action_type}` +
     `&access_token=[REDACTED]`
   );
 };
