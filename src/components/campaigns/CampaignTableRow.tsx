@@ -42,7 +42,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
   }, [campaign]);
 
   // Always log the campaign being rendered for debugging
-  console.log("Rendering campaign:", campaign.name, "(ID:", campaign.id, ")");
+  console.log("✅ [RENDER] Campaign row:", campaign.name, "(ID:", campaign.id, ")");
   
   // Check if we have minimal valid data to render the row
   if (!campaign) {
@@ -64,9 +64,6 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
   
   const hasInsights = campaign.insights && Object.keys(campaign.insights).length > 0;
   const hasValidMetrics = hasInsights || campaign.budget || campaign.daily_budget || campaign.lifetime_budget;
-
-  // Added top-level console log as requested for confirmation
-  console.log('[RENDER] Campaign row:', campaignId, campaignName);
 
   return (
     <TableRow className={isBlocked ? 'opacity-75' : ''}>

@@ -163,7 +163,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
             const key = campaign.id || Math.random().toString(36);
             
             // Force rendering of all campaigns regardless of status or insights
-            console.log(`🔄 Adding table row for campaign: ${campaign.name} (${campaign.id})`);
+            console.log(`✅ [RENDER] Campaign row: ${campaign.name} (${campaign.id})`);
             
             // Always render the campaign, regardless of insights or status
             return (
