@@ -126,7 +126,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
         status={status}
         hasFilteredResults={filteredCampaigns.length > 0}
         onClearFilters={() => {
-          setDateRange(null, 'last_28d');
+          setDateRange(null, 'maximum');
           setStatusFilter(null);
           setSearchQuery('');
         }}

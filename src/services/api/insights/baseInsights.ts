@@ -1,4 +1,3 @@
-
 /**
  * Base functionality for Meta Insights API
  */
@@ -35,8 +34,8 @@ export class BaseInsightsService extends BaseApiService {
       }
       
       // Check for problematic date presets directly in base service and replace them
-      if (options.datePreset === 'last_28d') {
-        console.warn(`[INSIGHTS] Replacing problematic date_preset "last_28d" with "maximum" to avoid 400 errors`);
+      if (options.datePreset && options.datePreset.includes('28d')) {
+        console.warn(`[INSIGHTS] Replacing problematic date_preset with "maximum" to avoid 400 errors`);
         options.datePreset = 'maximum';
       }
       

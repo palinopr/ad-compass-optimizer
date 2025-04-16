@@ -5,15 +5,15 @@ import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePre
 
 export function useDateRangeSelection(
   onChange: (dateRange: DateRange, preset: DatePresetOption) => void,
-  initialPreset: DatePresetOption = 'last_28d'
+  initialPreset: DatePresetOption = 'maximum'
 ) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<DatePresetOption>('last_28d');
+  const [selectedPreset, setSelectedPreset] = useState<DatePresetOption>('maximum');
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date();
-    const twentyEightDaysAgo = new Date();
-    twentyEightDaysAgo.setDate(today.getDate() - 28);
-    return { from: twentyEightDaysAgo, to: today };
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    return { from: thirtyDaysAgo, to: today };
   });
 
   const handlePresetChange = (preset: DatePresetOption) => {
@@ -52,11 +52,11 @@ export function useDateRangeSelection(
         sevenDaysAgo.setHours(0, 0, 0, 0);
         newRange = { from: sevenDaysAgo, to: today };
         break;
-      case 'last_28d':
-        const twentyEightDaysAgo = new Date();
-        twentyEightDaysAgo.setDate(today.getDate() - 28);
-        twentyEightDaysAgo.setHours(0, 0, 0, 0);
-        newRange = { from: twentyEightDaysAgo, to: today };
+      case 'last_30d':
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        thirtyDaysAgo.setHours(0, 0, 0, 0);
+        newRange = { from: thirtyDaysAgo, to: today };
         break;
       case 'this_month':
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -71,9 +71,9 @@ export function useDateRangeSelection(
         newRange = { from: startOfLastMonth, to: endOfLastMonth };
         break;
       default:
-        console.warn(`[DATE SELECTOR] Unhandled preset: ${validatedPreset}, using last_28d`);
+        console.warn(`[DATE SELECTOR] Unhandled preset: ${validatedPreset}, using maximum`);
         const defaultDaysAgo = new Date();
-        defaultDaysAgo.setDate(today.getDate() - 28);
+        defaultDaysAgo.setDate(today.getDate() - 30);
         defaultDaysAgo.setHours(0, 0, 0, 0);
         newRange = { from: defaultDaysAgo, to: today };
         break;
