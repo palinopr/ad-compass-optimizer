@@ -18,37 +18,80 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
   const [isBlocked, setIsBlocked] = React.useState(false);
 
   React.useEffect(() => {
-    // Use type guard to check for 'blocked' status (this fixes the TypeScript error)
-    if (campaign.insightsStatus && campaign.insightsStatus === 'blocked') {
+    // IMMEDIATE CHECK: Use type guard to check for 'blocked' status
+    if (campaign.insightsStatus === 'blocked') {
       setIsBlocked(true);
       return;
     }
     
+    // THOROUGH CHECK: Check all possible sources that could indicate this campaign is blocked
     try {
+      // First check blocked campaigns list in localStorage
       const blockedCampaigns = JSON.parse(localStorage.getItem('permanently_blocked_campaigns') || '[]');
       if (blockedCampaigns.includes(campaign.id)) {
         setIsBlocked(true);
         
         // Only update if not already blocked
         if (campaign.insightsStatus !== 'blocked') {
+          console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from localStorage list`);
           campaign.insightsStatus = 'blocked';
           campaign.insights = null;
         }
+        return;
+      }
+      
+      // Then check failed signatures for object-specific failures
+      const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
+      const objectFailSignature = `object-${campaign.id}-failed`;
+      if (failedSignatures.includes(objectFailSignature)) {
+        setIsBlocked(true);
+        
+        // Only update if not already blocked
+        if (campaign.insightsStatus !== 'blocked') {
+          console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from failed signatures`);
+          campaign.insightsStatus = 'blocked';
+          campaign.insights = null;
+          
+          // Also update the blocked campaigns list for consistency
+          if (!blockedCampaigns.includes(campaign.id)) {
+            blockedCampaigns.push(campaign.id);
+            localStorage.setItem('permanently_blocked_campaigns', JSON.stringify(blockedCampaigns));
+          }
+        }
+        return;
+      }
+      
+      // Finally check the 400 failures log
+      try {
+        const failed400s = JSON.parse(localStorage.getItem('insights_400_failures') || '[]');
+        const hasFailure = failed400s.some((failure: any) => failure.campaignId === campaign.id);
+        
+        if (hasFailure) {
+          setIsBlocked(true);
+          
+          // Only update if not already blocked
+          if (campaign.insightsStatus !== 'blocked') {
+            console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from 400 failures log`);
+            campaign.insightsStatus = 'blocked';
+            campaign.insights = null;
+            
+            // Update the other data sources for consistency
+            if (!blockedCampaigns.includes(campaign.id)) {
+              blockedCampaigns.push(campaign.id);
+              localStorage.setItem('permanently_blocked_campaigns', JSON.stringify(blockedCampaigns));
+            }
+            
+            if (!failedSignatures.includes(objectFailSignature)) {
+              failedSignatures.push(objectFailSignature);
+              localStorage.setItem('failed_insights_signatures', JSON.stringify(failedSignatures));
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore 400 failures storage errors
       }
     } catch (e) {
-      console.error('[CAMPAIGN ROW] Error checking blocked campaigns:', e);
-    }
-    
-    const objectFailSignature = `object-${campaign.id}-failed`;
-    const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
-    if (failedSignatures.includes(objectFailSignature)) {
-      setIsBlocked(true);
-      
-      // Only update if not already blocked
-      if (campaign.insightsStatus !== 'blocked') {
-        campaign.insightsStatus = 'blocked';
-        campaign.insights = null;
-      }
+      console.error('[CAMPAIGN ROW] Error checking blocked status:', e);
     }
   }, [campaign]);
 
@@ -61,7 +104,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
     if ((!campaign.insights || Object.keys(campaign.insights).length === 0) && campaign.name && campaign.status) {
       console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) rendering with metadata only - insights unavailable`);
       
-      if (isBlocked || (campaign.insightsStatus && campaign.insightsStatus === 'blocked')) {
+      if (isBlocked || campaign.insightsStatus === 'blocked') {
         console.log(`[CAMPAIGN ROW] 🚫 Campaign "${campaign.name}" (${campaign.id}) is blocked from insights fetching`);
       }
       

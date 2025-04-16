@@ -23,7 +23,7 @@ export const useInsightsFetching = () => {
       if (token && campaigns.length > 0) {
         console.log(`[INSIGHTS] Fetching insights for ${campaigns.length} campaigns`);
         
-        // Filter out permanently blocked campaigns before even starting the fetch
+        // Load blocked campaigns immediately at the start
         let blockedCampaigns: string[] = [];
         try {
           blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
@@ -31,9 +31,21 @@ export const useInsightsFetching = () => {
           console.error('[INSIGHTS] Error loading blocked campaigns:', e);
         }
         
-        // Skip permanently blocked campaigns to avoid making unnecessary requests
+        // STRONGER PRE-FILTERING: First mark all blocked campaigns in memory
+        // This ensures that any campaign loaded from storage as blocked is immediately marked
+        campaigns.forEach(campaign => {
+          // Check if campaign ID is in our blocklist
+          if (blockedCampaigns.includes(campaign.id)) {
+            console.log(`[INSIGHTS] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
+            // Mark campaign as blocked explicitly and null the insights
+            campaign.insights = null;
+            campaign.insightsStatus = 'blocked';
+          }
+        });
+        
+        // Then apply strict filtering to avoid processing any blocked campaigns
         const campaignsToProcess = campaigns.filter(campaign => {
-          // STRICTER CHECK: First check if the campaign is already marked as blocked
+          // STRICTER CHECK: First check if the campaign is already marked as blocked in memory
           if (campaign.insightsStatus === 'blocked') {
             console.log(`[INSIGHTS] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
             // Make sure insights is explicitly nulled
@@ -41,7 +53,7 @@ export const useInsightsFetching = () => {
             return false;
           }
           
-          // Then check if it's in our blocklist
+          // Then double-check against blocklist (for extra safety)
           const isBlocked = blockedCampaigns.includes(campaign.id);
           
           if (isBlocked) {
