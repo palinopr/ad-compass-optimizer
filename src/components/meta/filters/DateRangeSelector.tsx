@@ -23,10 +23,13 @@ export type DateRange = {
   to: Date | undefined;
 } | null;
 
+// Define a union type that includes both ValidMetaDatePreset and 'custom'
+export type DatePresetOption = ValidMetaDatePreset | 'custom';
+
 // Extended preset type that includes "custom" for UI purposes
 export type UIPresetOption = {
   label: string;
-  value: ValidMetaDatePreset | 'custom';
+  value: DatePresetOption;
 };
 
 // Updated presets to match Meta API accepted values - ONLY use official values
@@ -41,7 +44,7 @@ const presets: UIPresetOption[] = [
 ];
 
 interface DateRangeSelectorProps {
-  onChange: (dateRange: DateRange, preset: ValidMetaDatePreset | 'custom') => void;
+  onChange: (dateRange: DateRange, preset: DatePresetOption) => void;
   initialPreset?: ValidMetaDatePreset;
 }
 
@@ -50,7 +53,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   initialPreset = 'last_28d' // Default to last_28d
 }) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<ValidMetaDatePreset | 'custom'>('last_28d');
+  const [selectedPreset, setSelectedPreset] = useState<DatePresetOption>('last_28d');
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     // Initialize with last 28 days as default
     const today = new Date();
@@ -73,7 +76,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     handlePresetChange(validatedPreset);
   }, [initialPreset]);
 
-  const handlePresetChange = (preset: ValidMetaDatePreset | 'custom') => {
+  const handlePresetChange = (preset: DatePresetOption) => {
     // For custom preset, we just update the UI state without modifying date range
     if (preset === 'custom') {
       setSelectedPreset('custom');
@@ -134,7 +137,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         defaultDaysAgo.setDate(today.getDate() - 28);
         defaultDaysAgo.setHours(0, 0, 0, 0);
         newRange = { from: defaultDaysAgo, to: today };
-        preset = 'last_28d';
+        preset = 'last_28d' as DatePresetOption;
         break;
     }
 
