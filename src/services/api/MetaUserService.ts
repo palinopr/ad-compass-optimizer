@@ -42,7 +42,7 @@ export class MetaUserService extends BaseApiService {
   /**
    * Process an API response, checking for errors
    */
-  private static async processApiResponse(response: Response, method: string) {
+  protected static async processApiResponse(response: Response, method: string) {
     if (!response.ok) {
       // Special handling for 403 errors which indicate permission issues
       if (response.status === 403) {
