@@ -11,7 +11,7 @@ export const useFetchInsights = () => {
   const fetchInsights = useCallback(async (
     itemId: string, 
     itemType: 'campaign' | 'adset',
-    datePreset: string = 'maximum'
+    datePreset: string = 'last_30d' // Changed default from 'maximum' to last_30d
   ) => {
     console.log(`[INSIGHTS HOOK] Request started for ${itemType} ${itemId} with datePreset: ${datePreset}`);
 
@@ -22,6 +22,9 @@ export const useFetchInsights = () => {
       }
 
       const validDatePreset = safelyValidateDatePreset(datePreset);
+      
+      // Log the validated date preset
+      console.log(`[INSIGHTS HOOK] Using validated datePreset: ${validDatePreset} for ${itemType} ${itemId}`);
       
       // Generate a unique request signature for this particular insights request
       const requestSignature = DuplicateRequestChecker.generateRequestSignature(
@@ -55,9 +58,22 @@ export const useFetchInsights = () => {
         console.log(`[INSIGHTS HOOK] Using time_range instead of date_preset for ${validDatePreset}`);
       } else {
         baseOptions.datePreset = validDatePreset;
+        console.log(`[INSIGHTS HOOK] Setting datePreset=${validDatePreset} in options`);
       }
 
+      // Log the full options being used
+      console.log(`[INSIGHTS HOOK] Full options for fetch:`, JSON.stringify(baseOptions));
+
       const response = await MetaFunnelService.fetchFunnelData(token, itemId, validDatePreset);
+      
+      // Check for empty response data
+      if (response && response.campaigns && response.campaigns.length > 0) {
+        const emptyCampaigns = response.campaigns.filter(c => !c || Object.keys(c).length === 0).length;
+        if (emptyCampaigns > 0) {
+          console.warn(`[INSIGHTS HOOK] Warning: ${emptyCampaigns}/${response.campaigns.length} campaigns are empty objects`);
+        }
+      }
+      
       return response;
 
     } catch (err: any) {

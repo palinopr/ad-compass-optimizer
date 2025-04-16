@@ -52,10 +52,16 @@ export class InsightsBaseService extends BaseApiService {
         throw CampaignBlockingService.createBlockedError(objectId);
       }
       
+      // CRITICAL: Ensure a date_preset is always set
+      if (!options.datePreset && !options.timeRange) {
+        console.warn(`[INSIGHTS] No date_preset or time_range provided for ${objectId}, forcing date_preset=last_30d`);
+        options.datePreset = 'last_30d';
+      }
+      
       // Check for problematic date presets directly in base service
       if (options.datePreset && options.datePreset.includes('28d')) {
-        console.warn(`[INSIGHTS] Replacing problematic date_preset with "maximum" to avoid 400 errors`);
-        options.datePreset = 'maximum';
+        console.warn(`[INSIGHTS] Replacing problematic date_preset with "last_30d" to avoid 400 errors`);
+        options.datePreset = 'last_30d';
       }
       
       InsightsThrottling.checkThrottling();
@@ -66,6 +72,13 @@ export class InsightsBaseService extends BaseApiService {
       // Log the actual URL that will be used (with token redacted)
       const maskedUrl = url.replace(token, 'REDACTED');
       console.log(`[INSIGHTS] Final request URL: ${maskedUrl}`);
+      
+      // CRITICAL: Verify date_preset or time_range is in the URL
+      if (!url.includes('date_preset=') && !url.includes('time_range=')) {
+        console.error(`[INSIGHTS] CRITICAL ERROR: URL is missing date parameter for object ${objectId}`);
+        console.error(`[INSIGHTS] URL: ${maskedUrl}`);
+        throw new Error(`Missing date parameter in insights URL for object ${objectId}`);
+      }
       
       if (options.timeRange) {
         console.log(`[INSIGHTS] Using time_range: ${JSON.stringify(options.timeRange)}`);

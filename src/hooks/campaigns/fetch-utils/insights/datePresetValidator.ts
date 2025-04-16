@@ -21,7 +21,7 @@ export const validateDatePreset = (datePreset: string): string => {
       datePreset === '28d' ||
       datePreset === 'last28days' ||
       datePreset === 'last_28days') {
-    console.warn(`[INSIGHTS FETCH] Blocking known problematic date_preset "${datePreset}", using "maximum" instead`);
+    console.warn(`[INSIGHTS FETCH] Blocking known problematic date_preset "${datePreset}", using "last_30d" instead`);
     
     // Store info about this conversion for debugging
     try {
@@ -29,7 +29,7 @@ export const validateDatePreset = (datePreset: string): string => {
       blockedRequests.push({
         timestamp: new Date().toISOString(),
         original: datePreset,
-        replacedWith: 'maximum',
+        replacedWith: 'last_30d',
         location: 'datePresetValidator.ts'
       });
       localStorage.setItem('blocked_last_28d_requests', JSON.stringify(blockedRequests.slice(-20))); // Keep last 20
@@ -37,12 +37,12 @@ export const validateDatePreset = (datePreset: string): string => {
       // Ignore storage errors
     }
     
-    return 'maximum';
+    return 'last_30d';
   }
   
   // Directly check if the preset is in the valid list
   if (!validPresets.includes(datePreset)) {
-    console.error(`[INSIGHTS FETCH] Invalid date_preset "${datePreset}" detected, defaulting to maximum`);
+    console.error(`[INSIGHTS FETCH] Invalid date_preset "${datePreset}" detected, defaulting to last_30d`);
     
     // Store info about invalid presets for debugging
     try {
@@ -50,7 +50,7 @@ export const validateDatePreset = (datePreset: string): string => {
       invalidPresets.push({
         timestamp: new Date().toISOString(),
         invalid: datePreset,
-        replacedWith: 'maximum',
+        replacedWith: 'last_30d',
         location: 'datePresetValidator.ts'
       });
       localStorage.setItem('invalid_date_presets', JSON.stringify(invalidPresets.slice(-20))); // Keep last 20
@@ -58,7 +58,7 @@ export const validateDatePreset = (datePreset: string): string => {
       // Ignore storage errors
     }
     
-    return 'maximum';
+    return 'last_30d';
   }
   
   // Store the validated date_preset for debugging

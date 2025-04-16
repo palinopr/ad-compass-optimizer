@@ -1,3 +1,4 @@
+
 /**
  * Builder for Meta Insights API requests
  */
@@ -94,10 +95,14 @@ export class InsightsRequestBuilder {
   public static buildQueryParams(token: string, options: InsightFilterOptions): URLSearchParams {
     const params = new URLSearchParams();
     
+    // CRITICAL: Always ensure a date preset is set - if not provided, force last_30d
+    let hasDateParam = false;
+    
     // Handle date parameters (mutual exclusion between timeRange and datePreset)
     if (options.timeRange) {
       params.append('time_range', JSON.stringify(options.timeRange));
       console.log(`[INSIGHTS BUILDER] Using time_range: ${JSON.stringify(options.timeRange)}`);
+      hasDateParam = true;
     } else if (options.datePreset) {
       // Validate date preset
       const originalDatePreset = options.datePreset;
@@ -127,10 +132,13 @@ export class InsightsRequestBuilder {
       }
       
       console.log(`[INSIGHTS BUILDER] Using validated date preset: ${validDatePreset} (original: ${originalDatePreset})`);
-    } else {
-      // Default to last_30d if no time range specified (changed from last_28d)
+      hasDateParam = true;
+    }
+    
+    // CRITICAL: If no date parameter was set, force last_30d
+    if (!hasDateParam) {
       params.append('date_preset', 'last_30d');
-      console.log('[INSIGHTS BUILDER] Using default date preset: last_30d');
+      console.log('[INSIGHTS BUILDER] No date parameter provided, forcing date_preset=last_30d');
     }
     
     // Add fields parameter
@@ -176,8 +184,27 @@ export class InsightsRequestBuilder {
     // Add token
     params.append('access_token', token);
     
-    // Final safety check: ensure no last_28d made it through
+    // CRITICAL: Final verification that date parameter exists
     const paramsString = params.toString();
+    if (!paramsString.includes('date_preset=') && !paramsString.includes('time_range=')) {
+      console.error(`[INSIGHTS BUILDER] CRITICAL: No date parameter in final params! Adding date_preset=last_30d`);
+      params.append('date_preset', 'last_30d');
+      
+      // Log this emergency fix
+      try {
+        const emergencyFixes = JSON.parse(localStorage.getItem('missing_date_emergency_fixes') || '[]');
+        emergencyFixes.push({
+          timestamp: new Date().toISOString(),
+          originalParams: paramsString,
+          location: 'InsightsRequestBuilder.buildQueryParams-finalCheck'
+        });
+        localStorage.setItem('missing_date_emergency_fixes', JSON.stringify(emergencyFixes.slice(-30)));
+      } catch (e) {
+        // Ignore storage errors
+      }
+    }
+    
+    // Final safety check: ensure no last_28d made it through
     if (paramsString.includes('last_28d')) {
       console.error(`[INSIGHTS BUILDER] CRITICAL: last_28d found in final params! Fixing before returning.`);
       params.delete('date_preset');
@@ -196,6 +223,9 @@ export class InsightsRequestBuilder {
         // Ignore storage errors
       }
     }
+    
+    // Log the final params for debugging
+    console.log(`[INSIGHTS BUILDER] Final params: ${params.toString().replace(/access_token=[^&]+/, 'access_token=REDACTED')}`);
     
     return params;
   }
