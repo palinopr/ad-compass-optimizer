@@ -1,7 +1,6 @@
-
-import { MetaCampaign } from '../../../types/metaCampaignTypes';
+import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { CampaignThrottling } from '../../campaign/throttling';
-import { BaseApiService } from '../../BaseApiService';
+import { BaseApiService } from '../../../BaseApiService';
 import { CampaignProcessor } from './campaignProcessor';
 import { FallbackCampaignLoader } from './fallbackCampaignLoader';
 import { CampaignApiClient } from './api/campaignApiClient';
