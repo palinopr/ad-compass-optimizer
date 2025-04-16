@@ -1,7 +1,8 @@
 
 import { ErrorHandler } from '../../../error/errorHandler';
 import { ErrorStorage } from '../../../error/errorStorage';
-import { BaseApiService } from '../../../BaseApiService';
+import { BaseApiService } from '@/services/api/BaseApiService';
+import { ResponseHandler } from './responseHandler';
 
 export class CampaignApiClient extends BaseApiService {
   // Define lastResponseHeaders to match the BaseApiService property
@@ -31,8 +32,26 @@ export class CampaignApiClient extends BaseApiService {
   
       if (!response.ok) {
         console.error(`[CAMPAIGN FETCH] API request failed with status: ${response.status}`);
-        // Use the separate ErrorHandler class with correct casing
-        await ErrorHandler.handleErrorResponse(response);
+        // Log the error but don't throw - continue processing and return empty array if needed
+        try {
+          // Attempt to parse error response
+          const errorText = await response.clone().text();
+          let errorData;
+          
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { rawText: errorText };
+          }
+          
+          console.error('[CAMPAIGN FETCH] Error response:', errorData);
+          ErrorStorage.storeRawErrorResponse(errorData);
+        } catch (e) {
+          console.error('[CAMPAIGN FETCH] Failed to read error response:', e);
+        }
+        
+        // Continue with error handling but don't throw - we want to return empty array
+        return [];
       }
   
       // Get response text first to inspect and debug
@@ -48,7 +67,7 @@ export class CampaignApiClient extends BaseApiService {
         console.log('[MetaCampaignService] Raw campaigns response:', data);
       } catch (parseError) {
         console.error('[CAMPAIGN FETCH] Failed to parse response as JSON:', parseError);
-        throw new Error('Invalid JSON response from Meta API');
+        return []; // Return empty array instead of throwing
       }
       
       // Store raw response for debugging
@@ -63,7 +82,7 @@ export class CampaignApiClient extends BaseApiService {
       // Validate data structure before accessing properties
       if (!data) {
         console.error('[CAMPAIGN FETCH] Response data is null or undefined');
-        throw new Error('Empty response from Meta API');
+        return []; // Return empty array instead of throwing
       }
       
       // Check if data.data exists before using it
@@ -75,6 +94,10 @@ export class CampaignApiClient extends BaseApiService {
       
       if (!Array.isArray(data.data)) {
         console.error('[CAMPAIGN FETCH] data.data is not an array:', data.data);
+        // If data.data exists but isn't an array, try to convert it to an array
+        if (data.data) {
+          return [data.data];
+        }
         // Return empty array for consistent handling
         return [];
       }

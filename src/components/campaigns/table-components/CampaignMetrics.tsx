@@ -71,7 +71,7 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
     if (budget) return formatCurrency(budget);
     if (dailyBudget) return formatCurrency(dailyBudget) + '/day';
     if (lifetimeBudget) return formatCurrency(lifetimeBudget) + ' (lifetime)';
-    return 'No Budget';
+    return 'No Budget Data';
   };
   
   const getSpendDisplay = (): string => {
@@ -83,7 +83,7 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
     if (extraStats?.results && extraStats.results !== '-') {
       return extraStats.results;
     }
-    return results || 'No Results';
+    return results || 'No Results Data';
   };
   
   const getCpaDisplay = (): string => {

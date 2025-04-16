@@ -59,6 +59,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
   const hasInsights = campaign.insights && Object.keys(campaign.insights).length > 0;
   const hasValidMetrics = hasInsights || campaign.budget || campaign.daily_budget || campaign.lifetime_budget;
 
+  // Added top-level console log as requested for confirmation
+  console.log('[RENDER] Campaign row:', campaignId, campaignName);
+
   return (
     <TableRow className={isBlocked ? 'opacity-75' : ''}>
       <TableCell>

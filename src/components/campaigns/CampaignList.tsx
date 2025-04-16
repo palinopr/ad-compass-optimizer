@@ -117,10 +117,49 @@ const CampaignList: React.FC<CampaignListProps> = ({
       name: c.name,
       status: c.status
     })));
+    
+    // IMPORTANT: If we have campaigns but filtering removed them, still show all campaigns
+    console.log('[CAMPAIGN LIST] Forcing display of all campaigns despite filtering');
+    return (
+      <Card className="overflow-hidden" key={forceRender}>
+        <div className="bg-orange-100 p-4 border-b border-orange-200">
+          <p className="text-md font-medium text-orange-800">
+            Forcing display of all {campaigns.length} campaigns (filter removed all)
+          </p>
+          <p className="text-sm text-orange-700">
+            Tab: {activeTab}, Filter removed all campaigns but we're showing them anyway
+          </p>
+        </div>
+        <CampaignTable 
+          campaigns={campaigns} 
+          status={activeTab || status as 'active' | 'draft' | 'archived'}
+          campaignsFetchStatus={campaignsFetchStatus}
+        />
+      </Card>
+    );
   }
   
   // Show a clear "No Campaigns" UI when we have no campaigns but fetch completed successfully
   if ((safeFilteredCampaigns.length === 0 || !safeFilteredCampaigns) && fetchCompleted && !isLoading && !error && !metaPermissionsInvalid) {
+    // Check if we have any campaigns at all before showing the empty state
+    if (Array.isArray(campaigns) && campaigns.length > 0) {
+      console.log('[CAMPAIGN LIST] Using all campaigns instead of empty filtered result');
+      return (
+        <Card className="overflow-hidden" key={forceRender}>
+          <div className="bg-blue-100 p-4 border-b border-blue-200">
+            <p className="text-md font-medium text-blue-800">
+              Displaying all {campaigns.length} campaigns (ignoring filters)
+            </p>
+          </div>
+          <CampaignTable 
+            campaigns={campaigns} 
+            status={activeTab || status as 'active' | 'draft' | 'archived'}
+            campaignsFetchStatus={campaignsFetchStatus}
+          />
+        </Card>
+      );
+    }
+    
     return (
       <>
         <div className="bg-muted p-4 mb-4 rounded-md">

@@ -162,14 +162,16 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
             // Ensure campaign has an ID to use as a key
             const key = campaign.id || Math.random().toString(36);
             
+            // Force rendering of all campaigns regardless of status or insights
             console.log(`🔄 Adding table row for campaign: ${campaign.name} (${campaign.id})`);
             
-            // Even if the campaign data is incomplete, try to render it
+            // Always render the campaign, regardless of insights or status
             return (
               <CampaignTableRow 
                 key={key}
                 campaign={campaign} 
                 status={status}
+                loadedFromFallback={!!localStorage.getItem('using_fallback_campaigns')}
               />
             );
           })}
