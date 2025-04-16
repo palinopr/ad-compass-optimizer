@@ -18,6 +18,7 @@ interface CampaignListProps {
   isAuthenticated: boolean;
   fetchCompleted: boolean;
   campaignsFetchStatus?: 'success' | 'unauthorized' | 'error' | null;
+  status?: string; // Added prop for CampaignTabs usage
 }
 
 const CampaignList: React.FC<CampaignListProps> = ({
@@ -31,7 +32,8 @@ const CampaignList: React.FC<CampaignListProps> = ({
   forceRender,
   isAuthenticated,
   fetchCompleted,
-  campaignsFetchStatus
+  campaignsFetchStatus,
+  status
 }) => {
   // Show loading state if the app is loading campaigns
   if (isLoading) {
@@ -55,7 +57,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
     <Card className="overflow-hidden" key={forceRender}>
       <CampaignTable 
         campaigns={filteredCampaigns} 
-        status={activeTab}
+        status={activeTab || status}
         campaignsFetchStatus={campaignsFetchStatus}
       />
     </Card>

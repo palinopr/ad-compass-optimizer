@@ -11,6 +11,8 @@ interface CampaignsAuthenticationProps {
   isAuthSyncing: boolean;
   refreshConnection: () => void;
   resetConnection: () => void;
+  showConnectionDialog?: boolean;
+  setShowConnectionDialog?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const CampaignsAuthentication: React.FC<CampaignsAuthenticationProps> = ({
@@ -20,6 +22,8 @@ const CampaignsAuthentication: React.FC<CampaignsAuthenticationProps> = ({
   isAuthSyncing,
   refreshConnection,
   resetConnection,
+  showConnectionDialog,
+  setShowConnectionDialog
 }) => {
   return (
     <>

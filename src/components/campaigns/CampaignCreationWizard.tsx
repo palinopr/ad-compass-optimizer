@@ -13,10 +13,12 @@ import WizardControls from './wizard/WizardControls';
 import { STEPS, CampaignData } from './wizard/WizardSteps';
 
 interface CampaignCreationWizardProps {
-  onCancel: () => void;
+  onCancel?: () => void;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
-const CampaignCreationWizard = ({ onCancel }: CampaignCreationWizardProps) => {
+const CampaignCreationWizard = ({ onCancel, onClose, onSuccess }: CampaignCreationWizardProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [campaignData, setCampaignData] = useState<CampaignData>({
     name: '',
@@ -75,7 +77,7 @@ const CampaignCreationWizard = ({ onCancel }: CampaignCreationWizardProps) => {
         description: `${campaignData.name || 'New campaign'} has been created successfully.`,
       });
       
-      onCancel(); // Close wizard after creation
+      onSuccess(); // Close wizard after creation
     } catch (error) {
       console.error('Error creating campaign:', error);
       toast({
@@ -138,7 +140,7 @@ const CampaignCreationWizard = ({ onCancel }: CampaignCreationWizardProps) => {
             currentStep={currentStep}
             onNext={handleNext}
             onBack={handleBack}
-            onCancel={onCancel}
+            onCancel={onClose || onCancel}
             onCreate={handleCreate}
           />
         </CardContent>

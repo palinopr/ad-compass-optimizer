@@ -6,9 +6,26 @@ import { PlusCircle } from 'lucide-react';
 interface CampaignHeaderProps {
   onCreateCampaign: () => void;
   disabled: boolean;
+  isAuthenticated?: boolean;
+  hasAdAccount?: boolean;
+  hasPermissions?: boolean;
+  showConnectionDialog?: boolean;
+  setShowConnectionDialog?: React.Dispatch<React.SetStateAction<boolean>>;
+  refreshConnection?: () => void;
+  isAuthSyncing?: boolean;
 }
 
-const CampaignHeader: React.FC<CampaignHeaderProps> = ({ onCreateCampaign, disabled }) => {
+const CampaignHeader: React.FC<CampaignHeaderProps> = ({ 
+  onCreateCampaign, 
+  disabled,
+  isAuthenticated,
+  hasAdAccount,
+  hasPermissions, 
+  showConnectionDialog,
+  setShowConnectionDialog,
+  refreshConnection,
+  isAuthSyncing
+}) => {
   return (
     <div className="flex items-center justify-between">
       <div>

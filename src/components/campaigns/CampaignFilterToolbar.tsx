@@ -7,12 +7,13 @@ import RefreshButton from './filters/RefreshButton';
 import CampaignSearch from './CampaignSearch';
 
 interface CampaignFilterToolbarProps {
-  filters: CampaignFilters;
-  onDateRangeChange: (range: any, preset: string) => void;
-  onStatusChange: (status: string | null) => void;
-  onSearchChange: (query: string) => void;
-  onRefresh: () => void;
-  isLoading: boolean;
+  filters?: CampaignFilters;
+  onDateRangeChange?: (range: any, preset: string) => void;
+  onStatusChange?: (status: string | null) => void;
+  onSearchChange?: (query: string) => void;
+  onRefresh?: () => void;
+  isLoading?: boolean;
+  showCreateWizard?: boolean;
 }
 
 const CampaignFilterToolbar: React.FC<CampaignFilterToolbarProps> = ({
@@ -21,18 +22,24 @@ const CampaignFilterToolbar: React.FC<CampaignFilterToolbarProps> = ({
   onStatusChange,
   onSearchChange,
   onRefresh,
-  isLoading
+  isLoading,
+  showCreateWizard
 }) => {
+  // Skip rendering complex filters when showing create wizard
+  if (showCreateWizard) {
+    return null;
+  }
+  
   return (
     <div className="mb-4 space-y-4">
       <div className="flex flex-col md:flex-row gap-4 justify-between">
         <DateRangeFilter 
-          datePreset={filters.datePreset}
+          datePreset={filters?.datePreset}
           onDateRangeChange={onDateRangeChange}
         />
         <div className="flex gap-2">
           <StatusFilter
-            currentStatus={filters.status}
+            currentStatus={filters?.status}
             onStatusChange={onStatusChange}
           />
           <RefreshButton
@@ -41,7 +48,7 @@ const CampaignFilterToolbar: React.FC<CampaignFilterToolbarProps> = ({
           />
         </div>
       </div>
-      <CampaignSearch value={filters.search} onChange={onSearchChange} />
+      <CampaignSearch value={filters?.search} onChange={onSearchChange} />
     </div>
   );
 };

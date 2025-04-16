@@ -8,7 +8,7 @@ import CampaignCreationWizard from '@/components/campaigns/CampaignCreationWizar
 import CampaignsAuthentication from '@/components/campaigns/page/CampaignsAuthentication';
 import CampaignsContent from '@/components/campaigns/page/CampaignsContent';
 import { useCampaignsPage } from '@/components/campaigns/page/useCampaignsPage';
-import { MetaConnectionDialog } from '@/components/meta/MetaConnectionDialog';
+import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 
 const Campaigns = () => {
   const {
@@ -40,6 +40,8 @@ const Campaigns = () => {
   return (
     <div className="container py-4 space-y-4">
       <CampaignHeader
+        onCreateCampaign={() => setShowCreateWizard(true)}
+        disabled={!isAuthenticated || !hasAdAccount || !hasPermissions}
         isAuthenticated={isAuthenticated}
         hasAdAccount={hasAdAccount}
         hasPermissions={hasPermissions}
@@ -76,7 +78,7 @@ const Campaigns = () => {
           />
           
           <CampaignFilterToolbar 
-            showCreateWizard={showCreateWizard} 
+            showCreateWizard={showCreateWizard}
           />
           
           <CampaignList
