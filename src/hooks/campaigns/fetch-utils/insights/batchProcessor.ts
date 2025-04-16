@@ -113,10 +113,10 @@ export const fetchInsightsForCampaigns = async (
     console.error('[INSIGHTS FETCH] Error checking blocked campaigns:', e);
   }
   
-  for (let i = 0; i < campaignsWithInsights.length; i += BATCH_SIZE) {
-    const batch = campaignsWithInsights.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < campaignsWithInsights.length; i += BATCH_CONFIG.BATCH_SIZE) {
+    const batch = campaignsWithInsights.slice(i, i + BATCH_CONFIG.BATCH_SIZE);
     
-    console.log(`[INSIGHTS FETCH] Processing batch ${Math.floor(i/BATCH_SIZE) + 1} with ${batch.length} campaigns`);
+    console.log(`[INSIGHTS FETCH] Processing batch ${Math.floor(i/BATCH_CONFIG.BATCH_SIZE) + 1} with ${batch.length} campaigns`);
     
     for (let j = 0; j < batch.length; j++) {
       const campaign = batch[j];
@@ -159,7 +159,7 @@ export const fetchInsightsForCampaigns = async (
         }
         
         if (j < batch.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL));
+          await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.MIN_REQUEST_INTERVAL));
         }
       } catch (error: any) {
         console.error(`[INSIGHTS FETCH] Error in processing for campaign ${campaign.id}:`, error);
@@ -186,6 +186,19 @@ export const fetchInsightsForCampaigns = async (
               failedSignatures.push(objectFailSignature);
               localStorage.setItem('failed_insights_signatures', JSON.stringify(failedSignatures));
             }
+            
+            // Add to 400 failures log for diagnostic purposes
+            try {
+              const failures400 = JSON.parse(localStorage.getItem('insights_400_failures') || '[]');
+              failures400.push({
+                timestamp: new Date().toISOString(),
+                campaignId: campaign.id,
+                error: error.message || 'Unknown error'
+              });
+              localStorage.setItem('insights_400_failures', JSON.stringify(failures400.slice(-30)));
+            } catch (e) {
+              // Ignore storage errors
+            }
           } catch (e) {
             console.error('[INSIGHTS FETCH] Error updating blocked campaigns:', e);
           }
@@ -193,9 +206,9 @@ export const fetchInsightsForCampaigns = async (
       }
     }
     
-    if (i + BATCH_SIZE < campaignsWithInsights.length) {
-      console.log(`[INSIGHTS FETCH] Waiting ${BATCH_INTERVAL}ms before next batch`);
-      await new Promise(resolve => setTimeout(resolve, BATCH_INTERVAL));
+    if (i + BATCH_CONFIG.BATCH_SIZE < campaignsWithInsights.length) {
+      console.log(`[INSIGHTS FETCH] Waiting ${BATCH_CONFIG.BATCH_INTERVAL}ms before next batch`);
+      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_INTERVAL));
     }
   }
   

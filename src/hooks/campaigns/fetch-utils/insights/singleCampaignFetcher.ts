@@ -10,6 +10,7 @@ export const fetchCampaignInsights = async (
   datePreset: string = 'maximum'
 ): Promise<CampaignExtraStats | null> => {
   try {
+    // STRICT VALIDATION: First check if campaign is allowed to fetch insights
     const { isValid, reason } = validateCampaignForInsights(campaignId);
     if (!isValid) {
       console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – insights blocked after 400`);
@@ -19,8 +20,9 @@ export const fetchCampaignInsights = async (
     return await fetchCampaignInsightData(campaignId, token, datePreset);
   } catch (error: any) {
     console.error(`[INSIGHTS FETCH] Error fetching insights for campaign ${campaignId}:`, error);
+    
+    // Enhanced error handling to ensure 400 errors are properly blocked
     handleInsightsFetchError(error, campaignId);
     return null;
   }
 };
-

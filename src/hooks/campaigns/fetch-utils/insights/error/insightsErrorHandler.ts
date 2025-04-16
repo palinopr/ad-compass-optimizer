@@ -3,7 +3,7 @@ import { BLOCKED_CAMPAIGNS_KEY } from '../constants';
 import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
 
 export const handleInsightsFetchError = (error: any, campaignId: string): void => {
-  // Handle 400 errors specifically
+  // Handle 400 errors specifically with IMMEDIATE blocking
   if (error.status === 400 || (error.response && error.response.status === 400)) {
     console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaignId}`);
     addToBlockedCampaigns(campaignId);
@@ -20,7 +20,7 @@ export const handleInsightsFetchError = (error: any, campaignId: string): void =
         campaignId,
         error: error.message || 'Unknown error'
       });
-      localStorage.setItem('insights_400_failures', JSON.stringify(failed400s.slice(-20)));
+      localStorage.setItem('insights_400_failures', JSON.stringify(failed400s.slice(-30)));
       
       // Also store in failed_insights_signatures for cross-referencing
       const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
@@ -52,6 +52,7 @@ const addToBlockedCampaigns = (campaignId: string): void => {
     // Backup mechanism: Try to create a new array if parsing failed
     try {
       localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify([campaignId]));
+      console.log(`[INSIGHTS FETCH] Created new blocked campaigns list with: ${campaignId}`);
     } catch (innerError) {
       console.error('[INSIGHTS FETCH] Critical error storing blocked campaigns:', innerError);
     }

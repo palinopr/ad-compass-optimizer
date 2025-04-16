@@ -1,4 +1,3 @@
-
 /**
  * Base functionality for Meta Insights API
  */
@@ -23,7 +22,7 @@ export class BaseInsightsService extends BaseApiService {
       console.log(`Fetching insights for object ${objectId}...`);
       this.validateToken(token, 'fetchInsights');
       
-      // First check if this campaign is in the blocked campaigns list - EARLIEST CHECK POSSIBLE
+      // VERY FIRST CHECK: Check if this campaign is in the blocked campaigns list
       try {
         const blockedCampaigns = JSON.parse(localStorage.getItem(this.BLOCKED_CAMPAIGNS_KEY) || '[]');
         if (blockedCampaigns.includes(objectId)) {
@@ -40,7 +39,7 @@ export class BaseInsightsService extends BaseApiService {
       // Generate a unique request signature to identify this exact request
       const requestSignature = DuplicateRequestChecker.generateRequestSignature(objectId, 'insights', options);
       
-      // Check if this exact request previously failed with 400 - STOP IMMEDIATELY if so
+      // Check if this exact request previously failed with 400
       if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
         console.log(`[INSIGHTS] 🚫 Skipped ${objectId} – insights blocked after 400`);
         
@@ -68,7 +67,7 @@ export class BaseInsightsService extends BaseApiService {
         throw error;
       }
       
-      // Check for problematic date presets directly in base service and replace them
+      // Check for problematic date presets directly in base service
       if (options.datePreset && options.datePreset.includes('28d')) {
         console.warn(`[INSIGHTS] Replacing problematic date_preset with "maximum" to avoid 400 errors`);
         options.datePreset = 'maximum';
@@ -111,7 +110,7 @@ export class BaseInsightsService extends BaseApiService {
         const objectFailKey = `object-${objectId}-failed`;
         DuplicateRequestChecker.markAsPermanentlyFailed(objectFailKey);
         
-        // Add to the blocked campaigns list
+        // Add to the blocked campaigns list IMMEDIATELY
         this.addToBlockedCampaigns(objectId);
         
         // Store this requestSignature in localStorage to persist across sessions
@@ -129,15 +128,28 @@ export class BaseInsightsService extends BaseApiService {
           }
           
           // Also log basic info about this 400 error for diagnostics
-          const error400Logs = JSON.parse(localStorage.getItem('insights_400_error_logs') || '[]');
-          error400Logs.push({
-            timestamp: new Date().toISOString(),
-            objectId,
-            errorMessage: errorData.error?.message || 'Unknown 400 error',
-            errorCode: errorData.error?.code,
-            options: JSON.stringify(options)
-          });
-          localStorage.setItem('insights_400_error_logs', JSON.stringify(error400Logs.slice(-30)));
+          try {
+            const error400Logs = JSON.parse(localStorage.getItem('insights_400_error_logs') || '[]');
+            error400Logs.push({
+              timestamp: new Date().toISOString(),
+              objectId,
+              errorMessage: errorData.error?.message || 'Unknown 400 error',
+              errorCode: errorData.error?.code,
+              options: JSON.stringify(options)
+            });
+            localStorage.setItem('insights_400_error_logs', JSON.stringify(error400Logs.slice(-30)));
+            
+            // Also add to 400 failures log for cross-checking
+            const failures400 = JSON.parse(localStorage.getItem('insights_400_failures') || '[]');
+            failures400.push({
+              timestamp: new Date().toISOString(),
+              campaignId: objectId,
+              error: errorData.error?.message || 'Unknown 400 error'
+            });
+            localStorage.setItem('insights_400_failures', JSON.stringify(failures400.slice(-30)));
+          } catch (innerError) {
+            console.error('[INSIGHTS] Error storing 400 error logs:', innerError);
+          }
         } catch (e) {
           console.error('[INSIGHTS] Error storing failed signature in localStorage:', e);
         }
@@ -170,7 +182,7 @@ export class BaseInsightsService extends BaseApiService {
           const objSignature = `object-${objectId}-nonexistent`;
           DuplicateRequestChecker.markAsPermanentlyFailed(objSignature);
           
-          // Add to blocked campaigns list
+          // Add to blocked campaigns list IMMEDIATELY
           this.addToBlockedCampaigns(objectId);
           
           // Also mark the specific request as permanently failed
@@ -184,7 +196,7 @@ export class BaseInsightsService extends BaseApiService {
           const specificSignature = DuplicateRequestChecker.generateRequestSignature(objectId, 'insights', options);
           DuplicateRequestChecker.markAsPermanentlyFailed(specificSignature);
           
-          // Add to the blocked campaigns list
+          // Add to the blocked campaigns list IMMEDIATELY
           this.addToBlockedCampaigns(objectId);
         }
       }
@@ -207,6 +219,14 @@ export class BaseInsightsService extends BaseApiService {
       }
     } catch (e) {
       console.error('[INSIGHTS] Error adding to blocked campaigns:', e);
+      
+      // If parsing fails, create a new array
+      try {
+        localStorage.setItem(this.BLOCKED_CAMPAIGNS_KEY, JSON.stringify([campaignId]));
+        console.log(`[INSIGHTS] ✅ Created new blocked campaigns list with: ${campaignId}`);
+      } catch (innerError) {
+        console.error('[INSIGHTS] Critical error storing blocked campaigns:', innerError);
+      }
     }
   }
 }

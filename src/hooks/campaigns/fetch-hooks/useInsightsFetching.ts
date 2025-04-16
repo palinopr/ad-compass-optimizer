@@ -43,7 +43,7 @@ export const useInsightsFetching = () => {
           }
         });
         
-        // Then apply strict filtering to avoid processing any blocked campaigns
+        // STRICT FILTERING: Apply stricter filtering to avoid processing any blocked campaigns
         const campaignsToProcess = campaigns.filter(campaign => {
           // STRICTER CHECK: First check if the campaign is already marked as blocked in memory
           if ((campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null) === 'blocked') {

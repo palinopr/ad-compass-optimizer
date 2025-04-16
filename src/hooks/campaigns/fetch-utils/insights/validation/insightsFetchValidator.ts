@@ -30,6 +30,26 @@ export const validateCampaignForInsights = (campaignId: string): { isValid: bool
       console.error('[INSIGHTS FETCH] Error checking failed signatures:', e);
     }
     
+    // Also check the 400 failures log as a final check
+    try {
+      const failures400 = JSON.parse(localStorage.getItem('insights_400_failures') || '[]');
+      const isInFailureLog = failures400.some((failure: any) => failure.campaignId === campaignId);
+      
+      if (isInFailureLog) {
+        console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – found in 400 failures log`);
+        
+        // For consistency, also add to blocked campaigns if not already there
+        if (!blockedCampaigns.includes(campaignId)) {
+          blockedCampaigns.push(campaignId);
+          localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
+        }
+        
+        return { isValid: false, reason: 'in_failure_log' };
+      }
+    } catch (e) {
+      // Ignore storage errors
+    }
+    
     return { isValid: true };
   } catch (e) {
     console.error('[INSIGHTS FETCH] Error checking blocked campaigns:', e);
