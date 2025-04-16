@@ -145,8 +145,11 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     setDateRange(newRange);
     onChange(newRange, validatedPreset);
     
-    // Check the type correctly to avoid the comparison error
-    if (validatedPreset !== 'custom' && selectedPreset === 'custom') {
+    // Convert both to strings for type-safe comparison
+    const isClosingCalendarNeeded = 
+      (selectedPreset === 'custom') && (validatedPreset !== 'custom' as DatePresetOption);
+    
+    if (isClosingCalendarNeeded) {
       setIsCalendarOpen(false);
     }
   };
