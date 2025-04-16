@@ -1,5 +1,5 @@
 
-import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 
 export interface UseCampaignsResult {
   campaigns: MetaCampaign[];
