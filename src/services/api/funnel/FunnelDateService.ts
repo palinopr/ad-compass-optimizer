@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 import { CampaignQueryBuilder } from '../campaign/fetching/campaignQueryBuilder';
 
@@ -31,12 +30,12 @@ export class FunnelDateService {
       return mapping[preset];
     }
     
-    // Always display a warning toast when falling back
+    // Always display a toast when falling back
     toast({
       title: "Date preset warning",
       description: `Invalid preset '${preset}', using default 'last_30d'`,
       duration: 5000,
-      variant: "warning"
+      variant: "default"
     });
     
     // Default to last_30d
