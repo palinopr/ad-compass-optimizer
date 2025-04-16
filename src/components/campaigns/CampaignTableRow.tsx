@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { TableRow, TableCell } from '@/components/ui/table';
-import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
+import type { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import CampaignStatusBadge from './table-components/CampaignStatusBadge';
 import CampaignMetrics from './table-components/CampaignMetrics';
 import CampaignActions from './table-components/CampaignActions';
@@ -14,16 +14,14 @@ interface CampaignTableRowProps {
   loadedFromFallback?: boolean;
 }
 
-const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ 
-  campaign, 
-  status, 
-  loadedFromFallback 
-}: CampaignTableRowProps) => {
+const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableRowProps) => {
+  // Force TypeScript to use the proper type from metaCampaignTypes.ts
+  const { campaign, status, loadedFromFallback } = props;
   const [isBlocked, setIsBlocked] = React.useState(false);
 
   React.useEffect(() => {
-    // Direct comparison using properly typed MetaCampaign
-    if (campaign.insightsStatus === 'blocked') {
+    // Explicitly cast insightsStatus to ensure TypeScript recognizes 'blocked'
+    if ((campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null) === 'blocked') {
       setIsBlocked(true);
       return;
     }
@@ -36,10 +34,10 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({
         setIsBlocked(true);
         
         // Only update if not already blocked
-        if (campaign.insightsStatus !== 'blocked') {
+        if ((campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null) !== 'blocked') {
           console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from localStorage list`);
           // Use type assertion to ensure TypeScript understands this assignment
-          campaign.insightsStatus = 'blocked';
+          campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
           campaign.insights = null;
         }
         return;
@@ -52,9 +50,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({
         setIsBlocked(true);
         
         // Only update if not already blocked
-        if (campaign.insightsStatus !== 'blocked') {
+        if ((campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null) !== 'blocked') {
           console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from failed signatures`);
-          campaign.insightsStatus = 'blocked';
+          campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
           campaign.insights = null;
           
           // Also update the blocked campaigns list for consistency
@@ -75,9 +73,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({
           setIsBlocked(true);
           
           // Only update if not already blocked
-          if (campaign.insightsStatus !== 'blocked') {
+          if ((campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null) !== 'blocked') {
             console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from 400 failures log`);
-            campaign.insightsStatus = 'blocked';
+            campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
             campaign.insights = null;
             
             // Update the other data sources for consistency
@@ -109,7 +107,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({
     if ((!campaign.insights || Object.keys(campaign.insights).length === 0) && campaign.name && campaign.status) {
       console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) rendering with metadata only - insights unavailable`);
       
-      if (isBlocked || campaign.insightsStatus === 'blocked') {
+      if (isBlocked || (campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null) === 'blocked') {
         console.log(`[CAMPAIGN ROW] 🚫 Campaign "${campaign.name}" (${campaign.id}) is blocked from insights fetching`);
       }
       
@@ -169,7 +167,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({
           results={campaign.results}
           insights={campaign.insights}
           extraStats={campaign.extraStats}
-          isBlocked={isBlocked || (campaign.insightsStatus === 'blocked')}
+          isBlocked={isBlocked || ((campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null) === 'blocked')}
         />
       </TableCell>
       <TableCell className="text-right">

@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
+import type { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { fetchInsightsForCampaigns } from '../fetch-utils/campaignInsightsFetcher';
 import { metaAuthService } from '@/services/MetaAuthService';
 
@@ -39,14 +39,14 @@ export const useInsightsFetching = () => {
             console.log(`[INSIGHTS] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
             // Mark campaign as blocked explicitly and null the insights
             campaign.insights = null;
-            campaign.insightsStatus = 'blocked';
+            campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
           }
         });
         
         // Then apply strict filtering to avoid processing any blocked campaigns
         const campaignsToProcess = campaigns.filter(campaign => {
           // STRICTER CHECK: First check if the campaign is already marked as blocked in memory
-          if (campaign.insightsStatus === 'blocked') {
+          if ((campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null) === 'blocked') {
             console.log(`[INSIGHTS] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
             // Make sure insights is explicitly nulled
             campaign.insights = null;
@@ -60,7 +60,7 @@ export const useInsightsFetching = () => {
             console.log(`[INSIGHTS] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
             // Mark campaign as blocked explicitly and null the insights
             campaign.insights = null;
-            campaign.insightsStatus = 'blocked';
+            campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
             return false;
           }
           
