@@ -24,7 +24,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
   // Log render information to help debug
   useEffect(() => {
     console.log(`🔍 [CAMPAIGN TABLE] Rendering campaign table with ${campaigns?.length || 0} campaigns`);
-    console.log("[CampaignTable] Rendering with campaigns:", campaigns);
     
     if (!campaigns || campaigns.length === 0) {
       console.warn("Campaign data is empty at CampaignTable");
@@ -129,19 +128,15 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
     );
   }
 
-  // Debug banner - include count of campaigns with and without insights
-  const campaignsWithInsights = campaigns.filter(c => c.insights && Object.keys(c.insights).length > 0).length;
-  const campaignsWithoutInsights = campaigns.length - campaignsWithInsights;
+  // Add debug information
+  console.log(`[CAMPAIGN TABLE] Found ${campaigns.length} campaigns to render`);
 
   // Always render the table, even if some campaigns are missing insights
   return (
     <CardContent className="p-0">
       <div className="p-4 bg-blue-50 border-b border-blue-100">
         <p className="text-sm font-medium text-blue-800">
-          Rendering {campaigns.length} campaigns ({campaignsWithInsights} with insights, {campaignsWithoutInsights} without)
-        </p>
-        <p className="text-xs text-blue-600">
-          Campaigns will display even without insights data.
+          Displaying {campaigns.length} campaigns regardless of insights status
         </p>
       </div>
       <Table>
@@ -165,7 +160,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
             // Force rendering of all campaigns regardless of status or insights
             console.log(`✅ [RENDER] Campaign row: ${campaign.name} (${campaign.id})`);
             
-            // Always render the campaign, regardless of insights or status
+            // Always render every campaign
             return (
               <CampaignTableRow 
                 key={key}

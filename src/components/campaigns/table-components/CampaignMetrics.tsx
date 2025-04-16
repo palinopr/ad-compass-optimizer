@@ -41,49 +41,29 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
       cpa: getCpaDisplay(),
       roas: getRoasDisplay(),
       hasInsights: !!insights,
-      hasExtraStats: !!extraStats,
-      rawProps: {
-        budget,
-        dailyBudget,
-        lifetimeBudget,
-        spend,
-        results,
-        insights,
-        extraStats
-      }
+      hasExtraStats: !!extraStats
     };
     
     console.log('[CAMPAIGN METRICS] Rendering metrics with:', availableData);
-    
-    if (insights && (insights.spend || insights.cpa || insights.roas)) {
-      localStorage.setItem('has_valid_campaign_insights', 'true');
-    }
-    
-    // Log warning if no valid metrics data is available
-    if (!budget && !dailyBudget && !lifetimeBudget && !spend && !results && 
-        (!insights || Object.keys(insights).length === 0) && 
-        (!extraStats || Object.keys(extraStats).length === 0)) {
-      console.warn("Metrics data is empty at CampaignMetrics");
-    }
   }, [budget, dailyBudget, lifetimeBudget, spend, results, extraStats, insights]);
 
   const getBudgetDisplay = (): string => {
     if (budget) return formatCurrency(budget);
     if (dailyBudget) return formatCurrency(dailyBudget) + '/day';
     if (lifetimeBudget) return formatCurrency(lifetimeBudget) + ' (lifetime)';
-    return 'No Budget Data';
+    return 'No Budget';
   };
   
   const getSpendDisplay = (): string => {
     const spendValue = spend || insights?.spend || extraStats?.spend;
-    return spendValue ? formatCurrency(spendValue) : 'No Spend Data';
+    return spendValue ? formatCurrency(spendValue) : 'No Spend';
   };
 
   const getResultsDisplay = (): string => {
     if (extraStats?.results && extraStats.results !== '-') {
       return extraStats.results;
     }
-    return results || 'No Results Data';
+    return results || 'No Results';
   };
   
   const getCpaDisplay = (): string => {
@@ -93,7 +73,7 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
     if (extraStats?.cpa && extraStats.cpa !== '-') {
       return formatCurrency(extraStats.cpa);
     }
-    return 'No CPA Data';
+    return 'N/A';
   };
   
   const getRoasDisplay = (): string => {
@@ -103,7 +83,7 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
     if (extraStats?.roas && extraStats.roas !== '-') {
       return extraStats.roas;
     }
-    return 'No ROAS Data';
+    return 'N/A';
   };
 
   return (
