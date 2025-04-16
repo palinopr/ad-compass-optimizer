@@ -10,6 +10,9 @@ const validPresets = [
 ] as const;
 
 const mapToValidDatePreset = (preset: string): ValidMetaDatePreset => {
+  // Log the incoming preset for debugging
+  console.log(`[DATE PRESET MAPPING] Mapping preset: "${preset}"`);
+
   // If it's already a valid preset, use it
   if (validPresets.includes(preset as ValidMetaDatePreset)) {
     return preset as ValidMetaDatePreset;
@@ -20,6 +23,7 @@ const mapToValidDatePreset = (preset: string): ValidMetaDatePreset => {
       preset.includes('28day') || 
       preset === 'last28days' || 
       preset === 'last28d' ||
+      preset === 'last_28d' ||
       preset === 'last_30days') {
     console.log(`[DATE PRESET MAPPING] Mapped problematic preset '${preset}' to 'maximum'`);
     return 'maximum';
