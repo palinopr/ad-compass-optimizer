@@ -83,6 +83,16 @@ const CampaignList: React.FC<CampaignListProps> = ({
     );
   }
 
+  // Add debug information to help understand what's happening
+  console.log('[CAMPAIGN LIST] Before rendering, campaigns state:', {
+    campaignsLength: campaigns?.length || 0, 
+    filteredCampaignsLength: filteredCampaigns?.length || 0,
+    isArray: Array.isArray(filteredCampaigns),
+    fetchCompleted,
+    isLoading,
+    hasError: !!error
+  });
+
   // Ensure we have an array of campaigns - add additional safety check
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
   
@@ -92,19 +102,44 @@ const CampaignList: React.FC<CampaignListProps> = ({
       campaignsCount: campaigns.length,
       filteredCount: 0
     });
+    
+    // Log all campaigns in main array to help debug filtering issues
+    console.log('[CAMPAIGN LIST] Original campaigns:', campaigns.map(c => ({
+      id: c.id,
+      name: c.name,
+      status: c.status
+    })));
   }
   
   // Show a clear "No Campaigns" UI when we have no campaigns but fetch completed successfully
   if ((safeFilteredCampaigns.length === 0 || !safeFilteredCampaigns) && fetchCompleted && !isLoading && !error && !metaPermissionsInvalid) {
-    return <NoCampaignsFoundPanel onRefresh={refetchCampaigns} onCreateCampaign={() => {
-      // Dispatch an event to show the campaign creation wizard
-      window.dispatchEvent(new CustomEvent('show-campaign-creator'));
-    }} />;
+    return (
+      <>
+        <div className="bg-muted p-4 mb-4 rounded-md">
+          <p>Debug info: Campaign fetch completed with 0 campaigns. Fetch status: {campaignsFetchStatus || 'unknown'}</p>
+        </div>
+        <NoCampaignsFoundPanel onRefresh={refetchCampaigns} onCreateCampaign={() => {
+          // Dispatch an event to show the campaign creation wizard
+          window.dispatchEvent(new CustomEvent('show-campaign-creator'));
+        }} />
+      </>
+    );
   }
 
   // When we have campaigns, show the table
   return (
     <Card className="overflow-hidden" key={forceRender}>
+      {/* Debug information banner */}
+      <div className="bg-blue-50 p-4 border-b border-blue-100">
+        <p className="text-sm font-medium text-blue-800">
+          Rendering campaign table with {safeFilteredCampaigns.length} campaigns
+        </p>
+        <p className="text-xs text-blue-600">
+          Status: {fetchCompleted ? 'Fetch completed' : 'Fetch in progress'}, 
+          Tab: {activeTab}, 
+          Error: {error ? 'Yes' : 'None'}
+        </p>
+      </div>
       <CampaignTable 
         campaigns={safeFilteredCampaigns} 
         status={activeTab || status as 'active' | 'draft' | 'archived'}

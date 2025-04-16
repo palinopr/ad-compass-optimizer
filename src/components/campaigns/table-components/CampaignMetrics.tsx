@@ -55,19 +55,19 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
     if (budget) return formatCurrency(budget);
     if (dailyBudget) return formatCurrency(dailyBudget) + '/day';
     if (lifetimeBudget) return formatCurrency(lifetimeBudget) + ' (lifetime)';
-    return '-';
+    return '—';
   };
   
   const getSpendDisplay = (): string => {
     const spendValue = spend || insights?.spend || extraStats?.spend;
-    return spendValue ? formatCurrency(spendValue) : '-';
+    return spendValue ? formatCurrency(spendValue) : '—';
   };
 
   const getResultsDisplay = (): string => {
     if (extraStats?.results && extraStats.results !== '-') {
       return extraStats.results;
     }
-    return results || '-';
+    return results || '—';
   };
   
   const getCpaDisplay = (): string => {
@@ -77,7 +77,7 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
     if (extraStats?.cpa && extraStats.cpa !== '-') {
       return formatCurrency(extraStats.cpa);
     }
-    return '-';
+    return '—';
   };
   
   const getRoasDisplay = (): string => {
@@ -87,7 +87,7 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
     if (extraStats?.roas && extraStats.roas !== '-') {
       return extraStats.roas;
     }
-    return '-';
+    return '—';
   };
 
   return (

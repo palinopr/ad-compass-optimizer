@@ -38,6 +38,15 @@ export class MetaCampaignService extends BaseApiService {
           status: safeCampaigns[0]?.status || 'unknown',
           hasInsights: !!safeCampaigns[0]?.insights
         });
+        
+        // Ensure each campaign has at least basic properties even if API didn't provide them
+        safeCampaigns.forEach(campaign => {
+          if (!campaign.name) campaign.name = `Campaign ${campaign.id}`;
+          if (!campaign.status) campaign.status = 'unknown';
+          
+          // Log each campaign for debugging
+          console.log(`[META CAMPAIGN] Processing campaign: ${campaign.name} (${campaign.id}), status: ${campaign.status}, hasInsights: ${!!campaign.insights}`);
+        });
       } else {
         console.log('[META CAMPAIGN] No campaigns returned from API');
       }

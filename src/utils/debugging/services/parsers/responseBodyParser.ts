@@ -50,12 +50,22 @@ export const parseResponseBody = async (response: Response): Promise<{ text: str
             status: data.data[0].status,
             hasInsights: !!data.data[0].insights
           });
+          
+          // Additional campaign debugging for the UI rendering issue
+          console.log('[RESPONSE PARSER] Campaign data shape:', {
+            hasId: !!data.data[0].id,
+            hasName: !!data.data[0].name,
+            hasStatus: !!data.data[0].status,
+            hasObjective: !!data.data[0].objective,
+            knownProperties: Object.keys(data.data[0])
+          });
         }
       }
       
       // Check specifically for empty data arrays to help debug insights issues
       if (data && Array.isArray(data.data) && data.data.length === 0) {
         console.log('[RESPONSE PARSER] API returned empty data array []');
+        console.log('[RESPONSE PARSER] Full response for empty data[]:', data);
       }
       
       if (data.error) {

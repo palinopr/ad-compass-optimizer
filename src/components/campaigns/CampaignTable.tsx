@@ -127,6 +127,11 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
   // Always render the table, even if some campaigns are missing insights
   return (
     <CardContent className="p-0">
+      <div className="p-4 bg-yellow-50 border-b border-yellow-100">
+        <p className="text-sm text-yellow-800">
+          Rendering {campaigns.length} campaigns. If insights are missing, placeholders will be displayed.
+        </p>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
