@@ -62,7 +62,14 @@ export class CampaignProcessor {
           id: `empty-${Math.random().toString(36).substring(2, 9)}`,
           name: 'Empty Campaign Data',
           status: 'unknown',
-          insights: {},
+          insights: {
+            // Fix: Add required properties to match MetaCampaign.insights type
+            impressions: '0',
+            clicks: '0',
+            spend: '0',
+            cost_per_action_type: [],
+            actions: []
+          },
           isEmpty: true,
           error: 'Meta API returned empty object'
         };
@@ -71,7 +78,14 @@ export class CampaignProcessor {
       // Create a base normalized campaign
       const normalizedCampaign: MetaCampaign = {
         ...campaign,
-        insights: campaign.insights || {},
+        insights: campaign.insights || {
+          // Fix: Ensure default insights object has all required properties
+          impressions: '0',
+          clicks: '0',
+          spend: '0',
+          cost_per_action_type: [],
+          actions: []
+        },
       };
       
       if (campaign.insights) {
