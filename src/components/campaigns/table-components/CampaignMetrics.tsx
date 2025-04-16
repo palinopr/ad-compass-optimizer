@@ -1,22 +1,8 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { SingleMetric } from './metrics/SingleMetric';
+import { RoasMetric } from './metrics/RoasMetric';
+import { formatCurrency } from './metrics/utils/formatters';
 import { CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
-
-const formatCurrency = (value: string | undefined): string => {
-  if (!value || value === '-') return '-';
-  if (value.startsWith('$')) return value;
-  
-  const numValue = parseFloat(value);
-  if (isNaN(numValue)) return '-';
-  
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(numValue);
-};
 
 interface CampaignMetricsProps {
   budget?: string;
@@ -118,28 +104,12 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   };
 
   return (
-    <div className={`grid grid-cols-5 gap-4 text-sm ${isBlocked ? 'text-gray-400' : 'text-gray-600'}`}>
-      <div>{getBudgetDisplay()}</div>
-      <div>{getSpendDisplay()}</div>
-      <div>{getResultsDisplay()}</div>
-      <div>{getCpaDisplay()}</div>
-      <div className="flex items-center gap-2">
-        {getRoasDisplay() !== '-' ? (
-          <span className={parseFloat(getRoasDisplay()) >= 4 ? 'text-green-600 font-medium' : ''}>
-            {getRoasDisplay()}
-          </span>
-        ) : '-'}
-        {isBlocked && (
-          <Tooltip>
-            <TooltipTrigger>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>This campaign is blocked due to a permanent error (400). Check permissions or ID validity.</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
+    <div className="grid grid-cols-5 gap-4 text-sm">
+      <SingleMetric value={getBudgetDisplay()} isBlocked={isBlocked} />
+      <SingleMetric value={getSpendDisplay()} isBlocked={isBlocked} />
+      <SingleMetric value={getResultsDisplay()} isBlocked={isBlocked} />
+      <SingleMetric value={getCpaDisplay()} isBlocked={isBlocked} />
+      <RoasMetric value={getRoasDisplay()} isBlocked={isBlocked} />
     </div>
   );
 };
