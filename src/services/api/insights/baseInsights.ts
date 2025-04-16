@@ -27,7 +27,7 @@ export class BaseInsightsService extends BaseApiService {
       try {
         const blockedCampaigns = JSON.parse(localStorage.getItem(this.BLOCKED_CAMPAIGNS_KEY) || '[]');
         if (blockedCampaigns.includes(objectId)) {
-          console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign: ${objectId}`);
+          console.log(`[INSIGHTS] 🚫 Skipped ${objectId} – insights blocked after 400`);
           const error = new Error(`Campaign ${objectId} is permanently blocked due to previous 400 error`);
           (error as any).status = 400;
           (error as any).skipped = true;
@@ -42,7 +42,7 @@ export class BaseInsightsService extends BaseApiService {
       
       // Check if this exact request previously failed with 400 - STOP IMMEDIATELY if so
       if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-        console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign signature: ${objectId}`);
+        console.log(`[INSIGHTS] 🚫 Skipped ${objectId} – insights blocked after 400`);
         // Create an error object with status code for proper handling
         const error = new Error('Request previously failed with 400 status');
         (error as any).status = 400;
@@ -53,7 +53,7 @@ export class BaseInsightsService extends BaseApiService {
       // Check for object-specific permanent failure signatures
       const objectFailSignature = `object-${objectId}-failed`;
       if (DuplicateRequestChecker.isPermanentlyFailed(objectFailSignature)) {
-        console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign: ${objectId}`);
+        console.log(`[INSIGHTS] 🚫 Skipped ${objectId} – insights blocked after 400`);
         const error = new Error(`Campaign ${objectId} is permanently blocked due to previous 400 error`);
         (error as any).status = 400;
         (error as any).skipped = true;

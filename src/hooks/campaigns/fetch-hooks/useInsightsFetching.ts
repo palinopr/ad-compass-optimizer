@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { fetchInsightsForCampaigns } from '../fetch-utils/campaignInsightsFetcher';
@@ -32,13 +33,16 @@ export const useInsightsFetching = () => {
         
         // Skip permanently blocked campaigns to avoid making unnecessary requests
         const campaignsToProcess = campaigns.filter(campaign => {
-          const isBlocked = blockedCampaigns.includes(campaign.id);
+          // Check both the localStorage blocklist and the campaign's insightsStatus
+          const isBlocked = blockedCampaigns.includes(campaign.id) || campaign.insightsStatus === 'blocked';
+          
           if (isBlocked) {
-            console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign: ${campaign.id}`);
-            // Keep the campaign in the list but mark it as skipped
+            console.log(`[INSIGHTS] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
+            // Mark campaign as blocked explicitly
             campaign.insights = null;
             campaign.insightsStatus = 'blocked';
           }
+          
           return !isBlocked;
         });
         

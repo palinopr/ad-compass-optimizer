@@ -21,7 +21,7 @@ export const fetchCampaignInsights = async (
     try {
       const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
       if (blockedCampaigns.includes(campaignId)) {
-        console.log(`[INSIGHTS FETCH] 🚫 Skipped permanently blocked campaign: ${campaignId}`);
+        console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – insights blocked after 400`);
         return null;
       }
     } catch (e) {
@@ -61,7 +61,7 @@ export const fetchCampaignInsights = async (
     
     // Check if this exact request previously failed with 400 - BEFORE any other processing
     if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-      console.log(`[INSIGHTS FETCH] 🚫 Skipped permanently blocked campaign signature: ${campaignId} with preset ${validDatePreset}`);
+      console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – insights blocked after 400`);
       
       // Log this skipped request to verify our fix is working
       try {
@@ -85,7 +85,7 @@ export const fetchCampaignInsights = async (
     const nonexistentKey = `object-${campaignId}-nonexistent`;
     if (DuplicateRequestChecker.isPermanentlyFailed(objectFailureKey) || 
         DuplicateRequestChecker.isPermanentlyFailed(nonexistentKey)) {
-      console.log(`[INSIGHTS FETCH] 🚫 Skipped permanently blocked campaign: ${campaignId}`);
+      console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – insights blocked after 400`);
       return null;
     }
     

@@ -16,9 +16,52 @@ export class RequestQueueManager {
    * Add a request to the queue and return a promise that resolves when it's processed
    */
   public static async addToQueue<T>(requestFn: () => Promise<T>, requestId?: string): Promise<T> {
+    // Check immediately if this is a campaign ID that's been blocked
+    if (requestId) {
+      // Extract campaign ID if present in the request ID
+      let campaignId = "unknown";
+      if (requestId.includes(':')) {
+        const parts = requestId.split(':');
+        if (parts.length >= 2) {
+          campaignId = parts[1]; // Usually the second part is the object ID
+          
+          // Check if this campaign ID is in the blocked campaigns list
+          try {
+            const blockedCampaigns = JSON.parse(localStorage.getItem(this.BLOCKED_CAMPAIGNS_KEY) || '[]');
+            if (blockedCampaigns.includes(campaignId)) {
+              console.log(`[REQUEST QUEUE] 🚫 Skipped ${campaignId} – insights blocked after 400`);
+              
+              // Log that we skipped this request
+              try {
+                const skippedRequests = JSON.parse(localStorage.getItem('skipped_requests_log') || '[]');
+                skippedRequests.push({
+                  timestamp: new Date().toISOString(),
+                  requestId,
+                  campaignId,
+                  reason: 'blocked_campaign_400'
+                });
+                localStorage.setItem('skipped_requests_log', JSON.stringify(skippedRequests.slice(-50)));
+              } catch (e) {
+                console.error('[REQUEST QUEUE] Error logging skipped request:', e);
+              }
+              
+              return Promise.reject({
+                message: 'Campaign is blocked due to previous 400 status',
+                status: 400,
+                skipped: true,
+                campaignId
+              });
+            }
+          } catch (e) {
+            console.error('[REQUEST QUEUE] Error checking blocked campaigns:', e);
+          }
+        }
+      }
+    }
+    
     // If this request previously failed with 400, reject immediately - don't even queue it
     if (requestId && this.isPermanentlyFailed(requestId)) {
-      console.log(`[REQUEST QUEUE] 🚫 Skipped permanently blocked campaign request: ${requestId}`);
+      console.log(`[REQUEST QUEUE] 🚫 Skipped permanently blocked request: ${requestId}`);
       
       // Extract campaign ID if present in the request ID
       let campaignId = "unknown";
@@ -273,7 +316,7 @@ export class RequestQueueManager {
         try {
           const blockedCampaigns = JSON.parse(localStorage.getItem(this.BLOCKED_CAMPAIGNS_KEY) || '[]');
           if (blockedCampaigns.includes(objectId)) {
-            console.log(`[REQUEST QUEUE] 🚫 Skipped request for permanently blocked campaign: ${objectId}`);
+            console.log(`[REQUEST QUEUE] 🚫 Skipped ${objectId} – insights blocked after 400`);
             // Also mark this specific request as failed to prevent future attempts
             this.markAsPermanentlyFailed(requestId);
             return true;
@@ -287,7 +330,7 @@ export class RequestQueueManager {
         
         if (this.permanentlyFailedRequests.has(objectFailKey) || 
             this.permanentlyFailedRequests.has(nonexistentKey)) {
-          console.log(`[REQUEST QUEUE] 🚫 Skipped request for permanently blocked campaign: ${objectId}`);
+          console.log(`[REQUEST QUEUE] 🚫 Skipped ${objectId} – insights blocked after 400`);
           // Also mark this specific request as failed
           this.markAsPermanentlyFailed(requestId);
           return true;
@@ -305,6 +348,15 @@ export class RequestQueueManager {
     console.log(`[REQUEST QUEUE] ✅ Permanently blocking request: ${requestId}`);
     this.permanentlyFailedRequests.add(requestId);
     this.persistPermanentlyFailedRequests();
+    
+    // Extract campaign ID if present in the request ID and add it to blocked campaigns
+    if (requestId.includes(':')) {
+      const parts = requestId.split(':');
+      if (parts.length >= 2) {
+        const campaignId = parts[1]; // Usually the second part is the object ID
+        this.addToBlockedCampaigns(campaignId);
+      }
+    }
     
     // Cleanup if the set gets too large
     if (this.permanentlyFailedRequests.size > 1000) {
