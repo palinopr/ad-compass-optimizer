@@ -9,20 +9,21 @@ import { Info } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface CampaignTableRowProps {
-  campaign: MetaCampaign;
+  campaign: MetaCampaign;  // Explicitly typed as MetaCampaign from the import
   status: 'active' | 'draft' | 'archived';
   loadedFromFallback?: boolean;
 }
 
-const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, loadedFromFallback }) => {
+const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ 
+  campaign, 
+  status, 
+  loadedFromFallback 
+}: CampaignTableRowProps) => {
   const [isBlocked, setIsBlocked] = React.useState(false);
 
   React.useEffect(() => {
-    // IMMEDIATE CHECK: Use type guard to check for 'blocked' status
-    // Explicitly cast insightsStatus to ensure TypeScript recognizes 'blocked'
-    const insightsStatus = campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null;
-    
-    if (insightsStatus === 'blocked') {
+    // Direct comparison using properly typed MetaCampaign
+    if (campaign.insightsStatus === 'blocked') {
       setIsBlocked(true);
       return;
     }
@@ -35,9 +36,10 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
         setIsBlocked(true);
         
         // Only update if not already blocked
-        if (insightsStatus !== 'blocked') {
+        if (campaign.insightsStatus !== 'blocked') {
           console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from localStorage list`);
-          campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
+          // Use type assertion to ensure TypeScript understands this assignment
+          campaign.insightsStatus = 'blocked';
           campaign.insights = null;
         }
         return;
@@ -50,9 +52,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
         setIsBlocked(true);
         
         // Only update if not already blocked
-        if (insightsStatus !== 'blocked') {
+        if (campaign.insightsStatus !== 'blocked') {
           console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from failed signatures`);
-          campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
+          campaign.insightsStatus = 'blocked';
           campaign.insights = null;
           
           // Also update the blocked campaigns list for consistency
@@ -73,9 +75,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
           setIsBlocked(true);
           
           // Only update if not already blocked
-          if (insightsStatus !== 'blocked') {
+          if (campaign.insightsStatus !== 'blocked') {
             console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from 400 failures log`);
-            campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
+            campaign.insightsStatus = 'blocked';
             campaign.insights = null;
             
             // Update the other data sources for consistency
