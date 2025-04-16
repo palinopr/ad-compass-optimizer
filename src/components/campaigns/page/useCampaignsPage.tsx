@@ -23,7 +23,17 @@ export const useCampaignsPage = () => {
     isAuthSyncing
   } = useBaseCampaignsPage();
 
-  const { campaigns, filteredCampaigns, error: campaignsError, refetchCampaigns, isLoading } = useCampaigns(activeTab);
+  const { 
+    campaigns, 
+    filteredCampaigns, 
+    error: campaignsError, 
+    refetchCampaigns, 
+    isLoading, 
+    fetchCompleted, 
+    insightsFetchStatus,
+    campaignsFetchStatus 
+  } = useCampaigns(activeTab);
+  
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
   const initialFetchTriggeredRef = useRef(false);
 
@@ -109,6 +119,9 @@ export const useCampaignsPage = () => {
     campaignsError,
     isLoading,
     selectedAdAccount,
+    fetchCompleted,
+    insightsFetchStatus,
+    campaignsFetchStatus,
     
     // UI state
     activeTab,

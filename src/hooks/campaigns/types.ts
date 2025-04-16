@@ -11,6 +11,7 @@ export interface UseCampaignsResult {
   displayRefresh: number;
   forceRender: number;
   forceUiRefresh: () => void;
-  fetchCompleted?: boolean;
-  insightsFetchStatus?: 'pending' | 'success' | 'partial' | 'failed' | null;
+  fetchCompleted: boolean;
+  insightsFetchStatus: 'pending' | 'success' | 'partial' | 'failed' | null;
+  campaignsFetchStatus?: 'success' | 'unauthorized' | 'error' | null;
 }

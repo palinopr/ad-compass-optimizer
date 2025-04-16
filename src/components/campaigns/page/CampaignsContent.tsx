@@ -17,6 +17,7 @@ interface CampaignsContentProps {
   isLoading: boolean;
   campaignsError: any;
   selectedAdAccount: string | null;
+  campaignsFetchStatus?: 'success' | 'unauthorized' | 'error' | null;
 }
 
 const CampaignsContent: React.FC<CampaignsContentProps> = ({
@@ -30,6 +31,7 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
   isLoading,
   campaignsError,
   selectedAdAccount,
+  campaignsFetchStatus,
 }) => {
   if (!showCreateWizard) {
     return (
@@ -49,7 +51,7 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
           setActiveTab={setActiveTab} 
         />
 
-        {filteredCampaigns?.length === 0 && !showCreateWizard && (
+        {filteredCampaigns?.length === 0 && !showCreateWizard && campaignsFetchStatus !== 'unauthorized' && (
           <EmptyStateMessage adAccountId={selectedAdAccount} />
         )}
       </>

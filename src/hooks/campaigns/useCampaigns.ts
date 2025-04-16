@@ -25,6 +25,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     setInsightsFetchStatus
   } = useCampaignFetchState();
 
+  // Add campaignsFetchStatus state to track permission/access issues
+  const [campaignsFetchStatus, setCampaignsFetchStatus] = useState<'success' | 'unauthorized' | 'error' | null>(null);
   const [localForceRender, setLocalForceRender] = useState(0);
 
   const { fetchCampaigns, mountedRef } = useRefreshLogic(status);
@@ -38,6 +40,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     setErrorDetails(null);
     setFetchCompleted(false);
     setInsightsFetchStatus('pending');
+    // Reset campaign fetch status
+    setCampaignsFetchStatus(null);
 
     // Clear the existing status flags
     localStorage.removeItem('has_valid_campaign_insights');
@@ -49,6 +53,27 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         setError(result.error);
         setErrorDetails(result.errorDetails);
         setInsightsFetchStatus('failed');
+        
+        // Check for GraphMethodException or permission errors
+        const isPermissionError = 
+          result.errorDetails?.code === 100 || 
+          result.errorDetails?.code === 190 || 
+          result.errorDetails?.code === 200 ||
+          (result.errorDetails?.subcode === 33) ||
+          (typeof result.error === 'string' && 
+            (result.error.includes('permission') || 
+             result.error.includes('access') || 
+             result.error.includes('authorize')));
+        
+        if (isPermissionError) {
+          console.log('[CAMPAIGN FETCH] Permission error detected, marking as unauthorized');
+          setCampaignsFetchStatus('unauthorized');
+          localStorage.setItem('campaign_fetch_unauthorized', 'true');
+        } else {
+          setCampaignsFetchStatus('error');
+          localStorage.setItem('campaign_fetch_unauthorized', 'false');
+        }
+        
         localStorage.setItem('last_campaign_fetch_error_details', JSON.stringify({
           error: result.error,
           timestamp: new Date().toISOString()
@@ -60,6 +85,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.setItem('last_campaign_count', result.campaigns.length.toString());
+        setCampaignsFetchStatus('success');
+        localStorage.removeItem('campaign_fetch_unauthorized');
         
         const hasValidCampaigns = result.campaigns.length > 0;
         const hasValidInsightsData = result.campaigns.some(campaign => 
@@ -123,6 +150,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         console.warn('[CAMPAIGN FETCH] Fetch returned no campaigns and no error');
         localStorage.setItem('has_campaigns_data', 'false');
         setInsightsFetchStatus('failed');
+        setCampaignsFetchStatus('error');
         setCampaigns([]);
         setFetchCompleted(true);
         setIsLoading(false);
@@ -178,6 +206,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     forceRender: forceRender || localForceRender,
     forceUiRefresh: exposedForceUiRefresh,
     fetchCompleted,
-    insightsFetchStatus
+    insightsFetchStatus,
+    campaignsFetchStatus // Expose the new status
   };
 }

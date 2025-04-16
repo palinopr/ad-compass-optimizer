@@ -10,13 +10,16 @@ import {
 } from '@/components/ui/table';
 import CampaignTableRow from './CampaignTableRow';
 import type { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
+import { AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface CampaignTableProps {
   campaigns: MetaCampaign[];
   status?: 'active' | 'draft' | 'archived';
+  campaignsFetchStatus?: 'success' | 'unauthorized' | 'error' | null;
 }
 
-const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'active' }) => {
+const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'active', campaignsFetchStatus }) => {
   // Log render information to help debug
   useEffect(() => {
     console.log(`[CAMPAIGN TABLE] Rendering with ${campaigns.length} campaigns`, 
@@ -36,6 +39,22 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
       console.log(`[CAMPAIGN TABLE] ${missingInsights.length}/${campaigns.length} campaigns are missing insights data`);
     }
   }, [campaigns]);
+
+  // Show unauthorized error message
+  if (campaignsFetchStatus === 'unauthorized') {
+    return (
+      <CardContent className="p-4">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Permission Error</AlertTitle>
+          <AlertDescription>
+            ⚠️ No permission to view this ad account's campaigns.
+            Please reconnect your Meta account or verify ad account permissions.
+          </AlertDescription>
+        </Alert>
+      </CardContent>
+    );
+  }
 
   // Always render the table, even if some campaigns are missing insights
   return (

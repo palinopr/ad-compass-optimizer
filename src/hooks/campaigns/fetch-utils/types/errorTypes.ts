@@ -1,13 +1,12 @@
 
-export interface MetaApiError {
+export interface ErrorDetails {
   code?: number;
+  subcode?: number;
   type?: string;
   message?: string;
-  error_subcode?: number;
   fbtrace_id?: string;
-}
-
-export interface ErrorResponse {
-  error: string;
-  errorDetails: any;
+  status?: number;
+  general?: string;
+  isPermissionError?: boolean;
+  [key: string]: any;
 }
