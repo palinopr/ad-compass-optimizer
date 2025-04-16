@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
@@ -49,7 +48,7 @@ export function useProfileData() {
             toast({
               title: "Permission Warning",
               description: "Limited Meta profile access. Some features may be restricted.",
-              variant: "warning",
+              variant: "default",
               duration: 10000
             });
           }

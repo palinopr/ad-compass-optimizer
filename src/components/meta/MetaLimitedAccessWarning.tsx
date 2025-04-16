@@ -12,7 +12,7 @@ const MetaLimitedAccessWarning: React.FC<MetaLimitedAccessWarningProps> = ({
   onRefreshToken 
 }) => {
   return (
-    <Alert variant="warning" className="mb-4 bg-yellow-50 border-yellow-200">
+    <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
       <AlertTriangle className="h-4 w-4 text-yellow-800" />
       <AlertTitle className="text-yellow-800">Limited Meta Access</AlertTitle>
       <AlertDescription>

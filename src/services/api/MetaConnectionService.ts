@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 
 export interface ConnectionTestResult {
@@ -8,6 +9,7 @@ export interface ConnectionTestResult {
   userId?: string;
   userName?: string;
   hasAdAccess?: boolean;
+  limitedProfile?: boolean;  // Added this field to the interface
   exception?: unknown;
 }
 
