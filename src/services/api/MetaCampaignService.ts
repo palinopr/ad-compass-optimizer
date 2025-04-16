@@ -20,6 +20,14 @@ export class MetaCampaignService extends BaseApiService {
       
       console.log(`[META CAMPAIGN] Fetching campaigns for account ${adAccountId} with date preset ${datePreset || 'last_28d'}`);
       
+      // Log full request details for debugging
+      console.log('[META CAMPAIGN] Full request details:', {
+        tokenLength: token ? token.length : 0,
+        adAccountId: adAccountId,
+        datePreset: datePreset || 'last_28d',
+        timestamp: new Date().toISOString()
+      });
+      
       // Store timestamp of fetch attempt
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_fetch_account', adAccountId);
@@ -50,6 +58,12 @@ export class MetaCampaignService extends BaseApiService {
           status: safeCampaigns[0]?.status || 'unknown',
           hasInsights: !!safeCampaigns[0]?.insights
         });
+        
+        // Check if the campaigns are empty objects and warn if so
+        const emptyCount = safeCampaigns.filter(c => Object.keys(c).length === 0).length;
+        if (emptyCount > 0) {
+          console.warn(`⚠️ Meta API returned ${emptyCount}/${safeCampaigns.length} empty campaign objects. Possible permissions or token issue.`);
+        }
         
         // Ensure each campaign has at least basic properties even if API didn't provide them
         safeCampaigns.forEach(campaign => {

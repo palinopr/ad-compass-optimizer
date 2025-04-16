@@ -8,9 +8,8 @@ export class MetaFunnelBatchService {
     
     console.log('[META FUNNEL] Building batch requests for account:', formattedId);
     
-    // Use more comprehensive fields and include date_preset directly in the URL
-    // Include effective_status to ensure we get all campaign statuses
-    const campaignsUrl = `/${formattedId}/campaigns?fields=id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,insights.date_preset(last_28d){impressions,clicks,spend,actions,cost_per_action_type}`;
+    // Updated campaigns URL with explicit fields to match the main fetch
+    const campaignsUrl = `/${formattedId}/campaigns?fields=id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,stop_time,daily_budget,lifetime_budget,insights.date_preset(last_28d){impressions,clicks,spend,actions,cost_per_action_type}`;
     console.log('[META FUNNEL] Campaigns URL:', campaignsUrl);
     
     return [

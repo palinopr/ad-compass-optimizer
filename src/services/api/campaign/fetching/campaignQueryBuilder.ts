@@ -16,8 +16,9 @@ export class CampaignQueryBuilder {
     // Map legacy presets to Meta API compatible presets
     let validDatePreset = this.normalizePreset(datePreset);
     
-    // Use simplified fields for initial load to reduce API complexity
-    const basicFields = 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time';
+    // Use a more comprehensive list of fields to ensure we get all required data
+    // We're explicitly requesting these fields as required by the user
+    const basicFields = 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,stop_time';
     
     // Build a clean insights field string with the validated date preset
     // This format was proven to work in previous fixes
@@ -28,7 +29,7 @@ export class CampaignQueryBuilder {
     
     // Log the query for debugging
     console.log(`[CAMPAIGN QUERY] Built query with date preset: ${validDatePreset}`);
-    console.log(`[CAMPAIGN QUERY] Full query string: ${query}`);
+    console.log(`[CAMPAIGN QUERY] Full query fields: ${query}`);
     
     return query;
   }

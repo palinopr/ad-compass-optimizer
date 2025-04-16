@@ -17,6 +17,12 @@ export class CampaignApiClient extends BaseApiService {
     console.log(`[CAMPAIGN FETCH] Executing fetch to: ${redactedForLogging}`);
 
     try {
+      // Check if the URL contains the fields parameter - IMPORTANT check to avoid empty objects
+      if (!url.includes('fields=')) {
+        console.error('[CAMPAIGN FETCH] ERROR: Missing fields parameter in URL!');
+        throw new Error('Missing fields parameter in Meta API request URL');
+      }
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -57,6 +63,7 @@ export class CampaignApiClient extends BaseApiService {
       // Get response text first to inspect and debug
       const responseText = await response.text();
       console.log('[CAMPAIGN FETCH] Response received, length:', responseText.length);
+      console.log('[CAMPAIGN FETCH] Raw response text (first 500 chars):', responseText.substring(0, 500));
       
       let data;
       try {

@@ -11,9 +11,15 @@ export class CampaignUrlBuilder extends BaseApiService {
     fieldsQuery: string, 
     token: string
   ): string {
-    // Build URL - IMPORTANT: Use fields= for the first part, then append the rest
-    // This structure mimics the successful format from previous fixes
-    return `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fieldsQuery}&limit=500&access_token=${token}`;
+    // IMPORTANT: Ensure fields= parameter is properly formatted at the beginning
+    // This is critical to ensure the API returns populated objects, not empty ones
+    const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fieldsQuery}&limit=500&access_token=${token}`;
+    
+    // Log the full URL (with token redacted) to verify correct format
+    const redactedUrl = url.replace(token, 'REDACTED');
+    console.log(`[CAMPAIGN FETCH] Full URL structure (redacted): ${redactedUrl}`);
+    
+    return url;
   }
   
   /**
