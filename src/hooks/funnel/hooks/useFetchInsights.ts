@@ -5,6 +5,7 @@ import { metaAuthService } from '@/services/MetaAuthService';
 import { safelyValidateDatePreset } from '../utils/datePresetValidation';
 import { getDateRange } from '../utils/dateUtils';
 import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
+import { InsightOptions } from '@/types/insights';
 
 export const useFetchInsights = () => {
   const fetchInsights = useCallback(async (
@@ -44,17 +45,6 @@ export const useFetchInsights = () => {
         'website_purchase_roas'
       ];
 
-      // Define the type for options to fix type errors
-      interface InsightOptions {
-        fields: string[];
-        timeIncrement: number;
-        timeRange?: {
-          since: string;
-          until: string;
-        };
-        datePreset?: string;
-      }
-
       const baseOptions: InsightOptions = {
         fields: commonFields,
         timeIncrement: 1
@@ -71,6 +61,17 @@ export const useFetchInsights = () => {
       return response;
 
     } catch (err: any) {
+      // If it's a 400 error, ensure it's marked as permanently failed
+      if (err.status === 400 || (err.response?.status === 400)) {
+        const failureSignature = DuplicateRequestChecker.generateRequestSignature(
+          itemId,
+          `insights-${itemType}`,
+          { datePreset }
+        );
+        DuplicateRequestChecker.markAsPermanentlyFailed(failureSignature);
+        console.log(`[INSIGHTS HOOK] Marked request as permanently failed due to 400: ${itemId}`);
+      }
+      
       console.error('Error fetching insights:', err);
       throw err;
     }

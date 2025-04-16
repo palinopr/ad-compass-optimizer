@@ -1,18 +1,18 @@
 
-// Define our own mapping function since we can't rely on the one from datePresetParser
-const mapToValidDatePreset = (preset: string): string => {
-  // List of valid Meta date presets
-  const validPresets = [
-    'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
-    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_30d', 
-    'last_90d', 'last_week_mon_sun', 'last_week_sun_sat', 'last_quarter', 
-    'last_year', 'this_week_mon_today', 'this_week_sun_today', 'this_year',
-    'maximum'
-  ];
-  
+import { ValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
+
+const validPresets = [
+  'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
+  'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_30d', 
+  'last_90d', 'last_week_mon_sun', 'last_week_sun_sat', 'last_quarter', 
+  'last_year', 'this_week_mon_today', 'this_week_sun_today', 'this_year',
+  'maximum'
+] as const;
+
+const mapToValidDatePreset = (preset: string): ValidMetaDatePreset => {
   // If it's already a valid preset, use it
-  if (validPresets.includes(preset)) {
-    return preset;
+  if (validPresets.includes(preset as ValidMetaDatePreset)) {
+    return preset as ValidMetaDatePreset;
   }
   
   // Map legacy presets to valid ones
@@ -31,7 +31,7 @@ const mapToValidDatePreset = (preset: string): string => {
   return 'maximum';
 };
 
-const safelyValidateDatePreset = (datePreset: string): string => {
+const safelyValidateDatePreset = (datePreset: string): ValidMetaDatePreset => {
   // Always log what we're validating
   console.log(`[INSIGHTS HOOK] Validating datePreset: "${datePreset}"`);
   
@@ -40,21 +40,6 @@ const safelyValidateDatePreset = (datePreset: string): string => {
       datePreset.includes('28d') || 
       datePreset.includes('28day')) {
     console.warn(`[INSIGHTS HOOK] Blocking problematic date preset "${datePreset}", using maximum instead`);
-    
-    // Track this replacement for debugging
-    try {
-      const blockedHookRequests = JSON.parse(localStorage.getItem('hook_blocked_28d_requests') || '[]');
-      blockedHookRequests.push({
-        timestamp: new Date().toISOString(),
-        original: datePreset,
-        replacedWith: 'maximum',
-        location: 'useItemInsights.safelyValidateDatePreset'
-      });
-      localStorage.setItem('hook_blocked_28d_requests', JSON.stringify(blockedHookRequests.slice(-20)));
-    } catch (e) {
-      // Ignore storage errors
-    }
-    
     return 'maximum';
   }
   
@@ -70,4 +55,4 @@ const safelyValidateDatePreset = (datePreset: string): string => {
   return mappedPreset;
 };
 
-export { safelyValidateDatePreset };
+export { safelyValidateDatePreset, mapToValidDatePreset, validPresets };
