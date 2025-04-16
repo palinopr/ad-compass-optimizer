@@ -18,8 +18,8 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
   const [isBlocked, setIsBlocked] = React.useState(false);
 
   React.useEffect(() => {
-    // Explicitly check for 'blocked' status
-    if (campaign.insightsStatus === 'blocked') {
+    // Use type guard to check for 'blocked' status (this fixes the TypeScript error)
+    if (campaign.insightsStatus && campaign.insightsStatus === 'blocked') {
       setIsBlocked(true);
       return;
     }
@@ -29,6 +29,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
       if (blockedCampaigns.includes(campaign.id)) {
         setIsBlocked(true);
         
+        // Only update if not already blocked
         if (campaign.insightsStatus !== 'blocked') {
           campaign.insightsStatus = 'blocked';
           campaign.insights = null;
@@ -43,6 +44,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
     if (failedSignatures.includes(objectFailSignature)) {
       setIsBlocked(true);
       
+      // Only update if not already blocked
       if (campaign.insightsStatus !== 'blocked') {
         campaign.insightsStatus = 'blocked';
         campaign.insights = null;
@@ -59,7 +61,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
     if ((!campaign.insights || Object.keys(campaign.insights).length === 0) && campaign.name && campaign.status) {
       console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) rendering with metadata only - insights unavailable`);
       
-      if (isBlocked || campaign.insightsStatus === 'blocked') {
+      if (isBlocked || (campaign.insightsStatus && campaign.insightsStatus === 'blocked')) {
         console.log(`[CAMPAIGN ROW] 🚫 Campaign "${campaign.name}" (${campaign.id}) is blocked from insights fetching`);
       }
       
@@ -119,7 +121,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
           results={campaign.results}
           insights={campaign.insights}
           extraStats={campaign.extraStats}
-          isBlocked={isBlocked || campaign.insightsStatus === 'blocked'}
+          isBlocked={isBlocked || (campaign.insightsStatus === 'blocked')}
         />
       </TableCell>
       <TableCell className="text-right">
