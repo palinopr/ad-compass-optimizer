@@ -14,11 +14,18 @@ export class RequestQueueManager {
    * Add a request to the queue and return a promise that resolves when it's processed
    */
   public static async addToQueue<T>(requestFn: () => Promise<T>, requestId?: string): Promise<T> {
-    // If this request previously failed with 400, don't queue it again
+    // If this request previously failed with 400, reject immediately - don't even queue it
     if (requestId && this.permanentlyFailedRequests.has(requestId)) {
-      console.log(`[REQUEST QUEUE] Skipped insights request due to permanent failure (400): ${requestId}`);
-      return Promise.reject(new Error('Request previously failed with 400 status'));
+      console.log(`[REQUEST QUEUE] Immediately rejected request due to previous 400 failure: ${requestId}`);
+      return Promise.reject({
+        message: 'Request previously failed with 400 status',
+        status: 400,
+        skipped: true
+      });
     }
+
+    // Load previously failed requests from localStorage if needed
+    this.loadPermanentlyFailedRequests();
 
     return new Promise((resolve, reject) => {
       const wrappedRequest = async () => {
@@ -46,6 +53,7 @@ export class RequestQueueManager {
           if (error.status === 400 || (error.response && error.response.status === 400)) {
             if (requestId) {
               this.permanentlyFailedRequests.add(requestId);
+              this.persistPermanentlyFailedRequests();
               console.log(`[REQUEST QUEUE] Marked request as permanently failed due to 400 error: ${requestId}`);
             }
           }
@@ -62,6 +70,37 @@ export class RequestQueueManager {
         this.processQueue();
       }
     });
+  }
+
+  /**
+   * Load permanently failed requests from localStorage
+   */
+  private static loadPermanentlyFailedRequests() {
+    if (this.permanentlyFailedRequests.size === 0) {
+      try {
+        const storedFailures = localStorage.getItem('permanently_failed_requests');
+        if (storedFailures) {
+          const failures = JSON.parse(storedFailures);
+          failures.forEach((id: string) => this.permanentlyFailedRequests.add(id));
+          console.log(`[REQUEST QUEUE] Loaded ${this.permanentlyFailedRequests.size} permanently failed requests from storage`);
+        }
+      } catch (e) {
+        console.error('[REQUEST QUEUE] Error loading permanently failed requests:', e);
+      }
+    }
+  }
+
+  /**
+   * Persist permanently failed requests to localStorage
+   */
+  private static persistPermanentlyFailedRequests() {
+    try {
+      const failuresArray = Array.from(this.permanentlyFailedRequests);
+      localStorage.setItem('permanently_failed_requests', JSON.stringify(failuresArray));
+      console.log(`[REQUEST QUEUE] Persisted ${failuresArray.length} permanently failed requests to storage`);
+    } catch (e) {
+      console.error('[REQUEST QUEUE] Error persisting permanently failed requests:', e);
+    }
   }
 
   /**
@@ -130,6 +169,7 @@ export class RequestQueueManager {
     this.isProcessingQueue = false;
     this.lastRequestTime = 0;
     this.permanentlyFailedRequests.clear();
+    localStorage.removeItem('permanently_failed_requests');
     console.log('[REQUEST QUEUE] Queue and timing reset');
   }
   
@@ -137,6 +177,8 @@ export class RequestQueueManager {
    * Check if a request is permanently failed
    */
   public static isPermanentlyFailed(requestId: string): boolean {
+    // Load from storage if needed
+    this.loadPermanentlyFailedRequests();
     return this.permanentlyFailedRequests.has(requestId);
   }
   
@@ -145,6 +187,7 @@ export class RequestQueueManager {
    */
   public static markAsPermanentlyFailed(requestId: string) {
     this.permanentlyFailedRequests.add(requestId);
+    this.persistPermanentlyFailedRequests();
     console.log(`[REQUEST QUEUE] Marked request as permanently failed: ${requestId}`);
     
     // Cleanup if the set gets too large
@@ -152,6 +195,7 @@ export class RequestQueueManager {
       const entries = Array.from(this.permanentlyFailedRequests);
       const toRemove = entries.slice(0, 200);
       toRemove.forEach(key => this.permanentlyFailedRequests.delete(key));
+      this.persistPermanentlyFailedRequests();
     }
   }
 }

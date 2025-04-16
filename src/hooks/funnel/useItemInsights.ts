@@ -27,7 +27,7 @@ export const useItemInsights = () => {
   const fetchInsights = useCallback(async (
     itemId: string, 
     itemType: 'campaign' | 'adset',
-    datePreset: string = 'last_28d'
+    datePreset: string = 'maximum'  // CHANGED: Default from 'last_28d' to 'maximum'
   ) => {
     setIsLoading(true);
     setError(null);
@@ -38,8 +38,15 @@ export const useItemInsights = () => {
         throw new Error('No access token available');
       }
 
-      // Strictly validate the date preset
-      const validDatePreset = mapToValidDatePreset(datePreset);
+      // Strictly validate the date preset - EARLY VALIDATION
+      let validDatePreset = mapToValidDatePreset(datePreset);
+      
+      // Double-check: Force replace 'last_28d' with 'maximum' regardless of validation
+      if (validDatePreset === 'last_28d') {
+        console.log(`[INSIGHTS] Forcing override of problematic date_preset "last_28d" to "maximum"`);
+        validDatePreset = 'maximum';
+      }
+      
       console.log(`[INSIGHTS] Using strictly validated date preset: ${validDatePreset}`);
       
       // Generate a unique request signature for this particular insights request
@@ -49,7 +56,7 @@ export const useItemInsights = () => {
         { datePreset: validDatePreset }
       );
       
-      // Check if this exact request previously failed with 400
+      // Check if this exact request previously failed with 400 - EARLY CHECK
       if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
         console.log(`[INSIGHTS] Skipped insights request due to permanent failure (400): ${itemId}`);
         setError('This insights request previously failed due to a bad request (400)');
@@ -93,7 +100,12 @@ export const useItemInsights = () => {
       requests.push(() => {
         // Check again just before execution if this request has been marked as failed
         if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-          return Promise.reject(new Error('Request skipped due to previous 400 error'));
+          console.log(`[INSIGHTS] Skipping execution of request ${requestSignature} (previously failed with 400)`);
+          return Promise.reject({
+            message: 'Request skipped due to previous 400 error',
+            status: 400,
+            skipped: true
+          });
         }
         
         return itemType === 'campaign'
@@ -102,6 +114,7 @@ export const useItemInsights = () => {
           .catch(error => {
             // Mark this request signature as permanently failed if it's a 400
             if (error.status === 400 || (error.response && error.response.status === 400)) {
+              console.log(`[INSIGHTS] Marking request as permanently failed due to 400: ${requestSignature}`);
               DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
             }
             throw error;
@@ -121,23 +134,32 @@ export const useItemInsights = () => {
         fallbackOptions
       );
 
-      requests.push(() => {
-        // Check if fallback request has been marked as failed
-        if (DuplicateRequestChecker.isPermanentlyFailed(fallbackSignature)) {
-          return Promise.reject(new Error('Fallback request skipped due to previous 400 error'));
-        }
-        
-        return itemType === 'campaign'
-          ? MetaInsightsService.fetchCampaignInsights(token, itemId, fallbackOptions)
-          : MetaInsightsService.fetchAdSetInsights(token, itemId, fallbackOptions)
-          .catch(error => {
-            // Mark fallback request as permanently failed if it's a 400
-            if (error.status === 400 || (error.response && error.response.status === 400)) {
-              DuplicateRequestChecker.markAsPermanentlyFailed(fallbackSignature);
-            }
-            throw error;
-          });
-      });
+      // Only add fallback if the primary isn't already using maximum
+      if (validDatePreset !== 'maximum') {
+        requests.push(() => {
+          // Check if fallback request has been marked as failed
+          if (DuplicateRequestChecker.isPermanentlyFailed(fallbackSignature)) {
+            console.log(`[INSIGHTS] Skipping execution of fallback request ${fallbackSignature} (previously failed with 400)`);
+            return Promise.reject({
+              message: 'Fallback request skipped due to previous 400 error',
+              status: 400,
+              skipped: true
+            });
+          }
+          
+          return itemType === 'campaign'
+            ? MetaInsightsService.fetchCampaignInsights(token, itemId, fallbackOptions)
+            : MetaInsightsService.fetchAdSetInsights(token, itemId, fallbackOptions)
+            .catch(error => {
+              // Mark fallback request as permanently failed if it's a 400
+              if (error.status === 400 || (error.response && error.response.status === 400)) {
+                console.log(`[INSIGHTS] Marking fallback request as permanently failed due to 400: ${fallbackSignature}`);
+                DuplicateRequestChecker.markAsPermanentlyFailed(fallbackSignature);
+              }
+              throw error;
+            });
+        });
+      }
 
       // Execute requests with throttling
       const results = await InsightsRequestThrottler.throttleRequests(requests);

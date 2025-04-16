@@ -10,32 +10,33 @@ import { DuplicateRequestChecker } from '@/services/api/insights/throttling/dupl
 export const fetchCampaignInsights = async (
   campaignId: string, 
   token: string,
-  datePreset: string = 'last_28d'
+  datePreset: string = 'maximum'  // CHANGED: Default from 'last_28d' to 'maximum'
 ): Promise<CampaignExtraStats | null> => {
   try {
-    // Don't use last_28d anymore, use maximum instead to avoid 400 errors
+    // Double safety check - Always block last_28d directly
     if (datePreset === 'last_28d') {
-      console.warn(`[INSIGHTS FETCH] Avoiding problematic date_preset "last_28d", using "maximum" instead`);
+      console.warn(`[INSIGHTS FETCH] Blocking problematic date_preset "last_28d", using "maximum" instead`);
       datePreset = 'maximum';
     }
     
-    // Strictly validate the date preset using our new validator
+    // Strictly validate the date preset using our validator
     const validDatePreset = validateDatePreset(datePreset);
     
-    if (InsightsThrottling.isDuplicateRequest(campaignId, validDatePreset)) {
-      return null;
-    }
-    
-    // Generate a unique request signature for this insights request
+    // Generate a unique request signature for this insights request - EARLY CHECK
     const requestSignature = DuplicateRequestChecker.generateRequestSignature(
       campaignId, 
       'campaign-insights', 
       { datePreset: validDatePreset }
     );
     
-    // Check if this exact request previously failed with 400
+    // Check if this exact request previously failed with 400 - BEFORE any other processing
     if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-      console.log(`[INSIGHTS FETCH] Skipped insights request due to permanent failure (400): ${campaignId}`);
+      console.log(`[INSIGHTS FETCH] Skipped insights request due to permanent failure (400): ${campaignId} with preset ${validDatePreset}`);
+      return null;
+    }
+    
+    if (InsightsThrottling.isDuplicateRequest(campaignId, validDatePreset)) {
+      console.log(`[INSIGHTS FETCH] Skipped duplicate insights request: ${campaignId} with preset ${validDatePreset}`);
       return null;
     }
     
@@ -51,7 +52,7 @@ export const fetchCampaignInsights = async (
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'meta-marketing-dashboard/1.2.0' // Add user agent for better identification
+        'User-Agent': 'meta-marketing-dashboard/1.2.0' 
       }
     });
     
@@ -63,8 +64,26 @@ export const fetchCampaignInsights = async (
       
       // Mark as permanently failed if it's a 400 error
       if (response.status === 400) {
+        console.log(`[INSIGHTS FETCH] Marking request as permanently failed due to 400: ${campaignId} with preset ${validDatePreset}`);
         DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
-        console.log(`[INSIGHTS FETCH] Skipped insights request due to permanent failure (400): ${campaignId}`);
+        
+        // Store additional info about this specific 400 error
+        try {
+          const failed400s = JSON.parse(localStorage.getItem('insights_400_failures') || '[]');
+          failed400s.push({
+            timestamp: new Date().toISOString(),
+            campaignId,
+            datePreset: validDatePreset,
+            error: errorData.error ? {
+              code: errorData.error.code,
+              message: errorData.error.message
+            } : 'Unknown error'
+          });
+          localStorage.setItem('insights_400_failures', JSON.stringify(failed400s.slice(-20))); // Keep last 20
+        } catch (e) {
+          // Ignore storage errors
+        }
+        
         return null;
       }
       
@@ -116,8 +135,8 @@ export const fetchCampaignInsights = async (
         'campaign-insights', 
         { datePreset: datePreset }
       );
-      DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
       console.log(`[INSIGHTS FETCH] Marked request as permanently failed due to 400 error: ${campaignId}`);
+      DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
     }
     
     InsightsThrottling.checkErrorForRateLimit(error);

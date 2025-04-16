@@ -11,16 +11,31 @@ export const buildInsightsUrl = (
     datePreset = 'maximum';
   }
   
-  // Force replace last_28d with maximum to avoid 400 errors
+  // Always block last_28d - this is non-negotiable
   if (datePreset === 'last_28d') {
-    console.warn('[INSIGHTS URL] Replacing problematic date_preset "last_28d" with "maximum"');
+    console.warn('[INSIGHTS URL] Blocking problematic date_preset "last_28d", replacing with "maximum"');
+    
+    // Log this blocking for debugging
+    try {
+      const blockedRequests = JSON.parse(localStorage.getItem('url_blocked_last_28d') || '[]');
+      blockedRequests.push({
+        timestamp: new Date().toISOString(),
+        campaignId,
+        original: 'last_28d',
+        replacedWith: 'maximum'
+      });
+      localStorage.setItem('url_blocked_last_28d', JSON.stringify(blockedRequests.slice(-20))); // Keep last 20
+    } catch (e) {
+      // Ignore storage errors
+    }
+    
     datePreset = 'maximum';
   }
   
   // Strict list of Meta-accepted date presets (official API values only)
   const validPresets = [
     'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
-    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 
+    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_30d', 
     'last_90d', 'last_week_mon_sun', 'last_week_sun_sat', 'last_quarter', 
     'last_year', 'this_week_mon_today', 'this_week_sun_today', 'this_year',
     'maximum'
