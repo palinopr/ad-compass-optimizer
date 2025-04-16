@@ -15,9 +15,13 @@ const mapToValidDatePreset = (preset: string): ValidMetaDatePreset => {
     return preset as ValidMetaDatePreset;
   }
   
-  // Map legacy presets to valid ones
-  if (preset === 'last30days' || preset === 'last_30days' || preset === 'last_30d') {
-    console.log(`[DATE PRESET MAPPING] Mapped legacy preset '${preset}' to 'maximum'`);
+  // Map legacy and problematic presets to valid ones
+  if (preset === 'last_28d' || 
+      preset === 'last28days' || 
+      preset === 'last30days' || 
+      preset === 'last_30days' || 
+      preset === 'last_30d') {
+    console.log(`[DATE PRESET MAPPING] Mapped problematic preset '${preset}' to 'maximum'`);
     return 'maximum';
   }
   
@@ -35,7 +39,7 @@ const safelyValidateDatePreset = (datePreset: string): ValidMetaDatePreset => {
   // Always log what we're validating
   console.log(`[INSIGHTS HOOK] Validating datePreset: "${datePreset}"`);
   
-  // Block last_28d and similar patterns
+  // Block all variations of 28-day presets
   if (datePreset === 'last_28d' || 
       datePreset.includes('28d') || 
       datePreset.includes('28day')) {
@@ -43,7 +47,7 @@ const safelyValidateDatePreset = (datePreset: string): ValidMetaDatePreset => {
     return 'maximum';
   }
   
-  // Use the existing mapper, but override any "last_28d" it might return
+  // Use the mapping function to validate and potentially transform the preset
   const mappedPreset = mapToValidDatePreset(datePreset);
   
   // Double-check that the mapping didn't give us a problematic preset
@@ -56,3 +60,4 @@ const safelyValidateDatePreset = (datePreset: string): ValidMetaDatePreset => {
 };
 
 export { safelyValidateDatePreset, mapToValidDatePreset, validPresets };
+
