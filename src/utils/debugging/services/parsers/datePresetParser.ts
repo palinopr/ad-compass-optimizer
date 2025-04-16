@@ -47,33 +47,29 @@ const validMetaPresets = [
   'this_week_sun_today', 
   'this_year',
   'maximum'
-];
+] as const; // Use 'as const' to make this a readonly tuple
 
 // Define the type for valid Meta API date presets
-export type ValidMetaDatePreset = 'today' | 'yesterday' | 'this_month' | 'last_month' |
-  'this_quarter' | 'lifetime' | 'last_3d' | 'last_7d' | 'last_14d' |
-  'last_28d' | 'last_30d' | 'last_90d' | 'last_week_mon_sun' | 'last_week_sun_sat' | 
-  'last_quarter' | 'last_year' | 'this_week_mon_today' | 'this_week_sun_today' | 
-  'this_year' | 'maximum';
+export type ValidMetaDatePreset = typeof validMetaPresets[number];
 
 /**
  * Validates if a date preset is a valid Meta API value
  */
 export const isValidMetaDatePreset = (preset?: string): boolean => {
   if (!preset) return false;
-  return validMetaPresets.includes(preset);
+  return validMetaPresets.includes(preset as any);
 };
 
 /**
  * Maps legacy date presets to Meta API compatible values
  * Only returns strictly valid Meta API values
  */
-export const mapToValidDatePreset = (preset?: string): string => {
+export const mapToValidDatePreset = (preset?: string): ValidMetaDatePreset => {
   if (!preset) return 'last_28d'; // Default
   
   // If it's already a valid preset, use it
   if (isValidMetaDatePreset(preset)) {
-    return preset;
+    return preset as ValidMetaDatePreset;
   }
   
   // Strict mapping for legacy values

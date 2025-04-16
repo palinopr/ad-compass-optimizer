@@ -6,7 +6,7 @@ import { InsightFilterOptions, InsightsResponse } from '@/services/api/MetaInsig
 import { useRateLimitStatus } from './useRateLimitStatus';
 import { useErrorHandling } from './useErrorHandling';
 import { toast } from '@/hooks/use-toast';
-import { isValidMetaDatePreset, mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
+import { isValidMetaDatePreset, mapToValidDatePreset, ValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 export function useInsightsFetching() {
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
@@ -26,7 +26,8 @@ export function useInsightsFetching() {
     let validatedOptions = { ...options };
     
     if (options.datePreset) {
-      const validDatePreset = mapToValidDatePreset(options.datePreset);
+      // Use type assertion to ensure the returned value matches the expected type
+      const validDatePreset = mapToValidDatePreset(options.datePreset) as ValidMetaDatePreset;
       
       if (validDatePreset !== options.datePreset) {
         console.log(`[INSIGHTS FETCHING] Converting invalid preset "${options.datePreset}" to "${validDatePreset}"`);
