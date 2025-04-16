@@ -14,6 +14,15 @@ interface CampaignTableRowProps {
 }
 
 const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, loadedFromFallback }) => {
+  const [isBlocked, setIsBlocked] = React.useState(false);
+
+  // Check if this campaign ID has been marked as permanently failed
+  React.useEffect(() => {
+    const objectFailSignature = `object-${campaign.id}-failed`;
+    const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
+    setIsBlocked(failedSignatures.includes(objectFailSignature));
+  }, [campaign.id]);
+
   // Log detailed campaign data at render time for debugging
   React.useEffect(() => {
     // Basic validation check
@@ -58,7 +67,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
   }, [campaign]);
 
   return (
-    <TableRow>
+    <TableRow className={isBlocked ? 'opacity-75' : ''}>
       <TableCell>
         <div className="flex items-center gap-2">
           {campaign.name}
@@ -86,6 +95,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
           results={campaign.results}
           insights={campaign.insights}
           extraStats={campaign.extraStats}
+          isBlocked={isBlocked}
         />
       </TableCell>
       <TableCell className="text-right">

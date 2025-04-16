@@ -1,5 +1,6 @@
-
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
 
 const formatCurrency = (value: string | undefined): string => {
@@ -31,6 +32,7 @@ interface CampaignMetricsProps {
     clicks?: string;
     impressions?: string;
   };
+  isBlocked?: boolean;
 }
 
 const CampaignMetrics: React.FC<CampaignMetricsProps> = ({ 
@@ -40,7 +42,8 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   spend,
   results,
   extraStats,
-  insights
+  insights,
+  isBlocked = false
 }) => {
   React.useEffect(() => {
     const availableData = {
@@ -115,17 +118,27 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-5 gap-4 text-sm text-gray-600">
+    <div className={`grid grid-cols-5 gap-4 text-sm ${isBlocked ? 'text-gray-400' : 'text-gray-600'}`}>
       <div>{getBudgetDisplay()}</div>
       <div>{getSpendDisplay()}</div>
       <div>{getResultsDisplay()}</div>
       <div>{getCpaDisplay()}</div>
-      <div>
+      <div className="flex items-center gap-2">
         {getRoasDisplay() !== '-' ? (
           <span className={parseFloat(getRoasDisplay()) >= 4 ? 'text-green-600 font-medium' : ''}>
             {getRoasDisplay()}
           </span>
         ) : '-'}
+        {isBlocked && (
+          <Tooltip>
+            <TooltipTrigger>
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>This campaign is blocked due to a permanent error (400). Check permissions or ID validity.</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </div>
   );
