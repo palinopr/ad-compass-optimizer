@@ -11,7 +11,7 @@ export const useFetchInsights = () => {
   const fetchInsights = useCallback(async (
     itemId: string, 
     itemType: 'campaign' | 'adset',
-    datePreset: string = 'last_30d' // Changed default from 'maximum' to last_30d
+    datePreset: string = 'last_30d'
   ) => {
     console.log(`[INSIGHTS HOOK] Request started for ${itemType} ${itemId} with datePreset: ${datePreset}`);
 
@@ -21,6 +21,13 @@ export const useFetchInsights = () => {
         throw new Error('No access token available');
       }
 
+      // Force date_preset to last_30d regardless of input
+      const forcedDatePreset = 'last_30d';
+      if (datePreset !== forcedDatePreset) {
+        console.log(`[INSIGHTS HOOK] Overriding input date_preset '${datePreset}' with forced value '${forcedDatePreset}'`);
+        datePreset = forcedDatePreset;
+      }
+      
       const validDatePreset = safelyValidateDatePreset(datePreset);
       
       // Log the validated date preset
@@ -63,6 +70,13 @@ export const useFetchInsights = () => {
 
       // Log the full options being used
       console.log(`[INSIGHTS HOOK] Full options for fetch:`, JSON.stringify(baseOptions));
+      
+      // NEW: Log to confirm the date parameter is properly set
+      if (baseOptions.datePreset) {
+        console.log(`✅ Insights request will include date_preset=${baseOptions.datePreset}`);
+      } else if (baseOptions.timeRange) {
+        console.log(`✅ Insights request will include time_range=${JSON.stringify(baseOptions.timeRange)}`);
+      }
 
       const response = await MetaFunnelService.fetchFunnelData(token, itemId, validDatePreset);
       

@@ -67,18 +67,21 @@ export class InsightsBaseService extends BaseApiService {
       InsightsThrottling.checkThrottling();
       
       const params = InsightsRequestBuilder.buildQueryParams(token, options);
-      const url = `${this.BASE_URL}/${this.API_VERSION}/${objectId}/insights?${params.toString()}`;
+      let url = `${this.BASE_URL}/${this.API_VERSION}/${objectId}/insights?${params.toString()}`;
+      
+      // NEW: Double-check date_preset is in the URL; if not, force append it
+      if (!url.includes('date_preset=') && !url.includes('time_range=')) {
+        console.error(`[INSIGHTS] CRITICAL ERROR: URL is missing date parameter for object ${objectId}, force appending date_preset=last_30d`);
+        url = `${url}&date_preset=last_30d`;
+        console.log(`[INSIGHTS] Forced date_preset into URL`);
+      }
       
       // Log the actual URL that will be used (with token redacted)
       const maskedUrl = url.replace(token, 'REDACTED');
       console.log(`[INSIGHTS] Final request URL: ${maskedUrl}`);
       
-      // CRITICAL: Verify date_preset or time_range is in the URL
-      if (!url.includes('date_preset=') && !url.includes('time_range=')) {
-        console.error(`[INSIGHTS] CRITICAL ERROR: URL is missing date parameter for object ${objectId}`);
-        console.error(`[INSIGHTS] URL: ${maskedUrl}`);
-        throw new Error(`Missing date parameter in insights URL for object ${objectId}`);
-      }
+      // NEW: Log with checkmark to confirm date_preset is in URL
+      console.log(`✅ Final insights URL: ${maskedUrl}`);
       
       if (options.timeRange) {
         console.log(`[INSIGHTS] Using time_range: ${JSON.stringify(options.timeRange)}`);

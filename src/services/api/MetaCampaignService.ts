@@ -1,3 +1,4 @@
+
 import { BaseApiService } from './BaseApiService';
 import { CampaignFetchService } from './campaign/fetching/campaignFetchService';
 import { MetaCampaign } from './types/metaCampaignTypes';
@@ -31,7 +32,13 @@ export class MetaCampaignService extends BaseApiService {
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_fetch_account', adAccountId);
       
-      const campaigns = await CampaignFetchService.fetchCampaigns(token, adAccountId, datePreset);
+      // NEW: Ensure datePreset is specifically set to last_30d
+      const forcedDatePreset = 'last_30d';
+      if (datePreset !== forcedDatePreset) {
+        console.log(`[META CAMPAIGN] Overriding provided date_preset '${datePreset}' with forced value '${forcedDatePreset}'`);
+      }
+      
+      const campaigns = await CampaignFetchService.fetchCampaigns(token, adAccountId, forcedDatePreset);
       
       // NEW: Log raw campaign data after fetch but before mapping/filtering
       console.log('[MetaCampaignService] Raw campaigns response:', campaigns);
@@ -62,6 +69,8 @@ export class MetaCampaignService extends BaseApiService {
         const emptyCount = safeCampaigns.filter(c => Object.keys(c).length === 0).length;
         if (emptyCount > 0) {
           console.warn(`⚠️ Meta API returned ${emptyCount}/${safeCampaigns.length} empty campaign objects. Possible permissions or token issue.`);
+          // NEW: Log the request URL if available
+          console.warn(`⚠️ Check request parameters: date_preset=last_30d was ${safeCampaigns[0]?.insights?.date_preset ? 'included' : 'missing'}`);
         }
         
         // Ensure each campaign has at least basic properties even if API didn't provide them

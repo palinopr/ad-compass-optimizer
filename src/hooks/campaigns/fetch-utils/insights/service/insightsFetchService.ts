@@ -23,11 +23,18 @@ export const fetchCampaignInsightData = async (
   const debugUrl = url.replace(token, 'REDACTED_TOKEN');
   console.log(`[INSIGHTS FETCH] Full request URL: ${debugUrl}`);
   
-  // Verify date_preset is in the URL before proceeding
+  // NEW: Added explicit check and console log to confirm date_preset is in URL
   if (!url.includes('date_preset=') && !url.includes('time_range=')) {
-    console.error(`[INSIGHTS FETCH] CRITICAL ERROR: URL is missing date_preset parameter for campaign ${campaignId}`);
-    throw new Error(`Missing date_preset in insights URL for campaign ${campaignId}`);
+    console.error(`[INSIGHTS FETCH] CRITICAL ERROR: Missing date_preset in URL. Force appending it now...`);
+    // Force append date_preset if missing
+    const appendChar = url.includes('?') ? '&' : '?';
+    url = `${url}${appendChar}date_preset=${validDatePreset}`;
+    const fixedDebugUrl = url.replace(token, 'REDACTED_TOKEN');
+    console.log(`[INSIGHTS FETCH] FIXED request URL: ${fixedDebugUrl}`);
   }
+  
+  // NEW: Log the final URL with a checkmark
+  console.log(`✅ Final insights URL: ${url.replace(token, 'REDACTED_TOKEN')}`);
   
   const response = await fetch(url, {
     method: 'GET',
