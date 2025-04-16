@@ -9,6 +9,8 @@ import { InsightsThrottling } from './throttling/InsightsThrottling';
 import { DuplicateRequestChecker } from './throttling/duplicateChecker';
 
 export class BaseInsightsService extends BaseApiService {
+  private static readonly BLOCKED_CAMPAIGNS_KEY = 'permanently_blocked_campaigns';
+
   /**
    * Fetches insights for a specific ad object (account, campaign, adset, or ad)
    */
@@ -21,14 +23,38 @@ export class BaseInsightsService extends BaseApiService {
       console.log(`Fetching insights for object ${objectId}...`);
       this.validateToken(token, 'fetchInsights');
       
+      // First check if this campaign is in the blocked campaigns list
+      try {
+        const blockedCampaigns = JSON.parse(localStorage.getItem(this.BLOCKED_CAMPAIGNS_KEY) || '[]');
+        if (blockedCampaigns.includes(objectId)) {
+          console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign: ${objectId}`);
+          const error = new Error(`Campaign ${objectId} is permanently blocked due to previous 400 error`);
+          (error as any).status = 400;
+          (error as any).skipped = true;
+          throw error;
+        }
+      } catch (e) {
+        // Ignore storage errors
+      }
+      
       // Generate a unique request signature to identify this exact request
       const requestSignature = DuplicateRequestChecker.generateRequestSignature(objectId, 'insights', options);
       
       // Check if this exact request previously failed with 400 - STOP IMMEDIATELY if so
       if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-        console.log(`[INSIGHTS] ✓ Skipped insights request due to permanent failure (400): ${objectId}`);
+        console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign signature: ${objectId}`);
         // Create an error object with status code for proper handling
         const error = new Error('Request previously failed with 400 status');
+        (error as any).status = 400;
+        (error as any).skipped = true;
+        throw error;
+      }
+      
+      // Check for object-specific permanent failure signatures
+      const objectFailSignature = `object-${objectId}-failed`;
+      if (DuplicateRequestChecker.isPermanentlyFailed(objectFailSignature)) {
+        console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign: ${objectId}`);
+        const error = new Error(`Campaign ${objectId} is permanently blocked due to previous 400 error`);
         (error as any).status = 400;
         (error as any).skipped = true;
         throw error;
@@ -69,13 +95,16 @@ export class BaseInsightsService extends BaseApiService {
         const errorData = await response.json();
         console.error(`[INSIGHTS] 400 Error response:`, errorData);
         
-        // MORE AGGRESSIVE: Always mark 400 errors as permanent failures, regardless of error type
-        console.log(`[INSIGHTS] ✓ Marking request as PERMANENTLY FAILED due to 400: ${requestSignature}`);
+        // STRICT BLOCKING: Always mark 400 errors as permanent failures and block the campaign ID
+        console.log(`[INSIGHTS] ✅ Permanently blocking campaign due to 400 error: ${objectId}`);
         DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
         
         // Also store object ID as permanently failed to catch similar requests
-        const objectFailSignature = `object-${objectId}-failed`;
-        DuplicateRequestChecker.markAsPermanentlyFailed(objectFailSignature);
+        const objectFailKey = `object-${objectId}-failed`;
+        DuplicateRequestChecker.markAsPermanentlyFailed(objectFailKey);
+        
+        // Add to the blocked campaigns list
+        this.addToBlockedCampaigns(objectId);
         
         // Store this requestSignature in localStorage to persist across sessions
         try {
@@ -117,15 +146,18 @@ export class BaseInsightsService extends BaseApiService {
       
       return insights;
     } catch (error) {
-      // IMPROVED ERROR HANDLING: Special handling for 400 errors and object not found errors
+      // ENHANCED ERROR HANDLING: Special handling for 400 errors and object not found errors
       if (error instanceof Error) {
         console.error(`Error fetching insights for object ${objectId}:`, error.message);
         
         // Check for "Object does not exist" errors specifically
         if (error.message.includes('does not exist') || error.message.includes('not found')) {
-          console.log(`[INSIGHTS] ✓ Object ${objectId} does not exist - marking as permanently failed`);
+          console.log(`[INSIGHTS] ✅ Permanently blocking nonexistent object: ${objectId}`);
           const objSignature = `object-${objectId}-nonexistent`;
           DuplicateRequestChecker.markAsPermanentlyFailed(objSignature);
+          
+          // Add to blocked campaigns list
+          this.addToBlockedCampaigns(objectId);
           
           // Also mark the specific request as permanently failed
           const specificSignature = DuplicateRequestChecker.generateRequestSignature(objectId, 'insights', options);
@@ -134,14 +166,33 @@ export class BaseInsightsService extends BaseApiService {
         
         // If we get a 400 error, properly handle it and ensure we mark it
         if ((error as any).status === 400) {
-          console.log(`[INSIGHTS] ✓ Permanently flagging 400 error for object ${objectId}`);
+          console.log(`[INSIGHTS] ✅ Permanently blocking campaign due to 400 error: ${objectId}`);
           const specificSignature = DuplicateRequestChecker.generateRequestSignature(objectId, 'insights', options);
           DuplicateRequestChecker.markAsPermanentlyFailed(specificSignature);
+          
+          // Add to the blocked campaigns list
+          this.addToBlockedCampaigns(objectId);
         }
       }
       
       InsightsThrottling.checkErrorForRateLimit(error);
       throw error;
+    }
+  }
+
+  /**
+   * Add a campaign ID to the blocked campaigns list
+   */
+  private static addToBlockedCampaigns(campaignId: string): void {
+    try {
+      const blockedCampaigns = JSON.parse(localStorage.getItem(this.BLOCKED_CAMPAIGNS_KEY) || '[]');
+      if (!blockedCampaigns.includes(campaignId)) {
+        blockedCampaigns.push(campaignId);
+        localStorage.setItem(this.BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
+        console.log(`[INSIGHTS] ✅ Permanently blocked campaign: ${campaignId}`);
+      }
+    } catch (e) {
+      console.error('[INSIGHTS] Error adding to blocked campaigns:', e);
     }
   }
 }

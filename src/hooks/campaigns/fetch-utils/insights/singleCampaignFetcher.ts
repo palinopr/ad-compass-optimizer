@@ -10,10 +10,23 @@ import { DuplicateRequestChecker } from '@/services/api/insights/throttling/dupl
 export const fetchCampaignInsights = async (
   campaignId: string, 
   token: string,
-  datePreset: string = 'maximum'  // CHANGED: Default from 'last_28d' to 'maximum'
+  datePreset: string = 'maximum'  // Default to 'maximum'
 ): Promise<CampaignExtraStats | null> => {
+  const BLOCKED_CAMPAIGNS_KEY = 'permanently_blocked_campaigns';
+  
   try {
     console.log(`[INSIGHTS FETCH] Starting insights fetch for campaign ${campaignId} with initial datePreset=${datePreset}`);
+    
+    // FIRST CHECK: Check if this campaign is already in the blocked campaigns list
+    try {
+      const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
+      if (blockedCampaigns.includes(campaignId)) {
+        console.log(`[INSIGHTS FETCH] 🚫 Skipped permanently blocked campaign: ${campaignId}`);
+        return null;
+      }
+    } catch (e) {
+      // Ignore storage errors
+    }
     
     // Block last_28d directly at the entry point
     if (datePreset === 'last_28d' || datePreset.includes('28d') || datePreset.includes('28day')) {
@@ -48,7 +61,7 @@ export const fetchCampaignInsights = async (
     
     // Check if this exact request previously failed with 400 - BEFORE any other processing
     if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-      console.log(`[INSIGHTS FETCH] ✓ Skipped insights request due to permanent failure (400): ${campaignId} with preset ${validDatePreset}`);
+      console.log(`[INSIGHTS FETCH] 🚫 Skipped permanently blocked campaign signature: ${campaignId} with preset ${validDatePreset}`);
       
       // Log this skipped request to verify our fix is working
       try {
@@ -67,12 +80,12 @@ export const fetchCampaignInsights = async (
       return null;
     }
     
-    // NEW: Also check if the campaign ID itself has been marked as a failed object
+    // Also check if the campaign ID itself has been marked as a failed object
     const objectFailureKey = `object-${campaignId}-failed`;
     const nonexistentKey = `object-${campaignId}-nonexistent`;
     if (DuplicateRequestChecker.isPermanentlyFailed(objectFailureKey) || 
         DuplicateRequestChecker.isPermanentlyFailed(nonexistentKey)) {
-      console.log(`[INSIGHTS FETCH] ✓ Skipped insights for previously failed campaign object: ${campaignId}`);
+      console.log(`[INSIGHTS FETCH] 🚫 Skipped permanently blocked campaign: ${campaignId}`);
       return null;
     }
     
@@ -127,20 +140,32 @@ export const fetchCampaignInsights = async (
       const errorData = await response.json();
       console.error(`[INSIGHTS FETCH] Error fetching insights for campaign ${campaignId}:`, errorData);
       
-      // Mark as permanently failed if it's a 400 error
+      // STRICT BLOCKING: Immediately mark any 400 error as permanent failure
       if (response.status === 400) {
-        console.log(`[INSIGHTS FETCH] ✓ Marking request as permanently failed due to 400: ${campaignId} with preset ${validDatePreset}`);
+        console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaignId}`);
         DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
         
         // ALSO mark the campaign ID itself as permanently failed
         const objectFailKey = `object-${campaignId}-failed`;
         DuplicateRequestChecker.markAsPermanentlyFailed(objectFailKey);
         
+        // Add to the blocked campaigns list
+        try {
+          const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
+          if (!blockedCampaigns.includes(campaignId)) {
+            blockedCampaigns.push(campaignId);
+            localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
+            console.log(`[INSIGHTS FETCH] Added to permanently blocked campaigns: ${campaignId}`);
+          }
+        } catch (e) {
+          console.error('[INSIGHTS FETCH] Error adding to blocked campaigns:', e);
+        }
+        
         // Check if this is a "does not exist" error
         if (errorData.error && errorData.error.message && 
             (errorData.error.message.includes('does not exist') || 
              errorData.error.message.includes('not found'))) {
-          console.log(`[INSIGHTS FETCH] ✓ Object ${campaignId} does not exist - marking as permanently nonexistent`);
+          console.log(`[INSIGHTS FETCH] ✅ Permanently blocking nonexistent object: ${campaignId}`);
           const nonexistentKey = `object-${campaignId}-nonexistent`;
           DuplicateRequestChecker.markAsPermanentlyFailed(nonexistentKey);
         }
@@ -208,19 +233,31 @@ export const fetchCampaignInsights = async (
   } catch (error) {
     console.error(`[INSIGHTS FETCH] Error fetching insights for campaign ${campaignId}:`, error);
     
-    // If it's a 400 error, mark it as permanently failed
+    // STRICT BLOCKING: If it's a 400 error, mark it as permanently failed
     if ((error as any).status === 400) {
+      console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaignId}`);
       const requestSignature = DuplicateRequestChecker.generateRequestSignature(
         campaignId, 
         'campaign-insights', 
         { datePreset: datePreset }
       );
-      console.log(`[INSIGHTS FETCH] ✓ Marked request as permanently failed due to 400 error: ${campaignId}`);
       DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
       
       // ALSO mark the campaign ID as failed
       const objectFailKey = `object-${campaignId}-failed`;
       DuplicateRequestChecker.markAsPermanentlyFailed(objectFailKey);
+      
+      // Add to the blocked campaigns list
+      try {
+        const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
+        if (!blockedCampaigns.includes(campaignId)) {
+          blockedCampaigns.push(campaignId);
+          localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
+          console.log(`[INSIGHTS FETCH] Added to permanently blocked campaigns: ${campaignId}`);
+        }
+      } catch (e) {
+        console.error('[INSIGHTS FETCH] Error adding to blocked campaigns:', e);
+      }
       
       // Log the error for debugging
       try {

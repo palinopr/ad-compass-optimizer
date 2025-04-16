@@ -44,7 +44,7 @@ export class DuplicateRequestChecker {
     const objectFailureKey = `object-${campaignId}-failed`;
     const nonexistentKey = `object-${campaignId}-nonexistent`;
     if (this.failedWith400.has(objectFailureKey) || this.failedWith400.has(nonexistentKey)) {
-      console.log(`[INSIGHTS] ✓ Skipped insights request for previously failed object: ${campaignId}`);
+      console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign: ${campaignId}`);
       return true;
     }
     
@@ -83,23 +83,23 @@ export class DuplicateRequestChecker {
       return true;
     }
     
-    // NEW: Check if this is an object ID that has been previously marked as failed
+    // Check if this is an object ID that has been previously marked as failed
     if (requestSignature.startsWith('object-') && requestSignature.endsWith('-failed')) {
       const objectId = requestSignature.split('-')[1];
-      console.log(`[INSIGHTS] ✓ Object ${objectId} previously failed with 400 - skipping`);
+      console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign: ${objectId}`);
       return true;
     }
     
-    // NEW: Check if this is an object ID that has been marked as nonexistent
+    // Check if this is an object ID that has been marked as nonexistent
     if (requestSignature.startsWith('object-') && requestSignature.endsWith('-nonexistent')) {
       const objectId = requestSignature.split('-')[1];
-      console.log(`[INSIGHTS] ✓ Object ${objectId} previously marked as nonexistent - skipping`);
+      console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign: ${objectId}`);
       return true;
     }
     
     // Standard check for failed requests
     if (this.failedWith400.has(requestSignature)) {
-      console.log(`[INSIGHTS] ✓ Skipped insights request due to permanent failure (400): ${requestSignature}`);
+      console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign signature: ${requestSignature}`);
       return true;
     }
     
@@ -107,7 +107,7 @@ export class DuplicateRequestChecker {
   }
 
   static markAsPermanentlyFailed(requestSignature: string): void {
-    console.log(`[INSIGHTS] ✓ Marking request as permanently failed: ${requestSignature}`);
+    console.log(`[INSIGHTS] ✅ Permanently blocking request: ${requestSignature}`);
     this.failedWith400.add(requestSignature);
     this.persistFailedRequests();
     this.cleanupOldFailures();

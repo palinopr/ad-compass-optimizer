@@ -1,4 +1,3 @@
-
 /**
  * Request Queue Manager
  * Handles sequential processing of API requests with rate limiting
@@ -11,6 +10,7 @@ export class RequestQueueManager {
   private static permanentlyFailedRequests = new Set<string>();
   private static readonly PERMANENT_FAILURES_KEY = 'permanently_failed_requests';
   private static readonly REQUEST_ERROR_LOG_KEY = 'request_error_log';
+  private static readonly BLOCKED_CAMPAIGNS_KEY = 'permanently_blocked_campaigns';
 
   /**
    * Add a request to the queue and return a promise that resolves when it's processed
@@ -18,7 +18,16 @@ export class RequestQueueManager {
   public static async addToQueue<T>(requestFn: () => Promise<T>, requestId?: string): Promise<T> {
     // If this request previously failed with 400, reject immediately - don't even queue it
     if (requestId && this.isPermanentlyFailed(requestId)) {
-      console.log(`[REQUEST QUEUE] ✓ Immediately rejected request due to previous 400 failure: ${requestId}`);
+      console.log(`[REQUEST QUEUE] 🚫 Skipped permanently blocked campaign request: ${requestId}`);
+      
+      // Extract campaign ID if present in the request ID
+      let campaignId = "unknown";
+      if (requestId.includes(':')) {
+        const parts = requestId.split(':');
+        if (parts.length >= 2) {
+          campaignId = parts[1]; // Usually the second part is the object ID
+        }
+      }
       
       // Log that we skipped this request to ensure we can verify
       try {
@@ -26,6 +35,7 @@ export class RequestQueueManager {
         skippedRequests.push({
           timestamp: new Date().toISOString(),
           requestId,
+          campaignId,
           reason: 'previous_400_failure'
         });
         localStorage.setItem('skipped_requests_log', JSON.stringify(skippedRequests.slice(-50)));
@@ -65,12 +75,27 @@ export class RequestQueueManager {
         } catch (error: any) {
           console.error('[REQUEST QUEUE] Error executing queued request:', error);
 
-          // If it's a 400 error, mark this request as permanently failed
+          // STRICT ENFORCEMENT: If it's a 400 error, mark this request as permanently failed
+          // Also store the campaign ID in a blocked campaigns list
           if (error.status === 400 || (error.response && error.response.status === 400)) {
             if (requestId) {
-              console.log(`[REQUEST QUEUE] ✓ Marked request as permanently failed due to 400 error: ${requestId}`);
+              console.log(`[REQUEST QUEUE] ✅ Permanently blocking request due to 400 error: ${requestId}`);
               this.permanentlyFailedRequests.add(requestId);
               this.persistPermanentlyFailedRequests();
+              
+              // Extract campaign ID if present in the request ID and add it to blocked campaigns
+              if (requestId.includes(':')) {
+                const parts = requestId.split(':');
+                if (parts.length >= 2) {
+                  const campaignId = parts[1]; // Usually the second part is the object ID
+                  this.addToBlockedCampaigns(campaignId);
+                }
+              }
+              
+              // If error has an objectId, block it too
+              if (error.objectId) {
+                this.addToBlockedCampaigns(error.objectId);
+              }
               
               // Additional logging for 400 errors for diagnostics
               try {
@@ -101,6 +126,22 @@ export class RequestQueueManager {
         this.processQueue();
       }
     });
+  }
+
+  /**
+   * Add a campaign ID to the blocked campaigns list
+   */
+  private static addToBlockedCampaigns(campaignId: string): void {
+    try {
+      const blockedCampaigns = JSON.parse(localStorage.getItem(this.BLOCKED_CAMPAIGNS_KEY) || '[]');
+      if (!blockedCampaigns.includes(campaignId)) {
+        blockedCampaigns.push(campaignId);
+        localStorage.setItem(this.BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
+        console.log(`[REQUEST QUEUE] ✅ Added campaign ${campaignId} to permanently blocked campaigns list`);
+      }
+    } catch (e) {
+      console.error('[REQUEST QUEUE] Error adding to blocked campaigns:', e);
+    }
   }
 
   /**
@@ -218,21 +259,35 @@ export class RequestQueueManager {
     this.loadPermanentlyFailedRequests();
     
     if (this.permanentlyFailedRequests.has(requestId)) {
-      console.log(`[REQUEST QUEUE] ✓ Request ${requestId} is permanently failed`);
+      console.log(`[REQUEST QUEUE] 🚫 Skipped permanently blocked campaign request: ${requestId}`);
       return true;
     }
     
-    // NEW: Check if the requestId contains any object ID that's been marked as failed
+    // Check if the requestId contains any object ID that's been marked as failed
     if (requestId.includes(':')) {
       const parts = requestId.split(':');
       if (parts.length >= 2) {
         const objectId = parts[1]; // Typically the object ID is the second part
+        
+        // Check if this campaign is in our blocked campaigns list
+        try {
+          const blockedCampaigns = JSON.parse(localStorage.getItem(this.BLOCKED_CAMPAIGNS_KEY) || '[]');
+          if (blockedCampaigns.includes(objectId)) {
+            console.log(`[REQUEST QUEUE] 🚫 Skipped request for permanently blocked campaign: ${objectId}`);
+            // Also mark this specific request as failed to prevent future attempts
+            this.markAsPermanentlyFailed(requestId);
+            return true;
+          }
+        } catch (e) {
+          // Ignore storage errors
+        }
+        
         const objectFailKey = `object-${objectId}-failed`;
         const nonexistentKey = `object-${objectId}-nonexistent`;
         
         if (this.permanentlyFailedRequests.has(objectFailKey) || 
             this.permanentlyFailedRequests.has(nonexistentKey)) {
-          console.log(`[REQUEST QUEUE] ✓ Request contains failed object ID ${objectId}`);
+          console.log(`[REQUEST QUEUE] 🚫 Skipped request for permanently blocked campaign: ${objectId}`);
           // Also mark this specific request as failed
           this.markAsPermanentlyFailed(requestId);
           return true;
@@ -247,7 +302,7 @@ export class RequestQueueManager {
    * Mark a request as permanently failed
    */
   public static markAsPermanentlyFailed(requestId: string) {
-    console.log(`[REQUEST QUEUE] ✓ Marking request as permanently failed: ${requestId}`);
+    console.log(`[REQUEST QUEUE] ✅ Permanently blocking request: ${requestId}`);
     this.permanentlyFailedRequests.add(requestId);
     this.persistPermanentlyFailedRequests();
     

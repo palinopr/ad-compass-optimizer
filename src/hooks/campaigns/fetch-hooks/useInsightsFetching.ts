@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { fetchInsightsForCampaigns } from '../fetch-utils/campaignInsightsFetcher';
@@ -7,6 +6,7 @@ import { metaAuthService } from '@/services/MetaAuthService';
 export const useInsightsFetching = () => {
   const [insightsFetchStatus, setInsightsFetchStatus] = useState<'pending' | 'success' | 'partial' | 'failed' | null>(null);
   const [isInsightsFetching, setIsInsightsFetching] = useState(false);
+  const BLOCKED_CAMPAIGNS_KEY = 'permanently_blocked_campaigns';
 
   const updateCampaignsWithInsights = async (campaigns: MetaCampaign[]) => {
     if (isInsightsFetching) {
@@ -21,7 +21,34 @@ export const useInsightsFetching = () => {
 
       if (token && campaigns.length > 0) {
         console.log(`[INSIGHTS] Fetching insights for ${campaigns.length} campaigns`);
-        const enhancedCampaigns = await fetchInsightsForCampaigns(campaigns, token);
+        
+        // Filter out permanently blocked campaigns before even starting the fetch
+        let blockedCampaigns: string[] = [];
+        try {
+          blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
+        } catch (e) {
+          console.error('[INSIGHTS] Error loading blocked campaigns:', e);
+        }
+        
+        // Skip permanently blocked campaigns to avoid making unnecessary requests
+        const campaignsToProcess = campaigns.filter(campaign => {
+          const isBlocked = blockedCampaigns.includes(campaign.id);
+          if (isBlocked) {
+            console.log(`[INSIGHTS] 🚫 Skipped permanently blocked campaign: ${campaign.id}`);
+            // Keep the campaign in the list but mark it as skipped
+            campaign.insights = null;
+            campaign.insightsStatus = 'blocked';
+          }
+          return !isBlocked;
+        });
+        
+        console.log(`[INSIGHTS] After filtering blocked campaigns: ${campaignsToProcess.length}/${campaigns.length} will be processed`);
+        
+        // Only fetch insights for non-blocked campaigns
+        const enhancedCampaigns = 
+          campaignsToProcess.length > 0 
+            ? await fetchInsightsForCampaigns(campaignsToProcess, token)
+            : campaigns;
 
         const campaignsWithAnyInsights = enhancedCampaigns.filter(
           campaign => campaign.insights && Object.keys(campaign.insights).length > 0
