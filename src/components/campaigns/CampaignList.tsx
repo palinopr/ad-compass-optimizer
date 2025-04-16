@@ -66,6 +66,9 @@ const CampaignList: React.FC<CampaignListProps> = ({
     }
   }, [filteredCampaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted]);
 
+  // Always log when rendering campaign list
+  console.log("Rendering campaign list with", filteredCampaigns?.length || 0, "campaigns");
+
   // Show loading state if the app is loading campaigns
   if (isLoading) {
     return <LoadingView />;
@@ -129,16 +132,21 @@ const CampaignList: React.FC<CampaignListProps> = ({
   // When we have campaigns, show the table
   return (
     <Card className="overflow-hidden" key={forceRender}>
-      {/* Debug information banner */}
-      <div className="bg-blue-50 p-4 border-b border-blue-100">
-        <p className="text-sm font-medium text-blue-800">
-          Rendering campaign table with {safeFilteredCampaigns.length} campaigns
+      {/* Debug information banner - make this more prominent */}
+      <div className="bg-blue-100 p-4 border-b border-blue-200 flex flex-col gap-2">
+        <p className="text-md font-medium text-blue-800">
+          Rendering {safeFilteredCampaigns.length} campaigns
         </p>
-        <p className="text-xs text-blue-600">
+        <p className="text-sm text-blue-700">
           Status: {fetchCompleted ? 'Fetch completed' : 'Fetch in progress'}, 
           Tab: {activeTab}, 
           Error: {error ? 'Yes' : 'None'}
         </p>
+        {safeFilteredCampaigns.length > 0 && (
+          <p className="text-sm font-medium text-green-700 bg-green-50 p-2 rounded-md">
+            ✅ Have campaigns data: {safeFilteredCampaigns.length} campaigns available to render
+          </p>
+        )}
       </div>
       <CampaignTable 
         campaigns={safeFilteredCampaigns} 

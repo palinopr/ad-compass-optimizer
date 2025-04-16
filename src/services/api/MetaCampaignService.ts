@@ -31,6 +31,15 @@ export class MetaCampaignService extends BaseApiService {
       
       // Log success information
       console.log(`[META CAMPAIGN] Successfully fetched ${safeCampaigns.length} campaigns`);
+      
+      // Add IDs to any campaigns without them
+      safeCampaigns.forEach((campaign, index) => {
+        if (!campaign.id) {
+          campaign.id = `generated-id-${index}`;
+          console.warn(`[META CAMPAIGN] Generated ID for campaign: ${campaign.name || 'unnamed'}`);
+        }
+      });
+      
       if (safeCampaigns.length > 0) {
         console.log('[META CAMPAIGN] First campaign sample:', {
           id: safeCampaigns[0]?.id || 'missing',

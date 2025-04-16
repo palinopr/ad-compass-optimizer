@@ -38,16 +38,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
     }
   }, [campaign]);
 
-  React.useEffect(() => {
-    // Always log the campaign being rendered for debugging
-    console.log(`📋 Rendered campaign: ${campaign.name} (${campaign.id})`, {
-      status: campaign.status,
-      insightsStatus: campaign.insightsStatus || 'unknown',
-      hasInsights: !!campaign.insights && Object.keys(campaign.insights).length > 0,
-      isBlocked
-    });
-  }, [campaign, isBlocked]);
-
+  // Always log the campaign being rendered for debugging
+  console.log("Rendering campaign:", campaign.name, "(ID:", campaign.id, ")");
+  
   // Check if we have minimal valid data to render the row
   if (!campaign) {
     console.error('[CAMPAIGN ROW] Cannot render campaign row, missing campaign object');
@@ -58,6 +51,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
   const campaignId = campaign.id || 'unknown-id';
   const campaignName = campaign.name || 'Unnamed Campaign';
   const campaignStatus = campaign.status || 'unknown';
+  
+  const hasInsights = campaign.insights && Object.keys(campaign.insights).length > 0;
+  const hasValidMetrics = hasInsights || campaign.budget || campaign.daily_budget || campaign.lifetime_budget;
 
   return (
     <TableRow className={isBlocked ? 'opacity-75' : ''}>
@@ -83,6 +79,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
                 <p>Insights Blocked: This campaign's insights cannot be fetched due to API restrictions</p>
               </TooltipContent>
             </Tooltip>
+          )}
+          {!hasValidMetrics && (
+            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">No Insights</span>
           )}
         </div>
       </TableCell>
