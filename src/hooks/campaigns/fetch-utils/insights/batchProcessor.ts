@@ -13,8 +13,7 @@ const queueCampaignInsightsFetch = (
   token: string,
   datePreset: string
 ): Promise<CampaignExtraStats | null> => {
-  // STRICT PRE-CHECK: Don't even create a queue item if the campaign is already blocked
-  // This is a hard fail-fast check to prevent any queuing of blocked campaigns
+  // ENHANCED STRICT PRE-CHECK: Triple verification to prevent any API calls for blocked campaigns
   
   // First check in-memory status
   if (campaign.insightsStatus === 'blocked') {
@@ -22,7 +21,7 @@ const queueCampaignInsightsFetch = (
     return Promise.resolve(null); // Return immediately without queueing
   }
   
-  // Then check if campaign is blocked using our helper
+  // Then check if campaign is blocked using our localStorage helper
   if (isCampaignBlocked(campaign.id)) {
     console.log(`⛔ Not queuing insights for ${campaign.id} – already blocked.`);
     // Update in-memory status to match
@@ -31,7 +30,21 @@ const queueCampaignInsightsFetch = (
     return Promise.resolve(null); // Return immediately without queueing
   }
   
-  // If not blocked, queue the request normally
+  // Final check: directly check localStorage as ultimate failsafe
+  try {
+    const blockedCampaigns = JSON.parse(localStorage.getItem('permanently_blocked_campaigns') || '[]');
+    if (blockedCampaigns.includes(campaign.id)) {
+      console.log(`⛔ Not queuing insights for ${campaign.id} – already blocked (direct localStorage check).`);
+      campaign.insightsStatus = 'blocked';
+      campaign.insights = null;
+      markCampaignAsBlocked(campaign.id); // Ensure it's properly marked in all storage mechanisms
+      return Promise.resolve(null);
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+  
+  // If not blocked by any of the checks, queue the request normally
   return RequestQueueManager.addToQueue(() => {
     return fetchCampaignInsights(campaign.id, token, datePreset);
   });
@@ -60,21 +73,35 @@ export const fetchInsightsForCampaigns = async (
   
   const campaignMap = new Map<string, MetaCampaign>();
   
-  // PRE-FILTER: Filter out all blocked campaigns before starting the batch process
+  // ENHANCED PRE-FILTER: Triple verification to filter out all blocked campaigns
   const filteredCampaigns = campaigns.filter(campaign => {
-    // Skip already blocked campaigns
+    // Skip already blocked campaigns via insightsStatus
     if (campaign.insightsStatus === 'blocked') {
       console.log(`🚫 Skipped ${campaign.id} – insights blocked after 400`);
       return false;
     }
     
-    // Check if campaign is blocked using our helper
+    // Check if campaign is blocked using localStorage helper
     if (isCampaignBlocked(campaign.id)) {
       console.log(`🚫 Skipped ${campaign.id} – insights blocked after 400`);
       // Update in-memory status to match
       campaign.insightsStatus = 'blocked';
       campaign.insights = null;
       return false;
+    }
+    
+    // Final check: directly check localStorage as ultimate failsafe
+    try {
+      const blockedCampaigns = JSON.parse(localStorage.getItem('permanently_blocked_campaigns') || '[]');
+      if (blockedCampaigns.includes(campaign.id)) {
+        console.log(`🚫 Skipped ${campaign.id} – insights blocked after 400 (direct localStorage check)`);
+        campaign.insightsStatus = 'blocked';
+        campaign.insights = null;
+        markCampaignAsBlocked(campaign.id); // Ensure it's marked everywhere
+        return false;
+      }
+    } catch (e) {
+      // Ignore storage errors
     }
     
     return true;
@@ -100,8 +127,8 @@ export const fetchInsightsForCampaigns = async (
         continue;
       }
       
-      // EARLY SKIP: Don't process already blocked campaigns
-      if (campaign.insightsStatus === 'blocked') {
+      // FINAL RECHECK: Don't process already blocked campaigns (in case status changed during processing)
+      if (campaign.insightsStatus === 'blocked' || isCampaignBlocked(campaign.id)) {
         console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
         processedCampaignIds.set(campaign.id, true);
         continue;
@@ -138,7 +165,7 @@ export const fetchInsightsForCampaigns = async (
       } catch (error: any) {
         console.error(`[INSIGHTS FETCH] Error in processing for campaign ${campaign.id}:`, error);
         
-        // IMMEDIATE BLOCKING: Mark campaign as blocked immediately if 400 error
+        // ENHANCED IMMEDIATE BLOCKING: Mark campaign as blocked immediately if 400 error
         if (error.status === 400 || (error.response && error.response.status === 400)) {
           console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaign.id}`);
           
@@ -146,16 +173,11 @@ export const fetchInsightsForCampaigns = async (
           campaign.insightsStatus = 'blocked';
           campaign.insights = null;
           
-          // Update localStorage
-          try {
-            // FIX: Load blocked campaigns from localStorage first
-            const blockedCampaigns = JSON.parse(localStorage.getItem('permanently_blocked_campaigns') || '[]');
-            if (!blockedCampaigns.includes(campaign.id)) {
-              markCampaignAsBlocked(campaign.id);
-            }
-          } catch (e) {
-            console.error('[INSIGHTS FETCH] Error updating blocked campaigns:', e);
-          }
+          // Update localStorage and add to all blocking mechanisms
+          markCampaignAsBlocked(campaign.id);
+          
+          // Logging for visibility
+          console.log(`[INSIGHTS FETCH] Campaign ${campaign.id} is now BLOCKED from future insights fetches`);
         }
       }
     }
@@ -178,4 +200,3 @@ export const fetchInsightsForCampaigns = async (
   
   return campaignsWithInsights;
 };
-

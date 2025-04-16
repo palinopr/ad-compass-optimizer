@@ -1,8 +1,9 @@
+
 import { useState } from 'react';
 import type { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { fetchInsightsForCampaigns } from '../fetch-utils/campaignInsightsFetcher';
 import { metaAuthService } from '@/services/MetaAuthService';
-import { isCampaignBlocked } from '../fetch-utils/insights/singleCampaignFetcher';
+import { isCampaignBlocked, markCampaignAsBlocked } from '../fetch-utils/insights/singleCampaignFetcher';
 
 export const useInsightsFetching = () => {
   const [insightsFetchStatus, setInsightsFetchStatus] = useState<'pending' | 'success' | 'partial' | 'failed' | null>(null);
@@ -23,21 +24,34 @@ export const useInsightsFetching = () => {
       if (token && campaigns.length > 0) {
         console.log(`[INSIGHTS] Fetching insights for ${campaigns.length} campaigns`);
         
-        // PRE-FILTER: Filter out all blocked campaigns before starting the batch process
+        // ENHANCED PRE-FILTER: More thorough filtering of blocked campaigns before batch processing
         const filteredCampaigns = campaigns.filter(campaign => {
-          // Skip already blocked campaigns
+          // Skip already blocked campaigns using insightsStatus
           if (campaign.insightsStatus === 'blocked') {
             console.log(`🚫 Skipped ${campaign.id} – insights blocked after 400`);
             return false;
           }
           
-          // Check if campaign is blocked using our helper
+          // Check if campaign is blocked using localStorage helper
           if (isCampaignBlocked(campaign.id)) {
             console.log(`🚫 Skipped ${campaign.id} – insights blocked after 400`);
-            // Update in-memory status to match
+            // Update in-memory status to match and ensure consistency
             campaign.insightsStatus = 'blocked';
             campaign.insights = null;
             return false;
+          }
+          
+          // Third check: manually check the localStorage array as a final failsafe
+          try {
+            const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
+            if (blockedCampaigns.includes(campaign.id)) {
+              console.log(`🚫 Skipped ${campaign.id} – insights blocked after 400 (direct localStorage check)`);
+              campaign.insightsStatus = 'blocked';
+              campaign.insights = null;
+              return false;
+            }
+          } catch (e) {
+            // Ignore localStorage errors
           }
           
           return true;

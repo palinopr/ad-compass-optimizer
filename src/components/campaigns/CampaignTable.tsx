@@ -33,6 +33,13 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
       } : {}
     );
     
+    // Add debug log to show all campaigns and their block status
+    console.log("🧾 Campaigns at start:", campaigns.map(c => ({
+      id: c.id,
+      name: c.name,
+      insightsStatus: c.insightsStatus
+    })));
+    
     // Check and log if any campaigns are missing insights
     const missingInsights = campaigns.filter(c => !c.insights || Object.keys(c.insights).length === 0);
     if (missingInsights.length > 0) {
