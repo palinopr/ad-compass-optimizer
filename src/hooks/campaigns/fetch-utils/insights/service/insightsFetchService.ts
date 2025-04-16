@@ -17,7 +17,7 @@ export const fetchCampaignInsightData = async (
   const selectedAdAccount = localStorage.getItem('selected_ad_account') || 'default';
   InsightsThrottling.checkThrottling(selectedAdAccount);
   
-  const url = buildInsightsUrl(campaignId, token, validDatePreset);
+  let url = buildInsightsUrl(campaignId, token, validDatePreset);
   
   // DEBUG: Log the full URL with token redacted for debugging
   const debugUrl = url.replace(token, 'REDACTED_TOKEN');

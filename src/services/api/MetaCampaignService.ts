@@ -69,8 +69,8 @@ export class MetaCampaignService extends BaseApiService {
         const emptyCount = safeCampaigns.filter(c => Object.keys(c).length === 0).length;
         if (emptyCount > 0) {
           console.warn(`⚠️ Meta API returned ${emptyCount}/${safeCampaigns.length} empty campaign objects. Possible permissions or token issue.`);
-          // NEW: Log the request URL if available
-          console.warn(`⚠️ Check request parameters: date_preset=last_30d was ${safeCampaigns[0]?.insights?.date_preset ? 'included' : 'missing'}`);
+          // NEW: Log insights info but avoid referencing non-existent properties
+          console.warn(`⚠️ Check request parameters: date_preset=last_30d was ${safeCampaigns[0]?.insights ? 'included' : 'missing'}`);
         }
         
         // Ensure each campaign has at least basic properties even if API didn't provide them
