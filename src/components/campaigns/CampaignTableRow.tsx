@@ -23,55 +23,43 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
     setIsBlocked(failedSignatures.includes(objectFailSignature));
   }, [campaign.id]);
 
-  // Log detailed campaign data at render time for debugging
+  // Log campaign render state for debugging
   React.useEffect(() => {
     // Basic validation check
     if (!campaign.id || !campaign.name) {
-      console.warn(`[CAMPAIGN ROW] Invalid campaign data:`, campaign);
+      console.warn(`[CAMPAIGN ROW] ⚠️ Invalid campaign data:`, campaign);
       return;
     }
 
-    // Only log when insights data is missing
-    if (!campaign.insights || Object.keys(campaign.insights).length === 0) {
-      console.warn(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) is missing insights data`);
+    // Log when insights data is missing but campaign has valid metadata
+    if ((!campaign.insights || Object.keys(campaign.insights).length === 0) && campaign.name && campaign.status) {
+      console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) rendering with metadata only - insights unavailable`);
       
-      // Trigger state update notification to help debug UI rendering issues
-      localStorage.setItem('campaign_insight_missing', JSON.stringify({
-        campaignId: campaign.id,
-        campaignName: campaign.name,
-        timestamp: new Date().toISOString()
-      }));
-    } else {
-      // Log existing insights for tracking
-      console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) insights data:`, {
-        spend: campaign.insights.spend || 'missing',
-        clicks: campaign.insights.clicks || 'missing',
-        impressions: campaign.insights.impressions || 'missing',
-        cpa: campaign.insights.cpa || 'missing',
-        roas: campaign.insights.roas || 'missing',
-        hasExtraStats: !!campaign.extraStats,
-        hasValidData: (
-          (campaign.insights.spend && campaign.insights.spend !== '-') || 
-          (campaign.insights.cpa && campaign.insights.cpa !== '-') || 
-          (campaign.insights.roas && campaign.insights.roas !== '-')
-        )
-      });
-      
-      // Mark that we have valid insights data (used for synchronization checks)
-      if ((campaign.insights.spend && campaign.insights.spend !== '-') || 
-          (campaign.insights.cpa && campaign.insights.cpa !== '-') || 
-          (campaign.insights.roas && campaign.insights.roas !== '-')) {
-        localStorage.setItem('has_valid_campaign_insights', 'true');
+      // Store metadata-only stat for monitoring
+      try {
+        const metadataOnlyCampaigns = JSON.parse(localStorage.getItem('metadata_only_campaigns') || '[]');
+        if (!metadataOnlyCampaigns.includes(campaign.id)) {
+          metadataOnlyCampaigns.push(campaign.id);
+          localStorage.setItem('metadata_only_campaigns', JSON.stringify(metadataOnlyCampaigns));
+        }
+      } catch (e) {
+        console.error('[CAMPAIGN ROW] Error storing metadata-only campaign:', e);
       }
     }
   }, [campaign]);
+
+  // Don't render if we don't have basic metadata
+  if (!campaign.id || !campaign.name) {
+    console.warn('[CAMPAIGN ROW] Skipping invalid campaign:', campaign);
+    return null;
+  }
 
   return (
     <TableRow className={isBlocked ? 'opacity-75' : ''}>
       <TableCell>
         <div className="flex items-center gap-2">
           {campaign.name}
-          {campaign.loadedFromFallback && (
+          {loadedFromFallback && (
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
                 <Info size={16} className="text-muted-foreground cursor-help" />
@@ -95,7 +83,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
           results={campaign.results}
           insights={campaign.insights}
           extraStats={campaign.extraStats}
-          isBlocked={isBlocked}
+          isBlocked={isBlocked || !campaign.insights}
         />
       </TableCell>
       <TableCell className="text-right">

@@ -23,28 +23,28 @@ export const useInsightsFetching = () => {
         console.log(`[INSIGHTS] Fetching insights for ${campaigns.length} campaigns`);
         const enhancedCampaigns = await fetchInsightsForCampaigns(campaigns, token);
 
-        const campaignsWithInsights = enhancedCampaigns.filter(
-          campaign => campaign.insights && 
-            ((campaign.insights.spend && campaign.insights.spend !== '-') || 
-             (campaign.insights.cpa && campaign.insights.cpa !== '-') || 
-             (campaign.insights.roas && campaign.insights.roas !== '-'))
+        const campaignsWithAnyInsights = enhancedCampaigns.filter(
+          campaign => campaign.insights && Object.keys(campaign.insights).length > 0
         );
 
-        if (campaignsWithInsights.length === enhancedCampaigns.length && enhancedCampaigns.length > 0) {
+        if (campaignsWithAnyInsights.length === enhancedCampaigns.length && enhancedCampaigns.length > 0) {
           setInsightsFetchStatus('success');
           return { success: true, partial: false, campaigns: enhancedCampaigns };
-        } else if (campaignsWithInsights.length > 0) {
+        } else if (campaignsWithAnyInsights.length > 0) {
+          console.log(`[INSIGHTS] Partial success: ${campaignsWithAnyInsights.length}/${enhancedCampaigns.length} campaigns have insights`);
           setInsightsFetchStatus('partial');
           return { success: false, partial: true, campaigns: enhancedCampaigns };
         }
         
+        console.log('[INSIGHTS] Failed to fetch insights, but returning campaigns with metadata');
         setInsightsFetchStatus('failed');
         return { success: false, partial: false, campaigns: enhancedCampaigns };
       }
     } catch (error) {
       console.error('[INSIGHTS] Error fetching insights:', error);
       setInsightsFetchStatus('failed');
-      return { success: false, partial: false, error };
+      // Still return the original campaigns even if insights fetch failed
+      return { success: false, partial: false, campaigns, error };
     } finally {
       setIsInsightsFetching(false);
     }

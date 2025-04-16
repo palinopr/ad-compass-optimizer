@@ -1,4 +1,3 @@
-
 import React from 'react';
 import CampaignFilterToolbar from './CampaignFilterToolbar';
 import CampaignMetrics from './CampaignMetrics';
@@ -40,7 +39,6 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
   const isMockMode = localStorage.getItem("USE_MOCK_MODE") === "true";
   const debugMode = process.env.NODE_ENV !== 'production';
   
-  // Use the extracted effects hook
   useCampaignListEffects({
     isLoading,
     campaigns,
@@ -50,7 +48,6 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     forceUiRefresh
   });
 
-  // Log component render to track state changes
   console.log(`[CAMPAIGN LIST] Rendering with state:`, { 
     status,
     isLoading, 
@@ -62,13 +59,27 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     insightsFetchStatus
   });
 
+  useEffect(() => {
+    if (campaigns.length > 0 && filteredCampaigns.length === 0) {
+      console.log(`[CAMPAIGN LIST] ⚠️ ${campaigns.length} campaigns are being filtered out:`, {
+        totalCampaigns: campaigns.length,
+        filteredCount: filteredCampaigns.length,
+        filterState: filters,
+        campaignSample: campaigns.slice(0, 2).map(c => ({
+          id: c.id,
+          name: c.name,
+          hasMetadata: !!(c.name && c.status),
+          hasInsights: !!c.insights,
+          status: c.status
+        }))
+      });
+    }
+  }, [campaigns, filteredCampaigns, filters]);
+
   if (isLoading) {
     return <LoadingView />;
   }
   
-  // Only show error state if we have a genuine error and:
-  // 1. We don't have any campaigns OR
-  // 2. Insights fetch completely failed AND we're not in mock mode
   const hasValidData = campaigns.length > 0 && 
     (insightsFetchStatus === 'success' || insightsFetchStatus === 'partial');
     
@@ -83,10 +94,6 @@ const CampaignList: React.FC<CampaignListProps> = ({ status }) => {
     );
   }
 
-  // Only show empty state if:
-  // 1. Fetch is completed AND
-  // 2. No campaigns were found AND 
-  // 3. No error exists (meaning API returned empty array, not an error)
   if (fetchCompleted && campaigns.length === 0 && !error) {
     const selectedAccount = localStorage.getItem('selected_ad_account');
     const accountText = selectedAccount ? ` in account ${selectedAccount}` : '';
