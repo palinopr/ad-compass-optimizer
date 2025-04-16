@@ -106,7 +106,7 @@ export const useInsightsFetching = () => {
 
   return {
     insightsFetchStatus,
-    setInsightsFetchStatus, // Expose the setter function
+    setInsightsFetchStatus,
     isInsightsFetching,
     updateCampaignsWithInsights
   };

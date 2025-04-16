@@ -9,7 +9,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import CampaignTableRow from './CampaignTableRow';
-import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 
 interface CampaignTableProps {
   campaigns: MetaCampaign[];
