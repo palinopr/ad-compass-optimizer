@@ -27,4 +27,62 @@ export class MetaUserService extends BaseApiService {
       return this.handleApiError(error, 'fetchUserData');
     }
   }
+  
+  /**
+   * Process an API response, checking for errors
+   */
+  private static async processApiResponse(response: Response, method: string) {
+    if (!response.ok) {
+      // Special handling for 403 errors which indicate permission issues
+      if (response.status === 403) {
+        console.warn(`[${method}] Got 403 Forbidden error - limited permissions`);
+        const errorText = await response.text();
+        console.error(`[${method}] Error response:`, errorText);
+        
+        // Return fallback data with error info
+        return {
+          isFallback: true,
+          name: 'Meta User',
+          error: true,
+          status: 403,
+          message: `Permission denied: ${errorText.substring(0, 100)}...`
+        };
+      }
+      
+      const errorText = await response.text();
+      console.error(`[${method}] API Error (${response.status}):`, errorText);
+      throw new Error(`API Error (${response.status}): ${errorText.substring(0, 100)}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(`API Error: ${data.error.message || 'Unknown error'}`);
+    }
+    
+    return data;
+  }
+  
+  /**
+   * Handle API errors and return fallback data
+   */
+  private static handleApiError(error: unknown, method: string) {
+    console.error(`[${method}] Error:`, error);
+    
+    return {
+      isFallback: true,
+      name: 'Meta User',
+      error: true,
+      message: error instanceof Error ? error.message : 'Failed to fetch user data'
+    };
+  }
+  
+  /**
+   * Validate token format
+   */
+  private static validateToken(token: string, method: string) {
+    if (!token || token.length < 20) {
+      throw new Error('Invalid token format');
+    }
+  }
 }

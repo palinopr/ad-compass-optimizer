@@ -32,6 +32,7 @@ export class MetaConnectionService extends BaseApiService {
           userId: 'mock_user_123',
           userName: 'Mock User',
           hasAdAccess: true,
+          limitedProfile: false,
           error: undefined,  // Add this to avoid TypeScript errors
           details: undefined, // Add this for completeness
           permissionsWarning: undefined // Add this for completeness
@@ -171,7 +172,8 @@ export class MetaConnectionService extends BaseApiService {
               permissionsWarning: 'Connected to Meta, but your token lacks required ad account permissions (ads_read, ads_management). For full access, you need a token with these permissions.',
               userId: data.id,
               userName: data.name,
-              hasAdAccess: false
+              hasAdAccess: false,
+              limitedProfile: false
             };
           }
           
@@ -180,7 +182,8 @@ export class MetaConnectionService extends BaseApiService {
             permissionsWarning: adAccountsData.error.message || 'Connected to Meta, but could not access ad accounts.',
             userId: data.id,
             userName: data.name,
-            hasAdAccess: false
+            hasAdAccess: false,
+            limitedProfile: false
           };
         }
         
@@ -188,7 +191,8 @@ export class MetaConnectionService extends BaseApiService {
           success: true,
           userId: data.id,
           userName: data.name,
-          hasAdAccess: true
+          hasAdAccess: true,
+          limitedProfile: false
         };
       } catch (permError) {
         console.error('Error checking permissions:', permError);
@@ -198,7 +202,8 @@ export class MetaConnectionService extends BaseApiService {
           permissionsWarning: 'Connected to Meta, but could not verify ad account access due to a technical error.',
           userId: data.id,
           userName: data.name,
-          hasAdAccess: false
+          hasAdAccess: false,
+          limitedProfile: false
         };
       }
       

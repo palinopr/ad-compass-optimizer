@@ -1,6 +1,9 @@
+
 import { BaseApiService } from './api/BaseApiService';
 import { MetaAdAccount } from './api/MetaAdAccountService';
 import { RateLimitManager } from './api/rate-limit/RateLimitManager';
+import { Meta } from '@/types/meta';
+import { MetaUserService } from './api/MetaUserService';
 
 export class MetaApiService extends BaseApiService {
   // Rate limit management - forwarding from RateLimitManager
@@ -11,7 +14,16 @@ export class MetaApiService extends BaseApiService {
   public static overrideRateLimit = RateLimitManager.overrideRateLimit;
   public static isRateLimitOverridden = RateLimitManager.isRateLimitOverridden;
 
-  public static async testConnection(token: string): Promise<{ success: boolean; error?: string }> {
+  // User data fetch - forwarding from MetaUserService
+  public static fetchUserData = MetaUserService.fetchUserData;
+
+  public static async testConnection(token: string): Promise<{
+    success: boolean;
+    error?: string;
+    userId?: string;
+    userName?: string;
+    hasAdAccess?: boolean;
+  }> {
     try {
       this.validateToken(token, 'testConnection');
       const response = await fetch(`${this.BASE_URL}/${this.API_VERSION}/me?access_token=${token}`);
@@ -30,7 +42,12 @@ export class MetaApiService extends BaseApiService {
 
       const data = await response.json();
       console.log('Meta API Connection Test Successful:', data);
-      return { success: true };
+      return { 
+        success: true,
+        userId: data.id,
+        userName: data.name,
+        hasAdAccess: true
+      };
     } catch (error: any) {
       console.error('Error during Meta API connection test:', error);
       return { success: false, error: error.message || 'An error occurred during the connection test' };
