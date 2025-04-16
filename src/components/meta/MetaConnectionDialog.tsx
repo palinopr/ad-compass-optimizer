@@ -15,13 +15,15 @@ interface MetaConnectionDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: (userData: any) => void;
   onError: (errorMessage: string) => void;
+  requestedPermissions?: string[];
 }
 
 const MetaConnectionDialog: React.FC<MetaConnectionDialogProps> = ({ 
   open,
   onOpenChange,
   onSuccess,
-  onError
+  onError,
+  requestedPermissions
 }) => {
   // Check if already authenticated when dialog is opened
   useEffect(() => {
@@ -58,7 +60,10 @@ const MetaConnectionDialog: React.FC<MetaConnectionDialogProps> = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          <FacebookLoginTab onLoginSuccess={onSuccess} />
+          <FacebookLoginTab 
+            onLoginSuccess={onSuccess} 
+            requestedPermissions={requestedPermissions}
+          />
         </div>
       </DialogContent>
     </Dialog>

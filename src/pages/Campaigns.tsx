@@ -59,6 +59,7 @@ const Campaigns = () => {
           showConnectionDialog={showConnectionDialog}
           setShowConnectionDialog={setShowConnectionDialog}
           resetConnection={resetConnection}
+          refreshConnection={refreshConnection}
           isAuthSyncing={isAuthSyncing}
         />
       ) : (
@@ -106,12 +107,7 @@ const Campaigns = () => {
           )}
           
           {!showCreateWizard && (
-            <CampaignCreationTrigger
-              onClick={() => setShowCreateWizard(true)}
-              isAuthenticated={isAuthenticated}
-              hasAdAccount={hasAdAccount}
-              hasPermissions={hasPermissions}
-            />
+            <CampaignCreationTrigger />
           )}
         </>
       )}

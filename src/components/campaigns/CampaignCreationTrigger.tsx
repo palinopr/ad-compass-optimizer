@@ -2,7 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import CampaignCreationWizard from './CampaignCreationWizard';
 
-const CampaignCreationTrigger: React.FC = () => {
+interface CampaignCreationTriggerProps {
+  onClick?: () => void;
+  isAuthenticated?: boolean;
+  hasAdAccount?: boolean;
+  hasPermissions?: boolean;
+}
+
+const CampaignCreationTrigger: React.FC<CampaignCreationTriggerProps> = () => {
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   
   useEffect(() => {
@@ -22,7 +29,10 @@ const CampaignCreationTrigger: React.FC = () => {
   if (!showCreateWizard) return null;
   
   return (
-    <CampaignCreationWizard onCancel={() => setShowCreateWizard(false)} />
+    <CampaignCreationWizard 
+      onClose={() => setShowCreateWizard(false)}
+      onSuccess={() => setShowCreateWizard(false)}
+    />
   );
 };
 

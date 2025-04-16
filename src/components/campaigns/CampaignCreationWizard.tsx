@@ -13,9 +13,9 @@ import WizardControls from './wizard/WizardControls';
 import { STEPS, CampaignData } from './wizard/WizardSteps';
 
 interface CampaignCreationWizardProps {
-  onCancel?: () => void;
   onClose: () => void;
   onSuccess: () => void;
+  onCancel?: () => void;
 }
 
 const CampaignCreationWizard = ({ onCancel, onClose, onSuccess }: CampaignCreationWizardProps) => {
