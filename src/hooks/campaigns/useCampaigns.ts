@@ -1,9 +1,11 @@
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRefreshLogic } from './refresh/useRefreshLogic';
 import { useCampaignFetchState } from './useCampaignFetchState';
 import { useCampaignEventListeners } from './useCampaignEventListeners';
 import { useCampaignFilters } from './useCampaignFilters';
+import { useLoadingTimeout } from './fetch-hooks/useLoadingTimeout';
+import { useInitialFetch } from './fetch-hooks/useInitialFetch';
 import { UseCampaignsResult } from './types';
 
 export function useCampaigns(status?: string): UseCampaignsResult {
@@ -16,12 +18,14 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     incrementDisplayRefresh,
     clearCampaigns,
     forceUiRefresh,
-    hasEverHadCampaignsRef
+    hasEverHadCampaignsRef,
+    fetchCompleted,
+    setFetchCompleted,
+    insightsFetchStatus,
+    setInsightsFetchStatus
   } = useCampaignFetchState();
 
   const [localForceRender, setLocalForceRender] = useState(0);
-  const [fetchCompleted, setFetchCompleted] = useState(false);
-  const [insightsFetchStatus, setInsightsFetchStatus] = useState<'pending' | 'success' | 'partial' | 'failed' | null>(null);
 
   const { fetchCampaigns, mountedRef } = useRefreshLogic(status);
   const { filteredCampaigns, filters } = useCampaignFilters(campaigns);
@@ -45,7 +49,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         setError(result.error);
         setErrorDetails(result.errorDetails);
         setInsightsFetchStatus('failed');
-        // Store error details for better diagnostics
         localStorage.setItem('last_campaign_fetch_error_details', JSON.stringify({
           error: result.error,
           timestamp: new Date().toISOString()
@@ -55,11 +58,9 @@ export function useCampaigns(status?: string): UseCampaignsResult {
       } else if (result && 'campaigns' in result && Array.isArray(result.campaigns)) {
         console.log(`[CAMPAIGN FETCH] API returned ${result.campaigns.length} campaigns`);
         
-        // Mark that API call completed successfully
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.setItem('last_campaign_count', result.campaigns.length.toString());
         
-        // Check if we have valid campaign data with insights
         const hasValidCampaigns = result.campaigns.length > 0;
         const hasValidInsightsData = result.campaigns.some(campaign => 
           campaign.insights && Object.keys(campaign.insights).length > 0
@@ -73,17 +74,13 @@ export function useCampaigns(status?: string): UseCampaignsResult {
             console.log('[CAMPAIGN FETCH] Valid insights data found in response');
             localStorage.setItem('has_valid_campaign_insights', 'true');
             setInsightsFetchStatus('success');
-            
-            // Set campaigns directly for immediate rendering
             setCampaigns(result.campaigns);
             setFetchCompleted(true);
             setIsLoading(false);
           } else {
             console.log('[CAMPAIGN FETCH] No insights data in campaign response, updating campaigns');
-            // Update campaigns with the fetched data
             updateCampaigns(result.campaigns)
               .then(insightsResult => {
-                // Update insights fetch status based on result
                 if (insightsResult && insightsResult.success) {
                   console.log('[CAMPAIGN FETCH] Insights fetch completed successfully');
                   setInsightsFetchStatus('success');
@@ -97,11 +94,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
                   setInsightsFetchStatus('failed');
                 }
                 
-                // Always mark fetch as completed and exit loading state
                 setFetchCompleted(true);
                 setIsLoading(false);
-                
-                // Force UI to refresh
                 setLocalForceRender(prev => prev + 1);
               })
               .catch((error) => {
@@ -109,8 +103,6 @@ export function useCampaigns(status?: string): UseCampaignsResult {
                 setInsightsFetchStatus('failed');
                 setFetchCompleted(true);
                 setIsLoading(false);
-                
-                // Force UI to refresh even with error
                 setLocalForceRender(prev => prev + 1);
               });
           }
@@ -118,7 +110,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           console.log('[CAMPAIGN FETCH] API returned empty campaigns array');
           localStorage.setItem('has_campaigns_data', 'false');
           localStorage.setItem('empty_campaigns_response', 'true');
-          setCampaigns([]);  // Explicitly set empty array
+          setCampaigns([]);
           setFetchCompleted(true);
           setIsLoading(false);
           setInsightsFetchStatus(null);
@@ -127,7 +119,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         console.warn('[CAMPAIGN FETCH] Fetch returned no campaigns and no error');
         localStorage.setItem('has_campaigns_data', 'false');
         setInsightsFetchStatus('failed');
-        setCampaigns([]);  // Explicitly set empty array
+        setCampaigns([]);
         setFetchCompleted(true);
         setIsLoading(false);
       }
@@ -140,52 +132,27 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     forceUiRefresh();
     setTimeout(() => {
       setLocalForceRender(prev => prev + 1);
-    }, 50); // Use a shorter timeout for faster UI refresh
+    }, 50);
   }, [forceUiRefresh]);
 
-  // Add a safety check for stuck loading state
-  useEffect(() => {
-    let timeoutId: number | undefined;
-    
-    if (isLoading) {
-      timeoutId = window.setTimeout(() => {
-        // If we're still loading after 10 seconds, force exit loading state
-        if (isLoading) {
-          console.log('[CAMPAIGN FETCH] Safety timeout: forcing exit from loading state');
-          setIsLoading(false);
-          setFetchCompleted(true);
-          
-          // Check if we have any campaign data before marking insights as failed
-          const campaignDataExists = campaigns.length > 0 || localStorage.getItem('has_campaigns_data') === 'true';
-          if (campaignDataExists) {
-            setInsightsFetchStatus('partial');
-          } else {
-            setInsightsFetchStatus('failed');
-          }
-          
-          // Force UI refresh
-          setLocalForceRender(prev => prev + 1);
-        }
-      }, 10000); // 10 second safety timeout (reduced from 15)
-    }
-    
-    return () => {
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [isLoading, hasEverHadCampaignsRef, campaigns.length]);
-  
-  // Force a UI update whenever campaigns change
-  useEffect(() => {
-    if (campaigns.length > 0 && !isLoading) {
-      console.log(`[CAMPAIGN FETCH] Campaigns updated (${campaigns.length}), forcing UI refresh`);
-      // Small timeout to ensure state is settled
-      setTimeout(() => {
-        setLocalForceRender(prev => prev + 1);
-      }, 50);
-    }
-  }, [campaigns, isLoading]);
+  // Add loading timeout management
+  useLoadingTimeout(
+    isLoading,
+    setIsLoading,
+    setFetchCompleted,
+    setInsightsFetchStatus,
+    hasEverHadCampaignsRef,
+    campaigns
+  );
+
+  // Initialize campaign state and handle updates
+  useInitialFetch(
+    campaigns,
+    isLoading,
+    hasEverHadCampaignsRef,
+    forceUiRefresh,
+    setLocalForceRender
+  );
 
   // Set up event listeners for campaign refresh events
   useCampaignEventListeners(
