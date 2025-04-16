@@ -124,16 +124,21 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
   }, [campaign, isBlocked]);
 
   // Check if we have minimal valid data to render the row
-  if (!campaign.id || !campaign.name) {
-    console.warn('[CAMPAIGN ROW] Skipping invalid campaign (missing ID or name):', campaign);
+  if (!campaign || typeof campaign !== 'object') {
+    console.error('[CAMPAIGN ROW] Cannot render campaign row, invalid campaign object:', campaign);
     return null;
   }
+
+  // Make sure we have at least an ID to render something
+  const campaignId = campaign.id || 'unknown-id';
+  const campaignName = campaign.name || 'Unnamed Campaign';
+  const campaignStatus = campaign.status || 'unknown';
 
   return (
     <TableRow className={isBlocked ? 'opacity-75' : ''}>
       <TableCell>
         <div className="flex items-center gap-2">
-          {campaign.name}
+          {campaignName}
           {loadedFromFallback && (
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
@@ -157,7 +162,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
         </div>
       </TableCell>
       <TableCell>
-        <CampaignStatusBadge status={campaign.status} />
+        <CampaignStatusBadge status={campaignStatus} />
       </TableCell>
       <TableCell colSpan={5}>
         <CampaignMetrics 

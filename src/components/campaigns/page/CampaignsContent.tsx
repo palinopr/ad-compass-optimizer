@@ -33,12 +33,43 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
   selectedAdAccount,
   campaignsFetchStatus,
 }) => {
+  // Add debug info
+  React.useEffect(() => {
+    console.log('[CAMPAIGNS CONTENT] Rendered with:', {
+      isAuthenticated,
+      hasAdAccount,
+      activeTab,
+      showCreateWizard,
+      campaignsCount: campaigns?.length || 0,
+      filteredCount: filteredCampaigns?.length || 0,
+      isLoading,
+      hasError: !!campaignsError,
+      selectedAdAccount,
+      campaignsFetchStatus
+    });
+  }, [
+    isAuthenticated,
+    hasAdAccount,
+    activeTab,
+    showCreateWizard,
+    campaigns,
+    filteredCampaigns,
+    isLoading,
+    campaignsError,
+    selectedAdAccount,
+    campaignsFetchStatus
+  ]);
+
+  // Safety check for arrays
+  const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
+  const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
+
   if (!showCreateWizard) {
     return (
       <>
         {isAuthenticated && hasAdAccount && (
           <DebuggerPanel
-            campaigns={campaigns}
+            campaigns={safeCampaigns}
             isLoading={isLoading}
             error={campaignsError}
           />
@@ -51,7 +82,7 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
           setActiveTab={setActiveTab} 
         />
 
-        {filteredCampaigns?.length === 0 && !showCreateWizard && campaignsFetchStatus !== 'unauthorized' && (
+        {safeFilteredCampaigns.length === 0 && !showCreateWizard && !isLoading && campaignsFetchStatus !== 'unauthorized' && (
           <EmptyStateMessage adAccountId={selectedAdAccount} />
         )}
       </>

@@ -35,6 +35,22 @@ const CampaignList: React.FC<CampaignListProps> = ({
   campaignsFetchStatus,
   status
 }) => {
+  // Debug log to track campaign state
+  React.useEffect(() => {
+    console.log(`[CAMPAIGN LIST] Rendering with ${filteredCampaigns.length} campaigns`, {
+      isLoading,
+      hasError: !!error,
+      activeTab,
+      status,
+      campaignsFetchStatus,
+      fetchCompleted
+    });
+    
+    if (filteredCampaigns.length === 0 && !isLoading && !error) {
+      console.log('[CAMPAIGN LIST] Empty campaigns array but no loading or error state');
+    }
+  }, [filteredCampaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted]);
+
   // Show loading state if the app is loading campaigns
   if (isLoading) {
     return <LoadingView />;
@@ -52,11 +68,29 @@ const CampaignList: React.FC<CampaignListProps> = ({
     );
   }
 
+  // Ensure we have an array of campaigns
+  const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
+  
+  // Add a temporary fallback to show something when we have no campaigns but fetch completed
+  if (safeFilteredCampaigns.length === 0 && fetchCompleted && !isLoading && !error) {
+    return (
+      <Card className="overflow-hidden">
+        <div className="p-6 text-center">
+          <p>
+            {campaignsFetchStatus === 'success'
+              ? "No campaigns found for the selected filter."
+              : "No campaigns available. Try creating a new campaign."}
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
   // When we have campaigns, show the table
   return (
     <Card className="overflow-hidden" key={forceRender}>
       <CampaignTable 
-        campaigns={filteredCampaigns} 
+        campaigns={safeFilteredCampaigns} 
         status={activeTab || status as 'active' | 'draft' | 'archived'}
         campaignsFetchStatus={campaignsFetchStatus}
       />

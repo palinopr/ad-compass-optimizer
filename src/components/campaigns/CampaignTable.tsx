@@ -28,16 +28,17 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
           id: campaigns[0].id,
           name: campaigns[0].name,
           hasInsights: !!campaigns[0].insights,
-          insightKeys: campaigns[0].insights ? Object.keys(campaigns[0].insights) : []
+          insightKeys: campaigns[0].insights ? Object.keys(campaigns[0].insights) : [],
+          insightsStatus: campaigns[0].insightsStatus || 'unknown'
         }
       } : {}
     );
     
     // Add debug log to show all campaigns and their block status
-    console.log("🧾 Campaigns at start:", campaigns.map(c => ({
+    console.log("🧾 Campaigns at render:", campaigns.map(c => ({
       id: c.id,
       name: c.name,
-      insightsStatus: c.insightsStatus
+      insightsStatus: c.insightsStatus || 'unknown'
     })));
     
     // Check and log if any campaigns are missing insights
@@ -69,6 +70,33 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
     );
   }
 
+  // Make sure we have valid campaign data
+  if (!campaigns || !Array.isArray(campaigns)) {
+    console.error('[CAMPAIGN TABLE] Invalid campaigns data:', campaigns);
+    return (
+      <CardContent className="p-4">
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Data Format Error</AlertTitle>
+          <AlertDescription>
+            Unable to display campaigns due to invalid data format.
+          </AlertDescription>
+        </Alert>
+      </CardContent>
+    );
+  }
+
+  // If we have no campaigns, show a message
+  if (campaigns.length === 0) {
+    return (
+      <CardContent className="p-4">
+        <div className="text-center py-8 text-muted-foreground">
+          No campaigns found. Create a campaign to get started.
+        </div>
+      </CardContent>
+    );
+  }
+
   // Always render the table, even if some campaigns are missing insights
   return (
     <CardContent className="p-0">
@@ -86,13 +114,19 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
           </TableRow>
         </TableHeader>
         <TableBody>
-          {campaigns.map((campaign) => (
-            <CampaignTableRow 
-              key={campaign.id || Math.random().toString(36)} 
-              campaign={campaign as MetaCampaign} 
-              status={status}
-            />
-          ))}
+          {campaigns.map((campaign) => {
+            // Ensure campaign has an ID to use as a key
+            const key = campaign.id || Math.random().toString(36);
+            
+            // Even if the campaign data is incomplete, try to render it
+            return (
+              <CampaignTableRow 
+                key={key}
+                campaign={campaign} 
+                status={status}
+              />
+            );
+          })}
         </TableBody>
       </Table>
     </CardContent>

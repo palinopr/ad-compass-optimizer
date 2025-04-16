@@ -37,6 +37,41 @@ const Campaigns = () => {
     campaignsFetchStatus
   } = useCampaignsPage();
 
+  // Debug log to track render cycle
+  React.useEffect(() => {
+    console.log('[CAMPAIGNS] Page rendered with:', { 
+      isAuthenticated,
+      hasPermissions, 
+      hasAdAccount,
+      campaignsCount: campaigns?.length || 0,
+      isLoading,
+      showCreateWizard,
+      activeTab
+    });
+    
+    // Check if campaigns array is valid
+    if (campaigns) {
+      console.log(`[CAMPAIGNS] Has ${campaigns.length} campaigns`);
+      
+      if (campaigns.length > 0) {
+        // Log first campaign for debugging
+        console.log('[CAMPAIGNS] First campaign:', {
+          id: campaigns[0]?.id,
+          name: campaigns[0]?.name,
+          hasInsights: !!campaigns[0]?.insights,
+          insightsKeys: campaigns[0]?.insights ? Object.keys(campaigns[0].insights) : [],
+          insightsStatus: campaigns[0]?.insightsStatus
+        });
+      }
+    } else {
+      console.warn('[CAMPAIGNS] Campaigns array is undefined or null');
+    }
+  }, [campaigns, isAuthenticated, hasPermissions, hasAdAccount, isLoading, showCreateWizard, activeTab]);
+
+  // Safety check for campaign data
+  const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
+  const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
+
   return (
     <div className="container py-4 space-y-4">
       <CampaignHeader
@@ -70,8 +105,8 @@ const Campaigns = () => {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             showCreateWizard={showCreateWizard}
-            campaigns={campaigns}
-            filteredCampaigns={filteredCampaigns}
+            campaigns={safeCampaigns}
+            filteredCampaigns={safeFilteredCampaigns}
             isLoading={isLoading}
             campaignsError={campaignsError}
             selectedAdAccount={selectedAdAccount}
@@ -84,11 +119,11 @@ const Campaigns = () => {
           
           <CampaignList
             isLoading={isLoading}
-            campaigns={campaigns}
+            campaigns={safeCampaigns}
             error={campaignsError}
             errorDetails={null}
             activeTab={activeTab}
-            filteredCampaigns={filteredCampaigns}
+            filteredCampaigns={safeFilteredCampaigns}
             refetchCampaigns={() => refetchCampaigns(true)}
             forceRender={0}
             isAuthenticated={isAuthenticated}
