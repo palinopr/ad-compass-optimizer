@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
@@ -15,20 +16,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { isValidMetaDatePreset, mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
+import { ValidMetaDatePreset, mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 export type DateRange = {
   from: Date | undefined;
   to: Date | undefined;
 } | null;
 
-export type PresetOption = {
+// Extended preset type that includes "custom" for UI purposes
+export type UIPresetOption = {
   label: string;
-  value: string;
+  value: ValidMetaDatePreset | 'custom';
 };
 
 // Updated presets to match Meta API accepted values - ONLY use official values
-const presets: PresetOption[] = [
+const presets: UIPresetOption[] = [
   { label: 'Today', value: 'today' },
   { label: 'Yesterday', value: 'yesterday' },
   { label: 'Last 7 days', value: 'last_7d' },
@@ -39,8 +41,8 @@ const presets: PresetOption[] = [
 ];
 
 interface DateRangeSelectorProps {
-  onChange: (dateRange: DateRange, preset: string) => void;
-  initialPreset?: string;
+  onChange: (dateRange: DateRange, preset: ValidMetaDatePreset | 'custom') => void;
+  initialPreset?: ValidMetaDatePreset;
 }
 
 const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ 
@@ -48,7 +50,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   initialPreset = 'last_28d' // Default to last_28d
 }) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState('last_28d');
+  const [selectedPreset, setSelectedPreset] = useState<ValidMetaDatePreset | 'custom'>('last_28d');
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     // Initialize with last 28 days as default
     const today = new Date();
@@ -71,7 +73,14 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     handlePresetChange(validatedPreset);
   }, [initialPreset]);
 
-  const handlePresetChange = (preset: string) => {
+  const handlePresetChange = (preset: ValidMetaDatePreset | 'custom') => {
+    // For custom preset, we just update the UI state without modifying date range
+    if (preset === 'custom') {
+      setSelectedPreset('custom');
+      setIsCalendarOpen(true);
+      return;
+    }
+    
     // Ensure the preset is valid
     const validatedPreset = mapToValidDatePreset(preset);
     
@@ -118,11 +127,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
         endOfLastMonth.setHours(23, 59, 59, 999);
         newRange = { from: startOfLastMonth, to: endOfLastMonth };
-        break;
-      case 'custom':
-        // Keep existing date range for custom
-        newRange = dateRange;
-        setIsCalendarOpen(true);
         break;
       default:
         console.warn(`[DATE SELECTOR] Unhandled preset: ${validatedPreset}, using last_28d`);

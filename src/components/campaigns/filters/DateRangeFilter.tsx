@@ -1,8 +1,8 @@
 
 import React, { useEffect } from 'react';
-import DateRangeSelector from '@/components/meta/filters/DateRangeSelector';
+import DateRangeSelector, { DateRange } from '@/components/meta/filters/DateRangeSelector';
 import { toast } from '@/hooks/use-toast';
-import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
+import { mapToValidDatePreset, ValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 interface DateRangeFilterProps {
   datePreset: string;
@@ -18,8 +18,13 @@ const DateRangeFilter = ({ datePreset, onDateRangeChange }: DateRangeFilterProps
   }, [actualPreset]);
 
   // Handle date range changes with validation
-  const handleDateRangeChange = (range: any, preset: string) => {
-    const validatedPreset = mapToValidDatePreset(preset);
+  const handleDateRangeChange = (range: DateRange, preset: ValidMetaDatePreset | 'custom') => {
+    // For custom preset, we still need a valid Meta API preset for the actual API call
+    // We'll use the date range to determine an appropriate preset or default to last_28d
+    const validatedPreset = preset === 'custom' 
+      ? 'last_28d' // Default for custom ranges
+      : preset;
+      
     console.log(`[DATE FILTER] Changing date to validated preset: ${validatedPreset} (original: ${preset})`);
     
     // Show a toast notification

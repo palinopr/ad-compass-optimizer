@@ -1,11 +1,12 @@
+
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { DateRange } from '@/components/meta/filters/DateRangeSelector';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
-import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
+import { mapToValidDatePreset, ValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 export type CampaignFilters = {
   dateRange: DateRange;
-  datePreset: string;
+  datePreset: ValidMetaDatePreset;
   status: string | null;
   search: string;
 };
