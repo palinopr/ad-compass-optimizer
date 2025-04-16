@@ -1,4 +1,6 @@
 
+import { CampaignApiClient } from './api/campaignApiClient';
+
 export class PaginationHandler {
   static async fetchPaginatedCampaigns(nextPageUrl: string): Promise<any[]> {
     try {
