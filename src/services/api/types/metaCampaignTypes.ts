@@ -27,7 +27,8 @@ export interface MetaCampaign {
   objective?: string;
   loadedFromFallback?: boolean;
   extraStats?: CampaignExtraStats;
-  insightsStatus?: 'ok' | 'blocked' | 'pending' | 'failed' | null;
+  // Updated type to include 'blocked'
+  insightsStatus?: 'ok' | 'pending' | 'failed' | 'blocked' | null;
   insights?: {
     impressions: string;
     clicks: string;
