@@ -24,6 +24,11 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
   // Log render information to help debug
   useEffect(() => {
     console.log(`🔍 [CAMPAIGN TABLE] Rendering campaign table with ${campaigns?.length || 0} campaigns`);
+    console.log("[CampaignTable] Rendering with campaigns:", campaigns);
+    
+    if (!campaigns || campaigns.length === 0) {
+      console.warn("Campaign data is empty at CampaignTable");
+    }
     
     // Add debug log to show all campaigns at render
     if (campaigns && campaigns.length > 0) {

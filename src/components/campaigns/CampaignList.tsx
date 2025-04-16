@@ -53,6 +53,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
     
     if (filteredCampaigns && filteredCampaigns.length === 0 && !isLoading && !error) {
       console.log('[CAMPAIGN LIST] Empty campaigns array but no loading or error state');
+      console.warn("Campaign data is empty at CampaignList");
     }
     
     // Log the first few campaigns if available for debugging
@@ -64,11 +65,15 @@ const CampaignList: React.FC<CampaignListProps> = ({
         hasInsights: !!c.insights && Object.keys(c.insights).length > 0
       })));
     }
-  }, [filteredCampaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted]);
+    
+    // Explicitly log the raw campaigns data received
+    console.log("[CampaignList] Received campaigns:", campaigns);
+    console.log("[CampaignList] Filtered campaigns:", filteredCampaigns);
+  }, [filteredCampaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted, campaigns]);
 
   // Always log when rendering campaign list
   console.log("Rendering campaign list with", filteredCampaigns?.length || 0, "campaigns");
-
+  
   // Show loading state if the app is loading campaigns
   if (isLoading) {
     return <LoadingView />;

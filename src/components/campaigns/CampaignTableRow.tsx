@@ -36,6 +36,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
     } catch (e) {
       console.error('[CAMPAIGN ROW] Error checking blocked status:', e);
     }
+    
+    // Log detailed campaign data for debugging
+    console.log("[CampaignTableRow] Rendering campaign row:", campaign);
   }, [campaign]);
 
   // Always log the campaign being rendered for debugging
@@ -44,6 +47,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
   // Check if we have minimal valid data to render the row
   if (!campaign) {
     console.error('[CAMPAIGN ROW] Cannot render campaign row, missing campaign object');
+    console.warn("Campaign data is empty at CampaignTableRow");
     return null;
   }
 

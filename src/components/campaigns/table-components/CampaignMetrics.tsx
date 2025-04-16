@@ -41,13 +41,29 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
       cpa: getCpaDisplay(),
       roas: getRoasDisplay(),
       hasInsights: !!insights,
-      hasExtraStats: !!extraStats
+      hasExtraStats: !!extraStats,
+      rawProps: {
+        budget,
+        dailyBudget,
+        lifetimeBudget,
+        spend,
+        results,
+        insights,
+        extraStats
+      }
     };
     
     console.log('[CAMPAIGN METRICS] Rendering metrics with:', availableData);
     
     if (insights && (insights.spend || insights.cpa || insights.roas)) {
       localStorage.setItem('has_valid_campaign_insights', 'true');
+    }
+    
+    // Log warning if no valid metrics data is available
+    if (!budget && !dailyBudget && !lifetimeBudget && !spend && !results && 
+        (!insights || Object.keys(insights).length === 0) && 
+        (!extraStats || Object.keys(extraStats).length === 0)) {
+      console.warn("Metrics data is empty at CampaignMetrics");
     }
   }, [budget, dailyBudget, lifetimeBudget, spend, results, extraStats, insights]);
 
