@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { useFacebookLogin } from '@/hooks/useFacebookLogin';
@@ -10,11 +9,15 @@ import FacebookPermissionsSelector from './FacebookPermissionsSelector';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface FacebookLoginTabProps {
+export interface FacebookLoginTabProps {
   onLoginSuccess: (userData: any) => void;
+  requestedPermissions?: string[];
 }
 
-const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) => {
+const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ 
+  onLoginSuccess, 
+  requestedPermissions 
+}) => {
   const [showPermissionSelector, setShowPermissionSelector] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   
@@ -28,7 +31,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
     handleFacebookError
   } = useFacebookLogin(onLoginSuccess);
 
-  // Render different status messages based on login status
   const renderLoginStatus = () => {
     if (!loginStatus || !isScriptLoaded) return null;
     
@@ -56,15 +58,20 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
   };
 
   const handlePermissionsButtonClick = () => {
-    setShowPermissionSelector(true);
+    if (requestedPermissions && requestedPermissions.length > 0) {
+      if (typeof fbLogin === 'function') {
+        fbLogin(true, requestedPermissions);
+      }
+    } else {
+      setShowPermissionSelector(true);
+    }
   };
 
   const handlePermissionsSelected = (permissions: string[]) => {
     setSelectedPermissions(permissions);
     setShowPermissionSelector(false);
-    // Now login with the selected permissions
     if (typeof fbLogin === 'function') {
-      fbLogin(true, permissions); // Pass the selected permissions to fbLogin
+      fbLogin(true, permissions);
     }
   };
 
@@ -82,7 +89,6 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
         Connect your Facebook account to access campaign data and manage Meta ad accounts
       </p>
       
-      {/* Show login status if available */}
       {renderLoginStatus()}
       
       <FacebookLoginError error={loginError} />
@@ -104,8 +110,10 @@ const FacebookLoginTab: React.FC<FacebookLoginTabProps> = ({ onLoginSuccess }) =
               <FacebookLoginButton 
                 onClick={handlePermissionsButtonClick}
                 isConnecting={isConnecting}
-                advancedPermissions={true}
-                text="Connect with Campaign Permissions"
+                advancedPermissions={!!requestedPermissions}
+                text={requestedPermissions 
+                  ? "Connect with Specified Permissions" 
+                  : "Connect with Campaign Permissions"}
               />
               
               <div className="text-center my-2">
