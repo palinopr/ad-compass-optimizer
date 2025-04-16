@@ -1,4 +1,3 @@
-
 interface RateLimitState {
   isRateLimited: boolean;
   timestamp?: number;
@@ -35,6 +34,11 @@ export class RateLimitManager {
   }
 
   public static isRateLimited(): boolean {
+    if (!this.rateLimitState) {
+      // Initialize if not already done
+      this.rateLimitState = { isRateLimited: false };
+    }
+    
     if (!this.rateLimitState.isRateLimited) return false;
     
     if (this.rateLimitState.timestamp && this.rateLimitState.retryAfter) {
@@ -151,3 +155,6 @@ export class RateLimitManager {
     return localStorage.getItem('meta_rate_limit_override') === 'true';
   }
 }
+
+// Initialize right away for non-component imports
+RateLimitManager.initRateLimitState();
