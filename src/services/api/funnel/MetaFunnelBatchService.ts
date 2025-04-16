@@ -8,8 +8,9 @@ export class MetaFunnelBatchService {
     
     console.log('[META FUNNEL] Building batch requests for account:', formattedId);
     
-    // Updated campaigns URL with explicit fields to match the main fetch
-    const campaignsUrl = `/${formattedId}/campaigns?fields=id,name,objective,status,effective_status,created_time,updated_time,start_time,end_time,stop_time,daily_budget,lifetime_budget,insights.date_preset(last_28d){impressions,clicks,spend,actions,cost_per_action_type}`;
+    // These must match exactly the fields we're requesting in the direct API call
+    // IMPORTANT: Using fields parameter with essential fields to prevent empty objects
+    const campaignsUrl = `/${formattedId}/campaigns?fields=id,name,status,effective_status,start_time,stop_time,daily_budget,lifetime_budget,objective,created_time,updated_time,insights.date_preset(maximum){impressions,clicks,spend,actions,cost_per_action_type,website_purchase_roas}`;
     console.log('[META FUNNEL] Campaigns URL:', campaignsUrl);
     
     return [

@@ -11,13 +11,29 @@ export class CampaignUrlBuilder extends BaseApiService {
     fieldsQuery: string, 
     token: string
   ): string {
-    // IMPORTANT: Ensure fields= parameter is properly formatted at the beginning
-    // This is critical to ensure the API returns populated objects, not empty ones
-    const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?fields=${fieldsQuery}&limit=500&access_token=${token}`;
+    // CRITICAL: Verify the fields parameter is present and not empty
+    if (!fieldsQuery || fieldsQuery.trim() === '') {
+      const error = '[CAMPAIGN FETCH] Error: Empty fields parameter in campaign request URL';
+      console.error(error);
+      throw new Error(error);
+    }
+
+    // Ensure fieldsQuery starts with "fields=" if it doesn't already
+    const fieldsParam = fieldsQuery.startsWith('fields=') ? fieldsQuery : `fields=${fieldsQuery}`;
+    
+    // Build the URL with validated fields parameter
+    const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}/campaigns?${fieldsParam}&limit=500&access_token=${token}`;
     
     // Log the full URL (with token redacted) to verify correct format
     const redactedUrl = url.replace(token, 'REDACTED');
     console.log(`[CAMPAIGN FETCH] Full URL structure (redacted): ${redactedUrl}`);
+    
+    // Verify URL contains fields parameter
+    if (!url.includes('fields=')) {
+      const error = '[CAMPAIGN FETCH] Error: Missing fields parameter in campaign request URL';
+      console.error(error);
+      throw new Error(error);
+    }
     
     return url;
   }
@@ -34,9 +50,8 @@ export class CampaignUrlBuilder extends BaseApiService {
     const formattedAccountId = CampaignQueryBuilder.formatAccountId(adAccountId);
     console.log(`[CAMPAIGN FETCH] Using formatted account ID: ${formattedAccountId}`);
 
-    // Use the provided date preset or default to last_28d
-    // CampaignQueryBuilder.normalizePreset will validate/map the preset
-    const fieldsQuery = CampaignQueryBuilder.buildCampaignQuery(datePreset || 'last_28d');
+    // Use the provided date preset or default to maximum
+    const fieldsQuery = CampaignQueryBuilder.buildCampaignQuery(datePreset || 'maximum');
     
     // Verify that the date preset is valid
     CampaignQueryBuilder.verifyDatePreset(fieldsQuery);
@@ -54,7 +69,7 @@ export class CampaignUrlBuilder extends BaseApiService {
     try {
       localStorage.setItem('last_campaign_request_url', redactedUrl);
       localStorage.setItem('last_campaign_request_timestamp', new Date().toISOString());
-      localStorage.setItem('last_campaign_request_date_preset', datePreset || 'last_28d');
+      localStorage.setItem('last_campaign_request_date_preset', datePreset || 'maximum');
     } catch (e) {
       console.error('[CAMPAIGN FETCH] Error storing request info:', e);
     }

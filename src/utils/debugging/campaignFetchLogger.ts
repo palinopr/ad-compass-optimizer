@@ -1,3 +1,4 @@
+
 import { CampaignFetchLog } from './types/campaignLogTypes';
 import LogStorage from './services/logStorage';
 import LogEventEmitter from './services/logEventEmitter';
@@ -30,6 +31,22 @@ class CampaignFetchLogger {
   static logRequest(accountId: string, requestUrl: string): void {
     console.log('[CAMPAIGN FETCH] 🚀 Request URL:', requestUrl);
     
+    // Extract and log fields parameter
+    const fieldsMatch = requestUrl.match(/fields=([^&]+)/);
+    if (fieldsMatch && fieldsMatch[1]) {
+      console.log(`[CAMPAIGN FETCH] 📋 Using fields parameter: ${fieldsMatch[1]}`);
+      
+      // Store the fields parameter for debugging
+      try {
+        localStorage.setItem('current_fields_parameter', fieldsMatch[1]);
+        localStorage.setItem('fields_parameter_timestamp', new Date().toISOString());
+      } catch (e) {
+        // Ignore storage errors
+      }
+    } else {
+      console.warn('[CAMPAIGN FETCH] ⚠️ No fields parameter found in request URL!');
+    }
+    
     // Extract and log date preset
     const datePreset = parseDatePreset(requestUrl);
     if (datePreset) {
@@ -50,7 +67,8 @@ class CampaignFetchLogger {
       timestamp: new Date().toISOString(),
       accountId,
       requestUrl,
-      datePreset
+      datePreset,
+      fields: fieldsMatch ? fieldsMatch[1] : undefined
     };
     
     LogStorage.addLog(log);

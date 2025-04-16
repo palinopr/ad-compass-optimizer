@@ -17,11 +17,25 @@ export class CampaignApiClient extends BaseApiService {
     console.log(`[CAMPAIGN FETCH] Executing fetch to: ${redactedForLogging}`);
 
     try {
-      // Check if the URL contains the fields parameter - IMPORTANT check to avoid empty objects
+      // CRITICAL: Check if the URL contains the fields parameter with proper values
       if (!url.includes('fields=')) {
-        console.error('[CAMPAIGN FETCH] ERROR: Missing fields parameter in URL!');
+        const error = '[CAMPAIGN FETCH] ERROR: Missing fields parameter in URL!';
+        console.error(error);
         throw new Error('Missing fields parameter in Meta API request URL');
       }
+      
+      // Verify that the fields include at minimum required fields (id, name)
+      const requiredFields = ['id', 'name', 'status'];
+      const fieldsMatch = url.match(/fields=([^&]+)/);
+      const fieldsValue = fieldsMatch ? fieldsMatch[1] : '';
+      
+      requiredFields.forEach(field => {
+        if (!fieldsValue.includes(field)) {
+          const error = `[CAMPAIGN FETCH] ERROR: Missing required field '${field}' in fields parameter!`;
+          console.error(error);
+          throw new Error(`Missing required field '${field}' in Meta API request`);
+        }
+      });
 
       const response = await fetch(url, {
         method: 'GET',
@@ -109,7 +123,7 @@ export class CampaignApiClient extends BaseApiService {
         return [];
       }
 
-      // NEW: Check for empty campaign objects
+      // Log whether any campaign objects are empty
       if (data.data.length > 0) {
         const emptyObjects = data.data.filter(item => 
           typeof item === 'object' && 

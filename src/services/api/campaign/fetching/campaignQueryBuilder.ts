@@ -1,4 +1,3 @@
-
 import { CAMPAIGN_FIELDS } from './config/queryFields';
 import { AccountValidator } from './utils/accountValidator';
 
@@ -16,12 +15,11 @@ export class CampaignQueryBuilder {
     // Map legacy presets to Meta API compatible presets
     let validDatePreset = this.normalizePreset(datePreset);
     
-    // Use a more comprehensive list of fields to ensure we get all required data
-    // We're explicitly requesting these fields as required by the user
-    const basicFields = 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,created_time,updated_time,start_time,end_time,stop_time';
+    // Use this specific set of fields to ensure we get required data
+    // IMPORTANT: These exact fields are required to prevent empty objects
+    const basicFields = 'id,name,status,effective_status,start_time,stop_time,daily_budget,lifetime_budget,objective,created_time,updated_time';
     
     // Build a clean insights field string with the validated date preset
-    // This format was proven to work in previous fixes
     const insightFields = 'impressions,clicks,spend,actions,cost_per_action_type,website_purchase_roas';
     
     // Build query with the validated date preset using simplified structure
