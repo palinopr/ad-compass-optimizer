@@ -2,6 +2,8 @@
 /**
  * Specialized throttler for insights API requests
  */
+import { RequestQueueManager } from '../queue/RequestQueueManager';
+
 export class InsightsRequestThrottler {
   private static queue: Promise<any>[] = [];
   private static processing = false;
