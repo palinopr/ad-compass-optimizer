@@ -1,9 +1,15 @@
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useCampaignState } from './fetch-hooks/useCampaignState';
 import { useInsightsFetching } from './fetch-hooks/useInsightsFetching';
 import { useLoadingSafety } from './fetch-hooks/useLoadingSafety';
 import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
+
+export interface FetchMetadata {
+  campaignCount: number;
+  timestamp: string;
+  source?: string;
+}
 
 export function useCampaignFetchState() {
   const {
@@ -17,6 +23,7 @@ export function useCampaignFetchState() {
     setErrorDetails,
     displayRefresh,
     forceRender,
+    setForceRender, // Get the setForceRender from useCampaignState
     fetchCompleted,
     setFetchCompleted,
     incrementDisplayRefresh,
@@ -24,6 +31,11 @@ export function useCampaignFetchState() {
     forceUiRefresh
   } = useCampaignState();
 
+  const [lastFetchMetadata, setLastFetchMetadata] = useState<FetchMetadata>({
+    campaignCount: 0,
+    timestamp: '',
+  });
+  
   const { insightsFetchStatus, updateCampaignsWithInsights } = useInsightsFetching();
   const hasEverHadCampaignsRef = useRef<boolean>(false);
 
@@ -44,6 +56,13 @@ export function useCampaignFetchState() {
 
     setCampaigns(newCampaigns);
     setForceRender(prev => prev + 1);
+
+    // Update the lastFetchMetadata when campaigns are updated
+    setLastFetchMetadata({
+      campaignCount: newCampaigns.length,
+      timestamp: new Date().toISOString(),
+      source: localStorage.getItem('last_campaign_source') || undefined
+    });
 
     const insightsResult = await updateCampaignsWithInsights(newCampaigns);
     if (insightsResult.campaigns) {
@@ -72,6 +91,7 @@ export function useCampaignFetchState() {
     hasEverHadCampaignsRef,
     fetchCompleted,
     setFetchCompleted,
-    insightsFetchStatus
+    insightsFetchStatus,
+    lastFetchMetadata // Add the lastFetchMetadata to the return object
   };
 }

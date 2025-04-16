@@ -39,6 +39,7 @@ export const useCampaignState = () => {
     setErrorDetails,
     displayRefresh,
     forceRender,
+    setForceRender, // Make sure we export this function
     fetchCompleted,
     setFetchCompleted,
     incrementDisplayRefresh,
