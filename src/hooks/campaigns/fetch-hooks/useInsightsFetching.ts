@@ -24,6 +24,13 @@ export const useInsightsFetching = () => {
       if (token && campaigns.length > 0) {
         console.log(`[INSIGHTS] Fetching insights for ${campaigns.length} campaigns`);
         
+        // Debug log to show all campaigns and their block status at the beginning
+        console.log("🧾 Campaigns at start:", campaigns.map(c => ({
+          id: c.id,
+          name: c.name,
+          insightsStatus: c.insightsStatus
+        })));
+        
         // ENHANCED PRE-FILTER: More thorough filtering of blocked campaigns before batch processing
         const filteredCampaigns = campaigns.filter(campaign => {
           // Skip already blocked campaigns using insightsStatus

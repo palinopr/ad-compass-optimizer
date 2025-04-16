@@ -45,6 +45,12 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
     if (missingInsights.length > 0) {
       console.log(`[CAMPAIGN TABLE] ${missingInsights.length}/${campaigns.length} campaigns are missing insights data`);
     }
+    
+    // Check for blocked campaigns
+    const blockedCampaigns = campaigns.filter(c => c.insightsStatus === 'blocked');
+    if (blockedCampaigns.length > 0) {
+      console.log(`[CAMPAIGN TABLE] ${blockedCampaigns.length}/${campaigns.length} campaigns are blocked after 400 errors`);
+    }
   }, [campaigns]);
 
   // Show unauthorized error message
