@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { DateRange, DatePresetOption } from '../types';
 import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
@@ -15,6 +16,7 @@ export function useDateRangeSelection(
     return { from: twentyEightDaysAgo, to: today };
   });
 
+  // Explicitly type the preset parameter as DatePresetOption to include 'custom'
   const handlePresetChange = (preset: DatePresetOption) => {
     if (preset === 'custom') {
       setSelectedPreset('custom');
