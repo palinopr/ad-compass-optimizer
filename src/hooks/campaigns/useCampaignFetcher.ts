@@ -8,6 +8,7 @@ import { debounce } from 'lodash';
 import { MetaFunnelService } from '@/services/api/MetaFunnelService';
 import { handleSuccessfulFetch, logFetchDetails, prepareFetchRequest } from './fetch-utils/campaignFetchUtils';
 import { validateAdAccountPermissions } from '@/services/api/meta-accounts/permissionChecker';
+import { metaAuthService } from '@/services/MetaAuthService'; // Added the missing import
 
 export function useCampaignFetcher() {
   const { error, errorDetails, handleError, clearErrors } = useErrorHandler();
