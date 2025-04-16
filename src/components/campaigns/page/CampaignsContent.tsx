@@ -18,6 +18,7 @@ interface CampaignsContentProps {
   campaignsError: any;
   selectedAdAccount: string | null;
   campaignsFetchStatus?: 'success' | 'unauthorized' | 'error' | null;
+  metaPermissionsInvalid?: boolean;
 }
 
 const CampaignsContent: React.FC<CampaignsContentProps> = ({
@@ -32,6 +33,7 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
   campaignsError,
   selectedAdAccount,
   campaignsFetchStatus,
+  metaPermissionsInvalid
 }) => {
   // Add debug info
   React.useEffect(() => {
@@ -45,7 +47,8 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
       isLoading,
       hasError: !!campaignsError,
       selectedAdAccount,
-      campaignsFetchStatus
+      campaignsFetchStatus,
+      metaPermissionsInvalid
     });
   }, [
     isAuthenticated,
@@ -57,7 +60,8 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
     isLoading,
     campaignsError,
     selectedAdAccount,
-    campaignsFetchStatus
+    campaignsFetchStatus,
+    metaPermissionsInvalid
   ]);
 
   // Safety check for arrays
@@ -82,7 +86,11 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
           setActiveTab={setActiveTab} 
         />
 
-        {safeFilteredCampaigns.length === 0 && !showCreateWizard && !isLoading && campaignsFetchStatus !== 'unauthorized' && (
+        {safeFilteredCampaigns.length === 0 && 
+         !showCreateWizard && 
+         !isLoading && 
+         campaignsFetchStatus !== 'unauthorized' && 
+         !metaPermissionsInvalid && (
           <EmptyStateMessage adAccountId={selectedAdAccount} />
         )}
       </>
@@ -92,3 +100,4 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
 };
 
 export default CampaignsContent;
+

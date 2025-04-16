@@ -31,7 +31,8 @@ export const useCampaignsPage = () => {
     isLoading, 
     fetchCompleted, 
     insightsFetchStatus,
-    campaignsFetchStatus 
+    campaignsFetchStatus,
+    metaPermissionsInvalid
   } = useCampaigns(activeTab);
   
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
@@ -122,6 +123,7 @@ export const useCampaignsPage = () => {
     fetchCompleted,
     insightsFetchStatus,
     campaignsFetchStatus,
+    metaPermissionsInvalid, // Expose the new flag
     
     // UI state
     activeTab,
@@ -139,3 +141,4 @@ export const useCampaignsPage = () => {
     refetchCampaigns
   };
 };
+

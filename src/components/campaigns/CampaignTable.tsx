@@ -12,6 +12,7 @@ import CampaignTableRow from './CampaignTableRow';
 import type { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { metaPermissionsInvalid } from '@/hooks/campaigns/useCampaigns';
 
 interface CampaignTableProps {
   campaigns: MetaCampaign[];
@@ -52,7 +53,37 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
     if (blockedCampaigns.length > 0) {
       console.log(`[CAMPAIGN TABLE] ${blockedCampaigns.length}/${campaigns.length} campaigns are blocked after 400 errors`);
     }
+    
+    // Log permission status
+    console.log(`[CAMPAIGN TABLE] Meta permissions invalid: ${metaPermissionsInvalid}`);
   }, [campaigns]);
+
+  // Show Meta permissions error message
+  if (metaPermissionsInvalid) {
+    return (
+      <CardContent className="p-4">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Meta Permissions Error</AlertTitle>
+          <AlertDescription>
+            ❌ Unable to load campaigns: Missing Meta permissions for insights access.
+            Please reconnect your Meta account or request access.
+          </AlertDescription>
+        </Alert>
+        {campaigns.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-sm font-medium mb-2">Available Campaign Names:</h4>
+            <ul className="list-disc pl-5 text-sm text-muted-foreground">
+              {campaigns.slice(0, 10).map(campaign => (
+                <li key={campaign.id}>{campaign.name}</li>
+              ))}
+              {campaigns.length > 10 && <li>...and {campaigns.length - 10} more</li>}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    );
+  }
 
   // Show unauthorized error message
   if (campaignsFetchStatus === 'unauthorized') {
@@ -134,3 +165,4 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
 };
 
 export default CampaignTable;
+

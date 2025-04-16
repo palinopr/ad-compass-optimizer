@@ -5,6 +5,7 @@ import CampaignTable from './CampaignTable';
 import { UseCampaignsResult } from '@/hooks/campaigns/types';
 import { LoadingView } from './states/LoadingView';
 import ErrorView from './states/ErrorView';
+import { metaPermissionsInvalid } from '@/hooks/campaigns/useCampaigns';
 
 interface CampaignListProps {
   isLoading: boolean;
@@ -19,6 +20,7 @@ interface CampaignListProps {
   fetchCompleted: boolean;
   campaignsFetchStatus?: 'success' | 'unauthorized' | 'error' | null;
   status?: 'active' | 'draft' | 'archived' | string;
+  metaPermissionsInvalid?: boolean;
 }
 
 const CampaignList: React.FC<CampaignListProps> = ({
@@ -43,7 +45,8 @@ const CampaignList: React.FC<CampaignListProps> = ({
       activeTab,
       status,
       campaignsFetchStatus,
-      fetchCompleted
+      fetchCompleted,
+      metaPermissionsInvalid
     });
     
     if (filteredCampaigns.length === 0 && !isLoading && !error) {
@@ -56,8 +59,8 @@ const CampaignList: React.FC<CampaignListProps> = ({
     return <LoadingView />;
   }
 
-  // Show error state if there was an error (except for unauthorized, which is handled in CampaignTable)
-  if (error && campaignsFetchStatus !== 'unauthorized') {
+  // Show error state if there was an error (except for unauthorized or permissions issues, which are handled in CampaignTable)
+  if (error && campaignsFetchStatus !== 'unauthorized' && !metaPermissionsInvalid) {
     return (
       <ErrorView
         error={error}
@@ -72,7 +75,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
   
   // Add a temporary fallback to show something when we have no campaigns but fetch completed
-  if (safeFilteredCampaigns.length === 0 && fetchCompleted && !isLoading && !error) {
+  if (safeFilteredCampaigns.length === 0 && fetchCompleted && !isLoading && !error && !metaPermissionsInvalid) {
     return (
       <Card className="overflow-hidden">
         <div className="p-6 text-center">

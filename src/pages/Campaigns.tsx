@@ -34,7 +34,8 @@ const Campaigns = () => {
     refetchCampaigns,
     fetchCompleted,
     insightsFetchStatus,
-    campaignsFetchStatus
+    campaignsFetchStatus,
+    metaPermissionsInvalid
   } = useCampaignsPage();
 
   // Debug log to track render cycle
@@ -46,7 +47,8 @@ const Campaigns = () => {
       campaignsCount: campaigns?.length || 0,
       isLoading,
       showCreateWizard,
-      activeTab
+      activeTab,
+      metaPermissionsInvalid
     });
     
     // Check if campaigns array is valid
@@ -66,7 +68,7 @@ const Campaigns = () => {
     } else {
       console.warn('[CAMPAIGNS] Campaigns array is undefined or null');
     }
-  }, [campaigns, isAuthenticated, hasPermissions, hasAdAccount, isLoading, showCreateWizard, activeTab]);
+  }, [campaigns, isAuthenticated, hasPermissions, hasAdAccount, isLoading, showCreateWizard, activeTab, metaPermissionsInvalid]);
 
   // Safety check for campaign data
   const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
@@ -111,6 +113,7 @@ const Campaigns = () => {
             campaignsError={campaignsError}
             selectedAdAccount={selectedAdAccount}
             campaignsFetchStatus={campaignsFetchStatus}
+            metaPermissionsInvalid={metaPermissionsInvalid}
           />
           
           <CampaignFilterToolbar 
@@ -129,6 +132,7 @@ const Campaigns = () => {
             isAuthenticated={isAuthenticated}
             fetchCompleted={fetchCompleted}
             campaignsFetchStatus={campaignsFetchStatus}
+            metaPermissionsInvalid={metaPermissionsInvalid}
           />
           
           {showCreateWizard && (
@@ -159,3 +163,4 @@ const Campaigns = () => {
 };
 
 export default Campaigns;
+
