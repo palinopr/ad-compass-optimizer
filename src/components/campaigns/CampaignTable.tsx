@@ -23,43 +23,20 @@ interface CampaignTableProps {
 const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'active', campaignsFetchStatus }) => {
   // Log render information to help debug
   useEffect(() => {
-    console.log(`[CAMPAIGN TABLE] Rendering with ${campaigns?.length || 0} campaigns`, 
-      campaigns && campaigns.length > 0 ? { 
-        firstCampaign: {
-          id: campaigns[0]?.id || 'missing-id',
-          name: campaigns[0]?.name || 'unnamed',
-          hasInsights: !!campaigns[0]?.insights,
-          insightKeys: campaigns[0]?.insights ? Object.keys(campaigns[0].insights) : [],
-          insightsStatus: campaigns[0]?.insightsStatus || 'unknown'
-        }
-      } : { campaigns: 'empty or null' }
-    );
+    console.log(`🔍 [CAMPAIGN TABLE] Rendering campaign table with ${campaigns?.length || 0} campaigns`);
     
-    // Add debug log to show all campaigns and their block status
+    // Add debug log to show all campaigns at render
     if (campaigns && campaigns.length > 0) {
-      console.log("🧾 Campaigns at render:", campaigns.map(c => ({
+      console.log("🧾 Campaign list at render:", campaigns.map(c => ({
         id: c.id,
         name: c.name,
-        insightsStatus: c.insightsStatus || 'unknown'
+        status: c.status,
+        insightsStatus: c.insightsStatus || 'unknown',
+        hasInsights: !!c.insights && Object.keys(c.insights).length > 0
       })));
-      
-      // Check and log if any campaigns are missing insights
-      const missingInsights = campaigns.filter(c => !c.insights || Object.keys(c.insights).length === 0);
-      if (missingInsights.length > 0) {
-        console.log(`[CAMPAIGN TABLE] ${missingInsights.length}/${campaigns.length} campaigns are missing insights data`);
-      }
-      
-      // Check for blocked campaigns
-      const blockedCampaigns = campaigns.filter(c => c.insightsStatus === 'blocked');
-      if (blockedCampaigns.length > 0) {
-        console.log(`[CAMPAIGN TABLE] ${blockedCampaigns.length}/${campaigns.length} campaigns are blocked after 400 errors`);
-      }
     } else {
-      console.log('[CAMPAIGN TABLE] No campaigns to render');
+      console.warn('[CAMPAIGN TABLE] ⚠️ No campaigns to render in table');
     }
-    
-    // Log permission status
-    console.log(`[CAMPAIGN TABLE] Meta permissions invalid: ${metaPermissionsInvalid}`);
   }, [campaigns]);
 
   // Show Meta permissions error message
@@ -105,16 +82,31 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
     );
   }
 
-  // Make sure we have valid campaign data
-  if (!campaigns || !Array.isArray(campaigns)) {
-    console.error('[CAMPAIGN TABLE] Invalid campaigns data:', campaigns);
+  // Make sure we have valid campaign data - enhanced safety checks
+  if (!campaigns) {
+    console.error('[CAMPAIGN TABLE] Campaigns is null or undefined');
     return (
       <CardContent className="p-4">
         <Alert>
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Data Format Error</AlertTitle>
+          <AlertTitle>Missing Campaign Data</AlertTitle>
           <AlertDescription>
-            Unable to display campaigns due to invalid data format.
+            Unable to load campaign data. Please try refreshing the page.
+          </AlertDescription>
+        </Alert>
+      </CardContent>
+    );
+  }
+  
+  if (!Array.isArray(campaigns)) {
+    console.error('[CAMPAIGN TABLE] Campaigns is not an array:', campaigns);
+    return (
+      <CardContent className="p-4">
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Invalid Data Format</AlertTitle>
+          <AlertDescription>
+            The campaign data is not in the expected format. Please contact support.
           </AlertDescription>
         </Alert>
       </CardContent>
@@ -152,6 +144,8 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
           {campaigns.map((campaign) => {
             // Ensure campaign has an ID to use as a key
             const key = campaign.id || Math.random().toString(36);
+            
+            console.log(`🔄 Rendering table row for campaign: ${campaign.name} (${campaign.id})`);
             
             // Even if the campaign data is incomplete, try to render it
             return (

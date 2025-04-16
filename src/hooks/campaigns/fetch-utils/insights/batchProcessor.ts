@@ -50,11 +50,23 @@ const queueCampaignInsightsFetch = (
   });
 };
 
+// The main function to fetch insights for a list of campaigns
 export const fetchInsightsForCampaigns = async (
   campaigns: MetaCampaign[], 
   token: string,
   datePreset: string = 'last_28d'
 ): Promise<MetaCampaign[]> => {
+  // Important: Always return the campaigns array even if insights fetch fails
+  if (!campaigns || !Array.isArray(campaigns) || campaigns.length === 0) {
+    console.log(`[INSIGHTS FETCH] No campaigns to process, returning empty array`);
+    return campaigns || [];
+  }
+  
+  if (!token) {
+    console.error('[INSIGHTS FETCH] Missing token, cannot fetch insights');
+    return campaigns;
+  }
+  
   const { MIN_REQUEST_INTERVAL, BATCH_SIZE, BATCH_INTERVAL } = BATCH_CONFIG;
   
   console.log(`[INSIGHTS FETCH] Starting strictly controlled insights fetch for ${campaigns.length} campaigns with date_preset=${datePreset}`);
@@ -114,11 +126,19 @@ export const fetchInsightsForCampaigns = async (
     campaignMap.set(campaign.id, campaign);
   });
   
+  // If there are no campaigns to process after filtering, return the original array
+  if (campaignsWithInsights.length === 0) {
+    console.log('[INSIGHTS FETCH] No non-blocked campaigns to process, returning original array');
+    return campaigns;
+  }
+  
+  // Process campaigns in batches
   for (let i = 0; i < campaignsWithInsights.length; i += BATCH_CONFIG.BATCH_SIZE) {
     const batch = campaignsWithInsights.slice(i, i + BATCH_CONFIG.BATCH_SIZE);
     
     console.log(`[INSIGHTS FETCH] Processing batch ${Math.floor(i/BATCH_CONFIG.BATCH_SIZE) + 1} with ${batch.length} campaigns`);
     
+    // Process each campaign in the current batch
     for (let j = 0; j < batch.length; j++) {
       const campaign = batch[j];
       
@@ -198,5 +218,6 @@ export const fetchInsightsForCampaigns = async (
     });
   }
   
-  return campaignsWithInsights;
+  // Always return the original campaigns array to ensure we render what we have
+  return campaigns;
 };

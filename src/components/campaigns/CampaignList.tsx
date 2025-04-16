@@ -40,7 +40,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
 }) => {
   // Debug log to track campaign state
   React.useEffect(() => {
-    console.log(`[CAMPAIGN LIST] Rendering with ${filteredCampaigns?.length || 0} campaigns`, {
+    console.log(`🧾 [CAMPAIGN LIST] Rendering with ${filteredCampaigns?.length || 0} campaigns`, {
       isLoading,
       hasError: !!error,
       activeTab,
@@ -53,6 +53,16 @@ const CampaignList: React.FC<CampaignListProps> = ({
     
     if (filteredCampaigns && filteredCampaigns.length === 0 && !isLoading && !error) {
       console.log('[CAMPAIGN LIST] Empty campaigns array but no loading or error state');
+    }
+    
+    // Log the first few campaigns if available for debugging
+    if (filteredCampaigns && filteredCampaigns.length > 0) {
+      console.log('[CAMPAIGN LIST] First few campaigns:', filteredCampaigns.slice(0, 3).map(c => ({
+        id: c.id,
+        name: c.name,
+        status: c.status,
+        hasInsights: !!c.insights && Object.keys(c.insights).length > 0
+      })));
     }
   }, [filteredCampaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted]);
 
@@ -73,8 +83,16 @@ const CampaignList: React.FC<CampaignListProps> = ({
     );
   }
 
-  // Ensure we have an array of campaigns
+  // Ensure we have an array of campaigns - add additional safety check
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
+  
+  // Debug output if campaigns exist but filteredCampaigns is empty
+  if (Array.isArray(campaigns) && campaigns.length > 0 && safeFilteredCampaigns.length === 0) {
+    console.warn('[CAMPAIGN LIST] ⚠️ Campaigns exist but filtered list is empty:', {
+      campaignsCount: campaigns.length,
+      filteredCount: 0
+    });
+  }
   
   // Show a clear "No Campaigns" UI when we have no campaigns but fetch completed successfully
   if ((safeFilteredCampaigns.length === 0 || !safeFilteredCampaigns) && fetchCompleted && !isLoading && !error && !metaPermissionsInvalid) {

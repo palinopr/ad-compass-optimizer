@@ -26,25 +26,29 @@ export class MetaCampaignService extends BaseApiService {
       
       const campaigns = await CampaignFetchService.fetchCampaigns(token, adAccountId, datePreset);
       
+      // IMPORTANT: Ensure we always return an array, even if empty
+      const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
+      
       // Log success information
-      console.log(`[META CAMPAIGN] Successfully fetched ${campaigns.length} campaigns`);
-      if (campaigns.length > 0) {
+      console.log(`[META CAMPAIGN] Successfully fetched ${safeCampaigns.length} campaigns`);
+      if (safeCampaigns.length > 0) {
         console.log('[META CAMPAIGN] First campaign sample:', {
-          id: campaigns[0]?.id || 'missing',
-          name: campaigns[0]?.name || 'unnamed',
-          status: campaigns[0]?.status || 'unknown'
+          id: safeCampaigns[0]?.id || 'missing',
+          name: safeCampaigns[0]?.name || 'unnamed',
+          status: safeCampaigns[0]?.status || 'unknown',
+          hasInsights: !!safeCampaigns[0]?.insights
         });
       } else {
         console.log('[META CAMPAIGN] No campaigns returned from API');
       }
       
       // If data is empty and datePreset is not already "maximum", try with "maximum" preset
-      if (campaigns.length === 0 && datePreset !== "maximum") {
+      if (safeCampaigns.length === 0 && datePreset !== "maximum") {
         console.log(`[META CAMPAIGN] No campaigns found with ${datePreset}, trying fallback to "maximum"`);
         return await CampaignFetchService.fetchCampaigns(token, adAccountId, "maximum");
       }
       
-      return campaigns;
+      return safeCampaigns;
     } catch (error) {
       console.error('[META CAMPAIGN] Error in fetchCampaigns:', error);
       
@@ -68,7 +72,7 @@ export class MetaCampaignService extends BaseApiService {
         }
       }
       
-      // Return empty array instead of throwing to prevent UI breaks
+      // Always return empty array instead of throwing to prevent UI breaks
       return [];
     }
   }

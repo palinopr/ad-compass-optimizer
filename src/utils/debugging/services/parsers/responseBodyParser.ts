@@ -20,8 +20,8 @@ export const parseResponseBody = async (response: Response): Promise<{ text: str
     try {
       const data = JSON.parse(text);
       
-      // Log response structure for debugging
-      console.log('[RESPONSE PARSER] Response structure:', {
+      // Enhanced logging for debugging campaign loading issues
+      console.log('[RESPONSE PARSER] Response structure overview:', {
         hasData: !!data,
         hasDataArray: data && Array.isArray(data.data),
         dataLength: data && data.data ? data.data.length : 'N/A',
@@ -29,6 +29,19 @@ export const parseResponseBody = async (response: Response): Promise<{ text: str
         hasError: !!(data && data.error)
       });
 
+      // If data.data exists and is an array, log information about the first item
+      if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
+        // Check specifically for campaigns API response
+        if (data.data[0].name && data.data[0].status) {
+          console.log('[RESPONSE PARSER] First campaign in response:', {
+            id: data.data[0].id,
+            name: data.data[0].name,
+            status: data.data[0].status,
+            hasInsights: !!data.data[0].insights
+          });
+        }
+      }
+      
       // Check specifically for empty data arrays to help debug insights issues
       if (data && Array.isArray(data.data) && data.data.length === 0) {
         console.log('[RESPONSE PARSER] API returned empty data array []');

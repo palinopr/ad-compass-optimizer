@@ -33,6 +33,7 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   isBlocked = false
 }) => {
   React.useEffect(() => {
+    // Enhanced debugging: Log available metrics data
     const availableData = {
       budget: getBudgetDisplay(),
       spend: getSpendDisplay(),
@@ -43,25 +44,10 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
       hasExtraStats: !!extraStats
     };
     
+    console.log('[CAMPAIGN METRICS] Rendering metrics with:', availableData);
+    
     if (insights && (insights.spend || insights.cpa || insights.roas)) {
       localStorage.setItem('has_valid_campaign_insights', 'true');
-    }
-    
-    if (availableData.spend === '-' || availableData.results === '-' || 
-        availableData.cpa === '-' || availableData.roas === '-') {
-      console.log('[CAMPAIGN METRICS] Available data for rendering:', availableData);
-      
-      if (insights) {
-        console.log('[CAMPAIGN METRICS] Raw insights:', {
-          spend: insights.spend || 'missing',
-          cpa: insights.cpa || 'missing', 
-          roas: insights.roas || 'missing'
-        });
-      }
-      
-      if (extraStats) {
-        console.log('[CAMPAIGN METRICS] Extra stats:', extraStats);
-      }
     }
   }, [budget, dailyBudget, lifetimeBudget, spend, results, extraStats, insights]);
 
@@ -74,7 +60,7 @@ const CampaignMetrics: React.FC<CampaignMetricsProps> = ({
   
   const getSpendDisplay = (): string => {
     const spendValue = spend || insights?.spend || extraStats?.spend;
-    return formatCurrency(spendValue);
+    return spendValue ? formatCurrency(spendValue) : '-';
   };
 
   const getResultsDisplay = (): string => {

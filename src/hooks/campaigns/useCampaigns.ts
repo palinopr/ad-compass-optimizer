@@ -36,7 +36,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const { filteredCampaigns, filters } = useCampaignFilters(campaigns);
 
   const handleFetchCampaigns = useCallback(async (forceRefresh = false) => {
-    console.log(`[CAMPAIGN FETCH] handleFetchCampaigns called, forceRefresh: ${forceRefresh}`);
+    console.log(`📊 [CAMPAIGN FETCH] handleFetchCampaigns called, forceRefresh: ${forceRefresh}`);
     
     setIsLoading(true);
     setError(null);
@@ -86,42 +86,47 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           localStorage.setItem('campaign_fetch_unauthorized', 'false');
         }
         
-        localStorage.setItem('last_campaign_fetch_error_details', JSON.stringify({
-          error: result.error,
-          timestamp: new Date().toISOString()
-        }));
+        // Store error for debugging
+        try {
+          localStorage.setItem('last_campaign_fetch_error_details', JSON.stringify({
+            error: result.error,
+            timestamp: new Date().toISOString()
+          }));
+        } catch (e) {
+          // Ignore storage errors
+        }
+        
         setIsLoading(false);
         setFetchCompleted(true);
       } else if (result && 'campaigns' in result && Array.isArray(result.campaigns)) {
-        console.log(`[CAMPAIGN FETCH] API returned ${result.campaigns.length} campaigns`);
+        console.log(`✅ [CAMPAIGN FETCH] API returned ${result.campaigns.length} campaigns`);
         
+        // Always store campaigns first, regardless of insights status
         localStorage.setItem('last_campaign_fetch_success', 'true');
         localStorage.setItem('last_campaign_count', result.campaigns.length.toString());
         setCampaignsFetchStatus('success');
         localStorage.removeItem('campaign_fetch_unauthorized');
         localStorage.removeItem('meta_permissions_invalid');
         
+        // CRITICAL FIX: Always set campaigns array regardless of insights status
+        setCampaigns(result.campaigns);
+        
         const hasValidCampaigns = result.campaigns.length > 0;
         const hasValidInsightsData = result.campaigns.some(campaign => 
           campaign.insights && Object.keys(campaign.insights).length > 0
         );
         
-        // IMPORTANT FIX: Always save campaigns first, regardless of insights status
+        console.log(`[CAMPAIGN FETCH] Campaign validation: hasValidCampaigns=${hasValidCampaigns}, hasValidInsightsData=${hasValidInsightsData}`);
+        
         if (hasValidCampaigns) {
-          console.log('[CAMPAIGN FETCH] Valid campaigns found in response');
           localStorage.setItem('has_campaigns_data', 'true');
-          
-          // Set campaigns immediately to ensure they're available for rendering
-          setCampaigns(result.campaigns);
           
           if (hasValidInsightsData) {
             console.log('[CAMPAIGN FETCH] Valid insights data found in response');
             localStorage.setItem('has_valid_campaign_insights', 'true');
             setInsightsFetchStatus('success');
-            setFetchCompleted(true);
-            setIsLoading(false);
           } else {
-            console.log('[CAMPAIGN FETCH] No insights data in campaign response, updating campaigns');
+            console.log('[CAMPAIGN FETCH] No insights data in campaign response, will try to fetch separately');
             // Try to get insights but don't block campaign rendering
             try {
               const insightsResult = await updateCampaigns(result.campaigns);
@@ -142,32 +147,32 @@ export function useCampaigns(status?: string): UseCampaignsResult {
               
               // Check for specific Meta permissions error in insights fetch
               if (error?.code === 100 && error?.error_subcode === 33) {
-                console.log('⚠️ Meta permission error – insights blocked due to missing access (code 100 / subcode 33)');
+                console.log('⚠️ Meta permission error in insights fetch – insights blocked due to missing access');
                 metaPermissionsInvalid = true;
                 localStorage.setItem('meta_permissions_invalid', 'true');
               }
               
               setInsightsFetchStatus('failed');
-            } finally {
-              setFetchCompleted(true);
-              setIsLoading(false);
-              setLocalForceRender(prev => prev + 1);
             }
           }
         } else {
           console.log('[CAMPAIGN FETCH] API returned empty campaigns array');
           localStorage.setItem('has_campaigns_data', 'false');
           localStorage.setItem('empty_campaigns_response', 'true');
-          setCampaigns([]);
-          setFetchCompleted(true);
-          setIsLoading(false);
           setInsightsFetchStatus(null);
         }
+        
+        // CRITICAL FIX: Always complete fetch and remove loading state
+        setFetchCompleted(true);
+        setIsLoading(false);
+        setLocalForceRender(prev => prev + 1);
       } else {
         console.warn('[CAMPAIGN FETCH] Fetch returned no campaigns and no error');
         localStorage.setItem('has_campaigns_data', 'false');
         setInsightsFetchStatus('failed');
         setCampaignsFetchStatus('error');
+        
+        // CRITICAL FIX: Ensure we have an empty array to render
         setCampaigns([]);
         setFetchCompleted(true);
         setIsLoading(false);
@@ -224,7 +229,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     forceUiRefresh: exposedForceUiRefresh,
     fetchCompleted,
     insightsFetchStatus,
-    campaignsFetchStatus, // Expose the new status
-    metaPermissionsInvalid // Expose permissions flag
+    campaignsFetchStatus,
+    metaPermissionsInvalid
   };
 }
