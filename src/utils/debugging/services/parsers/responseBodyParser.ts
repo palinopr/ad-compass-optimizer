@@ -7,6 +7,14 @@ export const parseResponseBody = async (response: Response): Promise<{ text: str
       return { text: '', error: { message: 'Invalid API response object', code: 'INVALID_RESPONSE' } };
     }
 
+    // Additional response debugging info
+    console.log('[RESPONSE PARSER] Processing response:', {
+      url: response.url,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
     // Clone the response before reading to avoid "body already read" errors
     const text = await response.clone().text();
     let error = null;
@@ -16,6 +24,9 @@ export const parseResponseBody = async (response: Response): Promise<{ text: str
       console.error('[RESPONSE PARSER] Empty response body');
       return { text: '', error: { message: 'Empty response from API', code: 'EMPTY_RESPONSE' } };
     }
+    
+    // Log the first part of the response for debugging
+    console.log('[RESPONSE PARSER] Response preview:', text.substring(0, 200) + '...');
     
     try {
       const data = JSON.parse(text);
