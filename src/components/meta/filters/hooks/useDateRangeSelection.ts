@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { DateRange, DatePresetOption } from '../types';
 import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
@@ -82,8 +81,6 @@ export function useDateRangeSelection(
     setDateRange(newRange);
     onChange(newRange, validatedPreset);
     
-    // Fix the type error by checking if the selected preset is 'custom'
-    // and if the incoming preset is not 'custom' (using string comparison)
     const isClosingCalendarNeeded = 
       (selectedPreset === 'custom') && (preset !== 'custom');
     
