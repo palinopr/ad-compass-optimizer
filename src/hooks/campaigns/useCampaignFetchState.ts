@@ -24,6 +24,7 @@ export function useCampaignFetchState() {
   
   // Use refs to prevent multiple concurrent fetches
   const isFetchingRef = useRef<boolean>(false);
+  const isInsightsFetchingRef = useRef<boolean>(false); // Track insights fetch separately
   const lastFetchTimeRef = useRef<number>(0);
   const mountedRef = useRef<boolean>(true);
   const campaignCountRef = useRef<number>(0);
@@ -166,17 +167,26 @@ export function useCampaignFetchState() {
     // Immediately trigger a UI refresh
     setForceRender(prev => prev + 1);
     
-    // Then fetch additional insights for each campaign
+    // Prevent multiple concurrent insights fetches
+    if (isInsightsFetchingRef.current) {
+      console.log('[CAMPAIGN STATE] Insights fetch already in progress, skipping additional fetch');
+      return { success: false, partial: false, skipped: true };
+    }
+    
+    // Then fetch additional insights for each campaign, but only after campaigns are loaded
     try {
       const token = metaAuthService.getAccessToken();
       
       if (token && newCampaigns.length > 0) {
         console.log(`[CAMPAIGN STATE] Fetching additional insights for ${newCampaigns.length} campaigns`);
         
+        // Set flag to prevent concurrent insights fetches
+        isInsightsFetchingRef.current = true;
+        
         // Keep the UI responsive by setting campaigns before the detailed fetch
         incrementDisplayRefresh();
         
-        // Fetch additional insights for each campaign
+        // Fetch additional insights for each campaign - now rate limited
         const enhancedCampaigns = await fetchInsightsForCampaigns(newCampaigns, token);
         
         // Calculate how many campaigns received valid insights
@@ -197,6 +207,9 @@ export function useCampaignFetchState() {
         incrementDisplayRefresh();
         setForceRender(prev => prev + 1);
         
+        // Reset insights fetching flag
+        isInsightsFetchingRef.current = false;
+        
         // Determine insights fetch status
         let insightsSuccess = false;
         let insightsPartial = false;
@@ -216,9 +229,11 @@ export function useCampaignFetchState() {
       }
     } catch (error) {
       console.error('[CAMPAIGN STATE] Error fetching additional insights:', error);
+      isInsightsFetchingRef.current = false;
       return { success: false, partial: false, error };
     }
     
+    isInsightsFetchingRef.current = false;
     return { success: false, partial: false };
   };
 
@@ -257,6 +272,7 @@ export function useCampaignFetchState() {
     campaignCountRef,
     lastFetchMetadata,
     updateFetchMetadata,
-    hasEverHadCampaignsRef
+    hasEverHadCampaignsRef,
+    isInsightsFetchingRef
   };
 }

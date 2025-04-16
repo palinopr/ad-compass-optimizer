@@ -1,9 +1,16 @@
+
 import { toast } from '@/hooks/use-toast';
 import { MetaCampaign, CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
 import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 import { processInsightsData } from './insights/insightsProcessor';
 import { buildInsightsUrl } from './insights/insightsUrlBuilder';
 import { InsightsThrottling } from '@/services/api/insights/throttling';
+import { RequestQueueManager } from '@/services/api/queue/RequestQueueManager';
+
+// Rate limit configuration
+const MIN_REQUEST_INTERVAL = 300; // milliseconds between requests
+const BATCH_SIZE = 3; // Reduced from 5 to 3 campaigns per batch
+const BATCH_INTERVAL = 2500; // milliseconds between batches
 
 /**
  * Fetches detailed insights for a single campaign
@@ -73,7 +80,21 @@ export const fetchCampaignInsights = async (
 };
 
 /**
+ * Queue a single campaign insights fetch with proper rate limiting
+ */
+const queueCampaignInsightsFetch = (
+  campaign: MetaCampaign,
+  token: string,
+  datePreset: string
+): Promise<CampaignExtraStats | null> => {
+  return RequestQueueManager.addToQueue(() => {
+    return fetchCampaignInsights(campaign.id, token, datePreset);
+  });
+};
+
+/**
  * Enhanced version to batch fetch insights for multiple campaigns
+ * with proper rate limiting and sequential processing
  */
 export const fetchInsightsForCampaigns = async (
   campaigns: MetaCampaign[], 
@@ -81,7 +102,7 @@ export const fetchInsightsForCampaigns = async (
   datePreset: string = 'last_28d'
 ): Promise<MetaCampaign[]> => {
   const validDatePreset = mapToValidDatePreset(datePreset);
-  console.log(`[INSIGHTS FETCH] Starting batch insights fetch for ${campaigns.length} campaigns with date_preset=${validDatePreset}`);
+  console.log(`[INSIGHTS FETCH] Starting controlled insights fetch for ${campaigns.length} campaigns with date_preset=${validDatePreset}`);
   
   const processedCampaignIds = new Map<string, boolean>();
   let successCount = 0;
@@ -92,25 +113,30 @@ export const fetchInsightsForCampaigns = async (
     campaignMap.set(campaign.id, campaign);
   });
   
-  const batchSize = 5;
-  for (let i = 0; i < campaignsWithInsights.length; i += batchSize) {
-    const batch = campaignsWithInsights.slice(i, i + batchSize);
+  // Process in smaller batches
+  for (let i = 0; i < campaignsWithInsights.length; i += BATCH_SIZE) {
+    const batch = campaignsWithInsights.slice(i, i + BATCH_SIZE);
     
-    console.log(`[INSIGHTS FETCH] Processing batch ${Math.floor(i/batchSize) + 1} with ${batch.length} campaigns`);
+    console.log(`[INSIGHTS FETCH] Processing batch ${Math.floor(i/BATCH_SIZE) + 1} with ${batch.length} campaigns`);
     
     try {
       const selectedAdAccount = localStorage.getItem('selected_ad_account') || 'default';
       InsightsThrottling.checkThrottling(selectedAdAccount);
       
-      await Promise.all(batch.map(async (campaign) => {
+      // Process campaigns sequentially within each batch
+      for (let j = 0; j < batch.length; j++) {
+        const campaign = batch[j];
+        
         if (processedCampaignIds.has(campaign.id)) {
           console.log(`[INSIGHTS FETCH] Skipping duplicate campaign ID: ${campaign.id}`);
-          return;
+          continue;
         }
         
         try {
           processedCampaignIds.set(campaign.id, true);
-          const extraStats = await fetchCampaignInsights(campaign.id, token, validDatePreset);
+          
+          // Queue the request with controlled timing
+          const extraStats = await queueCampaignInsightsFetch(campaign, token, validDatePreset);
           
           if (extraStats) {
             const campaignToUpdate = campaignMap.get(campaign.id);
@@ -131,11 +157,16 @@ export const fetchInsightsForCampaigns = async (
               console.log(`[INSIGHTS FETCH] Updated campaign ${campaign.id} with extra stats`);
             }
           }
+          
+          // Ensure minimum time between requests within a batch
+          if (j < batch.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL));
+          }
         } catch (error) {
-          console.error(`[INSIGHTS FETCH] Error in batch processing for campaign ${campaign.id}:`, error);
+          console.error(`[INSIGHTS FETCH] Error in processing for campaign ${campaign.id}:`, error);
           InsightsThrottling.checkErrorForRateLimit(error);
         }
-      }));
+      }
     } catch (error) {
       console.error('[INSIGHTS FETCH] Batch processing error:', error);
       if (error instanceof Error && error.message.includes('rate limit')) {
@@ -144,9 +175,9 @@ export const fetchInsightsForCampaigns = async (
       }
     }
     
-    if (i + batchSize < campaignsWithInsights.length) {
-      console.log(`[INSIGHTS FETCH] Waiting 2000ms before next batch`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    if (i + BATCH_SIZE < campaignsWithInsights.length) {
+      console.log(`[INSIGHTS FETCH] Waiting ${BATCH_INTERVAL}ms before next batch`);
+      await new Promise(resolve => setTimeout(resolve, BATCH_INTERVAL));
     }
   }
   
