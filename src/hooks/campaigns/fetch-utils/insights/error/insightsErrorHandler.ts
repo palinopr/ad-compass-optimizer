@@ -35,4 +35,3 @@ const addToBlockedCampaigns = (campaignId: string): void => {
     console.error('[INSIGHTS FETCH] Error adding to blocked campaigns:', e);
   }
 };
-
