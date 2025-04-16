@@ -18,6 +18,7 @@ const mapToValidDatePreset = (preset: string): ValidMetaDatePreset => {
   // Map legacy and problematic presets to valid ones
   if (preset === 'last_28d' || 
       preset === 'last28days' || 
+      preset === 'last28d' ||
       preset === 'last30days' || 
       preset === 'last_30days' || 
       preset === 'last_30d') {
@@ -60,4 +61,3 @@ const safelyValidateDatePreset = (datePreset: string): ValidMetaDatePreset => {
 };
 
 export { safelyValidateDatePreset, mapToValidDatePreset, validPresets };
-
