@@ -1,3 +1,4 @@
+
 import { MetaCampaign } from '../../types/metaCampaignTypes';
 import { CampaignThrottling } from '../../campaign/throttling';
 import { CampaignQueryBuilder } from './campaignQueryBuilder';
@@ -76,9 +77,14 @@ export class CampaignFetchService extends BaseApiService {
           
           // Store that we used fallback loader
           localStorage.setItem('using_fallback_campaigns', 'true');
+        } else {
+          // If fallback also returns empty, log this clearly
+          console.log('[CAMPAIGN FETCH] Both primary and fallback fetches returned no campaigns');
+          localStorage.setItem('empty_campaigns_confirmed', 'true');
         }
       } else {
         localStorage.removeItem('using_fallback_campaigns');
+        localStorage.removeItem('empty_campaigns_confirmed');
       }
       
       return campaigns;
@@ -126,7 +132,18 @@ export class CampaignFetchService extends BaseApiService {
         await ErrorHandler.handleErrorResponse(response);
       }
   
-      const data = await response.json();
+      // Get response text first to inspect and debug
+      const responseText = await response.text();
+      console.log('[CAMPAIGN FETCH] Response received, length:', responseText.length);
+      
+      let data;
+      try {
+        // Parse JSON from text - if this fails, we'll catch it
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[CAMPAIGN FETCH] Failed to parse response as JSON:', parseError);
+        throw new Error('Invalid JSON response from Meta API');
+      }
       
       // Store raw response for debugging
       try {
@@ -137,9 +154,23 @@ export class CampaignFetchService extends BaseApiService {
       
       ErrorStorage.storeRawSuccessResponse(data);
       
-      if (!data || !data.data) {
-        console.error('[CAMPAIGN FETCH] Invalid response format:', data);
-        throw new Error('Invalid response format from Meta API');
+      // Validate data structure before accessing properties
+      if (!data) {
+        console.error('[CAMPAIGN FETCH] Response data is null or undefined');
+        throw new Error('Empty response from Meta API');
+      }
+      
+      // Check if data.data exists before using it
+      if (!data.data) {
+        console.error('[CAMPAIGN FETCH] Response missing data array:', data);
+        // Return empty array instead of throwing an error
+        return [];
+      }
+      
+      if (!Array.isArray(data.data)) {
+        console.error('[CAMPAIGN FETCH] data.data is not an array:', data.data);
+        // Return empty array for consistent handling
+        return [];
       }
   
       let allCampaigns = [...data.data];
@@ -163,6 +194,9 @@ export class CampaignFetchService extends BaseApiService {
       
       if (allCampaigns.length > 0) {
         localStorage.setItem('has_campaigns_data', 'true');
+      } else {
+        localStorage.setItem('has_campaigns_data', 'false');
+        localStorage.setItem('empty_campaigns_response', 'true');
       }
       
       return CampaignProcessor.processCampaigns(allCampaigns);
@@ -180,7 +214,8 @@ export class CampaignFetchService extends BaseApiService {
         console.error('[CAMPAIGN FETCH] Error storing error details:', e);
       }
       
-      throw error;
+      // Return empty array instead of throwing to prevent UI breaks
+      return [];
     }
   }
 }

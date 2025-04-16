@@ -33,6 +33,25 @@ export function useCampaignFetcher() {
     forceRefresh: boolean = false
   ) => {
     console.log('[CAMPAIGNS DEBUG] Starting campaign fetch...');
+    
+    // Check for required parameters first and log detailed information
+    if (!token) {
+      console.error('[CAMPAIGNS DEBUG] Missing token');
+      return { 
+        campaigns: [], 
+        error: 'Missing Meta access token. Please authenticate.',
+        errorDetails: { code: 'NO_TOKEN' }
+      };
+    }
+    
+    if (!adAccountId) {
+      console.error('[CAMPAIGNS DEBUG] Missing ad account ID');
+      return { 
+        campaigns: [], 
+        error: 'No ad account selected. Please select an account.',
+        errorDetails: { code: 'NO_AD_ACCOUNT' }
+      };
+    }
 
     // Log token format for debugging comparison with /me endpoint
     TokenFormatDebugger.logInsightsToken(token);
@@ -91,35 +110,51 @@ export function useCampaignFetcher() {
       // Store attempt timestamp for rate limiting & debugging
       localStorage.setItem('campaign_fetch_timestamp', Date.now().toString());
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
+      localStorage.setItem('campaign_fetch_ad_account', adAccountId);
 
       // CHANGED: Using maximum instead of last_28d for more reliable data
-      const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'maximum');
-      
-      // Validate the response has campaigns
-      if (!data || !data.campaigns || data.campaigns.length === 0) {
-        console.warn('[CAMPAIGNS DEBUG] No campaigns returned from API');
-        localStorage.setItem('has_campaigns_data', 'false');
-        localStorage.setItem('empty_campaigns_response', 'true');
-      } else {
-        localStorage.setItem('has_campaigns_data', 'true');
-        localStorage.setItem('empty_campaigns_response', 'false');
-        console.log(`[CAMPAIGNS DEBUG] Successfully fetched ${data.campaigns.length} campaigns`);
+      try {
+        const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'maximum');
         
-        // Log the first campaign to verify structure
-        if (data.campaigns.length > 0) {
-          console.log('[CAMPAIGNS DEBUG] First campaign sample:', {
-            id: data.campaigns[0].id,
-            name: data.campaigns[0].name,
-            hasInsights: !!data.campaigns[0].insights,
-            insights: data.campaigns[0].insights ? Object.keys(data.campaigns[0].insights) : 'none'
-          });
+        // Validate the response has campaigns property and it's an array
+        if (!data) {
+          console.error('[CAMPAIGNS DEBUG] Null or undefined response from API');
+          localStorage.setItem('has_campaigns_data', 'false');
+          localStorage.setItem('empty_campaigns_response', 'true');
+          return { campaigns: [], error: 'Empty response from API', errorDetails: { emptyResponse: true } };
         }
+        
+        // Make sure campaigns is an array (even if empty)
+        const campaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
+        
+        if (campaigns.length === 0) {
+          console.warn('[CAMPAIGNS DEBUG] No campaigns returned from API');
+          localStorage.setItem('has_campaigns_data', 'false');
+          localStorage.setItem('empty_campaigns_response', 'true');
+        } else {
+          localStorage.setItem('has_campaigns_data', 'true');
+          localStorage.setItem('empty_campaigns_response', 'false');
+          console.log(`[CAMPAIGNS DEBUG] Successfully fetched ${campaigns.length} campaigns`);
+          
+          // Log the first campaign to verify structure
+          if (campaigns.length > 0) {
+            console.log('[CAMPAIGNS DEBUG] First campaign sample:', {
+              id: campaigns[0]?.id || 'missing-id',
+              name: campaigns[0]?.name || 'unnamed',
+              hasInsights: !!campaigns[0]?.insights,
+              insights: campaigns[0]?.insights ? Object.keys(campaigns[0].insights) : 'none'
+            });
+          }
+        }
+        
+        handleSuccessfulFetch(campaigns, mountedRef, increaseCooldown);
+        handleFetchSuccess(false);
+        
+        return { campaigns, error: null };
+      } catch (err: any) {
+        console.error('[CAMPAIGNS DEBUG] MetaFunnelService.fetchFunnelData error:', err);
+        throw err; // Let the outer catch handle this
       }
-      
-      handleSuccessfulFetch(data.campaigns, mountedRef, increaseCooldown);
-      handleFetchSuccess(false);
-      
-      return { campaigns: data.campaigns, error: null };
     } catch (err: any) {
       console.error('[CAMPAIGNS DEBUG] Fetch error:', err);
       logFetchDetails(adAccountId, token, err);
@@ -168,6 +203,23 @@ export function useCampaignFetcher() {
             subcode: err.error_subcode,
             message: err.message || errorMessage
           } 
+        };
+      }
+      
+      // Check for "Cannot read properties of undefined (reading 'data')" error
+      if (err.message && (
+        err.message.includes("Cannot read properties of undefined") ||
+        err.message.includes("Cannot read property 'data'")
+      )) {
+        console.error('[CAMPAIGNS DEBUG] API response structure error:', err);
+        return {
+          campaigns: [],
+          error: 'Invalid API response structure',
+          errorDetails: {
+            malformedResponse: true,
+            message: 'The Meta API response was not in the expected format',
+            originalError: err.message
+          }
         };
       }
       

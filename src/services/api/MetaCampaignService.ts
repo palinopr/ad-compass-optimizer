@@ -8,6 +8,18 @@ export type { MetaCampaign };
 export class MetaCampaignService extends BaseApiService {
   public static async fetchCampaigns(token: string, adAccountId: string, datePreset?: string): Promise<MetaCampaign[]> {
     try {
+      if (!token) {
+        console.error('[META CAMPAIGN] Missing access token');
+        return [];
+      }
+      
+      if (!adAccountId) {
+        console.error('[META CAMPAIGN] Missing ad account ID');
+        return [];
+      }
+      
+      console.log(`[META CAMPAIGN] Fetching campaigns for account ${adAccountId} with date preset ${datePreset || 'last_28d'}`);
+      
       const campaigns = await CampaignFetchService.fetchCampaigns(token, adAccountId, datePreset);
       
       // If data is empty and datePreset is not already "maximum", try with "maximum" preset
@@ -27,11 +39,11 @@ export class MetaCampaignService extends BaseApiService {
           return await CampaignFetchService.fetchCampaigns(token, adAccountId, "maximum");
         } catch (fallbackError) {
           console.error('[META CAMPAIGN] Fallback also failed:', fallbackError);
-          throw fallbackError;
         }
       }
       
-      throw error;
+      // Return empty array instead of throwing to prevent UI breaks
+      return [];
     }
   }
 }
