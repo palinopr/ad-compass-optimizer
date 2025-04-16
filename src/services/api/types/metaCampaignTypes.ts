@@ -27,7 +27,7 @@ export interface MetaCampaign {
   objective?: string;
   loadedFromFallback?: boolean;
   extraStats?: CampaignExtraStats;
-  // Updated type to include 'blocked'
+  // Explicitly include 'blocked' in the union type
   insightsStatus?: 'ok' | 'pending' | 'failed' | 'blocked' | null;
   insights?: {
     impressions: string;
