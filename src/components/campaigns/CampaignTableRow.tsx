@@ -105,7 +105,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
     }
 
     if ((!campaign.insights || Object.keys(campaign.insights).length === 0) && campaign.name && campaign.status) {
-      console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) rendering with metadata only - insights unavailable`);
+      console.log(`[CAMPAIGN ROW] ⚠️ Rendering campaign ${campaign.id} without insights due to prior failure`);
       
       if (isBlocked || (campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null) === 'blocked') {
         console.log(`[CAMPAIGN ROW] 🚫 Campaign "${campaign.name}" (${campaign.id}) is blocked from insights fetching`);
@@ -123,8 +123,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
     }
   }, [campaign, isBlocked]);
 
+  // Check if we have minimal valid data to render the row
   if (!campaign.id || !campaign.name) {
-    console.warn('[CAMPAIGN ROW] Skipping invalid campaign:', campaign);
+    console.warn('[CAMPAIGN ROW] Skipping invalid campaign (missing ID or name):', campaign);
     return null;
   }
 

@@ -66,19 +66,23 @@ export function useCampaigns(status?: string): UseCampaignsResult {
           campaign.insights && Object.keys(campaign.insights).length > 0
         );
         
+        // IMPORTANT FIX: Always save campaigns first, regardless of insights status
         if (hasValidCampaigns) {
           console.log('[CAMPAIGN FETCH] Valid campaigns found in response');
           localStorage.setItem('has_campaigns_data', 'true');
+          
+          // Set campaigns immediately to ensure they're available for rendering
+          setCampaigns(result.campaigns);
           
           if (hasValidInsightsData) {
             console.log('[CAMPAIGN FETCH] Valid insights data found in response');
             localStorage.setItem('has_valid_campaign_insights', 'true');
             setInsightsFetchStatus('success');
-            setCampaigns(result.campaigns);
             setFetchCompleted(true);
             setIsLoading(false);
           } else {
             console.log('[CAMPAIGN FETCH] No insights data in campaign response, updating campaigns');
+            // Try to get insights but don't block campaign rendering
             updateCampaigns(result.campaigns)
               .then(insightsResult => {
                 if (insightsResult && insightsResult.success) {

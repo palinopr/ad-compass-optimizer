@@ -29,8 +29,15 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
         }
       } : {}
     );
+    
+    // Check and log if any campaigns are missing insights
+    const missingInsights = campaigns.filter(c => !c.insights || Object.keys(c.insights).length === 0);
+    if (missingInsights.length > 0) {
+      console.log(`[CAMPAIGN TABLE] ${missingInsights.length}/${campaigns.length} campaigns are missing insights data`);
+    }
   }, [campaigns]);
 
+  // Always render the table, even if some campaigns are missing insights
   return (
     <CardContent className="p-0">
       <Table>
