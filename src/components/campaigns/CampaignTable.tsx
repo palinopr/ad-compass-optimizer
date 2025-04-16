@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { CardContent } from '@/components/ui/card';
 import { 
@@ -58,53 +59,36 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
     );
   }
   
-  // Add a visible banner showing the number of campaigns loaded
+  console.log("[UI DEBUG] Campaigns received in CampaignTable:", campaigns);
+  
+  if (!campaigns.length) {
+    return (
+      <CardContent className="p-4">
+        <div style={{ padding: "1rem", fontWeight: "bold" }}>⚠️ No campaigns found</div>
+      </CardContent>
+    );
+  }
+
   return (
     <CardContent className="p-0">
-      <div style={{ background: '#fffae6', padding: '10px', fontWeight: 'bold' }}>
+      <div style={{ fontWeight: "bold", marginBottom: "1rem", background: "#fff7cc", padding: "1rem", borderRadius: "6px" }}>
         ✅ Rendering fallback active — Campaigns loaded: {campaigns.length}
       </div>
-      
-      {/* Temporary replacement for the table to force visibility */}
-      <div>
-        {campaigns.map((c, i) => (
-          <div key={i} style={{ padding: '10px', background: '#f9f9f9', marginBottom: '5px' }}>
-            🔍 Render test: {c?.name || 'Unnamed'} — ID: {c?.id || 'No ID'}
-          </div>
-        ))}
-      </div>
-      
-      {/* Original table code is commented out for now */}
-      {/* 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Campaign</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Budget</TableHead>
-            <TableHead>Spent</TableHead>
-            <TableHead>Results</TableHead>
-            <TableHead>CPA</TableHead>
-            <TableHead>ROAS</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {campaigns.map((campaign) => {
-            const key = campaign.id || Math.random().toString(36);
-            console.log(`✅ [RENDER] Campaign row: ${campaign.name} (${campaign.id})`);
-            return (
-              <CampaignTableRow 
-                key={key}
-                campaign={campaign} 
-                status={status}
-                loadedFromFallback={!!localStorage.getItem('using_fallback_campaigns')}
-              />
-            );
-          })}
-        </TableBody>
-      </Table>
-      */}
+      {campaigns.map((c, idx) => (
+        <div
+          key={idx}
+          style={{
+            marginBottom: "0.5rem",
+            padding: "1rem",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            background: "#f0f0f0",
+            fontFamily: "monospace",
+          }}
+        >
+          🔍 Render test: <strong>{c?.name || "Unnamed Campaign"}</strong> — ID: <code>{c?.id || "N/A"}</code>
+        </div>
+      ))}
     </CardContent>
   );
 };
