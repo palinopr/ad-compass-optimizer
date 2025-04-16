@@ -36,7 +36,7 @@ export function useCampaignFetchState() {
     timestamp: '',
   });
   
-  const { insightsFetchStatus, updateCampaignsWithInsights } = useInsightsFetching();
+  const { insightsFetchStatus, setInsightsFetchStatus, updateCampaignsWithInsights } = useInsightsFetching();
   const hasEverHadCampaignsRef = useRef<boolean>(false);
 
   useLoadingSafety(isLoading, hasEverHadCampaignsRef.current, () => {
@@ -92,6 +92,7 @@ export function useCampaignFetchState() {
     fetchCompleted,
     setFetchCompleted,
     insightsFetchStatus,
-    lastFetchMetadata // Add the lastFetchMetadata to the return object
+    setInsightsFetchStatus, // Expose setInsightsFetchStatus here
+    lastFetchMetadata
   };
 }
