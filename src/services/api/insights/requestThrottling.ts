@@ -3,6 +3,7 @@
  * Specialized throttler for insights API requests
  */
 import { RequestQueueManager } from '../queue/RequestQueueManager';
+import { DuplicateRequestChecker } from './throttling/duplicateChecker';
 
 export class InsightsRequestThrottler {
   private static queue: Promise<any>[] = [];
@@ -37,10 +38,29 @@ export class InsightsRequestThrottler {
             await new Promise(resolve => setTimeout(resolve, currentDelay));
           }
           
-          // Generate a unique request ID
+          // Generate a unique request ID that includes the request function hash
           const requestId = `${idPrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
           
-          const result = await RequestQueueManager.addToQueue(req, requestId);
+          // Create a wrapper function to capture the request signature before execution
+          const wrappedRequest = () => {
+            const requestSignature = `${requestId}-execution`;
+            
+            // Check if this request previously failed with 400
+            if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
+              return Promise.reject(new Error('Request skipped due to previous 400 error'));
+            }
+            
+            // Execute the actual request
+            return req().catch(error => {
+              // If it's a 400 error, mark this request signature as permanently failed
+              if (error.status === 400 || (error.response && error.response.status === 400)) {
+                DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
+              }
+              throw error;
+            });
+          };
+          
+          const result = await RequestQueueManager.addToQueue(wrappedRequest, requestId);
           consecutiveErrors = 0;
           return result;
         } catch (error: any) {

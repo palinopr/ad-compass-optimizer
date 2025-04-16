@@ -1,3 +1,4 @@
+
 /**
  * Request Queue Manager
  * Handles sequential processing of API requests with rate limiting
@@ -130,5 +131,27 @@ export class RequestQueueManager {
     this.lastRequestTime = 0;
     this.permanentlyFailedRequests.clear();
     console.log('[REQUEST QUEUE] Queue and timing reset');
+  }
+  
+  /**
+   * Check if a request is permanently failed
+   */
+  public static isPermanentlyFailed(requestId: string): boolean {
+    return this.permanentlyFailedRequests.has(requestId);
+  }
+  
+  /**
+   * Mark a request as permanently failed
+   */
+  public static markAsPermanentlyFailed(requestId: string) {
+    this.permanentlyFailedRequests.add(requestId);
+    console.log(`[REQUEST QUEUE] Marked request as permanently failed: ${requestId}`);
+    
+    // Cleanup if the set gets too large
+    if (this.permanentlyFailedRequests.size > 1000) {
+      const entries = Array.from(this.permanentlyFailedRequests);
+      const toRemove = entries.slice(0, 200);
+      toRemove.forEach(key => this.permanentlyFailedRequests.delete(key));
+    }
   }
 }

@@ -6,6 +6,7 @@ import { BaseApiService } from '../BaseApiService';
 import { InsightFilterOptions, InsightsResponse } from './types';
 import { InsightsRequestBuilder } from './requestBuilder';
 import { InsightsThrottling } from './throttling/InsightsThrottling';
+import { DuplicateRequestChecker } from './throttling/duplicateChecker';
 
 export class BaseInsightsService extends BaseApiService {
   /**
@@ -19,6 +20,17 @@ export class BaseInsightsService extends BaseApiService {
     try {
       console.log(`Fetching insights for object ${objectId}...`);
       this.validateToken(token, 'fetchInsights');
+      
+      // Generate a unique request signature to identify this exact request
+      const requestSignature = DuplicateRequestChecker.generateRequestSignature(objectId, 'insights', options);
+      
+      // Check if this exact request previously failed with 400
+      if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
+        // Create an error object with status code for proper handling
+        const error = new Error('Request previously failed with 400 status');
+        (error as any).status = 400;
+        throw error;
+      }
       
       InsightsThrottling.checkThrottling();
       
@@ -48,6 +60,9 @@ export class BaseInsightsService extends BaseApiService {
       if (response.status === 400) {
         const errorData = await response.json();
         console.error(`[INSIGHTS] 400 Error response:`, errorData);
+        
+        // Mark this request signature as permanently failed
+        DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
         
         // Create an error object with status code for proper handling
         const error = new Error(errorData.error?.message || 'Bad Request');

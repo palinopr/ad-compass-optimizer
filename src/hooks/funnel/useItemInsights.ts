@@ -5,6 +5,7 @@ import { metaAuthService } from '@/services/MetaAuthService';
 import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 import { format } from 'date-fns';
 import { InsightsRequestThrottler } from '@/services/api/insights/requestThrottling';
+import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
 
 const getDateRange = (preset: string) => {
   const date = preset === 'today' 
@@ -40,6 +41,21 @@ export const useItemInsights = () => {
       // Strictly validate the date preset
       const validDatePreset = mapToValidDatePreset(datePreset);
       console.log(`[INSIGHTS] Using strictly validated date preset: ${validDatePreset}`);
+      
+      // Generate a unique request signature for this particular insights request
+      const requestSignature = DuplicateRequestChecker.generateRequestSignature(
+        itemId, 
+        `insights-${itemType}`, 
+        { datePreset: validDatePreset }
+      );
+      
+      // Check if this exact request previously failed with 400
+      if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
+        console.log(`[INSIGHTS] Skipped insights request due to permanent failure (400): ${itemId}`);
+        setError('This insights request previously failed due to a bad request (400)');
+        setIsLoading(false);
+        return;
+      }
 
       // Common fields for all requests
       const commonFields = [
@@ -73,20 +89,55 @@ export const useItemInsights = () => {
         primaryOptions.datePreset = validDatePreset as InsightFilterOptions['datePreset'];
       }
 
-      // Add primary request
-      requests.push(() => itemType === 'campaign'
-        ? MetaInsightsService.fetchCampaignInsights(token, itemId, primaryOptions)
-        : MetaInsightsService.fetchAdSetInsights(token, itemId, primaryOptions));
+      // Add primary request with request signature checking
+      requests.push(() => {
+        // Check again just before execution if this request has been marked as failed
+        if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
+          return Promise.reject(new Error('Request skipped due to previous 400 error'));
+        }
+        
+        return itemType === 'campaign'
+          ? MetaInsightsService.fetchCampaignInsights(token, itemId, primaryOptions)
+          : MetaInsightsService.fetchAdSetInsights(token, itemId, primaryOptions)
+          .catch(error => {
+            // Mark this request signature as permanently failed if it's a 400
+            if (error.status === 400 || (error.response && error.response.status === 400)) {
+              DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
+            }
+            throw error;
+          });
+      });
 
       // Add fallback request with maximum date range
       const fallbackOptions: InsightFilterOptions = {
         ...baseOptions,
         datePreset: 'maximum',
       };
+      
+      // Generate a separate signature for the fallback request
+      const fallbackSignature = DuplicateRequestChecker.generateRequestSignature(
+        itemId, 
+        `insights-${itemType}-fallback`, 
+        fallbackOptions
+      );
 
-      requests.push(() => itemType === 'campaign'
-        ? MetaInsightsService.fetchCampaignInsights(token, itemId, fallbackOptions)
-        : MetaInsightsService.fetchAdSetInsights(token, itemId, fallbackOptions));
+      requests.push(() => {
+        // Check if fallback request has been marked as failed
+        if (DuplicateRequestChecker.isPermanentlyFailed(fallbackSignature)) {
+          return Promise.reject(new Error('Fallback request skipped due to previous 400 error'));
+        }
+        
+        return itemType === 'campaign'
+          ? MetaInsightsService.fetchCampaignInsights(token, itemId, fallbackOptions)
+          : MetaInsightsService.fetchAdSetInsights(token, itemId, fallbackOptions)
+          .catch(error => {
+            // Mark fallback request as permanently failed if it's a 400
+            if (error.status === 400 || (error.response && error.response.status === 400)) {
+              DuplicateRequestChecker.markAsPermanentlyFailed(fallbackSignature);
+            }
+            throw error;
+          });
+      });
 
       // Execute requests with throttling
       const results = await InsightsRequestThrottler.throttleRequests(requests);
