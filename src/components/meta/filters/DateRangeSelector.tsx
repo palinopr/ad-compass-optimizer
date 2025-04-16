@@ -22,7 +22,7 @@ interface DateRangeSelectorProps {
 
 const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({ 
   onChange,
-  initialPreset = 'last_28d'
+  initialPreset = 'maximum'
 }) => {
   const {
     isCalendarOpen,

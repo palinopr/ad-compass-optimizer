@@ -6,13 +6,13 @@ export class CampaignQueryBuilder {
   // Valid date presets according to Meta API documentation - strict list
   private static validDatePresets = [
     'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
-    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 
+    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_30d', 
     'last_90d', 'last_week_mon_sun', 'last_week_sun_sat', 'last_quarter', 
     'last_year', 'this_week_mon_today', 'this_week_sun_today', 'this_year',
     'maximum'
   ];
 
-  static buildCampaignQuery(datePreset = 'last_28d'): string {
+  static buildCampaignQuery(datePreset = 'maximum'): string {
     // Map legacy presets to Meta API compatible presets
     let validDatePreset = this.normalizePreset(datePreset);
     
@@ -35,7 +35,7 @@ export class CampaignQueryBuilder {
 
   // Map legacy or invalid presets to valid Meta API presets
   static normalizePreset(datePreset: string): string {
-    if (!datePreset) return 'last_28d';
+    if (!datePreset) return 'maximum';
 
     // Direct matching against valid presets
     if (this.validDatePresets.includes(datePreset)) {
@@ -44,8 +44,9 @@ export class CampaignQueryBuilder {
 
     // Direct mapping for legacy presets
     const legacyMapping: Record<string, string> = {
-      'last30days': 'last_28d',
-      'last_30d': 'last_28d',
+      'last30days': 'last_30d',
+      'last_28d': 'maximum',
+      'last28d': 'maximum',
       'last7days': 'last_7d'
     };
 
@@ -54,9 +55,9 @@ export class CampaignQueryBuilder {
       return legacyMapping[datePreset];
     }
 
-    // Fall back to last_28d for unrecognized presets
-    console.warn(`[CAMPAIGN QUERY] Unrecognized date preset: ${datePreset}, using default 'last_28d'`);
-    return 'last_28d';
+    // Fall back to maximum for unrecognized presets
+    console.warn(`[CAMPAIGN QUERY] Unrecognized date preset: ${datePreset}, using default 'maximum'`);
+    return 'maximum';
   }
 
   // Adding version tracking to help identify when this code is deployed

@@ -20,8 +20,7 @@ const mapToValidDatePreset = (preset: string): ValidMetaDatePreset => {
       preset === 'last28days' || 
       preset === 'last28d' ||
       preset === 'last30days' || 
-      preset === 'last_30days' || 
-      preset === 'last_30d') {
+      preset === 'last_30days') {
     console.log(`[DATE PRESET MAPPING] Mapped problematic preset '${preset}' to 'maximum'`);
     return 'maximum';
   }
@@ -52,7 +51,7 @@ const safelyValidateDatePreset = (datePreset: string): ValidMetaDatePreset => {
   const mappedPreset = mapToValidDatePreset(datePreset);
   
   // Double-check that the mapping didn't give us a problematic preset
-  if (mappedPreset === 'last_28d') {
+  if (mappedPreset === 'last_28d' as any) {
     console.warn(`[INSIGHTS HOOK] Mapping returned problematic preset "last_28d", overriding to maximum`);
     return 'maximum';
   }
