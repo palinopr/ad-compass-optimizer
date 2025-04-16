@@ -1,3 +1,4 @@
+
 // Define the CampaignExtraStats interface in this file to avoid circular dependencies
 export interface CampaignExtraStats {
   results: string;
@@ -26,6 +27,7 @@ export interface MetaCampaign {
   objective?: string;
   loadedFromFallback?: boolean;
   extraStats?: CampaignExtraStats;
+  insightsStatus?: 'ok' | 'blocked' | 'pending' | 'failed' | null;
   insights?: {
     impressions: string;
     clicks: string;
