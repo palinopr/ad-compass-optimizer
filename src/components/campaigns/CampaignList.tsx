@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import CampaignFilterToolbar from './CampaignFilterToolbar';
 import CampaignMetrics from './CampaignMetrics';
 import CampaignFilteredResults from './CampaignFilteredResults';
