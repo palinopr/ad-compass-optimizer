@@ -1,4 +1,3 @@
-
 /**
  * Request Queue Manager
  * Handles sequential processing of API requests with rate limiting
@@ -6,13 +5,20 @@
 export class RequestQueueManager {
   private static requestQueue: (() => Promise<any>)[] = [];
   private static isProcessingQueue = false;
-  private static requestInterval = 500; // Increased from 300ms to 500ms
+  private static requestInterval = 500;
   private static lastRequestTime = 0;
+  private static permanentlyFailedRequests = new Set<string>();
 
   /**
    * Add a request to the queue and return a promise that resolves when it's processed
    */
-  public static async addToQueue<T>(requestFn: () => Promise<T>): Promise<T> {
+  public static async addToQueue<T>(requestFn: () => Promise<T>, requestId?: string): Promise<T> {
+    // If this request previously failed with 400, don't queue it again
+    if (requestId && this.permanentlyFailedRequests.has(requestId)) {
+      console.log(`[REQUEST QUEUE] Skipped insights request due to permanent failure (400): ${requestId}`);
+      return Promise.reject(new Error('Request previously failed with 400 status'));
+    }
+
     return new Promise((resolve, reject) => {
       const wrappedRequest = async () => {
         try {
@@ -32,8 +38,17 @@ export class RequestQueueManager {
           const result = await requestFn();
           resolve(result);
           return result;
-        } catch (error) {
+        } catch (error: any) {
           console.error('[REQUEST QUEUE] Error executing queued request:', error);
+
+          // If it's a 400 error, mark this request as permanently failed
+          if (error.status === 400 || (error.response && error.response.status === 400)) {
+            if (requestId) {
+              this.permanentlyFailedRequests.add(requestId);
+              console.log(`[REQUEST QUEUE] Marked request as permanently failed due to 400 error: ${requestId}`);
+            }
+          }
+
           reject(error);
           throw error;
         }
@@ -113,6 +128,7 @@ export class RequestQueueManager {
     this.requestQueue = [];
     this.isProcessingQueue = false;
     this.lastRequestTime = 0;
+    this.permanentlyFailedRequests.clear();
     console.log('[REQUEST QUEUE] Queue and timing reset');
   }
 }
