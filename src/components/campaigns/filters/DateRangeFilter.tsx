@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
-import DateRangeSelector, { DateRange, DatePresetOption } from '@/components/meta/filters/DateRangeSelector';
+import DateRangeSelector from '@/components/meta/filters/DateRangeSelector';
+import { DateRange, DatePresetOption } from '@/components/meta/filters/types';
 import { toast } from '@/hooks/use-toast';
 import { mapToValidDatePreset, ValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
@@ -43,7 +44,7 @@ const DateRangeFilter = ({ datePreset, onDateRangeChange }: DateRangeFilterProps
   return (
     <DateRangeSelector 
       onChange={handleDateRangeChange} 
-      initialPreset={actualPreset}
+      initialPreset={actualPreset as ValidMetaDatePreset}
     />
   );
 };

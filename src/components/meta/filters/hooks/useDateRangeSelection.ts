@@ -83,7 +83,7 @@ export function useDateRangeSelection(
     onChange(newRange, validatedPreset);
     
     const isClosingCalendarNeeded = 
-      (selectedPreset === 'custom') && (validatedPreset !== 'custom' as DatePresetOption);
+      (selectedPreset === 'custom') && (validatedPreset !== 'custom');
     
     if (isClosingCalendarNeeded) {
       setIsCalendarOpen(false);

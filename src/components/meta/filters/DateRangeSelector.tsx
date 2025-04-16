@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
@@ -13,7 +13,7 @@ import { DateRange, DatePresetOption } from './types';
 import { formatDateRange } from './utils/dateFormatting';
 import { useDateRangeSelection } from './hooks/useDateRangeSelection';
 import PresetSelector from './components/PresetSelector';
-import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
+import { ValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 interface DateRangeSelectorProps {
   onChange: (dateRange: DateRange, preset: DatePresetOption) => void;
@@ -34,13 +34,9 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   } = useDateRangeSelection(onChange, initialPreset);
 
   useEffect(() => {
-    const validatedPreset = mapToValidDatePreset(initialPreset);
+    const validatedPreset = initialPreset;
     
-    if (validatedPreset !== initialPreset) {
-      console.log(`[DATE SELECTOR] Converted non-standard preset "${initialPreset}" to valid preset "${validatedPreset}"`);
-    } else {
-      console.log(`[DATE SELECTOR] Using validated preset: "${validatedPreset}"`);
-    }
+    console.log(`[DATE SELECTOR] Using validated preset: "${validatedPreset}"`);
     
     handlePresetChange(validatedPreset);
   }, [initialPreset]);
@@ -61,7 +57,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
               isCalendarOpen && "border-primary"
             )}
           >
-            <Calendar className="mr-2 h-4 w-4" />
+            <CalendarIcon className="mr-2 h-4 w-4" />
             {formatDateRange(dateRange)}
           </Button>
         </PopoverTrigger>

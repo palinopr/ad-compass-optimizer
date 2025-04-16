@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { DateRange, DatePresetOption } from '@/components/meta/filters/DateRangeSelector';
+import { DateRange, DatePresetOption } from '@/components/meta/filters/types';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { mapToValidDatePreset, ValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
