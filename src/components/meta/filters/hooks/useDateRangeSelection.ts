@@ -82,8 +82,8 @@ export function useDateRangeSelection(
     setDateRange(newRange);
     onChange(newRange, validatedPreset);
     
-    // Fix the type error by checking string values rather than trying to compare different types
-    // selectedPreset could be 'custom', while validatedPreset can only be ValidMetaDatePreset
+    // Fix the type error by checking if the selected preset is 'custom'
+    // and if the incoming preset is not 'custom' (using string comparison)
     const isClosingCalendarNeeded = 
       (selectedPreset === 'custom') && (preset !== 'custom');
     
