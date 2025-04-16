@@ -1,12 +1,19 @@
 
 import { BLOCKED_CAMPAIGNS_KEY } from '../constants';
+import { isCampaignBlocked } from '../singleCampaignFetcher';
 
 export const validateCampaignForInsights = (campaignId: string): { isValid: boolean; reason?: string } => {
+  // IMMEDIATE GUARD: Check if campaign is blocked using the utility function
+  if (isCampaignBlocked(campaignId)) {
+    console.log(`🚫 Skipped ${campaignId} – insights blocked after 400`);
+    return { isValid: false, reason: 'blocked_campaign' };
+  }
+
   try {
     // Check if this campaign is in the blocked campaigns list
     const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
     if (blockedCampaigns.includes(campaignId)) {
-      console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – insights blocked after 400`);
+      console.log(`🚫 Skipped ${campaignId} – insights blocked after 400`);
       return { isValid: false, reason: 'blocked_campaign' };
     }
     
@@ -16,7 +23,7 @@ export const validateCampaignForInsights = (campaignId: string): { isValid: bool
       const objectFailSignature = `object-${campaignId}-failed`;
       
       if (failedSignatures.includes(objectFailSignature)) {
-        console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – insights blocked after 400`);
+        console.log(`🚫 Skipped ${campaignId} – insights blocked after 400`);
         
         // For consistency, also add to blocked campaigns if not already there
         if (!blockedCampaigns.includes(campaignId)) {
@@ -36,7 +43,7 @@ export const validateCampaignForInsights = (campaignId: string): { isValid: bool
       const isInFailureLog = failures400.some((failure: any) => failure.campaignId === campaignId);
       
       if (isInFailureLog) {
-        console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – found in 400 failures log`);
+        console.log(`🚫 Skipped ${campaignId} – found in 400 failures log`);
         
         // For consistency, also add to blocked campaigns if not already there
         if (!blockedCampaigns.includes(campaignId)) {
@@ -53,11 +60,12 @@ export const validateCampaignForInsights = (campaignId: string): { isValid: bool
     return { isValid: true };
   } catch (e) {
     console.error('[INSIGHTS FETCH] Error checking blocked campaigns:', e);
+    
     // Check a second source of truth for safety
     try {
       const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
       if (failedSignatures.includes(`object-${campaignId}-failed`)) {
-        console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – insights blocked after 400 (fallback check)`);
+        console.log(`🚫 Skipped ${campaignId} – insights blocked after 400 (fallback check)`);
         return { isValid: false, reason: 'blocked_campaign_fallback' };
       }
     } catch (e) {

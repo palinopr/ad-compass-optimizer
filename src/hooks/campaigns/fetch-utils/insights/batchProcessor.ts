@@ -1,8 +1,7 @@
-
 import { MetaCampaign, CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
 import { RequestQueueManager } from '@/services/api/queue/RequestQueueManager';
 import { toast } from '@/hooks/use-toast';
-import { fetchCampaignInsights } from './singleCampaignFetcher';
+import { fetchCampaignInsights, isCampaignBlocked, markCampaignAsBlocked } from './singleCampaignFetcher';
 import { BATCH_CONFIG } from './batchConfig';
 
 /**
@@ -15,45 +14,20 @@ const queueCampaignInsightsFetch = (
 ): Promise<CampaignExtraStats | null> => {
   // STRICT PRE-CHECK: Don't even create a queue item if the campaign is already blocked
   // This is a hard fail-fast check to prevent any queuing of blocked campaigns
-  const BLOCKED_CAMPAIGNS_KEY = 'permanently_blocked_campaigns';
   
-  try {
-    // First check in-memory status
-    if (campaign.insightsStatus === 'blocked') {
-      console.log(`[INSIGHTS FETCH] ⛔ Not queuing insights for ${campaign.id} – already blocked.`);
-      return Promise.resolve(null); // Return immediately without queueing
-    }
-    
-    // Then check localStorage
-    const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
-    if (blockedCampaigns.includes(campaign.id)) {
-      console.log(`[INSIGHTS FETCH] ⛔ Not queuing insights for ${campaign.id} – already blocked.`);
-      // Update in-memory status to match
-      campaign.insightsStatus = 'blocked';
-      campaign.insights = null;
-      return Promise.resolve(null); // Return immediately without queueing
-    }
-    
-    // Also check object-specific failure signature from DuplicateRequestChecker
-    const objectFailSignature = `object-${campaign.id}-failed`;
-    const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
-    if (failedSignatures.includes(objectFailSignature)) {
-      console.log(`[INSIGHTS FETCH] ⛔ Not queuing insights for ${campaign.id} – already in failed signatures.`);
-      // Update in-memory status to match
-      campaign.insightsStatus = 'blocked';
-      campaign.insights = null;
-      
-      // Also add to blocked campaigns list for consistency
-      if (!blockedCampaigns.includes(campaign.id)) {
-        blockedCampaigns.push(campaign.id);
-        localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
-      }
-      
-      return Promise.resolve(null); // Return immediately without queueing
-    }
-  } catch (e) {
-    // If any error in checking, log it but continue with the queue
-    console.error('[INSIGHTS FETCH] Error checking blocked campaigns:', e);
+  // First check in-memory status
+  if (campaign.insightsStatus === 'blocked') {
+    console.log(`⛔ Not queuing insights for ${campaign.id} – already blocked.`);
+    return Promise.resolve(null); // Return immediately without queueing
+  }
+  
+  // Then check if campaign is blocked using our helper
+  if (isCampaignBlocked(campaign.id)) {
+    console.log(`⛔ Not queuing insights for ${campaign.id} – already blocked.`);
+    // Update in-memory status to match
+    campaign.insightsStatus = 'blocked';
+    campaign.insights = null;
+    return Promise.resolve(null); // Return immediately without queueing
   }
   
   // If not blocked, queue the request normally
@@ -84,34 +58,33 @@ export const fetchInsightsForCampaigns = async (
   let successCount = 0;
   
   const campaignMap = new Map<string, MetaCampaign>();
-  const campaignsWithInsights = [...campaigns];
+  
+  // PRE-FILTER: Filter out all blocked campaigns before starting the batch process
+  const filteredCampaigns = campaigns.filter(campaign => {
+    // Skip already blocked campaigns
+    if (campaign.insightsStatus === 'blocked') {
+      console.log(`🚫 Skipped ${campaign.id} – insights blocked after 400`);
+      return false;
+    }
+    
+    // Check if campaign is blocked using our helper
+    if (isCampaignBlocked(campaign.id)) {
+      console.log(`🚫 Skipped ${campaign.id} – insights blocked after 400`);
+      // Update in-memory status to match
+      campaign.insightsStatus = 'blocked';
+      campaign.insights = null;
+      return false;
+    }
+    
+    return true;
+  });
+  
+  console.log(`[INSIGHTS FETCH] After filtering blocked campaigns: ${filteredCampaigns.length}/${campaigns.length} will be processed`);
+  
+  const campaignsWithInsights = [...filteredCampaigns];
   campaignsWithInsights.forEach(campaign => {
     campaignMap.set(campaign.id, campaign);
   });
-  
-  // PRE-FILTER: Remove all blocked campaigns before even starting the batch process
-  const BLOCKED_CAMPAIGNS_KEY = 'permanently_blocked_campaigns';
-  let blockedCampaigns: string[] = [];
-  try {
-    blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
-    
-    // Mark all campaigns as blocked if they're in the list
-    campaignsWithInsights.forEach(campaign => {
-      if (blockedCampaigns.includes(campaign.id)) {
-        console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
-        campaign.insightsStatus = 'blocked';
-        campaign.insights = null;
-      }
-    });
-    
-    // Log how many campaigns were found to be blocked before we start
-    const blockedCount = campaignsWithInsights.filter(c => c.insightsStatus === 'blocked').length;
-    if (blockedCount > 0) {
-      console.log(`[INSIGHTS FETCH] Found ${blockedCount} already blocked campaigns before starting fetch.`);
-    }
-  } catch (e) {
-    console.error('[INSIGHTS FETCH] Error checking blocked campaigns:', e);
-  }
   
   for (let i = 0; i < campaignsWithInsights.length; i += BATCH_CONFIG.BATCH_SIZE) {
     const batch = campaignsWithInsights.slice(i, i + BATCH_CONFIG.BATCH_SIZE);
@@ -175,29 +148,7 @@ export const fetchInsightsForCampaigns = async (
           // Update localStorage
           try {
             if (!blockedCampaigns.includes(campaign.id)) {
-              blockedCampaigns.push(campaign.id);
-              localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
-            }
-            
-            // Also mark in failed signatures for cross-checking
-            const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
-            const objectFailSignature = `object-${campaign.id}-failed`;
-            if (!failedSignatures.includes(objectFailSignature)) {
-              failedSignatures.push(objectFailSignature);
-              localStorage.setItem('failed_insights_signatures', JSON.stringify(failedSignatures));
-            }
-            
-            // Add to 400 failures log for diagnostic purposes
-            try {
-              const failures400 = JSON.parse(localStorage.getItem('insights_400_failures') || '[]');
-              failures400.push({
-                timestamp: new Date().toISOString(),
-                campaignId: campaign.id,
-                error: error.message || 'Unknown error'
-              });
-              localStorage.setItem('insights_400_failures', JSON.stringify(failures400.slice(-30)));
-            } catch (e) {
-              // Ignore storage errors
+              markCampaignAsBlocked(campaign.id);
             }
           } catch (e) {
             console.error('[INSIGHTS FETCH] Error updating blocked campaigns:', e);

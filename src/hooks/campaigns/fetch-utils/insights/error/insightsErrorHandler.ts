@@ -1,12 +1,14 @@
-
 import { BLOCKED_CAMPAIGNS_KEY } from '../constants';
 import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
+import { markCampaignAsBlocked } from '../singleCampaignFetcher';
 
 export const handleInsightsFetchError = (error: any, campaignId: string): void => {
   // Handle 400 errors specifically with IMMEDIATE blocking
   if (error.status === 400 || (error.response && error.response.status === 400)) {
     console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaignId}`);
-    addToBlockedCampaigns(campaignId);
+    
+    // Use our utility function to mark campaign as blocked
+    markCampaignAsBlocked(campaignId);
     
     // Add to DuplicateRequestChecker to ensure cross-component blocking
     const objectFailSignature = `object-${campaignId}-failed`;
