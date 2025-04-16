@@ -37,8 +37,9 @@ export const useItemInsights = () => {
         throw new Error('No access token available');
       }
 
+      // Strictly validate the date preset
       const validDatePreset = mapToValidDatePreset(datePreset);
-      console.log(`[INSIGHTS] Using validated date preset: ${validDatePreset}`);
+      console.log(`[INSIGHTS] Using strictly validated date preset: ${validDatePreset}`);
 
       // Common fields for all requests
       const commonFields = [
@@ -51,7 +52,7 @@ export const useItemInsights = () => {
       ];
 
       // Create base options without datePreset
-      const baseOptions: Omit<InsightFilterOptions, 'datePreset'> = {
+      const baseOptions: Omit<InsightFilterOptions, 'datePreset' | 'timeRange'> = {
         fields: commonFields,
         timeIncrement: 1 // Always use time_increment=1 for consistent data breakdown
       };
@@ -59,14 +60,15 @@ export const useItemInsights = () => {
       // Prepare requests array for batching
       const requests: (() => Promise<any>)[] = [];
 
-      // Primary request with optimal configuration for the date range
+      // For today/yesterday use time_range, otherwise use date_preset
+      // Ensure mutual exclusivity between time_range and date_preset
       const primaryOptions: InsightFilterOptions = {
         ...baseOptions,
       };
 
-      // For today/yesterday and other short ranges, use time_range
       if (['today', 'yesterday'].includes(validDatePreset)) {
         primaryOptions.timeRange = getDateRange(validDatePreset);
+        console.log(`[INSIGHTS] Using time_range instead of date_preset for ${validDatePreset}`);
       } else {
         primaryOptions.datePreset = validDatePreset as InsightFilterOptions['datePreset'];
       }

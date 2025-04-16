@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
@@ -16,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { isValidMetaDatePreset, mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 export type DateRange = {
   from: Date | undefined;
@@ -27,7 +27,7 @@ export type PresetOption = {
   value: string;
 };
 
-// Updated presets to match Meta API accepted values
+// Updated presets to match Meta API accepted values - ONLY use official values
 const presets: PresetOption[] = [
   { label: 'Today', value: 'today' },
   { label: 'Yesterday', value: 'yesterday' },
@@ -37,13 +37,6 @@ const presets: PresetOption[] = [
   { label: 'Last month', value: 'last_month' },
   { label: 'Custom range', value: 'custom' },
 ];
-
-// Mapping to help with backward compatibility
-const legacyPresetMapping: Record<string, string> = {
-  'last30days': 'last_28d',
-  'last_30d': 'last_28d',
-  'last7days': 'last_7d'
-};
 
 interface DateRangeSelectorProps {
   onChange: (dateRange: DateRange, preset: string) => void;
@@ -55,7 +48,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   initialPreset = 'last_28d' // Default to last_28d
 }) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState(initialPreset);
+  const [selectedPreset, setSelectedPreset] = useState('last_28d');
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     // Initialize with last 28 days as default
     const today = new Date();
@@ -64,26 +57,30 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     return { from: twentyEightDaysAgo, to: today };
   });
 
-  // Handle backward compatibility for old preset values
+  // Handle validation for initialPreset
   useEffect(() => {
-    // Map legacy presets to new Meta API compatible presets
-    let normalizedPreset = initialPreset;
+    // Validate the preset to ensure it's strictly Meta API compatible
+    const validatedPreset = mapToValidDatePreset(initialPreset);
     
-    if (legacyPresetMapping[initialPreset]) {
-      normalizedPreset = legacyPresetMapping[initialPreset];
-      console.log(`[DATE PRESET] Converting legacy "${initialPreset}" to "${normalizedPreset}"`);
+    if (validatedPreset !== initialPreset) {
+      console.log(`[DATE SELECTOR] Converted non-standard preset "${initialPreset}" to valid preset "${validatedPreset}"`);
+    } else {
+      console.log(`[DATE SELECTOR] Using validated preset: "${validatedPreset}"`);
     }
     
-    handlePresetChange(normalizedPreset);
+    handlePresetChange(validatedPreset);
   }, [initialPreset]);
 
   const handlePresetChange = (preset: string) => {
+    // Ensure the preset is valid
+    const validatedPreset = mapToValidDatePreset(preset);
+    
     const today = new Date();
     today.setHours(23, 59, 59, 999); // End of today
     
     let newRange: DateRange = null;
     
-    switch (preset) {
+    switch (validatedPreset) {
       case 'today':
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0); // Start of today
@@ -98,22 +95,17 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         endOfYesterday.setHours(23, 59, 59, 999); // End of yesterday
         newRange = { from: startOfYesterday, to: endOfYesterday };
         break;
-      case 'last7days': // Legacy support
       case 'last_7d':
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(today.getDate() - 7);
         sevenDaysAgo.setHours(0, 0, 0, 0); // Start of 7 days ago
         newRange = { from: sevenDaysAgo, to: today };
-        preset = 'last_7d'; // Ensure we use the correct preset value
         break;
-      case 'last30days': // Legacy support
-      case 'last_30d': // Legacy support
       case 'last_28d':
         const twentyEightDaysAgo = new Date();
         twentyEightDaysAgo.setDate(today.getDate() - 28);
         twentyEightDaysAgo.setHours(0, 0, 0, 0); // Start of 28 days ago
         newRange = { from: twentyEightDaysAgo, to: today };
-        preset = 'last_28d'; // Ensure we use the correct preset value
         break;
       case 'this_month':
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -132,14 +124,22 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         newRange = dateRange;
         setIsCalendarOpen(true);
         break;
+      default:
+        console.warn(`[DATE SELECTOR] Unhandled preset: ${validatedPreset}, using last_28d`);
+        const defaultDaysAgo = new Date();
+        defaultDaysAgo.setDate(today.getDate() - 28);
+        defaultDaysAgo.setHours(0, 0, 0, 0);
+        newRange = { from: defaultDaysAgo, to: today };
+        preset = 'last_28d';
+        break;
     }
 
-    console.log(`[DATE PRESET] Date preset selected: ${preset}`, newRange);
-    setSelectedPreset(preset);
+    console.log(`[DATE SELECTOR] Date preset selected: ${validatedPreset}`, newRange);
+    setSelectedPreset(validatedPreset);
     setDateRange(newRange);
-    onChange(newRange, preset);
+    onChange(newRange, validatedPreset);
     
-    if (preset !== 'custom') {
+    if (validatedPreset !== 'custom') {
       setIsCalendarOpen(false);
     }
   };

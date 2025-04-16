@@ -6,6 +6,7 @@ import { InsightFilterOptions, InsightsResponse } from '@/services/api/MetaInsig
 import { useRateLimitStatus } from './useRateLimitStatus';
 import { useErrorHandling } from './useErrorHandling';
 import { toast } from '@/hooks/use-toast';
+import { isValidMetaDatePreset, mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 export function useInsightsFetching() {
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
@@ -20,6 +21,23 @@ export function useInsightsFetching() {
   ) => {
     setIsLoading(true);
     setError(null);
+    
+    // First validate date preset
+    let validatedOptions = { ...options };
+    
+    if (options.datePreset) {
+      const validDatePreset = mapToValidDatePreset(options.datePreset);
+      
+      if (validDatePreset !== options.datePreset) {
+        console.log(`[INSIGHTS FETCHING] Converting invalid preset "${options.datePreset}" to "${validDatePreset}"`);
+        validatedOptions.datePreset = validDatePreset;
+      }
+      
+      if (options.timeRange) {
+        console.warn('[INSIGHTS FETCHING] Both datePreset and timeRange specified, removing timeRange');
+        validatedOptions.timeRange = undefined;
+      }
+    }
     
     try {
       updateRateLimitStatus();
@@ -51,7 +69,7 @@ export function useInsightsFetching() {
         return null;
       }
       
-      const result = await fetchFunction(token, id, options);
+      const result = await fetchFunction(token, id, validatedOptions);
       setInsights(result);
       
       updateRateLimitStatus();

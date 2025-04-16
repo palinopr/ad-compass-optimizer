@@ -5,19 +5,25 @@
 import { InsightFilterOptions } from './types';
 
 export class InsightsRequestBuilder {
-  // Valid date presets according to Meta API
+  // Valid date presets according to Meta API - strict list
   private static validDatePresets = [
-    'today', 'yesterday', 'this_week', 'last_week',
-    'this_month', 'last_month', 'last_3_months', 'last_6_months',
-    'this_quarter', 'lifetime', 'last_30d', 'last_14d',
-    'last_7d', 'last_28d', 'maximum'
+    'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
+    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 
+    'last_90d', 'last_week_mon_sun', 'last_week_sun_sat', 'last_quarter', 
+    'last_year', 'this_week_mon_today', 'this_week_sun_today', 'this_year',
+    'maximum'
   ];
 
   /**
-   * Map legacy values to supported Meta API values
+   * Strictly validate and map date presets to ensure only valid values
    */
-  private static mapLegacyDatePreset(preset: string): string {
+  private static validateDatePreset(preset: string): string {
     if (!preset) return 'last_28d';
+
+    // Direct check against valid presets
+    if (this.validDatePresets.includes(preset)) {
+      return preset;
+    }
 
     // Explicit mapping of legacy values to valid Meta API values
     const mapping: Record<string, string> = {
@@ -30,11 +36,6 @@ export class InsightsRequestBuilder {
     if (mappedValue) {
       console.log(`[INSIGHTS] Mapping legacy date preset '${preset}' to '${mappedValue}'`);
       return mappedValue;
-    }
-
-    // If the preset is already valid, return it
-    if (this.validDatePresets.includes(preset)) {
-      return preset;
     }
 
     // Default to last_28d for unrecognized values
@@ -52,8 +53,8 @@ export class InsightsRequestBuilder {
     if (options.timeRange) {
       params.append('time_range', JSON.stringify(options.timeRange));
     } else if (options.datePreset) {
-      // Map and validate date preset
-      const validDatePreset = this.mapLegacyDatePreset(options.datePreset);
+      // Validate date preset
+      const validDatePreset = this.validateDatePreset(options.datePreset);
       params.append('date_preset', validDatePreset);
       console.log(`[INSIGHTS] Using validated date preset: ${validDatePreset}`);
     } else {

@@ -12,6 +12,7 @@ export const fetchCampaignInsights = async (
   datePreset: string = 'last_28d'
 ): Promise<CampaignExtraStats | null> => {
   try {
+    // Strictly validate the date preset using our new validator
     const validDatePreset = validateDatePreset(datePreset);
     
     if (InsightsThrottling.isDuplicateRequest(campaignId, validDatePreset)) {
@@ -23,12 +24,14 @@ export const fetchCampaignInsights = async (
     const selectedAdAccount = localStorage.getItem('selected_ad_account') || 'default';
     InsightsThrottling.checkThrottling(selectedAdAccount);
     
+    // Build URL using our improved URL builder with proper validation
     const url = buildInsightsUrl(campaignId, token, validDatePreset);
     
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'User-Agent': 'meta-marketing-dashboard/1.2.0' // Add user agent for better identification
       }
     });
     
@@ -48,6 +51,8 @@ export const fetchCampaignInsights = async (
             return null;
           }
           
+          // Try again with a known good preset
+          console.log(`[INSIGHTS FETCH] Retrying with date_preset=last_28d for campaign ${campaignId}`);
           return fetchCampaignInsights(campaignId, token, 'last_28d');
         }
       }

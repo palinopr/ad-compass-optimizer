@@ -2,15 +2,21 @@
 import { BaseApiService } from './BaseApiService';
 
 export class MetaFunnelService extends BaseApiService {
-  // Valid date presets according to Meta API
+  // Valid date presets according to Meta API - strictly enforced from documentation
   private static validDatePresets = [
-    'today', 'yesterday', 'this_week', 'last_week',
-    'this_month', 'last_month', 'last_3_months', 'last_6_months',
-    'this_quarter', 'lifetime', 'last_30d', 'last_14d',
-    'last_7d', 'last_28d', 'maximum'
+    'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
+    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 
+    'last_90d', 'last_week_mon_sun', 'last_week_sun_sat', 'last_quarter', 
+    'last_year', 'this_week_mon_today', 'this_week_sun_today', 'this_year',
+    'maximum'
   ];
   
-  private static mapDatePreset(preset: string = 'last_28d'): string {
+  private static strictlyValidateDatePreset(preset: string = 'last_28d'): string {
+    // Direct check against valid presets
+    if (this.validDatePresets.includes(preset)) {
+      return preset;
+    }
+    
     // Explicit mapping for legacy values
     const mapping: Record<string, string> = {
       'last30days': 'last_28d',
@@ -19,24 +25,18 @@ export class MetaFunnelService extends BaseApiService {
     };
     
     if (mapping[preset]) {
+      console.log(`[META FUNNEL] Mapped legacy preset '${preset}' to '${mapping[preset]}'`);
       return mapping[preset];
     }
     
-    // If already a valid preset, use it
-    if (this.validDatePresets.includes(preset)) {
-      return preset;
-    }
-    
     // Default to last_28d
+    console.warn(`[META FUNNEL] Invalid preset '${preset}', using default 'last_28d'`);
     return 'last_28d';
   }
 
   static async fetchFunnelData(token: string, adAccountId: string, datePreset: string = 'last_28d') {
-    const validDatePreset = this.mapDatePreset(datePreset);
-    console.log(`[META FUNNEL] Fetching funnel data with date preset: ${validDatePreset}`);
-    
-    // For demo purposes, return sample data
-    // In a real implementation, this would call the Meta API with the datePreset parameter
+    const validDatePreset = this.strictlyValidateDatePreset(datePreset);
+    console.log(`[META FUNNEL] Fetching funnel data with validated date preset: ${validDatePreset}`);
     
     // Import the meta campaign service that uses our date preset
     const { MetaCampaignService } = await import('./MetaCampaignService');

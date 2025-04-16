@@ -24,7 +24,7 @@ export const parseDatePreset = (queryParams?: string): string | undefined => {
 };
 
 /**
- * All valid Meta API date presets
+ * All valid Meta API date presets - STRICT list from Meta documentation
  */
 const validMetaPresets = [
   'today',
@@ -54,56 +54,37 @@ export type ValidMetaDatePreset = 'today' | 'yesterday' | 'this_month' | 'last_m
   'this_quarter' | 'lifetime' | 'last_3d' | 'last_7d' | 'last_14d' |
   'last_28d' | 'last_30d' | 'last_90d' | 'last_week_mon_sun' | 'last_week_sun_sat' | 
   'last_quarter' | 'last_year' | 'this_week_mon_today' | 'this_week_sun_today' | 
-  'this_year' | 'maximum' | 'last30days' | 'last7days';
+  'this_year' | 'maximum';
 
 /**
  * Validates if a date preset is a valid Meta API value
  */
 export const isValidMetaDatePreset = (preset?: string): boolean => {
   if (!preset) return false;
-  
-  // Reject obviously malformed values
-  if (preset.includes(' ') || preset === 'date_pre' || 
-      preset.length < 5 || preset.includes(',')) {
-    console.error(`[DATE PRESET] Malformed preset detected: "${preset}"`);
-    return false;
-  }
-  
   return validMetaPresets.includes(preset);
 };
 
 /**
  * Maps legacy date presets to Meta API compatible values
+ * Only returns strictly valid Meta API values
  */
 export const mapToValidDatePreset = (preset?: string): string => {
   if (!preset) return 'last_28d'; // Default
   
-  // Reject obviously malformed values
-  if (preset.includes(' ') || preset === 'date_pre' || 
-      preset.length < 5 || preset.includes(',')) {
-    console.error(`[DATE PRESET] Malformed preset detected: "${preset}", using last_28d`);
-    return 'last_28d';
-  }
-  
-  // Legacy mapping
-  const mapping: Record<string, string> = {
-    'last30days': 'last_28d',
-    'last_30days': 'last_28d',
-    'last_30d': 'last_28d',
-    'last7days': 'last_7d',
-    'today': 'today',          // Explicit mapping for clarity
-    'yesterday': 'yesterday'   // Explicit mapping for clarity
-  };
-  
-  // If it's a legacy preset, map it
-  if (mapping[preset]) {
-    console.log(`[DATE PRESET MAPPING] Mapped legacy preset '${preset}' to '${mapping[preset]}'`);
-    return mapping[preset];
-  }
-  
   // If it's already a valid preset, use it
   if (isValidMetaDatePreset(preset)) {
     return preset;
+  }
+  
+  // Strict mapping for legacy values
+  if (preset === 'last30days' || preset === 'last_30days' || preset === 'last_30d') {
+    console.log(`[DATE PRESET MAPPING] Mapped legacy preset '${preset}' to 'last_28d'`);
+    return 'last_28d';
+  }
+  
+  if (preset === 'last7days') {
+    console.log(`[DATE PRESET MAPPING] Mapped legacy preset '${preset}' to 'last_7d'`);
+    return 'last_7d';
   }
   
   // Default fallback

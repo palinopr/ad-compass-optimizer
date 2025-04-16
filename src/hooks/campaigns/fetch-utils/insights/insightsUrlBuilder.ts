@@ -11,7 +11,7 @@ export const buildInsightsUrl = (
     datePreset = 'last_28d';
   }
   
-  // Sanitize and validate the date preset
+  // Strict list of Meta-accepted date presets (official API values only)
   const validPresets = [
     'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
     'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 
@@ -20,22 +20,10 @@ export const buildInsightsUrl = (
     'maximum'
   ];
   
-  // Reject obviously malformed values
-  if (datePreset.includes(' ') || datePreset === 'date_pre' || 
-      datePreset.length < 5 || datePreset.includes(',')) {
-    console.error(`[INSIGHTS URL] Malformed date_preset detected: "${datePreset}", using last_28d instead`);
+  // Strict validation - only accept exact matches from the validPresets array
+  if (!validPresets.includes(datePreset)) {
+    console.error(`[INSIGHTS URL] Invalid date_preset detected: "${datePreset}", using last_28d instead`);
     datePreset = 'last_28d';
-  } else if (!validPresets.includes(datePreset)) {
-    // Map known values like last30days to valid ones
-    if (datePreset === 'last30days' || datePreset === 'last_30days') {
-      datePreset = 'last_28d';
-      console.log(`[INSIGHTS URL] Mapped legacy preset '${datePreset}' to 'last_28d'`);
-    } else if (datePreset === 'last7days') {
-      datePreset = 'last_7d';
-      console.log(`[INSIGHTS URL] Mapped legacy preset '${datePreset}' to 'last_7d'`);
-    } else {
-      console.warn(`[INSIGHTS URL] Potentially invalid date_preset: "${datePreset}", proceeding but may fail`);
-    }
   }
   
   console.log(`[INSIGHTS URL] Using validated date_preset: "${datePreset}" for campaign ${campaignId}`);

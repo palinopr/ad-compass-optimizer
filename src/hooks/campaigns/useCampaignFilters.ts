@@ -1,7 +1,7 @@
-
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { DateRange } from '@/components/meta/filters/DateRangeSelector';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 export type CampaignFilters = {
   dateRange: DateRange;
@@ -30,27 +30,18 @@ export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   }, []);
 
   const setDateRange = useCallback((dateRange: DateRange, preset: string) => {
-    // Map legacy presets to Meta API compatible values
-    let apiPreset = preset;
-    switch (preset) {
-      case 'last30days':
-      case 'last_30d':
-        apiPreset = 'last_28d';
-        break;
-      case 'last7days':
-        apiPreset = 'last_7d';
-        break;
-    }
+    // Strictly validate preset to ensure it's a valid Meta API value
+    const validatedPreset = mapToValidDatePreset(preset);
     
-    console.log(`[CAMPAIGN FILTERS] Setting date preset: ${apiPreset} (original: ${preset})`);
+    console.log(`[CAMPAIGN FILTERS] Setting validated date preset: ${validatedPreset} (original: ${preset})`);
     
     // Dispatch a custom event to notify that date preset has changed
     const event = new CustomEvent('campaign-date-preset-changed', {
-      detail: { datePreset: apiPreset, dateRange }
+      detail: { datePreset: validatedPreset, dateRange }
     });
     window.dispatchEvent(event);
     
-    setFilters(prev => ({ ...prev, dateRange, datePreset: apiPreset }));
+    setFilters(prev => ({ ...prev, dateRange, datePreset: validatedPreset }));
   }, []);
 
   const setStatusFilter = useCallback((status: string | null) => {

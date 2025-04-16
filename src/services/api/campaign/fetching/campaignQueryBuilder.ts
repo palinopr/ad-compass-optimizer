@@ -3,12 +3,13 @@ import { CAMPAIGN_FIELDS } from './config/queryFields';
 import { AccountValidator } from './utils/accountValidator';
 
 export class CampaignQueryBuilder {
-  // Valid date presets according to Meta API
+  // Valid date presets according to Meta API documentation - strict list
   private static validDatePresets = [
-    'today', 'yesterday', 'this_week', 'last_week',
-    'this_month', 'last_month', 'last_3_months', 'last_6_months',
-    'this_quarter', 'lifetime', 'last_30d', 'last_14d',
-    'last_7d', 'last_28d', 'maximum'
+    'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
+    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 
+    'last_90d', 'last_week_mon_sun', 'last_week_sun_sat', 'last_quarter', 
+    'last_year', 'this_week_mon_today', 'this_week_sun_today', 'this_year',
+    'maximum'
   ];
 
   static buildCampaignQuery(datePreset = 'last_28d'): string {
@@ -36,6 +37,11 @@ export class CampaignQueryBuilder {
   static normalizePreset(datePreset: string): string {
     if (!datePreset) return 'last_28d';
 
+    // Direct matching against valid presets
+    if (this.validDatePresets.includes(datePreset)) {
+      return datePreset;
+    }
+
     // Direct mapping for legacy presets
     const legacyMapping: Record<string, string> = {
       'last30days': 'last_28d',
@@ -48,11 +54,6 @@ export class CampaignQueryBuilder {
       return legacyMapping[datePreset];
     }
 
-    // Validate preset is in the allowed list
-    if (this.validDatePresets.includes(datePreset)) {
-      return datePreset;
-    }
-
     // Fall back to last_28d for unrecognized presets
     console.warn(`[CAMPAIGN QUERY] Unrecognized date preset: ${datePreset}, using default 'last_28d'`);
     return 'last_28d';
@@ -61,7 +62,7 @@ export class CampaignQueryBuilder {
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.8-fixed-query-structure';
+    return '1.0.9-strict-date-preset-validation';
   }
   
   // Adding timestamp to ensure no cache is used

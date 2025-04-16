@@ -1,30 +1,29 @@
 
-import { mapToValidDatePreset, isValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
+import { isValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 
 export const validateDatePreset = (datePreset: string): string => {
-  // First ensure we have a valid preset format
-  const validatedPreset = mapToValidDatePreset(datePreset);
+  // List of strictly valid Meta API date presets
+  const validPresets = [
+    'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
+    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 
+    'last_90d', 'last_week_mon_sun', 'last_week_sun_sat', 'last_quarter', 
+    'last_year', 'this_week_mon_today', 'this_week_sun_today', 'this_year',
+    'maximum'
+  ];
   
-  // Additional check for obviously malformed values
-  if (!validatedPreset || 
-      validatedPreset.includes(' ') || 
-      validatedPreset === 'date_pre' || 
-      validatedPreset.length < 5 || 
-      validatedPreset.includes(',')) {
+  // Directly check if the preset is in the valid list
+  if (!validPresets.includes(datePreset)) {
     console.error(`[INSIGHTS FETCH] Invalid date_preset "${datePreset}" detected, defaulting to last_28d`);
     return 'last_28d';
   }
   
-  if (!isValidMetaDatePreset(validatedPreset)) {
-    console.warn(`[INSIGHTS FETCH] Non-standard date_preset "${datePreset}" mapped to "${validatedPreset}"`);
-  }
-  
-  // Store the last used date_preset for debugging
+  // Store the validated date_preset for debugging
   try {
-    localStorage.setItem('last_used_date_preset', validatedPreset);
+    localStorage.setItem('last_used_date_preset', datePreset);
   } catch (e) {
     // Ignore storage errors
   }
   
-  return validatedPreset;
+  console.log(`[INSIGHTS FETCH] Using validated date_preset: "${datePreset}"`);
+  return datePreset;
 };
