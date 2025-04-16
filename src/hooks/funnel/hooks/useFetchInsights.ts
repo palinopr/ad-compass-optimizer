@@ -4,6 +4,7 @@ import { MetaFunnelService } from '@/services/api/MetaFunnelService';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { safelyValidateDatePreset } from '../utils/datePresetValidation';
 import { getDateRange } from '../utils/dateUtils';
+import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
 
 export const useFetchInsights = () => {
   const fetchInsights = useCallback(async (
@@ -43,20 +44,27 @@ export const useFetchInsights = () => {
         'website_purchase_roas'
       ];
 
-      const baseOptions = {
+      // Define the type for options to fix type errors
+      interface InsightOptions {
+        fields: string[];
+        timeIncrement: number;
+        timeRange?: {
+          since: string;
+          until: string;
+        };
+        datePreset?: string;
+      }
+
+      const baseOptions: InsightOptions = {
         fields: commonFields,
         timeIncrement: 1
       };
 
-      const primaryOptions = {
-        ...baseOptions,
-      };
-
       if (['today', 'yesterday'].includes(validDatePreset)) {
-        primaryOptions.timeRange = getDateRange(validDatePreset);
+        baseOptions.timeRange = getDateRange(validDatePreset);
         console.log(`[INSIGHTS HOOK] Using time_range instead of date_preset for ${validDatePreset}`);
       } else {
-        primaryOptions.datePreset = validDatePreset;
+        baseOptions.datePreset = validDatePreset;
       }
 
       const response = await MetaFunnelService.fetchFunnelData(token, itemId, validDatePreset);
