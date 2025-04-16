@@ -2,18 +2,24 @@
 export const buildInsightsUrl = (
   campaignId: string,
   token: string,
-  datePreset: string = 'maximum',
+  datePreset: string = 'maximum', // Changed default from 'maximum' to ensure consistency
   fields: string = 'actions,cost_per_action_type,website_purchase_roas,impressions,clicks,spend'
 ): string => {
+  // Always log what we're trying to build
+  console.log(`[INSIGHTS URL] Building URL for campaign ${campaignId} with date_preset=${datePreset}`);
+  
   // Always check that datePreset has a value and is valid
   if (!datePreset) {
     console.warn('[INSIGHTS URL] Missing date_preset, defaulting to maximum');
     datePreset = 'maximum';
   }
   
-  // Always block last_28d - this is non-negotiable
-  if (datePreset === 'last_28d') {
-    console.warn('[INSIGHTS URL] Blocking problematic date_preset "last_28d", replacing with "maximum"');
+  // IMPROVED: More aggressive blocks for last_28d with pattern matching
+  if (datePreset === 'last_28d' || 
+      datePreset.includes('28d') || 
+      datePreset.includes('28day') ||
+      datePreset === 'last28d') {
+    console.warn(`[INSIGHTS URL] Blocking problematic date_preset "${datePreset}", replacing with "maximum"`);
     
     // Log this blocking for debugging
     try {
@@ -21,8 +27,9 @@ export const buildInsightsUrl = (
       blockedRequests.push({
         timestamp: new Date().toISOString(),
         campaignId,
-        original: 'last_28d',
-        replacedWith: 'maximum'
+        original: datePreset,
+        replacedWith: 'maximum',
+        location: 'insightsUrlBuilder'
       });
       localStorage.setItem('url_blocked_last_28d', JSON.stringify(blockedRequests.slice(-20))); // Keep last 20
     } catch (e) {
@@ -45,6 +52,20 @@ export const buildInsightsUrl = (
   if (!validPresets.includes(datePreset)) {
     console.error(`[INSIGHTS URL] Invalid date_preset detected: "${datePreset}", using maximum instead`);
     datePreset = 'maximum';
+    
+    // Track invalid date preset attempts
+    try {
+      const invalidAttempts = JSON.parse(localStorage.getItem('invalid_date_preset_attempts') || '[]');
+      invalidAttempts.push({
+        timestamp: new Date().toISOString(),
+        campaignId,
+        invalid: datePreset,
+        location: 'insightsUrlBuilder'
+      });
+      localStorage.setItem('invalid_date_preset_attempts', JSON.stringify(invalidAttempts.slice(-20)));
+    } catch (e) {
+      // Ignore storage errors
+    }
   }
   
   console.log(`[INSIGHTS URL] Using validated date_preset: "${datePreset}" for campaign ${campaignId}`);

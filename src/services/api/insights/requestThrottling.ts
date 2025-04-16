@@ -11,6 +11,7 @@ export class InsightsRequestThrottler {
   private static readonly BATCH_SIZE = 3;
   private static readonly BATCH_INTERVAL = 2000;
   private static readonly REQUEST_DELAY = 300;
+  private static readonly SKIPPED_400_KEY = 'insights_skipped_400_requests';
 
   /**
    * Process an array of request functions with controlled rate limiting
@@ -24,8 +25,15 @@ export class InsightsRequestThrottler {
     // Track consecutive errors to implement exponential backoff
     let consecutiveErrors = 0;
     
-    for (let i = 0; i < requests.length; i += this.BATCH_SIZE) {
-      const batch = requests.slice(i, i + this.BATCH_SIZE);
+    // Filter out requests that are known to fail with 400
+    const filteredRequests = requests.filter((_, index) => {
+      // We can't actually filter by signature here, but we'll count how many we skip
+      // The actual filtering happens in the wrapped request function
+      return true;
+    });
+    
+    for (let i = 0; i < filteredRequests.length; i += this.BATCH_SIZE) {
+      const batch = filteredRequests.slice(i, i + this.BATCH_SIZE);
       console.log(`[INSIGHTS] Processing batch ${Math.floor(i/this.BATCH_SIZE) + 1} with ${batch.length} requests`);
       
       const currentDelay = consecutiveErrors > 0 
@@ -48,6 +56,21 @@ export class InsightsRequestThrottler {
             // Check if this request previously failed with 400 (IMPROVED CHECK)
             if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
               console.log(`[INSIGHTS] Skipped insights request due to permanent failure (400): ${requestId}`);
+              
+              // Track this skipped request for debugging
+              try {
+                const skippedRequests = JSON.parse(localStorage.getItem(this.SKIPPED_400_KEY) || '[]');
+                skippedRequests.push({
+                  timestamp: new Date().toISOString(),
+                  requestId,
+                  signature: requestSignature,
+                  location: 'throttleRequests-wrapper'
+                });
+                localStorage.setItem(this.SKIPPED_400_KEY, JSON.stringify(skippedRequests.slice(-30)));
+              } catch (e) {
+                // Ignore storage errors
+              }
+              
               return Promise.reject({
                 message: 'Request skipped due to previous 400 error',
                 status: 400,
@@ -61,6 +84,21 @@ export class InsightsRequestThrottler {
               if (error.status === 400 || (error.response && error.response.status === 400)) {
                 console.error(`[INSIGHTS] Request failed with 400, marking as permanently failed: ${requestSignature}`);
                 DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
+                
+                // Store additional info about this 400 error
+                try {
+                  const failures = JSON.parse(localStorage.getItem('throttler_400_failures') || '[]');
+                  failures.push({
+                    timestamp: new Date().toISOString(),
+                    requestId,
+                    signature: requestSignature,
+                    error: error.message || 'Unknown 400 error',
+                    location: 'throttleRequests-catch'
+                  });
+                  localStorage.setItem('throttler_400_failures', JSON.stringify(failures.slice(-30)));
+                } catch (e) {
+                  // Ignore storage errors
+                }
               }
               throw error;
             });
@@ -71,6 +109,11 @@ export class InsightsRequestThrottler {
           return result;
         } catch (error: any) {
           console.error('[INSIGHTS] Request failed:', error);
+          
+          // Skip logging for already-skipped 400 errors to reduce noise
+          if (!error.skipped) {
+            console.log('[INSIGHTS] Logging non-skipped error:', error);
+          }
           
           // If it's a 400 error, don't increment consecutive errors
           if (error.status !== 400 && (!error.response || error.response.status !== 400)) {
@@ -91,7 +134,7 @@ export class InsightsRequestThrottler {
         }
       });
       
-      if (i + this.BATCH_SIZE < requests.length) {
+      if (i + this.BATCH_SIZE < filteredRequests.length) {
         const batchWaitTime = consecutiveErrors > 0
           ? Math.min(this.BATCH_INTERVAL * Math.pow(1.5, consecutiveErrors), 10000)
           : this.BATCH_INTERVAL;

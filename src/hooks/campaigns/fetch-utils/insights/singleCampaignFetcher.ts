@@ -13,10 +13,27 @@ export const fetchCampaignInsights = async (
   datePreset: string = 'maximum'  // CHANGED: Default from 'last_28d' to 'maximum'
 ): Promise<CampaignExtraStats | null> => {
   try {
-    // Double safety check - Always block last_28d directly
-    if (datePreset === 'last_28d') {
-      console.warn(`[INSIGHTS FETCH] Blocking problematic date_preset "last_28d", using "maximum" instead`);
+    console.log(`[INSIGHTS FETCH] Starting insights fetch for campaign ${campaignId} with initial datePreset=${datePreset}`);
+    
+    // Block last_28d directly at the entry point
+    if (datePreset === 'last_28d' || datePreset.includes('28d') || datePreset.includes('28day')) {
+      console.warn(`[INSIGHTS FETCH] Blocking problematic date_preset "${datePreset}" at entry point, using "maximum" instead`);
       datePreset = 'maximum';
+      
+      // Log this early blocking
+      try {
+        const earlyBlocks = JSON.parse(localStorage.getItem('insights_early_blocks') || '[]');
+        earlyBlocks.push({
+          timestamp: new Date().toISOString(),
+          campaignId,
+          original: datePreset,
+          replacedWith: 'maximum',
+          location: 'fetchCampaignInsights-entry'
+        });
+        localStorage.setItem('insights_early_blocks', JSON.stringify(earlyBlocks.slice(-20)));
+      } catch (e) {
+        // Ignore storage errors
+      }
     }
     
     // Strictly validate the date preset using our validator
@@ -48,6 +65,30 @@ export const fetchCampaignInsights = async (
     // Build URL using our improved URL builder with proper validation
     const url = buildInsightsUrl(campaignId, token, validDatePreset);
     
+    // Final check to ensure the URL does not contain last_28d
+    if (url.includes('date_preset=last_28d')) {
+      console.error(`[INSIGHTS FETCH] CRITICAL: URL still contains last_28d after all validations. Aborting request.`);
+      
+      // Mark this signature as permanently failed to prevent future attempts
+      DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
+      
+      // Log this critical failure
+      try {
+        const criticalFailures = JSON.parse(localStorage.getItem('critical_date_preset_failures') || '[]');
+        criticalFailures.push({
+          timestamp: new Date().toISOString(),
+          campaignId,
+          requestSignature,
+          url: url.replace(token, 'REDACTED_TOKEN')
+        });
+        localStorage.setItem('critical_date_preset_failures', JSON.stringify(criticalFailures.slice(-20)));
+      } catch (e) {
+        // Ignore storage errors
+      }
+      
+      return null;
+    }
+    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -74,6 +115,7 @@ export const fetchCampaignInsights = async (
             timestamp: new Date().toISOString(),
             campaignId,
             datePreset: validDatePreset,
+            requestSignature,
             error: errorData.error ? {
               code: errorData.error.code,
               message: errorData.error.message

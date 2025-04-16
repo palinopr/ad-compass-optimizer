@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -78,7 +79,8 @@ export function useCampaignFetcher() {
       localStorage.setItem('campaign_fetch_timestamp', Date.now().toString());
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
 
-      const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'last_28d');
+      // CHANGED: Using maximum instead of last_28d for more reliable data
+      const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'maximum');
       
       // Validate the response has campaigns
       if (!data || !data.campaigns || data.campaigns.length === 0) {
