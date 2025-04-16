@@ -108,7 +108,7 @@ export const useItemInsights = () => {
     }
   }, []);
 
-  // Enhanced helper to transform and set insights data with improved extraction of metrics
+  // Helper to transform and set insights data with improved extraction of metrics
   const transformAndSetInsights = (response: any) => {
     if (!response?.data || response.data.length === 0) {
       console.warn('[INSIGHTS] Response contains no data to transform');
