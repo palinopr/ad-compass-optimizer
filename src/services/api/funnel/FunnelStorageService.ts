@@ -31,6 +31,29 @@ export class FunnelStorageService {
     return null;
   }
 
+  static storeRawApiResponse(response: any) {
+    try {
+      if (!response) return;
+      
+      // If response is an error object, store it separately
+      if (response.error) {
+        localStorage.setItem('raw_campaign_error_response', JSON.stringify(response));
+        console.log('[FUNNEL DEBUG] Stored error response');
+        return;
+      }
+      
+      // For regular responses, store the data
+      localStorage.setItem('raw_campaign_response', JSON.stringify({
+        data: response.data?.slice(0, 10), // Store first 10 campaigns to avoid huge storage
+        paging: response.paging,
+        timestamp: new Date().toISOString()
+      }));
+      console.log('[FUNNEL DEBUG] Stored raw API response');
+    } catch (e) {
+      console.error('[FUNNEL DEBUG] Error storing raw API response:', e);
+    }
+  }
+
   static clearCaches() {
     localStorage.removeItem('campaign_query_cache');
     localStorage.removeItem('campaign_data_cache');

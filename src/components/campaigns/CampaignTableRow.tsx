@@ -51,6 +51,12 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
     return null;
   }
 
+  // Check if campaign is an empty object
+  const isEmpty = Object.keys(campaign).length === 0;
+  if (isEmpty) {
+    console.warn('[CAMPAIGN ROW] Empty campaign object detected!');
+  }
+
   // Make sure we have at least an ID to render something
   const campaignId = campaign.id || 'unknown-id';
   const campaignName = campaign.name || 'Unnamed Campaign';
@@ -89,6 +95,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
           )}
           {!hasValidMetrics && (
             <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">No Insights</span>
+          )}
+          {isEmpty && (
+            <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">Empty Data</span>
           )}
         </div>
       </TableCell>

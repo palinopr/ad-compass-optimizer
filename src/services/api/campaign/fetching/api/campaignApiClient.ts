@@ -101,6 +101,30 @@ export class CampaignApiClient extends BaseApiService {
         // Return empty array for consistent handling
         return [];
       }
+
+      // NEW: Check for empty campaign objects
+      if (data.data.length > 0) {
+        const emptyObjects = data.data.filter(item => 
+          typeof item === 'object' && 
+          item !== null && 
+          Object.keys(item).length === 0
+        ).length;
+        
+        if (emptyObjects > 0) {
+          console.warn(`⚠️ Meta API returned ${emptyObjects}/${data.data.length} empty campaign objects. Possible permissions or token issue.`);
+        }
+        
+        // Log specific details about the first few campaigns
+        data.data.slice(0, 5).forEach((campaign, idx) => {
+          console.log(`[CAMPAIGN FETCH] Campaign ${idx+1} details:`, {
+            isEmpty: Object.keys(campaign).length === 0,
+            id: campaign.id || 'missing',
+            name: campaign.name || 'missing',
+            status: campaign.status || 'missing',
+            keys: Object.keys(campaign)
+          });
+        });
+      }
   
       return data.data;
     } catch (error: any) {

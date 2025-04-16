@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -143,6 +142,12 @@ export function useCampaignFetcher() {
           localStorage.setItem('has_campaigns_data', 'true');
           localStorage.setItem('empty_campaigns_response', 'false');
           console.log(`[CAMPAIGNS DEBUG] Successfully fetched ${campaigns.length} campaigns`);
+          
+          // Check for empty campaign objects
+          const emptyCount = campaigns.filter(c => Object.keys(c).length === 0).length;
+          if (emptyCount > 0) {
+            console.warn(`⚠️ Meta API returned ${emptyCount}/${campaigns.length} empty campaign objects. Possible permissions or token issue.`);
+          }
           
           // Log the first campaign to verify structure
           if (campaigns.length > 0) {

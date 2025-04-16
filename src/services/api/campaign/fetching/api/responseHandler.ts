@@ -53,6 +53,19 @@ export class ResponseHandler {
         return [];
       }
       
+      // Check for empty campaign objects
+      if (data.data.length > 0) {
+        const emptyObjects = data.data.filter(item => 
+          typeof item === 'object' && 
+          item !== null && 
+          Object.keys(item).length === 0
+        ).length;
+        
+        if (emptyObjects > 0) {
+          console.warn(`⚠️ Meta API returned ${emptyObjects}/${data.data.length} empty campaign objects. Possible permissions or token issue.`);
+        }
+      }
+      
       // Always return the data array, even if empty
       return data.data;
     } catch (error) {

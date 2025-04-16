@@ -24,6 +24,18 @@ export class CampaignProcessor {
       const insightsCount = campaigns.filter(c => !!c.insights).length;
       console.log(`[CAMPAIGN FETCH] Insights present in ${insightsCount}/${campaigns.length} campaigns`);
       
+      // Check for completely empty objects
+      const emptyCount = campaigns.filter(c => Object.keys(c).length === 0).length;
+      if (emptyCount > 0) {
+        console.warn(`⚠️ Meta API returned ${emptyCount}/${campaigns.length} completely empty campaign objects. Possible permissions or token issue.`);
+      }
+      
+      // Check for objects with only ID but no other data
+      const idOnlyCount = campaigns.filter(c => Object.keys(c).length === 1 && c.id).length;
+      if (idOnlyCount > 0) {
+        console.warn(`⚠️ Found ${idOnlyCount}/${campaigns.length} campaigns with ID only but no other data.`);
+      }
+      
       if (insightsCount === 0) {
         console.warn('[CAMPAIGN FETCH] ⚠️ No campaigns have insights data! Check date_preset parameter.');
         // Mark this in localStorage for diagnostics
@@ -43,6 +55,19 @@ export class CampaignProcessor {
     }
     
     return campaigns.map(campaign => {
+      // Check for empty campaign object and add warning
+      if (Object.keys(campaign).length === 0) {
+        console.warn(`⚠️ Processing empty campaign object. Will create minimal placeholder.`);
+        return {
+          id: `empty-${Math.random().toString(36).substring(2, 9)}`,
+          name: 'Empty Campaign Data',
+          status: 'unknown',
+          insights: {},
+          isEmpty: true,
+          error: 'Meta API returned empty object'
+        };
+      }
+      
       // Create a base normalized campaign
       const normalizedCampaign: MetaCampaign = {
         ...campaign,
@@ -122,17 +147,6 @@ export class CampaignProcessor {
             console.log(`[CAMPAIGN ${campaign.id}] No valid ROAS value found`);
           }
         }
-        
-        // Log processed insights for this campaign
-        console.log(`[CAMPAIGN INSIGHTS] Campaign ${campaign.name} (${campaign.id}):`, {
-          clicks: normalizedCampaign.insights.clicks || 'missing',
-          impressions: normalizedCampaign.insights.impressions || 'missing',
-          results: normalizedCampaign.results || 'missing',
-          cpa: normalizedCampaign.insights.cpa || 'missing',
-          roas: normalizedCampaign.insights.roas || 'missing'
-        });
-      } else {
-        console.log(`[CAMPAIGN FETCH] No insights data for campaign: ${campaign.name} (${campaign.id})`);
       }
       
       return normalizedCampaign;

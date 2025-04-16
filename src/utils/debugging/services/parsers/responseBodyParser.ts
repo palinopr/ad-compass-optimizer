@@ -80,6 +80,19 @@ export const parseResponseBody = async (response: Response): Promise<{ text: str
         console.log('[RESPONSE PARSER] Full response for empty data[]:', data);
       }
       
+      // Check for empty objects in the data array
+      if (data && data.data && Array.isArray(data.data)) {
+        const emptyObjects = data.data.filter(item => 
+          typeof item === 'object' && 
+          item !== null && 
+          Object.keys(item).length === 0
+        ).length;
+        
+        if (emptyObjects > 0) {
+          console.warn(`⚠️ [RESPONSE PARSER] Meta API returned ${emptyObjects}/${data.data.length} empty campaign objects. Possible permissions or token issue.`);
+        }
+      }
+      
       if (data.error) {
         error = data.error;
         console.error('[RESPONSE PARSER] API error:', error);
