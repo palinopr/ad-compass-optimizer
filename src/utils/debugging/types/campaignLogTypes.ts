@@ -29,6 +29,7 @@ export interface CampaignFetchLog {
   requestUrl?: string;
   campaignPreviews?: CampaignPreview[];
   headers?: Record<string, string>;
+  fields?: string; // Added the missing fields property
   requestDetails?: {
     url: string;
     headers: Record<string, string>;
