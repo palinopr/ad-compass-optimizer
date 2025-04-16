@@ -19,7 +19,10 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
 
   React.useEffect(() => {
     // IMMEDIATE CHECK: Use type guard to check for 'blocked' status
-    if (campaign.insightsStatus === 'blocked') {
+    // Explicitly cast insightsStatus to ensure TypeScript recognizes 'blocked'
+    const insightsStatus = campaign.insightsStatus as 'ok' | 'pending' | 'failed' | 'blocked' | null;
+    
+    if (insightsStatus === 'blocked') {
       setIsBlocked(true);
       return;
     }
@@ -32,9 +35,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
         setIsBlocked(true);
         
         // Only update if not already blocked
-        if (campaign.insightsStatus !== 'blocked') {
+        if (insightsStatus !== 'blocked') {
           console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from localStorage list`);
-          campaign.insightsStatus = 'blocked';
+          campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
           campaign.insights = null;
         }
         return;
@@ -47,9 +50,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
         setIsBlocked(true);
         
         // Only update if not already blocked
-        if (campaign.insightsStatus !== 'blocked') {
+        if (insightsStatus !== 'blocked') {
           console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from failed signatures`);
-          campaign.insightsStatus = 'blocked';
+          campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
           campaign.insights = null;
           
           // Also update the blocked campaigns list for consistency
@@ -70,9 +73,9 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
           setIsBlocked(true);
           
           // Only update if not already blocked
-          if (campaign.insightsStatus !== 'blocked') {
+          if (insightsStatus !== 'blocked') {
             console.log(`[CAMPAIGN ROW] 🚫 Marking ${campaign.id} as blocked from 400 failures log`);
-            campaign.insightsStatus = 'blocked';
+            campaign.insightsStatus = 'blocked' as 'ok' | 'pending' | 'failed' | 'blocked' | null;
             campaign.insights = null;
             
             // Update the other data sources for consistency

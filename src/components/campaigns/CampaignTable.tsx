@@ -50,7 +50,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
           {campaigns.map((campaign) => (
             <CampaignTableRow 
               key={campaign.id || Math.random().toString(36)} 
-              campaign={campaign} 
+              campaign={campaign as MetaCampaign} 
               status={status}
             />
           ))}
