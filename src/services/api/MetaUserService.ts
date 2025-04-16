@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 
 // Define return type for user data that accounts for both success and fallback cases
@@ -76,7 +75,6 @@ export class MetaUserService extends BaseApiService {
   
   /**
    * Handle API errors and return fallback data
-   * Using a different method name to avoid conflict with parent class
    */
   protected static handleUserApiError(error: unknown, method: string): MetaUserData {
     console.error(`[${method}] Error:`, error);
@@ -92,7 +90,7 @@ export class MetaUserService extends BaseApiService {
   /**
    * Validate token format
    */
-  private static validateToken(token: string, method: string) {
+  protected static validateToken(token: string, method: string) {
     if (!token || token.length < 20) {
       throw new Error('Invalid token format');
     }
