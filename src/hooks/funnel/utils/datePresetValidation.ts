@@ -25,7 +25,22 @@ const mapToValidDatePreset = (preset: string): ValidMetaDatePreset => {
       preset === 'last28d' ||
       preset === 'last_28d' ||
       preset === 'last_30days') {
-    console.log(`[DATE PRESET MAPPING] Mapped problematic preset '${preset}' to 'maximum'`);
+    console.log(`[DATE PRESET MAPPING] ✓ Mapped problematic preset '${preset}' to 'maximum'`);
+    
+    // Log this replacement for debugging
+    try {
+      const replacements = JSON.parse(localStorage.getItem('date_preset_replacements') || '[]');
+      replacements.push({
+        timestamp: new Date().toISOString(),
+        original: preset,
+        replacedWith: 'maximum',
+        location: 'mapToValidDatePreset'
+      });
+      localStorage.setItem('date_preset_replacements', JSON.stringify(replacements.slice(-30)));
+    } catch (e) {
+      // Ignore storage errors
+    }
+    
     return 'maximum';
   }
   
@@ -46,7 +61,22 @@ const safelyValidateDatePreset = (datePreset: string): ValidMetaDatePreset => {
   // Block all variations of 28-day presets
   if (datePreset.includes('28d') || 
       datePreset.includes('28day')) {
-    console.warn(`[INSIGHTS HOOK] Blocking problematic date preset "${datePreset}", using maximum instead`);
+    console.warn(`[INSIGHTS HOOK] ✓ Blocking problematic date preset "${datePreset}", using maximum instead`);
+    
+    // Log this blocking for debugging
+    try {
+      const blocked = JSON.parse(localStorage.getItem('date_preset_blocks') || '[]');
+      blocked.push({
+        timestamp: new Date().toISOString(),
+        original: datePreset,
+        replacedWith: 'maximum',
+        location: 'safelyValidateDatePreset'
+      });
+      localStorage.setItem('date_preset_blocks', JSON.stringify(blocked.slice(-30)));
+    } catch (e) {
+      // Ignore storage errors
+    }
+    
     return 'maximum';
   }
   

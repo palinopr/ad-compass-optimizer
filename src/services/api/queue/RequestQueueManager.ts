@@ -9,14 +9,30 @@ export class RequestQueueManager {
   private static requestInterval = 500;
   private static lastRequestTime = 0;
   private static permanentlyFailedRequests = new Set<string>();
+  private static readonly PERMANENT_FAILURES_KEY = 'permanently_failed_requests';
+  private static readonly REQUEST_ERROR_LOG_KEY = 'request_error_log';
 
   /**
    * Add a request to the queue and return a promise that resolves when it's processed
    */
   public static async addToQueue<T>(requestFn: () => Promise<T>, requestId?: string): Promise<T> {
     // If this request previously failed with 400, reject immediately - don't even queue it
-    if (requestId && this.permanentlyFailedRequests.has(requestId)) {
-      console.log(`[REQUEST QUEUE] Immediately rejected request due to previous 400 failure: ${requestId}`);
+    if (requestId && this.isPermanentlyFailed(requestId)) {
+      console.log(`[REQUEST QUEUE] ✓ Immediately rejected request due to previous 400 failure: ${requestId}`);
+      
+      // Log that we skipped this request to ensure we can verify
+      try {
+        const skippedRequests = JSON.parse(localStorage.getItem('skipped_requests_log') || '[]');
+        skippedRequests.push({
+          timestamp: new Date().toISOString(),
+          requestId,
+          reason: 'previous_400_failure'
+        });
+        localStorage.setItem('skipped_requests_log', JSON.stringify(skippedRequests.slice(-50)));
+      } catch (e) {
+        console.error('[REQUEST QUEUE] Error logging skipped request:', e);
+      }
+      
       return Promise.reject({
         message: 'Request previously failed with 400 status',
         status: 400,
@@ -52,9 +68,24 @@ export class RequestQueueManager {
           // If it's a 400 error, mark this request as permanently failed
           if (error.status === 400 || (error.response && error.response.status === 400)) {
             if (requestId) {
+              console.log(`[REQUEST QUEUE] ✓ Marked request as permanently failed due to 400 error: ${requestId}`);
               this.permanentlyFailedRequests.add(requestId);
               this.persistPermanentlyFailedRequests();
-              console.log(`[REQUEST QUEUE] Marked request as permanently failed due to 400 error: ${requestId}`);
+              
+              // Additional logging for 400 errors for diagnostics
+              try {
+                const errorLogs = JSON.parse(localStorage.getItem(this.REQUEST_ERROR_LOG_KEY) || '[]');
+                errorLogs.push({
+                  timestamp: new Date().toISOString(),
+                  requestId,
+                  errorMessage: error.message || 'Unknown error',
+                  status: error.status || (error.response && error.response.status),
+                  objectId: error.objectId || 'unknown'
+                });
+                localStorage.setItem(this.REQUEST_ERROR_LOG_KEY, JSON.stringify(errorLogs.slice(-50)));
+              } catch (e) {
+                console.error('[REQUEST QUEUE] Error logging error details:', e);
+              }
             }
           }
 
@@ -78,11 +109,14 @@ export class RequestQueueManager {
   private static loadPermanentlyFailedRequests() {
     if (this.permanentlyFailedRequests.size === 0) {
       try {
-        const storedFailures = localStorage.getItem('permanently_failed_requests');
+        const storedFailures = localStorage.getItem(this.PERMANENT_FAILURES_KEY);
         if (storedFailures) {
           const failures = JSON.parse(storedFailures);
           failures.forEach((id: string) => this.permanentlyFailedRequests.add(id));
           console.log(`[REQUEST QUEUE] Loaded ${this.permanentlyFailedRequests.size} permanently failed requests from storage`);
+          
+          // Log when we last loaded from storage for diagnostics
+          localStorage.setItem('last_failed_requests_load_time', new Date().toISOString());
         }
       } catch (e) {
         console.error('[REQUEST QUEUE] Error loading permanently failed requests:', e);
@@ -96,8 +130,11 @@ export class RequestQueueManager {
   private static persistPermanentlyFailedRequests() {
     try {
       const failuresArray = Array.from(this.permanentlyFailedRequests);
-      localStorage.setItem('permanently_failed_requests', JSON.stringify(failuresArray));
+      localStorage.setItem(this.PERMANENT_FAILURES_KEY, JSON.stringify(failuresArray));
       console.log(`[REQUEST QUEUE] Persisted ${failuresArray.length} permanently failed requests to storage`);
+      
+      // Update timestamp for when we last persisted
+      localStorage.setItem('last_persistence_time', new Date().toISOString());
     } catch (e) {
       console.error('[REQUEST QUEUE] Error persisting permanently failed requests:', e);
     }
@@ -169,7 +206,7 @@ export class RequestQueueManager {
     this.isProcessingQueue = false;
     this.lastRequestTime = 0;
     this.permanentlyFailedRequests.clear();
-    localStorage.removeItem('permanently_failed_requests');
+    localStorage.removeItem(this.PERMANENT_FAILURES_KEY);
     console.log('[REQUEST QUEUE] Queue and timing reset');
   }
   
@@ -179,16 +216,40 @@ export class RequestQueueManager {
   public static isPermanentlyFailed(requestId: string): boolean {
     // Load from storage if needed
     this.loadPermanentlyFailedRequests();
-    return this.permanentlyFailedRequests.has(requestId);
+    
+    if (this.permanentlyFailedRequests.has(requestId)) {
+      console.log(`[REQUEST QUEUE] ✓ Request ${requestId} is permanently failed`);
+      return true;
+    }
+    
+    // NEW: Check if the requestId contains any object ID that's been marked as failed
+    if (requestId.includes(':')) {
+      const parts = requestId.split(':');
+      if (parts.length >= 2) {
+        const objectId = parts[1]; // Typically the object ID is the second part
+        const objectFailKey = `object-${objectId}-failed`;
+        const nonexistentKey = `object-${objectId}-nonexistent`;
+        
+        if (this.permanentlyFailedRequests.has(objectFailKey) || 
+            this.permanentlyFailedRequests.has(nonexistentKey)) {
+          console.log(`[REQUEST QUEUE] ✓ Request contains failed object ID ${objectId}`);
+          // Also mark this specific request as failed
+          this.markAsPermanentlyFailed(requestId);
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
   
   /**
    * Mark a request as permanently failed
    */
   public static markAsPermanentlyFailed(requestId: string) {
+    console.log(`[REQUEST QUEUE] ✓ Marking request as permanently failed: ${requestId}`);
     this.permanentlyFailedRequests.add(requestId);
     this.persistPermanentlyFailedRequests();
-    console.log(`[REQUEST QUEUE] Marked request as permanently failed: ${requestId}`);
     
     // Cleanup if the set gets too large
     if (this.permanentlyFailedRequests.size > 1000) {
@@ -196,6 +257,20 @@ export class RequestQueueManager {
       const toRemove = entries.slice(0, 200);
       toRemove.forEach(key => this.permanentlyFailedRequests.delete(key));
       this.persistPermanentlyFailedRequests();
+    }
+    
+    // Log this marking action for debugging
+    try {
+      const markedActions = JSON.parse(localStorage.getItem('marked_permanent_failures_log') || '[]');
+      markedActions.push({
+        timestamp: new Date().toISOString(),
+        requestId,
+        action: 'marked_as_permanent_failure',
+        source: 'RequestQueueManager'
+      });
+      localStorage.setItem('marked_permanent_failures_log', JSON.stringify(markedActions.slice(-50)));
+    } catch (e) {
+      // Ignore storage errors
     }
   }
 }

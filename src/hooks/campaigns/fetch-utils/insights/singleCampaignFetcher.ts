@@ -48,7 +48,31 @@ export const fetchCampaignInsights = async (
     
     // Check if this exact request previously failed with 400 - BEFORE any other processing
     if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-      console.log(`[INSIGHTS FETCH] Skipped insights request due to permanent failure (400): ${campaignId} with preset ${validDatePreset}`);
+      console.log(`[INSIGHTS FETCH] ✓ Skipped insights request due to permanent failure (400): ${campaignId} with preset ${validDatePreset}`);
+      
+      // Log this skipped request to verify our fix is working
+      try {
+        const skippedRequests = JSON.parse(localStorage.getItem('singleCampaignFetcher_skipped') || '[]');
+        skippedRequests.push({
+          timestamp: new Date().toISOString(),
+          campaignId,
+          datePreset: validDatePreset,
+          signature: requestSignature
+        });
+        localStorage.setItem('singleCampaignFetcher_skipped', JSON.stringify(skippedRequests.slice(-30)));
+      } catch (e) {
+        // Ignore storage errors
+      }
+      
+      return null;
+    }
+    
+    // NEW: Also check if the campaign ID itself has been marked as a failed object
+    const objectFailureKey = `object-${campaignId}-failed`;
+    const nonexistentKey = `object-${campaignId}-nonexistent`;
+    if (DuplicateRequestChecker.isPermanentlyFailed(objectFailureKey) || 
+        DuplicateRequestChecker.isPermanentlyFailed(nonexistentKey)) {
+      console.log(`[INSIGHTS FETCH] ✓ Skipped insights for previously failed campaign object: ${campaignId}`);
       return null;
     }
     
@@ -105,8 +129,21 @@ export const fetchCampaignInsights = async (
       
       // Mark as permanently failed if it's a 400 error
       if (response.status === 400) {
-        console.log(`[INSIGHTS FETCH] Marking request as permanently failed due to 400: ${campaignId} with preset ${validDatePreset}`);
+        console.log(`[INSIGHTS FETCH] ✓ Marking request as permanently failed due to 400: ${campaignId} with preset ${validDatePreset}`);
         DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
+        
+        // ALSO mark the campaign ID itself as permanently failed
+        const objectFailKey = `object-${campaignId}-failed`;
+        DuplicateRequestChecker.markAsPermanentlyFailed(objectFailKey);
+        
+        // Check if this is a "does not exist" error
+        if (errorData.error && errorData.error.message && 
+            (errorData.error.message.includes('does not exist') || 
+             errorData.error.message.includes('not found'))) {
+          console.log(`[INSIGHTS FETCH] ✓ Object ${campaignId} does not exist - marking as permanently nonexistent`);
+          const nonexistentKey = `object-${campaignId}-nonexistent`;
+          DuplicateRequestChecker.markAsPermanentlyFailed(nonexistentKey);
+        }
         
         // Store additional info about this specific 400 error
         try {
@@ -116,6 +153,7 @@ export const fetchCampaignInsights = async (
             campaignId,
             datePreset: validDatePreset,
             requestSignature,
+            objectFailKey,
             error: errorData.error ? {
               code: errorData.error.code,
               message: errorData.error.message
@@ -177,8 +215,26 @@ export const fetchCampaignInsights = async (
         'campaign-insights', 
         { datePreset: datePreset }
       );
-      console.log(`[INSIGHTS FETCH] Marked request as permanently failed due to 400 error: ${campaignId}`);
+      console.log(`[INSIGHTS FETCH] ✓ Marked request as permanently failed due to 400 error: ${campaignId}`);
       DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
+      
+      // ALSO mark the campaign ID as failed
+      const objectFailKey = `object-${campaignId}-failed`;
+      DuplicateRequestChecker.markAsPermanentlyFailed(objectFailKey);
+      
+      // Log the error for debugging
+      try {
+        const catchErrors = JSON.parse(localStorage.getItem('insights_catch_errors') || '[]');
+        catchErrors.push({
+          timestamp: new Date().toISOString(),
+          campaignId,
+          message: (error as any).message || 'Unknown error',
+          status: (error as any).status
+        });
+        localStorage.setItem('insights_catch_errors', JSON.stringify(catchErrors.slice(-20)));
+      } catch (e) {
+        // Ignore storage errors
+      }
     }
     
     InsightsThrottling.checkErrorForRateLimit(error);

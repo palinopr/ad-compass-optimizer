@@ -24,9 +24,9 @@ export class BaseInsightsService extends BaseApiService {
       // Generate a unique request signature to identify this exact request
       const requestSignature = DuplicateRequestChecker.generateRequestSignature(objectId, 'insights', options);
       
-      // Check if this exact request previously failed with 400
+      // Check if this exact request previously failed with 400 - STOP IMMEDIATELY if so
       if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-        console.log(`[INSIGHTS] Skipped insights request due to permanent failure (400): ${objectId}`);
+        console.log(`[INSIGHTS] ✓ Skipped insights request due to permanent failure (400): ${objectId}`);
         // Create an error object with status code for proper handling
         const error = new Error('Request previously failed with 400 status');
         (error as any).status = 400;
@@ -69,8 +69,13 @@ export class BaseInsightsService extends BaseApiService {
         const errorData = await response.json();
         console.error(`[INSIGHTS] 400 Error response:`, errorData);
         
-        // Mark this request signature as permanently failed
+        // MORE AGGRESSIVE: Always mark 400 errors as permanent failures, regardless of error type
+        console.log(`[INSIGHTS] ✓ Marking request as PERMANENTLY FAILED due to 400: ${requestSignature}`);
         DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
+        
+        // Also store object ID as permanently failed to catch similar requests
+        const objectFailSignature = `object-${objectId}-failed`;
+        DuplicateRequestChecker.markAsPermanentlyFailed(objectFailSignature);
         
         // Store this requestSignature in localStorage to persist across sessions
         try {
@@ -79,6 +84,17 @@ export class BaseInsightsService extends BaseApiService {
             failedSignatures.push(requestSignature);
             localStorage.setItem('failed_insights_signatures', JSON.stringify(failedSignatures));
           }
+          
+          // Also log basic info about this 400 error for diagnostics
+          const error400Logs = JSON.parse(localStorage.getItem('insights_400_error_logs') || '[]');
+          error400Logs.push({
+            timestamp: new Date().toISOString(),
+            objectId,
+            errorMessage: errorData.error?.message || 'Unknown 400 error',
+            errorCode: errorData.error?.code,
+            options: JSON.stringify(options)
+          });
+          localStorage.setItem('insights_400_error_logs', JSON.stringify(error400Logs.slice(-30)));
         } catch (e) {
           console.error('[INSIGHTS] Error storing failed signature in localStorage:', e);
         }
@@ -87,6 +103,7 @@ export class BaseInsightsService extends BaseApiService {
         const error = new Error(errorData.error?.message || 'Bad Request');
         (error as any).status = 400;
         (error as any).response = response;
+        (error as any).objectId = objectId;
         throw error;
       }
       
@@ -100,12 +117,27 @@ export class BaseInsightsService extends BaseApiService {
       
       return insights;
     } catch (error) {
-      console.error(`Error fetching insights for object ${objectId}:`, error);
-      
-      // If we get a 400 error, properly handle it
-      if ((error as any).status === 400) {
-        console.log(`[INSIGHTS] Permanently flagging 400 error for object ${objectId}`);
-        // Re-throw but ensure we don't retry
+      // IMPROVED ERROR HANDLING: Special handling for 400 errors and object not found errors
+      if (error instanceof Error) {
+        console.error(`Error fetching insights for object ${objectId}:`, error.message);
+        
+        // Check for "Object does not exist" errors specifically
+        if (error.message.includes('does not exist') || error.message.includes('not found')) {
+          console.log(`[INSIGHTS] ✓ Object ${objectId} does not exist - marking as permanently failed`);
+          const objSignature = `object-${objectId}-nonexistent`;
+          DuplicateRequestChecker.markAsPermanentlyFailed(objSignature);
+          
+          // Also mark the specific request as permanently failed
+          const specificSignature = DuplicateRequestChecker.generateRequestSignature(objectId, 'insights', options);
+          DuplicateRequestChecker.markAsPermanentlyFailed(specificSignature);
+        }
+        
+        // If we get a 400 error, properly handle it and ensure we mark it
+        if ((error as any).status === 400) {
+          console.log(`[INSIGHTS] ✓ Permanently flagging 400 error for object ${objectId}`);
+          const specificSignature = DuplicateRequestChecker.generateRequestSignature(objectId, 'insights', options);
+          DuplicateRequestChecker.markAsPermanentlyFailed(specificSignature);
+        }
       }
       
       InsightsThrottling.checkErrorForRateLimit(error);
