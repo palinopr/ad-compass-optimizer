@@ -137,7 +137,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         defaultDaysAgo.setDate(today.getDate() - 28);
         defaultDaysAgo.setHours(0, 0, 0, 0);
         newRange = { from: defaultDaysAgo, to: today };
-        preset = 'last_28d' as DatePresetOption;
         break;
     }
 
@@ -146,7 +145,8 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     setDateRange(newRange);
     onChange(newRange, validatedPreset);
     
-    if (validatedPreset !== 'custom') {
+    // Check the type correctly to avoid the comparison error
+    if (validatedPreset !== 'custom' && selectedPreset === 'custom') {
       setIsCalendarOpen(false);
     }
   };
