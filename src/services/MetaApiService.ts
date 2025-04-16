@@ -1,75 +1,112 @@
 
-import { RateLimitManager } from './api/rate-limit/RateLimitManager';
-import { MetaConnectionService, ConnectionTestResult } from './api/MetaConnectionService';
-import { MetaUserService } from './api/MetaUserService';
-import { MetaAdAccountService, MetaAdAccount } from './api/MetaAdAccountService';
-import { MetaBusinessService, MetaBusinessManager } from './api/MetaBusinessService';
-import { MetaCampaignService, MetaCampaign } from './api/MetaCampaignService';
+import { Meta } from '@/types/meta';
+import { MetaConnectionService } from './api/MetaConnectionService';
 
 export class MetaApiService {
-  public static isMockMode(): boolean {
-    return false;
+  private static BASE_URL = 'https://graph.facebook.com';
+  private static API_VERSION = 'v17.0'; // Should match the version in other services
+  
+  static async fetchUserData(token: string): Promise<any> {
+    try {
+      console.log('[MetaApiService] Fetching user data...');
+      
+      // Validate token before making request
+      if (!token || token.length < 20) {
+        console.warn('[MetaApiService] Invalid token format');
+        return { 
+          error: true, 
+          message: 'Invalid token format',
+          isFallback: true
+        };
+      }
+      
+      const response = await fetch(
+        `${this.BASE_URL}/${this.API_VERSION}/me?fields=id,name,email,picture&access_token=${token}`
+      );
+      
+      if (!response.ok) {
+        // Handle 403 gracefully
+        if (response.status === 403) {
+          console.warn('[MetaApiService] 403 Permission denied for /me endpoint');
+          
+          // Store the error for diagnostics
+          try {
+            const errorText = await response.text();
+            localStorage.setItem('last_me_request_error', errorText);
+            console.log('[MetaApiService] Error details:', errorText);
+            
+            // Return fallback user data with error flag
+            return { 
+              id: localStorage.getItem('meta_user_id') || 'unknown',
+              name: localStorage.getItem('meta_user_name') || 'Meta User',
+              error: true, 
+              status: 403,
+              message: 'Permission denied for user profile access',
+              isFallback: true
+            };
+          } catch (parseError) {
+            console.error('[MetaApiService] Error parsing 403 response:', parseError);
+          }
+        }
+        
+        throw new Error(`Failed to fetch user data: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error.message || 'Failed to fetch user data');
+      }
+      
+      // Cache successful user data
+      if (data.id) localStorage.setItem('meta_user_id', data.id);
+      if (data.name) localStorage.setItem('meta_user_name', data.name);
+      
+      return data;
+    } catch (error) {
+      console.error('[MetaApiService] Error fetching user data:', error);
+      
+      // Important: Return fallback user data instead of throwing
+      return {
+        id: localStorage.getItem('meta_user_id') || 'unknown',
+        name: localStorage.getItem('meta_user_name') || 'Meta User',
+        error: true,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        isFallback: true
+      };
+    }
   }
 
-  // Rate limit management methods
-  public static isRateLimited(): boolean {
-    return RateLimitManager.isRateLimited();
+  static async testConnection(token: string): Promise<any> {
+    try {
+      return await MetaConnectionService.testConnection(token);
+    } catch (error) {
+      console.error('[MetaApiService] Error testing connection:', error);
+      throw error;
+    }
   }
-
-  public static getRateLimitTimeRemaining(): number | null {
-    return RateLimitManager.getRateLimitTimeRemaining();
-  }
-
-  public static getRateLimitInfo(): any {
-    return RateLimitManager.getRateLimitInfo();
-  }
-
-  public static clearRateLimit(): void {
-    RateLimitManager.clearRateLimit();
-  }
-
-  public static overrideRateLimit(override: boolean = true): void {
-    RateLimitManager.overrideRateLimit(override);
-  }
-
-  public static isRateLimitOverridden(): boolean {
-    return RateLimitManager.isRateLimitOverridden();
-  }
-
-  // Connection methods
-  public static async testConnection(token: string): Promise<ConnectionTestResult> {
-    return MetaConnectionService.testConnection(token);
-  }
-
-  // User methods
-  public static async fetchUserData(token: string): Promise<any> {
-    return MetaUserService.fetchUserData(token);
-  }
-
-  // Ad Account methods
-  public static async fetchAdAccounts(token: string): Promise<MetaAdAccount[]> {
-    return MetaAdAccountService.fetchAdAccounts(token);
-  }
-
-  public static async fetchAdAccountDetails(token: string, accountId: string): Promise<MetaAdAccount> {
-    return MetaAdAccountService.fetchAdAccountDetails(token, accountId);
-  }
-
-  // Business methods
-  public static async fetchBusinessManagers(token: string): Promise<MetaBusinessManager[]> {
-    return MetaBusinessService.fetchBusinessManagers(token);
-  }
-
-  public static async fetchAdAccountsForBusiness(token: string, businessId: string): Promise<MetaAdAccount[]> {
-    // For now, this simply calls through to the AdAccountService
-    // In a real implementation, we would filter by business ID
-    return MetaAdAccountService.fetchAdAccounts(token);
-  }
-
-  // Campaign methods
-  public static async fetchCampaigns(token: string, adAccountId: string): Promise<MetaCampaign[]> {
-    return MetaCampaignService.fetchCampaigns(token, adAccountId);
+  
+  static async fetchAdAccounts(token: string): Promise<any[]> {
+    try {
+      console.log('[MetaApiService] Fetching ad accounts...');
+      const response = await fetch(
+        `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ad accounts: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error.message || 'Failed to fetch ad accounts');
+      }
+      
+      return data.data || [];
+    } catch (error) {
+      console.error('[MetaApiService] Error fetching ad accounts:', error);
+      throw error;
+    }
   }
 }
-
-RateLimitManager.initRateLimitState();

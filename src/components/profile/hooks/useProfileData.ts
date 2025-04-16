@@ -9,13 +9,15 @@ interface ProfileDataState {
   userData: any | null;
   isLoading: boolean;
   error: string | null;
+  hasFallbackData: boolean;
 }
 
 export function useProfileData() {
   const [state, setState] = useState<ProfileDataState>({
     userData: null,
     isLoading: false,
-    error: null
+    error: null,
+    hasFallbackData: false
   });
   const { toast } = useToast();
   const { isAuthenticated, checkAuth } = useMetaConnection();
@@ -37,7 +39,39 @@ export function useProfileData() {
       setState(prev => ({ ...prev, isLoading: true }));
       try {
         const data = await MetaApiService.fetchUserData(accessToken);
-        setState(prev => ({ ...prev, userData: data, isLoading: false }));
+        
+        // Check if we received fallback data with an error
+        if (data.error || data.isFallback) {
+          console.warn('[ProfileData] Using fallback user data due to API error');
+          
+          // Show a toast notification about the permission issue
+          if (data.status === 403) {
+            toast({
+              title: "Permission Warning",
+              description: "Limited Meta profile access. Some features may be restricted.",
+              variant: "warning",
+              duration: 10000
+            });
+          }
+          
+          setState(prev => ({ 
+            ...prev, 
+            userData: data,
+            isLoading: false,
+            hasFallbackData: true,
+            error: data.message || 'Limited profile access'
+          }));
+          
+          return;
+        }
+        
+        setState(prev => ({ 
+          ...prev, 
+          userData: data, 
+          isLoading: false,
+          hasFallbackData: false,
+          error: null
+        }));
       } catch (err) {
         setState(prev => ({ 
           ...prev, 
@@ -61,9 +95,23 @@ export function useProfileData() {
       description: "Your Meta account has been disconnected."
     });
   };
+  
+  const handleRefreshToken = () => {
+    // Clear token to force re-authentication
+    metaAuthService.logout();
+    
+    toast({
+      title: "Token Expired",
+      description: "Please reconnect your Meta account with updated permissions."
+    });
+    
+    // Trigger auth check which will show connection dialog
+    checkAuth();
+  };
 
   return {
     ...state,
-    handleDisconnect
+    handleDisconnect,
+    handleRefreshToken
   };
 }

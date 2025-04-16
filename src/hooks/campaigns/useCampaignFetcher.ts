@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -8,7 +7,8 @@ import { debounce } from 'lodash';
 import { MetaFunnelService } from '@/services/api/MetaFunnelService';
 import { handleSuccessfulFetch, logFetchDetails, prepareFetchRequest } from './fetch-utils/campaignFetchUtils';
 import { validateAdAccountPermissions } from '@/services/api/meta-accounts/permissionChecker';
-import { metaAuthService } from '@/services/MetaAuthService'; // Added the missing import
+import { metaAuthService } from '@/services/MetaAuthService';
+import { TokenFormatDebugger } from '@/utils/debugging/tokenFormatDebugger';
 
 export function useCampaignFetcher() {
   const { error, errorDetails, handleError, clearErrors } = useErrorHandler();
@@ -32,6 +32,9 @@ export function useCampaignFetcher() {
     forceRefresh: boolean = false
   ) => {
     console.log('[CAMPAIGNS DEBUG] Starting campaign fetch...');
+
+    // Log token format for debugging comparison with /me endpoint
+    TokenFormatDebugger.logInsightsToken(token);
 
     if (!canFetch() && !forceRefresh) {
       console.log('[CAMPAIGNS DEBUG] Fetch already in progress or cooling down');

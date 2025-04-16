@@ -48,13 +48,25 @@ export class MetaConnectionService extends BaseApiService {
       console.log(`Testing connection with token: ${token.substring(0, 4)}... (${token.length} chars)`);
       
       // First try a basic validation request to check if the token is valid at all
+      console.log('[META CONNECTION] Making /me request to validate token');
       const response = await fetch(
         `${this.BASE_URL}/${this.API_VERSION}/me?access_token=${token}`
       );
       
+      // Store the token format for comparison debugging
+      localStorage.setItem('last_token_format', JSON.stringify({
+        length: token.length,
+        prefix: token.substring(0, 4),
+        suffix: token.substring(token.length - 4),
+        timestamp: new Date().toISOString()
+      }));
+      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Meta API Connection Test Failed:', errorText);
+        console.error('Meta API Connection Test Failed on /me endpoint:', errorText);
+        
+        // Store the error response for diagnostics
+        localStorage.setItem('last_me_request_error', errorText);
         
         let errorMessage = `Connection failed: ${response.status}`;
         let errorDetails = errorText;
@@ -74,6 +86,36 @@ export class MetaConnectionService extends BaseApiService {
           }
         } catch (e) {
           // If parsing fails, use the raw error text
+        }
+        
+        // Special handling for 403 errors - try ad account access instead
+        if (response.status === 403) {
+          console.log('[META CONNECTION] Got 403 on /me, trying ad accounts as fallback...');
+          
+          try {
+            const adAccountsResponse = await fetch(
+              `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status&limit=1&access_token=${token}`
+            );
+            
+            const adAccountsData = await adAccountsResponse.json();
+            console.log('[META CONNECTION] Ad accounts test response:', adAccountsData);
+            
+            if (!adAccountsData.error && adAccountsData.data && adAccountsData.data.length > 0) {
+              console.log('[META CONNECTION] Ad access OK but /me failed - proceeding with limited user data');
+              
+              // We can still use this token for ads but not for user data
+              return {
+                success: true,
+                permissionsWarning: 'Token has ad account access but limited profile permissions. Some profile features will be restricted.',
+                userId: 'restricted',
+                userName: 'Meta User',
+                hasAdAccess: true,
+                limitedProfile: true
+              };
+            }
+          } catch (adError) {
+            console.error('[META CONNECTION] Error checking ad account access:', adError);
+          }
         }
         
         // Provide more helpful guidance based on status code
