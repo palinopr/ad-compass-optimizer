@@ -45,11 +45,15 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
   const campaignName = campaign.name || "Unnamed Campaign";
   const campaignId = campaign.id || 'unknown-id';
   const campaignStatus = campaign.status || 'unknown';
-  
-  const hasInsights = campaign.insights && Object.keys(campaign.insights).length > 0;
-  const hasValidMetrics = hasInsights || campaign.budget || campaign.daily_budget || campaign.lifetime_budget;
 
-  // Always render the row regardless of data completeness
+  // Always render a fallback div to ensure visibility
+  return (
+    <div style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
+      ✅ Campaign: {campaignName} ({campaignId})
+    </div>
+  );
+
+  /* Original table row rendering code is commented out for now
   return (
     <TableRow className={isBlocked ? 'opacity-75' : ''}>
       <TableCell>
@@ -100,6 +104,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = (props: CampaignTableR
       </TableCell>
     </TableRow>
   );
+  */
 };
 
 export default CampaignTableRow;

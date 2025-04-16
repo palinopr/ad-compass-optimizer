@@ -1,3 +1,4 @@
+
 import { toast } from '@/hooks/use-toast';
 import { CampaignQueryBuilder } from '../campaign/fetching/campaignQueryBuilder';
 
@@ -30,6 +31,14 @@ export class FunnelDateService {
       return mapping[preset];
     }
     
+    // Always display a warning toast when falling back
+    toast({
+      title: "Date preset warning",
+      description: `Invalid preset '${preset}', using default 'last_30d'`,
+      duration: 5000,
+      variant: "warning"
+    });
+    
     // Default to last_30d
     console.warn(`[META FUNNEL] Invalid preset '${preset}', using default 'last_30d'`);
     return 'last_30d';
@@ -45,11 +54,16 @@ export class FunnelDateService {
   }
 
   static getDatePresetFromQuery(): string {
-    const queryWithDatePreset = CampaignQueryBuilder.buildCampaignQuery();
-    const extractedDatePreset = queryWithDatePreset.match(/date_preset\(([^)]+)\)/)?.[1] || 'unknown';
-    
-    console.log(`[FUNNEL] Using date preset: ${extractedDatePreset}`);
-    return extractedDatePreset;
+    try {
+      const queryWithDatePreset = CampaignQueryBuilder.buildCampaignQuery();
+      const extractedDatePreset = queryWithDatePreset.match(/date_preset\(([^)]+)\)/)?.[1] || 'last_30d';
+      
+      console.log(`[FUNNEL] Using date preset: ${extractedDatePreset}`);
+      return extractedDatePreset;
+    } catch (error) {
+      console.error('[FUNNEL] Error getting date preset from query:', error);
+      return 'last_30d'; // Failsafe default
+    }
   }
 
   static notifyUserOfVersion(version: string, datePreset: string): void {

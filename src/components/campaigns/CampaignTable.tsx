@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { CardContent } from '@/components/ui/card';
 import { 
@@ -43,50 +42,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
     }
   }, [campaigns]);
 
-  // Show Meta permissions error message
-  if (metaPermissionsInvalid) {
-    return (
-      <CardContent className="p-4">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Meta Permissions Error</AlertTitle>
-          <AlertDescription>
-            ❌ Unable to load campaigns: Missing Meta permissions for insights access.
-            Please reconnect your Meta account or request access.
-          </AlertDescription>
-        </Alert>
-        {campaigns && campaigns.length > 0 && (
-          <div className="mt-4">
-            <h4 className="text-sm font-medium mb-2">Available Campaign Names:</h4>
-            <ul className="list-disc pl-5 text-sm text-muted-foreground">
-              {campaigns.slice(0, 10).map(campaign => (
-                <li key={campaign.id}>{campaign.name}</li>
-              ))}
-              {campaigns.length > 10 && <li>...and {campaigns.length - 10} more</li>}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    );
-  }
-
-  // Show unauthorized error message
-  if (campaignsFetchStatus === 'unauthorized') {
-    return (
-      <CardContent className="p-4">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Permission Error</AlertTitle>
-          <AlertDescription>
-            ⚠️ No permission to view this ad account's campaigns.
-            Please reconnect your Meta account or verify ad account permissions.
-          </AlertDescription>
-        </Alert>
-      </CardContent>
-    );
-  }
-
-  // Make sure we have valid campaign data - enhanced safety checks
+  // Make sure we have valid campaign data
   if (!campaigns) {
     console.error('[CAMPAIGN TABLE] Campaigns is null or undefined');
     return (
@@ -102,43 +58,24 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
     );
   }
   
-  if (!Array.isArray(campaigns)) {
-    console.error('[CAMPAIGN TABLE] Campaigns is not an array:', campaigns);
-    return (
-      <CardContent className="p-4">
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Invalid Data Format</AlertTitle>
-          <AlertDescription>
-            The campaign data is not in the expected format. Please contact support.
-          </AlertDescription>
-        </Alert>
-      </CardContent>
-    );
-  }
-
-  // If we have no campaigns, show a message
-  if (campaigns.length === 0) {
-    return (
-      <CardContent className="p-4">
-        <div className="text-center py-8 text-muted-foreground">
-          No campaigns found. Create a campaign to get started.
-        </div>
-      </CardContent>
-    );
-  }
-
-  // Add debug information
-  console.log(`[CAMPAIGN TABLE] Found ${campaigns.length} campaigns to render`);
-
-  // Always render the table, even if some campaigns are missing insights
+  // Add a visible banner showing the number of campaigns loaded
   return (
     <CardContent className="p-0">
-      <div className="p-4 bg-blue-50 border-b border-blue-100">
-        <p className="text-sm font-medium text-blue-800">
-          Displaying {campaigns.length} campaigns regardless of insights status
-        </p>
+      <div style={{ background: '#fffae6', padding: '10px', fontWeight: 'bold' }}>
+        ✅ Rendering fallback active — Campaigns loaded: {campaigns.length}
       </div>
+      
+      {/* Temporary replacement for the table to force visibility */}
+      <div>
+        {campaigns.map((c, i) => (
+          <div key={i} style={{ padding: '10px', background: '#f9f9f9', marginBottom: '5px' }}>
+            🔍 Render test: {c?.name || 'Unnamed'} — ID: {c?.id || 'No ID'}
+          </div>
+        ))}
+      </div>
+      
+      {/* Original table code is commented out for now */}
+      {/* 
       <Table>
         <TableHeader>
           <TableRow>
@@ -154,13 +91,8 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
         </TableHeader>
         <TableBody>
           {campaigns.map((campaign) => {
-            // Ensure campaign has an ID to use as a key
             const key = campaign.id || Math.random().toString(36);
-            
-            // Force rendering of all campaigns regardless of status or insights
             console.log(`✅ [RENDER] Campaign row: ${campaign.name} (${campaign.id})`);
-            
-            // Always render every campaign
             return (
               <CampaignTableRow 
                 key={key}
@@ -172,6 +104,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
           })}
         </TableBody>
       </Table>
+      */}
     </CardContent>
   );
 };

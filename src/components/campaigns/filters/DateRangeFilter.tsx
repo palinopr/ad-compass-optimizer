@@ -11,11 +11,18 @@ interface DateRangeFilterProps {
 }
 
 const DateRangeFilter = ({ datePreset, onDateRangeChange }: DateRangeFilterProps) => {
-  // Strictly validate the preset
-  const actualPreset = mapToValidDatePreset(datePreset);
+  // Strictly validate the preset with a guaranteed fallback
+  const actualPreset = mapToValidDatePreset(datePreset) || 'last_30d';
   
   useEffect(() => {
     console.log(`[DATE FILTER] Initialized with validated preset: ${actualPreset}`);
+    
+    // Show a toast notification to indicate that date preset is being used
+    toast({
+      title: "Date preset active",
+      description: `Using date preset: ${actualPreset}`,
+      duration: 2000
+    });
   }, [actualPreset]);
 
   // Handle date range changes with validation
@@ -42,10 +49,15 @@ const DateRangeFilter = ({ datePreset, onDateRangeChange }: DateRangeFilterProps
   };
   
   return (
-    <DateRangeSelector 
-      onChange={handleDateRangeChange} 
-      initialPreset={actualPreset as ValidMetaDatePreset}
-    />
+    <>
+      <div style={{ background: '#e6f7ff', padding: '5px', margin: '5px 0', borderRadius: '4px', fontSize: '14px' }}>
+        💡 Date preset in use: {actualPreset}
+      </div>
+      <DateRangeSelector 
+        onChange={handleDateRangeChange} 
+        initialPreset={actualPreset as ValidMetaDatePreset}
+      />
+    </>
   );
 };
 
