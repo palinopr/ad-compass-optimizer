@@ -7,6 +7,7 @@ import { useRateLimitStatus } from './useRateLimitStatus';
 import { useErrorHandling } from './useErrorHandling';
 import { toast } from '@/hooks/use-toast';
 import { isValidMetaDatePreset, mapToValidDatePreset, ValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
+import { CampaignBlockingService } from '@/services/api/insights/core/CampaignBlockingService';
 
 export function useInsightsFetching() {
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
@@ -24,24 +25,10 @@ export function useInsightsFetching() {
     setError(null);
     
     // FIRST CHECK: Verify if this campaign ID is blocked due to 400 errors
-    try {
-      const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
-      if (blockedCampaigns.includes(id)) {
-        console.log(`🚫 Skipped ${id} – insights blocked after 400`);
-        setIsLoading(false);
-        return null;
-      }
-      
-      // Additional check for object-specific failure signature
-      const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
-      const objectFailSignature = `object-${id}-failed`;
-      if (failedSignatures.includes(objectFailSignature)) {
-        console.log(`🚫 Skipped ${id} – insights blocked after 400 (in signatures)`);
-        setIsLoading(false);
-        return null;
-      }
-    } catch (e) {
-      // Ignore storage errors and continue with the request
+    if (CampaignBlockingService.isCampaignBlocked(id)) {
+      console.log(`🚫 Skipped ${id} – insights blocked after 400`);
+      setIsLoading(false);
+      return null;
     }
     
     // First validate date preset
@@ -104,23 +91,7 @@ export function useInsightsFetching() {
       // Special handling for 400 errors - mark campaign as blocked
       if (err.status === 400 || (err.response && err.response.status === 400)) {
         console.log(`[INSIGHTS FETCHING] ✅ Permanently blocking campaign due to 400 error: ${id}`);
-        try {
-          const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
-          if (!blockedCampaigns.includes(id)) {
-            blockedCampaigns.push(id);
-            localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
-          }
-          
-          // Also add to failed signatures
-          const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
-          const objectFailSignature = `object-${id}-failed`;
-          if (!failedSignatures.includes(objectFailSignature)) {
-            failedSignatures.push(objectFailSignature);
-            localStorage.setItem('failed_insights_signatures', JSON.stringify(failedSignatures));
-          }
-        } catch (e) {
-          console.error('[INSIGHTS FETCHING] Error marking campaign as blocked:', e);
-        }
+        CampaignBlockingService.blockCampaign(id);
       }
       
       handleError(err, rateLimitStatus);
