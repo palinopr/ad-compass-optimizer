@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { metaAuthService } from '@/services/MetaAuthService';
+import { validateAdAccountPermissions } from '@/services/api/meta-accounts/permissionChecker';
 
 export const useCampaignListEffects = ({
   isLoading,
@@ -26,9 +27,25 @@ export const useCampaignListEffects = ({
     const campaignsFetched = localStorage.getItem('last_campaign_fetch_completed');
     const hasRecentFetch = campaignsFetched && (Date.now() - new Date(campaignsFetched).getTime() < 60000);
     
-    if (hasAuth && !isLoading && campaigns.length === 0 && !hasRecentFetch) {
-      console.log('[CAMPAIGN LIST] Authenticated but no campaigns or old data, forcing fetch');
-      refetchCampaigns(true);
+    // Validate permissions before triggering fetch
+    if (hasAuth) {
+      try {
+        // Check if token has required permissions
+        validateAdAccountPermissions();
+        
+        // Only fetch if no recent fetch and we have required permissions
+        if (!isLoading && campaigns.length === 0 && !hasRecentFetch) {
+          console.log('[CAMPAIGN LIST] Authenticated but no campaigns or old data, forcing fetch');
+          refetchCampaigns(true);
+        }
+      } catch (error) {
+        console.error('[CAMPAIGN LIST] Permission validation failed:', error);
+        toast({
+          title: "Permission Error",
+          description: error instanceof Error ? error.message : "Missing required permissions for Meta API",
+          variant: "destructive",
+        });
+      }
     }
   }, []);
   

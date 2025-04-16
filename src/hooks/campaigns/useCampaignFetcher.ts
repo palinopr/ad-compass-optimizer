@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { debounce } from 'lodash';
 import { MetaFunnelService } from '@/services/api/MetaFunnelService';
 import { handleSuccessfulFetch, logFetchDetails, prepareFetchRequest } from './fetch-utils/campaignFetchUtils';
+import { validateAdAccountPermissions } from '@/services/api/meta-accounts/permissionChecker';
 
 export function useCampaignFetcher() {
   const { error, errorDetails, handleError, clearErrors } = useErrorHandler();
@@ -44,6 +45,23 @@ export function useCampaignFetcher() {
     clearErrors();
     
     try {
+      // Validate token permissions before making API call
+      try {
+        validateAdAccountPermissions();
+      } catch (permError) {
+        console.error('[CAMPAIGNS DEBUG] Permission validation failed:', permError);
+        const error = permError instanceof Error ? permError.message : 'Missing required permissions';
+        return { 
+          campaigns: [], 
+          error, 
+          errorDetails: { 
+            permissionError: true, 
+            status: 403,
+            message: error
+          } 
+        };
+      }
+
       const { error: prepError } = await prepareFetchRequest(token, adAccountId);
       if (prepError) {
         endFetch();
@@ -86,6 +104,31 @@ export function useCampaignFetcher() {
     } catch (err: any) {
       console.error('[CAMPAIGNS DEBUG] Fetch error:', err);
       logFetchDetails(adAccountId, token, err);
+      
+      // Special handling for 403 errors to provide better error messages
+      if (err.status === 403 || (err.message && err.message.includes('403'))) {
+        console.error('[CAMPAIGNS DEBUG] 403 Permission error detected');
+        
+        // Check token freshness
+        const tokenInfo = metaAuthService.checkTokenFreshness();
+        
+        let errorMessage = 'Access denied: Your token lacks required permissions or has expired.';
+        if (!tokenInfo.isFresh) {
+          errorMessage += ` Token is ${tokenInfo.age} days old and may have expired.`;
+        }
+        
+        return { 
+          campaigns: [], 
+          error: errorMessage, 
+          errorDetails: { 
+            permissionError: true,
+            status: 403,
+            code: err.code || 200,
+            subcode: err.error_subcode,
+            message: err.message || errorMessage
+          } 
+        };
+      }
       
       const { error, errorDetails } = handleError(err, adAccountId);
       handleFetchFailure();
