@@ -6,4 +6,3 @@ export const INSIGHTS_HEADERS = {
   'Accept': 'application/json',
   'Content-Type': 'application/json',
 } as const;
-

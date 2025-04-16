@@ -15,4 +15,3 @@ export const validateCampaignForInsights = (campaignId: string): { isValid: bool
     return { isValid: true }; // Default to allowing fetch on storage error
   }
 };
-
