@@ -23,7 +23,7 @@ export class BaseInsightsService extends BaseApiService {
       console.log(`Fetching insights for object ${objectId}...`);
       this.validateToken(token, 'fetchInsights');
       
-      // First check if this campaign is in the blocked campaigns list
+      // First check if this campaign is in the blocked campaigns list - EARLIEST CHECK POSSIBLE
       try {
         const blockedCampaigns = JSON.parse(localStorage.getItem(this.BLOCKED_CAMPAIGNS_KEY) || '[]');
         if (blockedCampaigns.includes(objectId)) {
@@ -43,6 +43,10 @@ export class BaseInsightsService extends BaseApiService {
       // Check if this exact request previously failed with 400 - STOP IMMEDIATELY if so
       if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
         console.log(`[INSIGHTS] 🚫 Skipped ${objectId} – insights blocked after 400`);
+        
+        // IMPORTANT: Add to the blocked campaigns list for consistency
+        this.addToBlockedCampaigns(objectId);
+        
         // Create an error object with status code for proper handling
         const error = new Error('Request previously failed with 400 status');
         (error as any).status = 400;
@@ -54,6 +58,10 @@ export class BaseInsightsService extends BaseApiService {
       const objectFailSignature = `object-${objectId}-failed`;
       if (DuplicateRequestChecker.isPermanentlyFailed(objectFailSignature)) {
         console.log(`[INSIGHTS] 🚫 Skipped ${objectId} – insights blocked after 400`);
+        
+        // IMPORTANT: Add to the blocked campaigns list for consistency
+        this.addToBlockedCampaigns(objectId);
+        
         const error = new Error(`Campaign ${objectId} is permanently blocked due to previous 400 error`);
         (error as any).status = 400;
         (error as any).skipped = true;
@@ -111,6 +119,12 @@ export class BaseInsightsService extends BaseApiService {
           const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
           if (!failedSignatures.includes(requestSignature)) {
             failedSignatures.push(requestSignature);
+            localStorage.setItem('failed_insights_signatures', JSON.stringify(failedSignatures));
+          }
+          
+          // Also add the object failure key to failed signatures for easier checking
+          if (!failedSignatures.includes(objectFailKey)) {
+            failedSignatures.push(objectFailKey);
             localStorage.setItem('failed_insights_signatures', JSON.stringify(failedSignatures));
           }
           

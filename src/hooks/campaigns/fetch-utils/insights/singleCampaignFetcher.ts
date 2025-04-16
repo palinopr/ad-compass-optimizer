@@ -70,11 +70,24 @@ export const fetchCampaignInsights = async (
           timestamp: new Date().toISOString(),
           campaignId,
           datePreset: validDatePreset,
-          signature: requestSignature
+          signature: requestSignature,
+          reason: 'permanently_failed_signature'
         });
         localStorage.setItem('singleCampaignFetcher_skipped', JSON.stringify(skippedRequests.slice(-30)));
       } catch (e) {
         // Ignore storage errors
+      }
+      
+      // IMPORTANT: Add to permanent blocklist if not already there
+      try {
+        const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
+        if (!blockedCampaigns.includes(campaignId)) {
+          blockedCampaigns.push(campaignId);
+          localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
+          console.log(`[INSIGHTS FETCH] Added to permanently blocked campaigns: ${campaignId}`);
+        }
+      } catch (e) {
+        console.error('[INSIGHTS FETCH] Error adding to blocked campaigns:', e);
       }
       
       return null;
@@ -86,6 +99,19 @@ export const fetchCampaignInsights = async (
     if (DuplicateRequestChecker.isPermanentlyFailed(objectFailureKey) || 
         DuplicateRequestChecker.isPermanentlyFailed(nonexistentKey)) {
       console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – insights blocked after 400`);
+      
+      // IMPORTANT: Add to permanent blocklist if not already there
+      try {
+        const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
+        if (!blockedCampaigns.includes(campaignId)) {
+          blockedCampaigns.push(campaignId);
+          localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
+          console.log(`[INSIGHTS FETCH] Added to permanently blocked campaigns: ${campaignId}`);
+        }
+      } catch (e) {
+        console.error('[INSIGHTS FETCH] Error adding to blocked campaigns:', e);
+      }
+      
       return null;
     }
     
@@ -108,6 +134,18 @@ export const fetchCampaignInsights = async (
       
       // Mark this signature as permanently failed to prevent future attempts
       DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
+      
+      // IMPORTANT: Add to permanent blocklist
+      try {
+        const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
+        if (!blockedCampaigns.includes(campaignId)) {
+          blockedCampaigns.push(campaignId);
+          localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
+          console.log(`[INSIGHTS FETCH] Added to permanently blocked campaigns: ${campaignId}`);
+        }
+      } catch (e) {
+        console.error('[INSIGHTS FETCH] Error adding to blocked campaigns:', e);
+      }
       
       // Log this critical failure
       try {
@@ -200,6 +238,18 @@ export const fetchCampaignInsights = async (
           
           // Mark as permanently failed for this specific date preset
           DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
+          
+          // Add to the blocked campaigns list for any parameter error too
+          try {
+            const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
+            if (!blockedCampaigns.includes(campaignId)) {
+              blockedCampaigns.push(campaignId);
+              localStorage.setItem(BLOCKED_CAMPAIGNS_KEY, JSON.stringify(blockedCampaigns));
+              console.log(`[INSIGHTS FETCH] Added to permanently blocked campaigns due to parameter error: ${campaignId}`);
+            }
+          } catch (e) {
+            console.error('[INSIGHTS FETCH] Error adding to blocked campaigns:', e);
+          }
           
           // Do NOT try again with a known preset - completely abort instead
           console.log(`[INSIGHTS FETCH] Not retrying - parameter error marked as permanently failed`);

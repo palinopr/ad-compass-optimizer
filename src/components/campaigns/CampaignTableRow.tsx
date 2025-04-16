@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { TableRow, TableCell } from '@/components/ui/table';
-import { MetaCampaign } from '@/services/api/MetaCampaignService';
+import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import CampaignStatusBadge from './table-components/CampaignStatusBadge';
 import CampaignMetrics from './table-components/CampaignMetrics';
 import CampaignActions from './table-components/CampaignActions';
@@ -16,12 +17,43 @@ interface CampaignTableRowProps {
 const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, loadedFromFallback }) => {
   const [isBlocked, setIsBlocked] = React.useState(false);
 
-  // Check if this campaign ID has been marked as permanently failed
+  // Check if this campaign ID has been marked as permanently failed or has insightsStatus='blocked'
   React.useEffect(() => {
+    // Check directly if campaign is already marked with blocked status
+    if (campaign.insightsStatus === 'blocked') {
+      setIsBlocked(true);
+      return;
+    }
+    
+    // Also check if campaign is in the blocked list
+    try {
+      const blockedCampaigns = JSON.parse(localStorage.getItem('permanently_blocked_campaigns') || '[]');
+      if (blockedCampaigns.includes(campaign.id)) {
+        setIsBlocked(true);
+        
+        // Update campaign's insightsStatus for consistency if not already set
+        if (campaign.insightsStatus !== 'blocked') {
+          campaign.insightsStatus = 'blocked';
+          campaign.insights = null;
+        }
+      }
+    } catch (e) {
+      console.error('[CAMPAIGN ROW] Error checking blocked campaigns:', e);
+    }
+    
+    // Secondary check for object-specific failure signatures
     const objectFailSignature = `object-${campaign.id}-failed`;
     const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
-    setIsBlocked(failedSignatures.includes(objectFailSignature));
-  }, [campaign.id]);
+    if (failedSignatures.includes(objectFailSignature)) {
+      setIsBlocked(true);
+      
+      // Update campaign's insightsStatus for consistency if not already set
+      if (campaign.insightsStatus !== 'blocked') {
+        campaign.insightsStatus = 'blocked';
+        campaign.insights = null;
+      }
+    }
+  }, [campaign]);
 
   // Log campaign render state for debugging
   React.useEffect(() => {
@@ -35,6 +67,11 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
     if ((!campaign.insights || Object.keys(campaign.insights).length === 0) && campaign.name && campaign.status) {
       console.log(`[CAMPAIGN ROW] Campaign "${campaign.name}" (${campaign.id}) rendering with metadata only - insights unavailable`);
       
+      // Log if this campaign is blocked
+      if (isBlocked || campaign.insightsStatus === 'blocked') {
+        console.log(`[CAMPAIGN ROW] 🚫 Campaign "${campaign.name}" (${campaign.id}) is blocked from insights fetching`);
+      }
+      
       // Store metadata-only stat for monitoring
       try {
         const metadataOnlyCampaigns = JSON.parse(localStorage.getItem('metadata_only_campaigns') || '[]');
@@ -46,7 +83,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
         console.error('[CAMPAIGN ROW] Error storing metadata-only campaign:', e);
       }
     }
-  }, [campaign]);
+  }, [campaign, isBlocked]);
 
   // Don't render if we don't have basic metadata
   if (!campaign.id || !campaign.name) {
@@ -69,6 +106,16 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
               </TooltipContent>
             </Tooltip>
           )}
+          {isBlocked && (
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <Info size={16} className="text-yellow-500 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Insights Blocked: This campaign's insights cannot be fetched due to API restrictions</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </TableCell>
       <TableCell>
@@ -83,7 +130,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
           results={campaign.results}
           insights={campaign.insights}
           extraStats={campaign.extraStats}
-          isBlocked={isBlocked || !campaign.insights}
+          isBlocked={isBlocked || campaign.insightsStatus === 'blocked'}
         />
       </TableCell>
       <TableCell className="text-right">

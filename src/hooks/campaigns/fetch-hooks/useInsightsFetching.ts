@@ -33,17 +33,26 @@ export const useInsightsFetching = () => {
         
         // Skip permanently blocked campaigns to avoid making unnecessary requests
         const campaignsToProcess = campaigns.filter(campaign => {
-          // Check both the localStorage blocklist and the campaign's insightsStatus
-          const isBlocked = blockedCampaigns.includes(campaign.id) || campaign.insightsStatus === 'blocked';
+          // STRICTER CHECK: First check if the campaign is already marked as blocked
+          if (campaign.insightsStatus === 'blocked') {
+            console.log(`[INSIGHTS] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
+            // Make sure insights is explicitly nulled
+            campaign.insights = null;
+            return false;
+          }
+          
+          // Then check if it's in our blocklist
+          const isBlocked = blockedCampaigns.includes(campaign.id);
           
           if (isBlocked) {
             console.log(`[INSIGHTS] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
-            // Mark campaign as blocked explicitly
+            // Mark campaign as blocked explicitly and null the insights
             campaign.insights = null;
             campaign.insightsStatus = 'blocked';
+            return false;
           }
           
-          return !isBlocked;
+          return true;
         });
         
         console.log(`[INSIGHTS] After filtering blocked campaigns: ${campaignsToProcess.length}/${campaigns.length} will be processed`);

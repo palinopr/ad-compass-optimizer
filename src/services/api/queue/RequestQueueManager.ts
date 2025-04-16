@@ -1,3 +1,4 @@
+
 /**
  * Request Queue Manager
  * Handles sequential processing of API requests with rate limiting
@@ -69,6 +70,9 @@ export class RequestQueueManager {
         const parts = requestId.split(':');
         if (parts.length >= 2) {
           campaignId = parts[1]; // Usually the second part is the object ID
+          
+          // IMPORTANT: Always add to blocked campaigns list to ensure consistency
+          this.addToBlockedCampaigns(campaignId);
         }
       }
       
