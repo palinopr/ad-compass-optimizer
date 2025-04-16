@@ -38,9 +38,9 @@ const EmptyState: React.FC<EmptyStateProps> = ({
             <p>Ad Account: {adAccountId}</p>
           </div>
         )}
-        {errorDetails && errorDetails.code && (
+        {errorDetails && (errorDetails.code || errorDetails.message) && (
           <div className="mt-2 text-xs text-muted-foreground bg-gray-50 p-2 rounded w-full max-w-md">
-            <p>Error code: {errorDetails.code} {errorDetails.subcode ? `(${errorDetails.subcode})` : ''}</p>
+            {errorDetails.code && <p>Error code: {errorDetails.code} {errorDetails.subcode ? `(${errorDetails.subcode})` : ''}</p>}
             {errorDetails.message && <p className="mt-1">{errorDetails.message}</p>}
             
             {/* Debug information for troubleshooting */}

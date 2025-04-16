@@ -23,35 +23,39 @@ interface CampaignTableProps {
 const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'active', campaignsFetchStatus }) => {
   // Log render information to help debug
   useEffect(() => {
-    console.log(`[CAMPAIGN TABLE] Rendering with ${campaigns.length} campaigns`, 
-      campaigns.length > 0 ? { 
+    console.log(`[CAMPAIGN TABLE] Rendering with ${campaigns?.length || 0} campaigns`, 
+      campaigns && campaigns.length > 0 ? { 
         firstCampaign: {
-          id: campaigns[0].id,
-          name: campaigns[0].name,
-          hasInsights: !!campaigns[0].insights,
-          insightKeys: campaigns[0].insights ? Object.keys(campaigns[0].insights) : [],
-          insightsStatus: campaigns[0].insightsStatus || 'unknown'
+          id: campaigns[0]?.id || 'missing-id',
+          name: campaigns[0]?.name || 'unnamed',
+          hasInsights: !!campaigns[0]?.insights,
+          insightKeys: campaigns[0]?.insights ? Object.keys(campaigns[0].insights) : [],
+          insightsStatus: campaigns[0]?.insightsStatus || 'unknown'
         }
-      } : {}
+      } : { campaigns: 'empty or null' }
     );
     
     // Add debug log to show all campaigns and their block status
-    console.log("🧾 Campaigns at render:", campaigns.map(c => ({
-      id: c.id,
-      name: c.name,
-      insightsStatus: c.insightsStatus || 'unknown'
-    })));
-    
-    // Check and log if any campaigns are missing insights
-    const missingInsights = campaigns.filter(c => !c.insights || Object.keys(c.insights).length === 0);
-    if (missingInsights.length > 0) {
-      console.log(`[CAMPAIGN TABLE] ${missingInsights.length}/${campaigns.length} campaigns are missing insights data`);
-    }
-    
-    // Check for blocked campaigns
-    const blockedCampaigns = campaigns.filter(c => c.insightsStatus === 'blocked');
-    if (blockedCampaigns.length > 0) {
-      console.log(`[CAMPAIGN TABLE] ${blockedCampaigns.length}/${campaigns.length} campaigns are blocked after 400 errors`);
+    if (campaigns && campaigns.length > 0) {
+      console.log("🧾 Campaigns at render:", campaigns.map(c => ({
+        id: c.id,
+        name: c.name,
+        insightsStatus: c.insightsStatus || 'unknown'
+      })));
+      
+      // Check and log if any campaigns are missing insights
+      const missingInsights = campaigns.filter(c => !c.insights || Object.keys(c.insights).length === 0);
+      if (missingInsights.length > 0) {
+        console.log(`[CAMPAIGN TABLE] ${missingInsights.length}/${campaigns.length} campaigns are missing insights data`);
+      }
+      
+      // Check for blocked campaigns
+      const blockedCampaigns = campaigns.filter(c => c.insightsStatus === 'blocked');
+      if (blockedCampaigns.length > 0) {
+        console.log(`[CAMPAIGN TABLE] ${blockedCampaigns.length}/${campaigns.length} campaigns are blocked after 400 errors`);
+      }
+    } else {
+      console.log('[CAMPAIGN TABLE] No campaigns to render');
     }
     
     // Log permission status
@@ -70,7 +74,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
             Please reconnect your Meta account or request access.
           </AlertDescription>
         </Alert>
-        {campaigns.length > 0 && (
+        {campaigns && campaigns.length > 0 && (
           <div className="mt-4">
             <h4 className="text-sm font-medium mb-2">Available Campaign Names:</h4>
             <ul className="list-disc pl-5 text-sm text-muted-foreground">

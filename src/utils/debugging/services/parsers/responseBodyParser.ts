@@ -1,6 +1,12 @@
 
 export const parseResponseBody = async (response: Response): Promise<{ text: string; error: any }> => {
   try {
+    // Check if response is valid
+    if (!response) {
+      console.error('[RESPONSE PARSER] Invalid or undefined response object');
+      return { text: '', error: { message: 'Invalid API response object', code: 'INVALID_RESPONSE' } };
+    }
+
     // Clone the response before reading to avoid "body already read" errors
     const text = await response.clone().text();
     let error = null;

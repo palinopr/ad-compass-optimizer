@@ -40,7 +40,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
 }) => {
   // Debug log to track campaign state
   React.useEffect(() => {
-    console.log(`[CAMPAIGN LIST] Rendering with ${filteredCampaigns.length} campaigns`, {
+    console.log(`[CAMPAIGN LIST] Rendering with ${filteredCampaigns?.length || 0} campaigns`, {
       isLoading,
       hasError: !!error,
       activeTab,
@@ -51,7 +51,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
       selectedAdAccount: localStorage.getItem('selected_ad_account')
     });
     
-    if (filteredCampaigns.length === 0 && !isLoading && !error) {
+    if (filteredCampaigns && filteredCampaigns.length === 0 && !isLoading && !error) {
       console.log('[CAMPAIGN LIST] Empty campaigns array but no loading or error state');
     }
   }, [filteredCampaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted]);
@@ -77,7 +77,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
   
   // Show a clear "No Campaigns" UI when we have no campaigns but fetch completed successfully
-  if (safeFilteredCampaigns.length === 0 && fetchCompleted && !isLoading && !error && !metaPermissionsInvalid) {
+  if ((safeFilteredCampaigns.length === 0 || !safeFilteredCampaigns) && fetchCompleted && !isLoading && !error && !metaPermissionsInvalid) {
     return <NoCampaignsFoundPanel onRefresh={refetchCampaigns} onCreateCampaign={() => {
       // Dispatch an event to show the campaign creation wizard
       window.dispatchEvent(new CustomEvent('show-campaign-creator'));
