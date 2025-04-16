@@ -52,4 +52,3 @@ export interface UseCampaignFetchStateResult {
   insightsFetchStatus: 'pending' | 'success' | 'partial' | 'failed' | null;
   setInsightsFetchStatus: React.Dispatch<React.SetStateAction<'pending' | 'success' | 'partial' | 'failed' | null>>;
 }
-

@@ -228,4 +228,3 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     metaPermissionsInvalid // Expose permissions flag
   };
 }
-

@@ -165,4 +165,3 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
 };
 
 export default CampaignTable;
-

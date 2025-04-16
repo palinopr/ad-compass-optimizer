@@ -56,13 +56,26 @@ export function useCampaignFetcher() {
       } catch (permError) {
         console.error('[CAMPAIGNS DEBUG] Permission validation failed:', permError);
         const error = permError instanceof Error ? permError.message : 'Missing required permissions';
+        
+        // Check if this is the specific Meta permissions error (code 100, subcode 33)
+        const metaPermissionsError = 
+          (permError as any)?.code === 100 && 
+          (permError as any)?.error_subcode === 33;
+          
+        if (metaPermissionsError) {
+          console.warn("🔒 Meta permissions invalid – showing fallback UI");
+          localStorage.setItem('meta_permissions_invalid', 'true');
+        }
+        
         return { 
           campaigns: [], 
           error, 
           errorDetails: { 
             permissionError: true, 
             status: 403,
-            message: error
+            message: error,
+            code: (permError as any)?.code,
+            subcode: (permError as any)?.error_subcode
           } 
         };
       }
@@ -110,6 +123,28 @@ export function useCampaignFetcher() {
     } catch (err: any) {
       console.error('[CAMPAIGNS DEBUG] Fetch error:', err);
       logFetchDetails(adAccountId, token, err);
+      
+      // Check for Meta permissions error (code 100, subcode 33)
+      if (
+        (err?.response?.data?.error?.code === 100 && 
+        err?.response?.data?.error?.error_subcode === 33) ||
+        (err?.code === 100 && err?.error_subcode === 33)
+      ) {
+        console.warn("🔒 Meta permissions invalid – showing fallback UI");
+        localStorage.setItem('meta_permissions_invalid', 'true');
+        
+        return { 
+          campaigns: [], 
+          error: 'Missing Meta Graph API permissions', 
+          errorDetails: { 
+            permissionError: true,
+            status: 403,
+            code: 100,
+            subcode: 33,
+            message: 'Missing permissions for insights access'
+          } 
+        };
+      }
       
       // Special handling for 403 errors to provide better error messages
       if (err.status === 403 || (err.message && err.message.includes('403'))) {

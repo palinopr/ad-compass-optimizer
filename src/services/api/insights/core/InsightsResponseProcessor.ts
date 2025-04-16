@@ -19,6 +19,24 @@ export class InsightsResponseProcessor {
     const errorData = await response.json();
     console.error(`[INSIGHTS] 400 Error response:`, errorData);
     
+    // Check for Meta permissions error (code 100, subcode 33)
+    if (
+      errorData.error?.code === 100 &&
+      errorData.error?.error_subcode === 33
+    ) {
+      console.warn("🔒 Meta permissions invalid – showing fallback UI");
+      localStorage.setItem('meta_permissions_invalid', 'true');
+      
+      // Create an error object with appropriate metadata
+      const error = new Error('Missing Meta Graph API permissions');
+      (error as any).status = 403; // Use 403 to indicate permission issue
+      (error as any).response = response;
+      (error as any).objectId = objectId;
+      (error as any).code = 100;
+      (error as any).error_subcode = 33;
+      throw error;
+    }
+    
     // STRICT BLOCKING: Always mark 400 errors as permanent failures and block the campaign ID
     console.log(`[INSIGHTS] ✅ Permanently blocking campaign due to 400 error: ${objectId}`);
     DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
@@ -52,6 +70,7 @@ export class InsightsResponseProcessor {
           objectId,
           errorMessage: errorData.error?.message || 'Unknown 400 error',
           errorCode: errorData.error?.code,
+          errorSubcode: errorData.error?.error_subcode,
         });
         localStorage.setItem('insights_400_error_logs', JSON.stringify(error400Logs.slice(-30)));
         
@@ -60,7 +79,9 @@ export class InsightsResponseProcessor {
         failures400.push({
           timestamp: new Date().toISOString(),
           campaignId: objectId,
-          error: errorData.error?.message || 'Unknown 400 error'
+          error: errorData.error?.message || 'Unknown 400 error',
+          code: errorData.error?.code,
+          subcode: errorData.error?.error_subcode
         });
         localStorage.setItem('insights_400_failures', JSON.stringify(failures400.slice(-30)));
       } catch (innerError) {
@@ -86,6 +107,16 @@ export class InsightsResponseProcessor {
     objectId: string,
     options: InsightFilterOptions
   ): never {
+    // Check for Meta permissions error (code 100, subcode 33)
+    if (
+      error?.code === 100 && 
+      error?.error_subcode === 33
+    ) {
+      console.warn("🔒 Meta permissions invalid – showing fallback UI");
+      localStorage.setItem('meta_permissions_invalid', 'true');
+      throw error;
+    }
+    
     // ENHANCED ERROR HANDLING: Special handling for 400 errors and object not found errors
     if (error instanceof Error) {
       console.error(`Error fetching insights for object ${objectId}:`, error.message);

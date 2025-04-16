@@ -100,4 +100,3 @@ const CampaignsContent: React.FC<CampaignsContentProps> = ({
 };
 
 export default CampaignsContent;
-
