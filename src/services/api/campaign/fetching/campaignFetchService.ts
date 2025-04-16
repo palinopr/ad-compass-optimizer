@@ -1,5 +1,5 @@
 
-import { MetaCampaign } from '../../types/metaCampaignTypes';
+import { MetaCampaign } from '../../../types/metaCampaignTypes';
 import { CampaignThrottling } from '../../campaign/throttling';
 import { BaseApiService } from '../../BaseApiService';
 import { CampaignProcessor } from './campaignProcessor';

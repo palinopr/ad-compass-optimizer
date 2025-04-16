@@ -1,9 +1,12 @@
 
-import { ErrorHandler } from '../../campaign/error/errorHandler';
-import { ErrorStorage } from '../../campaign/error/errorStorage';
-import { BaseApiService } from '../../BaseApiService';
+import { ErrorHandler } from '../../../error/errorHandler';
+import { ErrorStorage } from '../../../error/errorStorage';
+import { BaseApiService } from '../../../BaseApiService';
 
 export class CampaignApiClient extends BaseApiService {
+  // Define lastResponseHeaders to match the BaseApiService property
+  public static lastResponseHeaders: Record<string, string> = {};
+
   /**
    * Executes a fetch request to the Meta API with proper error handling
    */
