@@ -6,6 +6,7 @@ import { UseCampaignsResult } from '@/hooks/campaigns/types';
 import { LoadingView } from './states/LoadingView';
 import ErrorView from './states/ErrorView';
 import { metaPermissionsInvalid } from '@/hooks/campaigns/useCampaigns';
+import NoCampaignsFoundPanel from './diagnostic-components/NoCampaignsFoundPanel';
 
 interface CampaignListProps {
   isLoading: boolean;
@@ -46,7 +47,8 @@ const CampaignList: React.FC<CampaignListProps> = ({
       status,
       campaignsFetchStatus,
       fetchCompleted,
-      metaPermissionsInvalid
+      metaPermissionsInvalid,
+      selectedAdAccount: localStorage.getItem('selected_ad_account')
     });
     
     if (filteredCampaigns.length === 0 && !isLoading && !error) {
@@ -74,19 +76,12 @@ const CampaignList: React.FC<CampaignListProps> = ({
   // Ensure we have an array of campaigns
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
   
-  // Add a temporary fallback to show something when we have no campaigns but fetch completed
+  // Show a clear "No Campaigns" UI when we have no campaigns but fetch completed successfully
   if (safeFilteredCampaigns.length === 0 && fetchCompleted && !isLoading && !error && !metaPermissionsInvalid) {
-    return (
-      <Card className="overflow-hidden">
-        <div className="p-6 text-center">
-          <p>
-            {campaignsFetchStatus === 'success'
-              ? "No campaigns found for the selected filter."
-              : "No campaigns available. Try creating a new campaign."}
-          </p>
-        </div>
-      </Card>
-    );
+    return <NoCampaignsFoundPanel onRefresh={refetchCampaigns} onCreateCampaign={() => {
+      // Dispatch an event to show the campaign creation wizard
+      window.dispatchEvent(new CustomEvent('show-campaign-creator'));
+    }} />;
   }
 
   // When we have campaigns, show the table

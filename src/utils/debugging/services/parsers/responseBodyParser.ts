@@ -13,6 +13,16 @@ export const parseResponseBody = async (response: Response): Promise<{ text: str
     
     try {
       const data = JSON.parse(text);
+      
+      // Log response structure for debugging
+      console.log('[RESPONSE PARSER] Response structure:', {
+        hasData: !!data,
+        hasDataArray: data && Array.isArray(data.data),
+        dataLength: data && data.data ? data.data.length : 'N/A',
+        hasPaging: !!(data && data.paging),
+        hasError: !!(data && data.error)
+      });
+      
       if (data.error) {
         error = data.error;
         console.error('[RESPONSE PARSER] API error:', error);

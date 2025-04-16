@@ -53,6 +53,9 @@ export function useCampaignFetcher() {
       };
     }
 
+    // Log the account ID being used for fetching
+    console.log(`[CAMPAIGNS DEBUG] Using ad account ID: ${adAccountId}`);
+
     // Log token format for debugging comparison with /me endpoint
     TokenFormatDebugger.logInsightsToken(token);
 
@@ -69,6 +72,11 @@ export function useCampaignFetcher() {
     clearErrors();
     
     try {
+      // Store fetch attempt information
+      localStorage.setItem('campaign_fetch_timestamp', Date.now().toString());
+      localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
+      localStorage.setItem('campaign_fetch_ad_account', adAccountId);
+      
       // Validate token permissions before making API call
       try {
         validateAdAccountPermissions();
@@ -107,13 +115,10 @@ export function useCampaignFetcher() {
 
       logFetchDetails(adAccountId, token);
 
-      // Store attempt timestamp for rate limiting & debugging
-      localStorage.setItem('campaign_fetch_timestamp', Date.now().toString());
-      localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
-      localStorage.setItem('campaign_fetch_ad_account', adAccountId);
-
       // CHANGED: Using maximum instead of last_28d for more reliable data
       try {
+        console.log(`[CAMPAIGNS DEBUG] Fetching campaign data for account ${adAccountId} using "maximum" date preset`);
+        
         const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'maximum');
         
         // Validate the response has campaigns property and it's an array
@@ -153,58 +158,41 @@ export function useCampaignFetcher() {
         return { campaigns, error: null };
       } catch (err: any) {
         console.error('[CAMPAIGNS DEBUG] MetaFunnelService.fetchFunnelData error:', err);
+        
+        // Check for Meta permissions error (code 100, subcode 33)
+        if (
+          (err?.response?.data?.error?.code === 100 && 
+          err?.response?.data?.error?.error_subcode === 33) ||
+          (err?.code === 100 && err?.error_subcode === 33)
+        ) {
+          console.warn("🔒 Meta permissions invalid – showing fallback UI");
+          localStorage.setItem('meta_permissions_invalid', 'true');
+          
+          // Store debugging information
+          localStorage.setItem('meta_permissions_error_detail', JSON.stringify({
+            timestamp: new Date().toISOString(),
+            errorCode: err?.code || err?.response?.data?.error?.code,
+            errorSubcode: err?.error_subcode || err?.response?.data?.error?.error_subcode
+          }));
+          
+          return { 
+            campaigns: [], 
+            error: 'Missing Meta Graph API permissions', 
+            errorDetails: { 
+              permissionError: true,
+              status: 403,
+              code: 100,
+              subcode: 33,
+              message: 'Missing permissions for insights access'
+            } 
+          };
+        }
+        
         throw err; // Let the outer catch handle this
       }
     } catch (err: any) {
       console.error('[CAMPAIGNS DEBUG] Fetch error:', err);
       logFetchDetails(adAccountId, token, err);
-      
-      // Check for Meta permissions error (code 100, subcode 33)
-      if (
-        (err?.response?.data?.error?.code === 100 && 
-        err?.response?.data?.error?.error_subcode === 33) ||
-        (err?.code === 100 && err?.error_subcode === 33)
-      ) {
-        console.warn("🔒 Meta permissions invalid – showing fallback UI");
-        localStorage.setItem('meta_permissions_invalid', 'true');
-        
-        return { 
-          campaigns: [], 
-          error: 'Missing Meta Graph API permissions', 
-          errorDetails: { 
-            permissionError: true,
-            status: 403,
-            code: 100,
-            subcode: 33,
-            message: 'Missing permissions for insights access'
-          } 
-        };
-      }
-      
-      // Special handling for 403 errors to provide better error messages
-      if (err.status === 403 || (err.message && err.message.includes('403'))) {
-        console.error('[CAMPAIGNS DEBUG] 403 Permission error detected');
-        
-        // Check token freshness
-        const tokenInfo = metaAuthService.checkTokenFreshness();
-        
-        let errorMessage = 'Access denied: Your token lacks required permissions or has expired.';
-        if (!tokenInfo.isFresh) {
-          errorMessage += ` Token is ${tokenInfo.age} days old and may have expired.`;
-        }
-        
-        return { 
-          campaigns: [], 
-          error: errorMessage, 
-          errorDetails: { 
-            permissionError: true,
-            status: 403,
-            code: err.code || 200,
-            subcode: err.error_subcode,
-            message: err.message || errorMessage
-          } 
-        };
-      }
       
       // Check for "Cannot read properties of undefined (reading 'data')" error
       if (err.message && (
