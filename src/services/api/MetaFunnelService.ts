@@ -5,13 +5,13 @@ export class MetaFunnelService extends BaseApiService {
   // Valid date presets according to Meta API - strictly enforced from documentation
   private static validDatePresets = [
     'today', 'yesterday', 'this_month', 'last_month', 'this_quarter',
-    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 
+    'lifetime', 'last_3d', 'last_7d', 'last_14d', 'last_30d', 
     'last_90d', 'last_week_mon_sun', 'last_week_sun_sat', 'last_quarter', 
     'last_year', 'this_week_mon_today', 'this_week_sun_today', 'this_year',
     'maximum'
   ];
   
-  private static strictlyValidateDatePreset(preset: string = 'last_28d'): string {
+  private static strictlyValidateDatePreset(preset: string = 'maximum'): string {
     // Direct check against valid presets
     if (this.validDatePresets.includes(preset)) {
       return preset;
@@ -19,8 +19,9 @@ export class MetaFunnelService extends BaseApiService {
     
     // Explicit mapping for legacy values
     const mapping: Record<string, string> = {
-      'last30days': 'last_28d',
-      'last_30d': 'last_28d',
+      'last30days': 'last_30d',
+      'last_28d': 'maximum',
+      'last28d': 'maximum',
       'last7days': 'last_7d'
     };
     
@@ -29,12 +30,12 @@ export class MetaFunnelService extends BaseApiService {
       return mapping[preset];
     }
     
-    // Default to last_28d
-    console.warn(`[META FUNNEL] Invalid preset '${preset}', using default 'last_28d'`);
-    return 'last_28d';
+    // Default to maximum
+    console.warn(`[META FUNNEL] Invalid preset '${preset}', using default 'maximum'`);
+    return 'maximum';
   }
 
-  static async fetchFunnelData(token: string, adAccountId: string, datePreset: string = 'last_28d') {
+  static async fetchFunnelData(token: string, adAccountId: string, datePreset: string = 'maximum') {
     const validDatePreset = this.strictlyValidateDatePreset(datePreset);
     console.log(`[META FUNNEL] Fetching funnel data with validated date preset: ${validDatePreset}`);
     

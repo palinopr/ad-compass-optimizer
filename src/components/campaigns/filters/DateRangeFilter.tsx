@@ -21,9 +21,9 @@ const DateRangeFilter = ({ datePreset, onDateRangeChange }: DateRangeFilterProps
   // Handle date range changes with validation
   const handleDateRangeChange = (range: DateRange, preset: DatePresetOption) => {
     // For custom preset, we still need a valid Meta API preset for the actual API call
-    // We'll use the date range to determine an appropriate preset or default to last_28d
+    // We'll use the date range to determine an appropriate preset or default to maximum
     const validatedPreset = preset === 'custom' 
-      ? 'last_28d' // Default for custom ranges
+      ? 'maximum' // Default for custom ranges
       : preset;
       
     console.log(`[DATE FILTER] Changing date to validated preset: ${validatedPreset} (original: ${preset})`);
