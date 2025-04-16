@@ -18,6 +18,7 @@ const CampaignTableRow: React.FC<CampaignTableRowProps> = ({ campaign, status, l
   const [isBlocked, setIsBlocked] = React.useState(false);
 
   React.useEffect(() => {
+    // Explicitly check for 'blocked' status
     if (campaign.insightsStatus === 'blocked') {
       setIsBlocked(true);
       return;
