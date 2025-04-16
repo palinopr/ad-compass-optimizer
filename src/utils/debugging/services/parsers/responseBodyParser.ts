@@ -28,6 +28,11 @@ export const parseResponseBody = async (response: Response): Promise<{ text: str
         hasPaging: !!(data && data.paging),
         hasError: !!(data && data.error)
       });
+
+      // Check specifically for empty data arrays to help debug insights issues
+      if (data && Array.isArray(data.data) && data.data.length === 0) {
+        console.log('[RESPONSE PARSER] API returned empty data array []');
+      }
       
       if (data.error) {
         error = data.error;
