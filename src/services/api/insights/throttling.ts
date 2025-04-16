@@ -4,8 +4,22 @@ import { toast } from '@/hooks/use-toast';
 
 export class InsightsThrottling {
   private static readonly THROTTLE_STORAGE_KEY = 'meta_insights_throttle';
+  private static lastRequestTimestamps: Map<string, number> = new Map();
 
   public static checkThrottling(accountId: string = 'default'): void {
+    // First enforce the 300ms delay between any insights requests
+    const now = Date.now();
+    const lastRequestTime = this.lastRequestTimestamps.get(accountId) || 0;
+    const timeElapsed = now - lastRequestTime;
+    
+    if (lastRequestTime > 0 && timeElapsed < 300) {
+      const delayNeeded = 300 - timeElapsed;
+      console.log(`[INSIGHTS THROTTLING] Enforcing ${delayNeeded}ms delay between requests for account ${accountId}`);
+      throw new Error(`THROTTLE_DELAY:${delayNeeded}`);
+    }
+    
+    this.lastRequestTimestamps.set(accountId, now);
+    
     // Check if rate limited via RateLimitManager first
     if (RateLimitManager.isRateLimited()) {
       const remainingTime = RateLimitManager.getRateLimitTimeRemaining();
@@ -105,6 +119,36 @@ export class InsightsThrottling {
           console.error('[INSIGHTS] Error parsing usage headers:', e);
         }
       }
+      
+      // Also check HTTP status and response for error indications
+      if (!response.ok) {
+        // Detect specific response codes
+        if (response.status === 400) {
+          console.warn('[INSIGHTS] 400 Bad Request received - possible parameter issue');
+          
+          // Store for debugging
+          try {
+            const clonedResponse = response.clone();
+            clonedResponse.json().then(data => {
+              console.error('[INSIGHTS] Error response body:', data);
+              
+              if (data.error && data.error.message && data.error.message.includes('date_preset')) {
+                console.error('[INSIGHTS] Date preset parameter issue detected');
+              }
+            }).catch(e => {
+              console.error('[INSIGHTS] Could not parse error response body');
+            });
+          } catch (e) {
+            console.error('[INSIGHTS] Error examining response body', e);
+          }
+        }
+        
+        // Apply throttling for 4xx errors as precaution
+        if (response.status >= 400 && response.status < 500) {
+          console.warn(`[INSIGHTS] Received ${response.status} response, applying cautionary throttling`);
+          this.markThrottled('default', 20); // 20-second throttling for client errors
+        }
+      }
     } catch (e) {
       console.error('[INSIGHTS] Error monitoring response headers:', e);
     }
@@ -156,5 +200,13 @@ export class InsightsThrottling {
     } catch (e) {
       console.error('[INSIGHTS] Error checking for rate limiting:', e);
     }
+  }
+  
+  /**
+   * Reset all throttling state
+   */
+  public static resetThrottling(): void {
+    this.lastRequestTimestamps.clear();
+    console.log('[INSIGHTS THROTTLING] Timestamps reset');
   }
 }

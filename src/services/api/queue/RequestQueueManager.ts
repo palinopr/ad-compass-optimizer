@@ -6,7 +6,8 @@
 export class RequestQueueManager {
   private static requestQueue: (() => Promise<any>)[] = [];
   private static isProcessingQueue = false;
-  private static requestInterval = 300; // Default minimum time between requests (ms)
+  private static requestInterval = 300; // Default interval exactly as requested
+  private static lastRequestTime = 0;
 
   /**
    * Add a request to the queue and return a promise that resolves when it's processed
@@ -16,6 +17,18 @@ export class RequestQueueManager {
       const wrappedRequest = async () => {
         try {
           console.log('[REQUEST QUEUE] Processing queued request');
+          
+          // Enforce minimum time since last request
+          const now = Date.now();
+          const timeSinceLastRequest = now - this.lastRequestTime;
+          
+          if (timeSinceLastRequest < this.requestInterval && this.lastRequestTime > 0) {
+            const waitTime = this.requestInterval - timeSinceLastRequest;
+            console.log(`[REQUEST QUEUE] Enforcing ${waitTime}ms delay since last request`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+          
+          this.lastRequestTime = Date.now();
           const result = await requestFn();
           resolve(result);
           return result;
@@ -84,5 +97,22 @@ export class RequestQueueManager {
       this.requestInterval = interval;
       console.log(`[REQUEST QUEUE] Request interval updated to ${interval}ms`);
     }
+  }
+
+  /**
+   * Get the current queue length
+   */
+  public static getQueueLength(): number {
+    return this.requestQueue.length;
+  }
+  
+  /**
+   * Reset the queue and timing
+   */
+  public static reset() {
+    this.requestQueue = [];
+    this.isProcessingQueue = false;
+    this.lastRequestTime = 0;
+    console.log('[REQUEST QUEUE] Queue and timing reset');
   }
 }

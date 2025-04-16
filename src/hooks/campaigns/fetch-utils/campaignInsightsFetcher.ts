@@ -1,16 +1,34 @@
 
 import { toast } from '@/hooks/use-toast';
 import { MetaCampaign, CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
-import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
+import { mapToValidDatePreset, isValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 import { processInsightsData } from './insights/insightsProcessor';
 import { buildInsightsUrl } from './insights/insightsUrlBuilder';
 import { InsightsThrottling } from '@/services/api/insights/throttling';
 import { RequestQueueManager } from '@/services/api/queue/RequestQueueManager';
 
-// Rate limit configuration
-const MIN_REQUEST_INTERVAL = 300; // milliseconds between requests
-const BATCH_SIZE = 3; // Reduced from 5 to 3 campaigns per batch
-const BATCH_INTERVAL = 2500; // milliseconds between batches
+// Rate limit configuration - stricter limits
+const MIN_REQUEST_INTERVAL = 300; // milliseconds between requests, exact 300ms as requested
+const BATCH_SIZE = 2; // Reduced from 3 to 2 campaigns per batch to be more conservative
+const BATCH_INTERVAL = 3000; // Increased from 2500ms to 3000ms between batches
+
+// Additional tracking for duplicate request prevention
+const recentRequests = new Map<string, number>();
+
+/**
+ * Validate date_preset before sending request
+ */
+const validateDatePreset = (datePreset: string): string => {
+  // First ensure we have a valid preset format
+  const validatedPreset = mapToValidDatePreset(datePreset);
+  
+  if (!isValidMetaDatePreset(validatedPreset)) {
+    console.warn(`[INSIGHTS FETCH] Invalid date_preset "${datePreset}" detected, defaulting to last_28d`);
+    return 'last_28d';
+  }
+  
+  return validatedPreset;
+};
 
 /**
  * Fetches detailed insights for a single campaign
@@ -21,8 +39,29 @@ export const fetchCampaignInsights = async (
   datePreset: string = 'last_28d'
 ): Promise<CampaignExtraStats | null> => {
   try {
-    const validDatePreset = mapToValidDatePreset(datePreset);
+    const validDatePreset = validateDatePreset(datePreset);
+    
+    // Check for recent duplicate requests to the same campaign with same preset
+    const requestKey = `${campaignId}-${validDatePreset}`;
+    const now = Date.now();
+    const lastRequestTime = recentRequests.get(requestKey);
+    
+    if (lastRequestTime && (now - lastRequestTime) < 60000) { // 60 second duplicate prevention
+      console.log(`[INSIGHTS FETCH] Duplicate request for campaign ${campaignId} prevented`);
+      return null;
+    }
+    
+    // Log the validated request
     console.log(`[INSIGHTS FETCH] Fetching insights for campaign ${campaignId} with date_preset=${validDatePreset}`);
+    
+    // Record this request
+    recentRequests.set(requestKey, now);
+    
+    // Limit the map size to avoid memory leaks
+    if (recentRequests.size > 100) {
+      const oldestKey = [...recentRequests.keys()][0];
+      recentRequests.delete(oldestKey);
+    }
     
     const selectedAdAccount = localStorage.getItem('selected_ad_account') || 'default';
     InsightsThrottling.checkThrottling(selectedAdAccount);
@@ -42,11 +81,30 @@ export const fetchCampaignInsights = async (
       const errorData = await response.json();
       console.error(`[INSIGHTS FETCH] Error fetching insights for campaign ${campaignId}:`, errorData);
       
+      // Check and log specific error types for better debugging
+      if (errorData.error && errorData.error.code) {
+        console.error(`[INSIGHTS FETCH] Error code: ${errorData.error.code}, Message: ${errorData.error.message}`);
+        
+        // Handle invalid parameter errors specifically
+        if (errorData.error.code === 100 && errorData.error.message.includes('date_preset')) {
+          console.error(`[INSIGHTS FETCH] Invalid date_preset parameter detected`);
+          
+          // If we're already using a fallback, don't retry
+          if (validDatePreset === 'last_28d' || validDatePreset === 'maximum') {
+            return null;
+          }
+          
+          // Try with standard last_28d preset instead
+          console.log(`[INSIGHTS FETCH] Retrying with date_preset=last_28d for campaign ${campaignId}`);
+          return fetchCampaignInsights(campaignId, token, 'last_28d');
+        }
+      }
+      
       InsightsThrottling.checkErrorForRateLimit(errorData);
       
-      if (validDatePreset !== 'maximum') {
-        console.log(`[INSIGHTS FETCH] Retrying with date_preset=maximum for campaign ${campaignId}`);
-        return fetchCampaignInsights(campaignId, token, 'maximum');
+      if (validDatePreset !== 'maximum' && validDatePreset !== 'last_28d') {
+        console.log(`[INSIGHTS FETCH] Retrying with date_preset=last_28d for campaign ${campaignId}`);
+        return fetchCampaignInsights(campaignId, token, 'last_28d');
       }
       return null;
     }
@@ -56,9 +114,9 @@ export const fetchCampaignInsights = async (
     if (!data || !data.data || data.data.length === 0) {
       console.log(`[INSIGHTS FETCH] No insights data available for campaign ${campaignId}`);
       
-      if (validDatePreset !== 'maximum') {
-        console.log(`[INSIGHTS FETCH] Retrying with date_preset=maximum for campaign ${campaignId}`);
-        return fetchCampaignInsights(campaignId, token, 'maximum');
+      if (validDatePreset !== 'maximum' && validDatePreset !== 'last_28d') {
+        console.log(`[INSIGHTS FETCH] Retrying with date_preset=last_28d for campaign ${campaignId}`);
+        return fetchCampaignInsights(campaignId, token, 'last_28d');
       }
       return null;
     }
@@ -101,8 +159,12 @@ export const fetchInsightsForCampaigns = async (
   token: string,
   datePreset: string = 'last_28d'
 ): Promise<MetaCampaign[]> => {
-  const validDatePreset = mapToValidDatePreset(datePreset);
-  console.log(`[INSIGHTS FETCH] Starting controlled insights fetch for ${campaigns.length} campaigns with date_preset=${validDatePreset}`);
+  // Always validate the date preset before proceeding
+  const validDatePreset = validateDatePreset(datePreset);
+  console.log(`[INSIGHTS FETCH] Starting strictly controlled insights fetch for ${campaigns.length} campaigns with date_preset=${validDatePreset}`);
+  
+  // Set the request interval to exactly 300ms as requested
+  RequestQueueManager.setRequestInterval(300);
   
   const processedCampaignIds = new Map<string, boolean>();
   let successCount = 0;
@@ -113,7 +175,7 @@ export const fetchInsightsForCampaigns = async (
     campaignMap.set(campaign.id, campaign);
   });
   
-  // Process in smaller batches
+  // Process in smaller batches with stricter pacing
   for (let i = 0; i < campaignsWithInsights.length; i += BATCH_SIZE) {
     const batch = campaignsWithInsights.slice(i, i + BATCH_SIZE);
     
@@ -158,7 +220,7 @@ export const fetchInsightsForCampaigns = async (
             }
           }
           
-          // Ensure minimum time between requests within a batch
+          // Force minimum time between requests within a batch - exact 300ms as requested
           if (j < batch.length - 1) {
             await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL));
           }
