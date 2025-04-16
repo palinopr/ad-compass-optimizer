@@ -1,3 +1,4 @@
+
 import { CAMPAIGN_FIELDS } from './config/queryFields';
 import { AccountValidator } from './utils/accountValidator';
 
@@ -11,7 +12,7 @@ export class CampaignQueryBuilder {
     'maximum'
   ];
 
-  static buildCampaignQuery(datePreset = 'maximum'): string {
+  static buildCampaignQuery(datePreset = 'last_30d'): string {
     // Map legacy presets to Meta API compatible presets
     let validDatePreset = this.normalizePreset(datePreset);
     
@@ -34,7 +35,7 @@ export class CampaignQueryBuilder {
 
   // Map legacy or invalid presets to valid Meta API presets
   static normalizePreset(datePreset: string): string {
-    if (!datePreset) return 'maximum';
+    if (!datePreset) return 'last_30d';
 
     // Direct matching against valid presets
     if (this.validDatePresets.includes(datePreset)) {
@@ -44,8 +45,8 @@ export class CampaignQueryBuilder {
     // Direct mapping for legacy presets
     const legacyMapping: Record<string, string> = {
       'last30days': 'last_30d',
-      'last_28d': 'maximum',
-      'last28d': 'maximum',
+      'last_28d': 'last_30d',
+      'last28d': 'last_30d',
       'last7days': 'last_7d'
     };
 
@@ -54,15 +55,15 @@ export class CampaignQueryBuilder {
       return legacyMapping[datePreset];
     }
 
-    // Fall back to maximum for unrecognized presets
-    console.warn(`[CAMPAIGN QUERY] Unrecognized date preset: ${datePreset}, using default 'maximum'`);
-    return 'maximum';
+    // Fall back to last_30d for unrecognized presets
+    console.warn(`[CAMPAIGN QUERY] Unrecognized date preset: ${datePreset}, using default 'last_30d'`);
+    return 'last_30d';
   }
 
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.9-strict-date-preset-validation';
+    return '1.0.10-last-30d-preset-validation';
   }
   
   // Adding timestamp to ensure no cache is used

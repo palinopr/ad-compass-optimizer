@@ -1,4 +1,3 @@
-
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { MetaFunnelService } from '@/services/api/MetaFunnelService';
@@ -11,7 +10,7 @@ export const useRefreshLogic = (status?: string) => {
   // Add a flag to prevent duplicate fetches in rapid succession
   const fetchInProgressRef = useRef(false);
   // Track the current date preset
-  const [currentDatePreset, setCurrentDatePreset] = useState<string>('last_28d');
+  const [currentDatePreset, setCurrentDatePreset] = useState<string>('last_30d');
   
   useEffect(() => {
     // Listen for date preset changes

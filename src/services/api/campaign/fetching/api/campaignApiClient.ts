@@ -1,4 +1,3 @@
-
 import { ErrorHandler } from '../../../error/errorHandler';
 import { ErrorStorage } from '../../../error/errorStorage';
 import { BaseApiService } from '@/services/api/BaseApiService';
@@ -36,6 +35,18 @@ export class CampaignApiClient extends BaseApiService {
           throw new Error(`Missing required field '${field}' in Meta API request`);
         }
       });
+
+      // Check for date_preset and ensure it's not using last_28d
+      const datePresetMatch = url.match(/date_preset=([^&]+)/);
+      if (datePresetMatch) {
+        const datePreset = datePresetMatch[1];
+        if (datePreset === 'last_28d') {
+          console.warn('[CAMPAIGN FETCH] Found problematic last_28d date preset in URL, request may fail');
+        }
+      } else if (url.includes('insights')) {
+        // If there's insights in the URL but no date_preset, that might be a problem
+        console.warn('[CAMPAIGN FETCH] URL contains insights but no date_preset parameter found');
+      }
 
       const response = await fetch(url, {
         method: 'GET',
@@ -133,6 +144,7 @@ export class CampaignApiClient extends BaseApiService {
         
         if (emptyObjects > 0) {
           console.warn(`⚠️ Meta API returned ${emptyObjects}/${data.data.length} empty campaign objects. Possible permissions or token issue.`);
+          console.warn(`⚠️ Request URL used: ${redactedForLogging}`);
         }
         
         // Log specific details about the first few campaigns

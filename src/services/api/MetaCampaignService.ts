@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { CampaignFetchService } from './campaign/fetching/campaignFetchService';
 import { MetaCampaign } from './types/metaCampaignTypes';
@@ -6,7 +5,7 @@ import { MetaCampaign } from './types/metaCampaignTypes';
 export type { MetaCampaign };
 
 export class MetaCampaignService extends BaseApiService {
-  public static async fetchCampaigns(token: string, adAccountId: string, datePreset?: string): Promise<MetaCampaign[]> {
+  public static async fetchCampaigns(token: string, adAccountId: string, datePreset: string = 'last_30d'): Promise<MetaCampaign[]> {
     try {
       if (!token) {
         console.error('[META CAMPAIGN] Missing access token');
@@ -18,13 +17,13 @@ export class MetaCampaignService extends BaseApiService {
         return [];
       }
       
-      console.log(`[META CAMPAIGN] Fetching campaigns for account ${adAccountId} with date preset ${datePreset || 'last_28d'}`);
+      console.log(`[META CAMPAIGN] Fetching campaigns for account ${adAccountId} with date preset ${datePreset || 'last_30d'}`);
       
       // Log full request details for debugging
       console.log('[META CAMPAIGN] Full request details:', {
         tokenLength: token ? token.length : 0,
         adAccountId: adAccountId,
-        datePreset: datePreset || 'last_28d',
+        datePreset: datePreset || 'last_30d',
         timestamp: new Date().toISOString()
       });
       
@@ -77,10 +76,10 @@ export class MetaCampaignService extends BaseApiService {
         console.log('[META CAMPAIGN] No campaigns returned from API');
       }
       
-      // If data is empty and datePreset is not already "maximum", try with "maximum" preset
-      if (safeCampaigns.length === 0 && datePreset !== "maximum") {
-        console.log(`[META CAMPAIGN] No campaigns found with ${datePreset}, trying fallback to "maximum"`);
-        return await CampaignFetchService.fetchCampaigns(token, adAccountId, "maximum");
+      // If data is empty and datePreset is not already "last_30d", try with "last_30d" preset
+      if (safeCampaigns.length === 0 && datePreset !== "last_30d") {
+        console.log(`[META CAMPAIGN] No campaigns found with ${datePreset}, trying fallback to "last_30d"`);
+        return await CampaignFetchService.fetchCampaigns(token, adAccountId, "last_30d");
       }
       
       return safeCampaigns;
@@ -100,11 +99,11 @@ export class MetaCampaignService extends BaseApiService {
         console.error('[META CAMPAIGN] Error storing fetch error details:', e);
       }
       
-      // If there's an error and datePreset is not already "maximum", try with "maximum" preset
-      if (datePreset !== "maximum") {
-        console.log(`[META CAMPAIGN] Error with ${datePreset}, trying fallback to "maximum"`);
+      // If there's an error and datePreset is not already "last_30d", try with "last_30d" preset
+      if (datePreset !== "last_30d") {
+        console.log(`[META CAMPAIGN] Error with ${datePreset}, trying fallback to "last_30d"`);
         try {
-          return await CampaignFetchService.fetchCampaigns(token, adAccountId, "maximum");
+          return await CampaignFetchService.fetchCampaigns(token, adAccountId, "last_30d");
         } catch (fallbackError) {
           console.error('[META CAMPAIGN] Fallback also failed:', fallbackError);
         }

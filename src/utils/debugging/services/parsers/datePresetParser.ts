@@ -64,7 +64,7 @@ export const isValidMetaDatePreset = (preset?: string): boolean => {
  * Only returns strictly valid Meta API values
  */
 export const mapToValidDatePreset = (preset?: string): ValidMetaDatePreset => {
-  if (!preset) return 'maximum'; // Default to maximum
+  if (!preset) return 'last_30d'; // Default to last_30d
   
   // If it's already a valid preset, use it
   if (isValidMetaDatePreset(preset)) {
@@ -78,8 +78,8 @@ export const mapToValidDatePreset = (preset?: string): ValidMetaDatePreset => {
   }
   
   if (preset === 'last_28d' || preset === 'last28days' || preset === 'last28d') {
-    console.log(`[DATE PRESET MAPPING] Blocking problematic preset '${preset}', using 'maximum'`);
-    return 'maximum';
+    console.log(`[DATE PRESET MAPPING] Blocking problematic preset '${preset}', using 'last_30d'`);
+    return 'last_30d';
   }
   
   if (preset === 'last7days') {
@@ -88,8 +88,8 @@ export const mapToValidDatePreset = (preset?: string): ValidMetaDatePreset => {
   }
   
   // Default fallback
-  console.warn(`[DATE PRESET MAPPING] Unrecognized preset '${preset}', using default 'maximum'`);
-  return 'maximum';
+  console.warn(`[DATE PRESET MAPPING] Unrecognized preset '${preset}', using default 'last_30d'`);
+  return 'last_30d';
 };
 
 /**

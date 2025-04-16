@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
 import { useErrorHandler } from './fetch-hooks/useErrorHandler';
@@ -114,11 +115,11 @@ export function useCampaignFetcher() {
 
       logFetchDetails(adAccountId, token);
 
-      // CHANGED: Using maximum instead of last_28d for more reliable data
+      // CHANGED: Using last_30d instead of maximum for more reliable data
       try {
-        console.log(`[CAMPAIGNS DEBUG] Fetching campaign data for account ${adAccountId} using "maximum" date preset`);
+        console.log(`[CAMPAIGNS DEBUG] Fetching campaign data for account ${adAccountId} using "last_30d" date preset`);
         
-        const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'maximum');
+        const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'last_30d');
         
         // NEW: Log raw data response
         console.log('[MetaCampaignService] Raw campaigns response from funnel service:', data);
@@ -147,6 +148,7 @@ export function useCampaignFetcher() {
           const emptyCount = campaigns.filter(c => Object.keys(c).length === 0).length;
           if (emptyCount > 0) {
             console.warn(`⚠️ Meta API returned ${emptyCount}/${campaigns.length} empty campaign objects. Possible permissions or token issue.`);
+            console.warn(`⚠️ Fetch request URL may be malformed or invalid date_preset/fields parameters`);
           }
           
           // Log the first campaign to verify structure
@@ -155,7 +157,8 @@ export function useCampaignFetcher() {
               id: campaigns[0]?.id || 'missing-id',
               name: campaigns[0]?.name || 'unnamed',
               hasInsights: !!campaigns[0]?.insights,
-              insights: campaigns[0]?.insights ? Object.keys(campaigns[0].insights) : 'none'
+              insights: campaigns[0]?.insights ? Object.keys(campaigns[0].insights) : 'none',
+              fieldCount: Object.keys(campaigns[0] || {}).length
             });
           }
         }

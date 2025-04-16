@@ -9,7 +9,7 @@ import { CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
 export const fetchCampaignInsightData = async (
   campaignId: string,
   token: string,
-  datePreset: string = 'maximum'
+  datePreset: string = 'last_30d'
 ): Promise<CampaignExtraStats | null> => {
   const validDatePreset = validateDatePreset(datePreset);
   console.log(`[INSIGHTS FETCH] Fetching insights for campaign ${campaignId} with date_preset=${validDatePreset}`);
@@ -42,4 +42,3 @@ export const fetchCampaignInsightData = async (
   const insightsData = data.data[0];
   return processInsightsData(insightsData);
 };
-

@@ -1,4 +1,3 @@
-
 /**
  * Builder for Meta Insights API requests
  */
@@ -22,8 +21,8 @@ export class InsightsRequestBuilder {
     console.log(`[INSIGHTS BUILDER] Validating date preset: "${preset}"`);
     
     if (!preset) {
-      console.warn('[INSIGHTS BUILDER] Empty date preset provided, using maximum');
-      return 'maximum';
+      console.warn('[INSIGHTS BUILDER] Empty date preset provided, using last_30d');
+      return 'last_30d';
     }
     
     // BLOCK ALL VARIATIONS of the last_28d preset
@@ -31,7 +30,7 @@ export class InsightsRequestBuilder {
         preset.includes('28d') || 
         preset.includes('28day') ||
         preset === 'last28d') {
-      console.warn(`[INSIGHTS BUILDER] Blocking known problematic date preset '${preset}', using 'maximum' instead`);
+      console.warn(`[INSIGHTS BUILDER] Blocking known problematic date preset '${preset}', using 'last_30d' instead`);
       
       // Track this replacement for debugging
       try {
@@ -39,7 +38,7 @@ export class InsightsRequestBuilder {
         blockLog.push({
           timestamp: new Date().toISOString(),
           original: preset,
-          replacedWith: 'maximum',
+          replacedWith: 'last_30d',
           location: 'InsightsRequestBuilder.validateDatePreset'
         });
         localStorage.setItem('builder_preset_blocks', JSON.stringify(blockLog.slice(-30)));
@@ -47,7 +46,7 @@ export class InsightsRequestBuilder {
         // Ignore storage errors
       }
       
-      return 'maximum';
+      return 'last_30d';
     }
 
     // Direct check against valid presets
@@ -69,8 +68,8 @@ export class InsightsRequestBuilder {
       return mappedValue;
     }
 
-    // Default to maximum for unrecognized values
-    console.warn(`[INSIGHTS BUILDER] Unrecognized date preset: ${preset}, using default 'maximum'`);
+    // Default to last_30d for unrecognized values
+    console.warn(`[INSIGHTS BUILDER] Unrecognized date preset: ${preset}, using default 'last_30d'`);
     
     // Log this replacement for debugging
     try {
@@ -78,7 +77,7 @@ export class InsightsRequestBuilder {
       unrecognizedLog.push({
         timestamp: new Date().toISOString(),
         unrecognized: preset,
-        replacedWith: 'maximum',
+        replacedWith: 'last_30d',
         location: 'InsightsRequestBuilder.validateDatePreset'
       });
       localStorage.setItem('unrecognized_date_presets', JSON.stringify(unrecognizedLog.slice(-30)));
@@ -86,7 +85,7 @@ export class InsightsRequestBuilder {
       // Ignore storage errors
     }
     
-    return 'maximum';
+    return 'last_30d';
   }
 
   /**
@@ -106,8 +105,8 @@ export class InsightsRequestBuilder {
       
       // Final check for last_28d in case validation somehow failed
       if (validDatePreset === 'last_28d') {
-        console.error(`[INSIGHTS BUILDER] CRITICAL: Validation returned last_28d! Forcing to maximum instead.`);
-        params.append('date_preset', 'maximum');
+        console.error(`[INSIGHTS BUILDER] CRITICAL: Validation returned last_28d! Forcing to last_30d instead.`);
+        params.append('date_preset', 'last_30d');
         
         // Log this critical failure
         try {
@@ -116,7 +115,7 @@ export class InsightsRequestBuilder {
             timestamp: new Date().toISOString(),
             original: originalDatePreset,
             validatedTo: validDatePreset,
-            forcedTo: 'maximum',
+            forcedTo: 'last_30d',
             location: 'InsightsRequestBuilder.buildQueryParams'
           });
           localStorage.setItem('critical_validation_failures', JSON.stringify(criticalFailures.slice(-30)));
@@ -129,9 +128,9 @@ export class InsightsRequestBuilder {
       
       console.log(`[INSIGHTS BUILDER] Using validated date preset: ${validDatePreset} (original: ${originalDatePreset})`);
     } else {
-      // Default to maximum if no time range specified (changed from last_28d)
-      params.append('date_preset', 'maximum');
-      console.log('[INSIGHTS BUILDER] Using default date preset: maximum');
+      // Default to last_30d if no time range specified (changed from last_28d)
+      params.append('date_preset', 'last_30d');
+      console.log('[INSIGHTS BUILDER] Using default date preset: last_30d');
     }
     
     // Add fields parameter
@@ -182,7 +181,7 @@ export class InsightsRequestBuilder {
     if (paramsString.includes('last_28d')) {
       console.error(`[INSIGHTS BUILDER] CRITICAL: last_28d found in final params! Fixing before returning.`);
       params.delete('date_preset');
-      params.append('date_preset', 'maximum');
+      params.append('date_preset', 'last_30d');
       
       // Log this emergency fix
       try {

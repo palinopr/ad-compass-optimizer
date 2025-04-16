@@ -2,7 +2,7 @@
 export const buildInsightsUrl = (
   campaignId: string,
   token: string,
-  datePreset: string = 'maximum', // Changed default from 'maximum' to ensure consistency
+  datePreset: string = 'last_30d', // Changed default from 'maximum' to last_30d
   fields: string = 'actions,cost_per_action_type,website_purchase_roas,impressions,clicks,spend'
 ): string => {
   // Always log what we're trying to build
@@ -10,8 +10,8 @@ export const buildInsightsUrl = (
   
   // Always check that datePreset has a value and is valid
   if (!datePreset) {
-    console.warn('[INSIGHTS URL] Missing date_preset, defaulting to maximum');
-    datePreset = 'maximum';
+    console.warn('[INSIGHTS URL] Missing date_preset, defaulting to last_30d');
+    datePreset = 'last_30d';
   }
   
   // IMPROVED: More aggressive blocks for last_28d with pattern matching
@@ -19,7 +19,7 @@ export const buildInsightsUrl = (
       datePreset.includes('28d') || 
       datePreset.includes('28day') ||
       datePreset === 'last28d') {
-    console.warn(`[INSIGHTS URL] Blocking problematic date_preset "${datePreset}", replacing with "maximum"`);
+    console.warn(`[INSIGHTS URL] Blocking problematic date_preset "${datePreset}", replacing with "last_30d"`);
     
     // Log this blocking for debugging
     try {
@@ -28,7 +28,7 @@ export const buildInsightsUrl = (
         timestamp: new Date().toISOString(),
         campaignId,
         original: datePreset,
-        replacedWith: 'maximum',
+        replacedWith: 'last_30d',
         location: 'insightsUrlBuilder'
       });
       localStorage.setItem('url_blocked_last_28d', JSON.stringify(blockedRequests.slice(-20))); // Keep last 20
@@ -36,7 +36,7 @@ export const buildInsightsUrl = (
       // Ignore storage errors
     }
     
-    datePreset = 'maximum';
+    datePreset = 'last_30d';
   }
   
   // Strict list of Meta-accepted date presets (official API values only)
@@ -50,8 +50,8 @@ export const buildInsightsUrl = (
   
   // Strict validation - only accept exact matches from the validPresets array
   if (!validPresets.includes(datePreset)) {
-    console.error(`[INSIGHTS URL] Invalid date_preset detected: "${datePreset}", using maximum instead`);
-    datePreset = 'maximum';
+    console.error(`[INSIGHTS URL] Invalid date_preset detected: "${datePreset}", using last_30d instead`);
+    datePreset = 'last_30d';
     
     // Track invalid date preset attempts
     try {
