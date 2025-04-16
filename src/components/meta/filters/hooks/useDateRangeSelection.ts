@@ -16,9 +16,9 @@ export function useDateRangeSelection(
     return { from: twentyEightDaysAgo, to: today };
   });
 
-  // Explicitly type the preset parameter as DatePresetOption to include 'custom'
   const handlePresetChange = (preset: DatePresetOption) => {
-    if (preset === 'custom') {
+    // First, check if this is a custom preset selection
+    if (preset === 'custom' as DatePresetOption) {
       setSelectedPreset('custom');
       setIsCalendarOpen(true);
       return;
@@ -84,7 +84,7 @@ export function useDateRangeSelection(
     onChange(newRange, validatedPreset);
     
     const isClosingCalendarNeeded = 
-      (selectedPreset === 'custom') && (preset !== 'custom');
+      (selectedPreset === 'custom') && (preset !== 'custom' as DatePresetOption);
     
     if (isClosingCalendarNeeded) {
       setIsCalendarOpen(false);
