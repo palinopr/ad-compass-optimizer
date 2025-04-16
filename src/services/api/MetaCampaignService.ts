@@ -40,11 +40,14 @@ export class MetaCampaignService extends BaseApiService {
       
       const campaigns = await CampaignFetchService.fetchCampaigns(token, adAccountId, forcedDatePreset);
       
-      // NEW: Log raw campaign data after fetch but before mapping/filtering
-      console.log('[MetaCampaignService] Raw campaigns response:', campaigns);
+      // NEW: Log raw campaign data before any processing
+      console.log('[MetaCampaignService] PIPELINE RAW INPUT - Raw campaigns response:', campaigns);
       
       // IMPORTANT: Ensure we always return an array, even if empty
       const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
+      
+      // NEW: No filtering or transformation - pass ALL campaigns through
+      console.log('[MetaCampaignService] BYPASSING FILTERS - Using all campaigns');
       
       // Log success information
       console.log(`[META CAMPAIGN] Successfully fetched ${safeCampaigns.length} campaigns`);
@@ -57,39 +60,12 @@ export class MetaCampaignService extends BaseApiService {
         }
       });
       
-      if (safeCampaigns.length > 0) {
-        console.log('[META CAMPAIGN] First campaign sample:', {
-          id: safeCampaigns[0]?.id || 'missing',
-          name: safeCampaigns[0]?.name || 'unnamed',
-          status: safeCampaigns[0]?.status || 'unknown',
-          hasInsights: !!safeCampaigns[0]?.insights
-        });
-        
-        // Check if the campaigns are empty objects and warn if so
-        const emptyCount = safeCampaigns.filter(c => Object.keys(c).length === 0).length;
-        if (emptyCount > 0) {
-          console.warn(`⚠️ Meta API returned ${emptyCount}/${safeCampaigns.length} empty campaign objects. Possible permissions or token issue.`);
-          // NEW: Log insights info but avoid referencing non-existent properties
-          console.warn(`⚠️ Check request parameters: date_preset=last_30d was ${safeCampaigns[0]?.insights ? 'included' : 'missing'}`);
-        }
-        
-        // Ensure each campaign has at least basic properties even if API didn't provide them
-        safeCampaigns.forEach(campaign => {
-          if (!campaign.name) campaign.name = `Campaign ${campaign.id}`;
-          if (!campaign.status) campaign.status = 'unknown';
-          
-          // Log each campaign for debugging
-          console.log(`[META CAMPAIGN] Processing campaign: ${campaign.name} (${campaign.id}), status: ${campaign.status}, hasInsights: ${!!campaign.insights}`);
-        });
-      } else {
-        console.log('[META CAMPAIGN] No campaigns returned from API');
-      }
-      
-      // If data is empty and datePreset is not already "last_30d", try with "last_30d" preset
-      if (safeCampaigns.length === 0 && datePreset !== "last_30d") {
-        console.log(`[META CAMPAIGN] No campaigns found with ${datePreset}, trying fallback to "last_30d"`);
-        return await CampaignFetchService.fetchCampaigns(token, adAccountId, "last_30d");
-      }
+      // NEW: Log the final output before returning
+      console.log('[MetaCampaignService] PIPELINE OUTPUT - Returning campaigns:', {
+        count: safeCampaigns.length,
+        hasEmptyObjects: safeCampaigns.some(c => Object.keys(c).length === 0),
+        allHaveIds: safeCampaigns.every(c => !!c.id)
+      });
       
       return safeCampaigns;
     } catch (error) {

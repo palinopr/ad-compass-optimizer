@@ -121,7 +121,8 @@ export function useCampaignFetcher() {
         
         const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'last_30d');
         
-        // NEW: Log raw data response
+        // NEW: Log raw data response before any processing
+        console.log('[RAW API RESPONSE] Complete funnel data:', data);
         console.log('[MetaCampaignService] Raw campaigns response from funnel service:', data);
         
         // Validate the response has campaigns property and it's an array
@@ -133,7 +134,17 @@ export function useCampaignFetcher() {
         }
         
         // Make sure campaigns is an array (even if empty)
-        const campaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
+        let campaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
+        
+        // NEW: Add logging before and after any processing
+        console.log('[CAMPAIGN PIPELINE] Before processing:', {
+          campaignCount: campaigns.length,
+          hasEmptyCampaigns: campaigns.some(c => Object.keys(c).length === 0),
+          firstFew: campaigns.slice(0, 3).map(c => ({ id: c.id, name: c.name }))
+        });
+        
+        // IMPORTANT: Don't filter campaigns - use ALL campaigns as-is
+        console.log('[CAMPAIGN PIPELINE] BYPASSING FILTERS - Using all campaigns');
         
         if (campaigns.length === 0) {
           console.warn('[CAMPAIGNS DEBUG] No campaigns returned from API');
@@ -162,6 +173,13 @@ export function useCampaignFetcher() {
             });
           }
         }
+        
+        // NEW: Final pipeline output log
+        console.log('[CAMPAIGN PIPELINE] Final output - returning campaigns:', {
+          count: campaigns.length,
+          allHaveIds: campaigns.every(c => !!c.id),
+          allHaveNames: campaigns.every(c => !!c.name)
+        });
         
         handleSuccessfulFetch(campaigns, mountedRef, increaseCooldown);
         handleFetchSuccess(false);

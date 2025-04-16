@@ -61,10 +61,13 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
   
   console.log("[UI DEBUG] Campaigns received in CampaignTable:", campaigns);
   
+  // NEW: If campaigns is an empty array, show the warning message
   if (!campaigns.length) {
     return (
       <CardContent className="p-4">
-        <div style={{ padding: "1rem", fontWeight: "bold" }}>⚠️ No campaigns found</div>
+        <div style={{ background: 'orange', padding: '15px', color: 'black', borderRadius: '5px' }}>
+          ⚠ CampaignTable received empty array — check fetcher
+        </div>
       </CardContent>
     );
   }
