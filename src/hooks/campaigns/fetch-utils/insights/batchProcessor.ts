@@ -1,3 +1,4 @@
+
 import { MetaCampaign, CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
 import { RequestQueueManager } from '@/services/api/queue/RequestQueueManager';
 import { toast } from '@/hooks/use-toast';
@@ -147,6 +148,8 @@ export const fetchInsightsForCampaigns = async (
           
           // Update localStorage
           try {
+            // FIX: Load blocked campaigns from localStorage first
+            const blockedCampaigns = JSON.parse(localStorage.getItem('permanently_blocked_campaigns') || '[]');
             if (!blockedCampaigns.includes(campaign.id)) {
               markCampaignAsBlocked(campaign.id);
             }
@@ -175,3 +178,4 @@ export const fetchInsightsForCampaigns = async (
   
   return campaignsWithInsights;
 };
+
