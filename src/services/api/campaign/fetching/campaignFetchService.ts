@@ -1,6 +1,7 @@
+
 import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { CampaignThrottling } from '../../campaign/throttling';
-import { BaseApiService } from '../../../BaseApiService';
+import { BaseApiService } from '@/services/api/BaseApiService';
 import { CampaignProcessor } from './campaignProcessor';
 import { FallbackCampaignLoader } from './fallbackCampaignLoader';
 import { CampaignApiClient } from './api/campaignApiClient';
@@ -26,7 +27,8 @@ export class CampaignFetchService extends BaseApiService {
       }
       console.groupEnd();
       
-      this.validateToken(token, 'fetchCampaigns');
+      // Call validateToken on BaseApiService instead of CampaignFetchService
+      BaseApiService.validateToken(token, 'fetchCampaigns');
       
       // Check for rate limiting
       CampaignThrottling.checkThrottling(adAccountId);
