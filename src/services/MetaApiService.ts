@@ -1,216 +1,51 @@
 
 import { BaseApiService } from './api/BaseApiService';
-import { MetaAdAccount } from './api/MetaAdAccountService';
-import { RateLimitManager } from './api/rate-limit/RateLimitManager';
-import { Meta } from '@/types/meta';
+import { MetaAdAccount, MetaAdAccountService } from './api/MetaAdAccountService';
+import { MetaAdAccountDetailService } from './api/MetaAdAccountDetailService';
+import { MetaRateLimitService } from './api/MetaRateLimitService';
 import { MetaUserService, MetaUserData } from './api/MetaUserService';
+import { MetaConnectionTestService } from './api/MetaConnectionTestService';
+import { MetaBusinessManagerService } from './api/MetaBusinessManagerService';
 
 export class MetaApiService extends BaseApiService {
-  // Rate limit management - forwarding from RateLimitManager
-  public static isRateLimited = RateLimitManager.isRateLimited;
-  public static getRateLimitInfo = RateLimitManager.getRateLimitInfo;
-  public static getRateLimitTimeRemaining = RateLimitManager.getRateLimitTimeRemaining;
-  public static clearRateLimit = RateLimitManager.clearRateLimit;
-  public static overrideRateLimit = RateLimitManager.overrideRateLimit;
-  public static isRateLimitOverridden = RateLimitManager.isRateLimitOverridden;
+  // Rate limit management - forwarded from MetaRateLimitService
+  public static isRateLimited = MetaRateLimitService.isRateLimited;
+  public static getRateLimitInfo = MetaRateLimitService.getRateLimitInfo;
+  public static getRateLimitTimeRemaining = MetaRateLimitService.getRateLimitTimeRemaining;
+  public static clearRateLimit = MetaRateLimitService.clearRateLimit;
+  public static overrideRateLimit = MetaRateLimitService.overrideRateLimit;
+  public static isRateLimitOverridden = MetaRateLimitService.isRateLimitOverridden;
 
   // User data fetch - forwarding from MetaUserService with correct return type
   public static fetchUserData(token: string): Promise<MetaUserData> {
     return MetaUserService.fetchUserData(token);
   }
 
-  public static async testConnection(token: string): Promise<{
-    success: boolean;
-    error?: string;
-    userId?: string;
-    userName?: string;
-    hasAdAccess?: boolean;
-  }> {
-    try {
-      this.validateToken(token, 'testConnection');
-      const response = await fetch(`${this.BASE_URL}/${this.API_VERSION}/me?access_token=${token}`);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const error = errorData?.error || {};
-        console.error('Meta API Connection Test Failed:', {
-          message: error.message || 'Connection test failed',
-          code: error.code,
-          type: error.type,
-          status: response.status
-        });
-        return { success: false, error: error.message || 'Connection test failed' };
-      }
-
-      const data = await response.json();
-      console.log('Meta API Connection Test Successful:', data);
-      return { 
-        success: true,
-        userId: data.id,
-        userName: data.name,
-        hasAdAccess: true
-      };
-    } catch (error: any) {
-      console.error('Error during Meta API connection test:', error);
-      return { success: false, error: error.message || 'An error occurred during the connection test' };
-    }
+  // Connection test - forwarded from MetaConnectionTestService
+  public static testConnection(token: string) {
+    return MetaConnectionTestService.testConnection(token);
   }
 
-  public static async fetchAdAccounts(token: string): Promise<MetaAdAccount[]> {
-    try {
-      this.validateToken(token, 'fetchAdAccounts');
-      
-      // Use GET request with proper fields
-      const url = `${this.BASE_URL}/${this.API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency&access_token=${token}`;
-      
-      console.log('[AD ACCOUNT FETCH] Request URL:', url.replace(token, 'REDACTED'));
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const error = errorData?.error || {};
-        console.error('Meta API Error fetching ad accounts:', {
-          message: error.message || `HTTP error ${response.status}`,
-          code: error.code,
-          type: error.type,
-          status: response.status
-        });
-        throw new Error(error.message || 'Failed to fetch ad accounts');
-      }
-
-      const data = await response.json();
-      const accounts: MetaAdAccount[] = data.data || [];
-
-      console.log('[AD ACCOUNT FETCH] Total accounts fetched:', accounts.length);
-      accounts.forEach((acct, i) => {
-        console.log(`[AD ACCOUNT ${i}]`, acct.id, acct.name);
-      });
-
-      if (accounts.length === 0) {
-        console.warn('[AD ACCOUNT FETCH] ⚠️ No ad accounts returned from Meta API');
-      }
-
-      return accounts;
-    } catch (error: any) {
-      console.error('[AD ACCOUNT FETCH] Error fetching ad accounts:', error);
-      throw error;
-    }
+  // Business managers - forwarded from MetaBusinessManagerService
+  public static fetchBusinessManagers(token: string) {
+    return MetaBusinessManagerService.fetchBusinessManagers(token);
   }
 
-  public static async fetchAdAccountDetails(token: string, accountId: string): Promise<MetaAdAccount> {
-    try {
-      this.validateToken(token, 'fetchAdAccountDetails');
-      
-      // Ensure accountId has act_ prefix
-      const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
-      
-      const url = `${this.BASE_URL}/${this.API_VERSION}/${formattedAccountId}?fields=name,account_id,account_status,currency&access_token=${token}`;
-      
-      console.log('[AD ACCOUNT FETCH] Request URL for details:', url.replace(token, 'REDACTED'));
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const error = errorData?.error || {};
-        console.error(`Meta API Error fetching ad account details for ${accountId}:`, {
-          message: error.message || `HTTP error ${response.status}`,
-          code: error.code,
-          type: error.type,
-          status: response.status
-        });
-        throw new Error(error.message || `Failed to fetch ad account details for ${accountId}`);
-      }
-
-      return await response.json();
-    } catch (error: any) {
-      console.error(`Error fetching ad account details for ${accountId}:`, error);
-      throw error;
-    }
+  public static fetchAdAccountsForBusiness(token: string, businessId: string) {
+    return MetaBusinessManagerService.fetchAdAccountsForBusiness(token, businessId);
   }
 
-  public static async fetchBusinessManagers(token: string): Promise<any[]> {
-    try {
-      this.validateToken(token, 'fetchBusinessManagers');
-      
-      const url = `${this.BASE_URL}/${this.API_VERSION}/me/businesses?access_token=${token}`;
-      
-      console.log('[BUSINESS MANAGERS] Request URL:', url.replace(token, 'REDACTED'));
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const error = errorData?.error || {};
-        console.error('Meta API Error fetching business managers:', {
-          message: error.message || `HTTP error ${response.status}`,
-          code: error.code,
-          type: error.type,
-          status: response.status
-        });
-        throw new Error(error.message || 'Failed to fetch business managers');
-      }
-
-      const data = await response.json();
-      return data.data || [];
-    } catch (error: any) {
-      console.error('[BUSINESS MANAGERS] Error fetching business managers:', error);
-      throw error;
-    }
+  // Ad accounts - forwarded from MetaAdAccountService
+  public static fetchAdAccounts(token: string): Promise<MetaAdAccount[]> {
+    return MetaAdAccountService.fetchAdAccounts(token);
   }
 
-  public static async fetchAdAccountsForBusiness(token: string, businessId: string): Promise<any[]> {
-    try {
-      this.validateToken(token, 'fetchAdAccountsForBusiness');
-      
-      const url = `${this.BASE_URL}/${this.API_VERSION}/${businessId}/client_ad_accounts?fields=name,account_id,account_status,currency&access_token=${token}`;
-      
-      console.log('[AD ACCOUNTS] Business Request URL:', url.replace(token, 'REDACTED'));
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const error = errorData?.error || {};
-        console.error('Meta API Error fetching business ad accounts:', {
-          message: error.message || `HTTP error ${response.status}`,
-          code: error.code,
-          type: error.type,
-          status: response.status
-        });
-        throw new Error(error.message || `Failed to fetch ad accounts for business ${businessId}`);
-      }
-
-      const data = await response.json();
-      return data.data || [];
-    } catch (error: any) {
-      console.error(`[AD ACCOUNTS] Error fetching ad accounts for business ${businessId}:`, error);
-      throw error;
-    }
+  // Ad account details - forwarded from MetaAdAccountDetailService
+  public static fetchAdAccountDetails(token: string, accountId: string): Promise<MetaAdAccount> {
+    return MetaAdAccountDetailService.fetchAdAccountDetails(token, accountId);
   }
 
-  // Change from private to protected to match parent class
+  // Protected method used by the API service
   protected static validateToken(token: string, method: string) {
     if (!token || token.length < 50) {
       console.warn(`[META API ${method}] Invalid token:`, token);
