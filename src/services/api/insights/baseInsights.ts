@@ -1,11 +1,10 @@
-
 /**
  * Base functionality for Meta Insights API
  */
 import { BaseApiService } from '../BaseApiService';
 import { InsightFilterOptions, InsightsResponse } from './types';
 import { InsightsRequestBuilder } from './requestBuilder';
-import { InsightsThrottling } from './throttling';
+import { InsightsThrottling } from './throttling/InsightsThrottling';
 
 export class BaseInsightsService extends BaseApiService {
   /**

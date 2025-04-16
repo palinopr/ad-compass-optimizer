@@ -4,7 +4,7 @@ import { MetaCampaign, CampaignExtraStats } from '@/services/api/types/metaCampa
 import { mapToValidDatePreset, isValidMetaDatePreset } from '@/utils/debugging/services/parsers/datePresetParser';
 import { processInsightsData } from './insights/insightsProcessor';
 import { buildInsightsUrl } from './insights/insightsUrlBuilder';
-import { InsightsThrottling } from '@/services/api/insights/throttling';
+import { InsightsThrottling } from '@/services/api/insights/throttling/InsightsThrottling';
 import { RequestQueueManager } from '@/services/api/queue/RequestQueueManager';
 
 // Rate limit configuration - stricter limits
