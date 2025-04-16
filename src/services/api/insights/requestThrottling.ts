@@ -45,15 +45,21 @@ export class InsightsRequestThrottler {
           const wrappedRequest = () => {
             const requestSignature = `${requestId}-execution`;
             
-            // Check if this request previously failed with 400
+            // Check if this request previously failed with 400 (IMPROVED CHECK)
             if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-              return Promise.reject(new Error('Request skipped due to previous 400 error'));
+              console.log(`[INSIGHTS] Skipped insights request due to permanent failure (400): ${requestId}`);
+              return Promise.reject({
+                message: 'Request skipped due to previous 400 error',
+                status: 400,
+                skipped: true
+              });
             }
             
             // Execute the actual request
             return req().catch(error => {
               // If it's a 400 error, mark this request signature as permanently failed
               if (error.status === 400 || (error.response && error.response.status === 400)) {
+                console.error(`[INSIGHTS] Request failed with 400, marking as permanently failed: ${requestSignature}`);
                 DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
               }
               throw error;

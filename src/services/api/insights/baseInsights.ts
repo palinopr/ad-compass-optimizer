@@ -26,10 +26,18 @@ export class BaseInsightsService extends BaseApiService {
       
       // Check if this exact request previously failed with 400
       if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
+        console.log(`[INSIGHTS] Skipped insights request due to permanent failure (400): ${objectId}`);
         // Create an error object with status code for proper handling
         const error = new Error('Request previously failed with 400 status');
         (error as any).status = 400;
+        (error as any).skipped = true;
         throw error;
+      }
+      
+      // Check for problematic date presets directly in base service and replace them
+      if (options.datePreset === 'last_28d') {
+        console.warn(`[INSIGHTS] Replacing problematic date_preset "last_28d" with "maximum" to avoid 400 errors`);
+        options.datePreset = 'maximum';
       }
       
       InsightsThrottling.checkThrottling();
@@ -64,6 +72,17 @@ export class BaseInsightsService extends BaseApiService {
         // Mark this request signature as permanently failed
         DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
         
+        // Store this requestSignature in localStorage to persist across sessions
+        try {
+          const failedSignatures = JSON.parse(localStorage.getItem('failed_insights_signatures') || '[]');
+          if (!failedSignatures.includes(requestSignature)) {
+            failedSignatures.push(requestSignature);
+            localStorage.setItem('failed_insights_signatures', JSON.stringify(failedSignatures));
+          }
+        } catch (e) {
+          console.error('[INSIGHTS] Error storing failed signature in localStorage:', e);
+        }
+        
         // Create an error object with status code for proper handling
         const error = new Error(errorData.error?.message || 'Bad Request');
         (error as any).status = 400;
@@ -82,6 +101,13 @@ export class BaseInsightsService extends BaseApiService {
       return insights;
     } catch (error) {
       console.error(`Error fetching insights for object ${objectId}:`, error);
+      
+      // If we get a 400 error, properly handle it
+      if ((error as any).status === 400) {
+        console.log(`[INSIGHTS] Permanently flagging 400 error for object ${objectId}`);
+        // Re-throw but ensure we don't retry
+      }
+      
       InsightsThrottling.checkErrorForRateLimit(error);
       throw error;
     }

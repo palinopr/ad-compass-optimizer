@@ -11,10 +11,16 @@ export const validateDatePreset = (datePreset: string): string => {
     'maximum'
   ];
   
+  // Skip problematic presets that have been causing 400 errors
+  if (datePreset === 'last_28d') {
+    console.warn(`[INSIGHTS FETCH] Avoiding problematic date_preset "last_28d", using "maximum" instead`);
+    return 'maximum';
+  }
+  
   // Directly check if the preset is in the valid list
   if (!validPresets.includes(datePreset)) {
-    console.error(`[INSIGHTS FETCH] Invalid date_preset "${datePreset}" detected, defaulting to last_28d`);
-    return 'last_28d';
+    console.error(`[INSIGHTS FETCH] Invalid date_preset "${datePreset}" detected, defaulting to maximum`);
+    return 'maximum';
   }
   
   // Store the validated date_preset for debugging

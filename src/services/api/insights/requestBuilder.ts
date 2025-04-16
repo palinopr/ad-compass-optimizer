@@ -18,17 +18,22 @@ export class InsightsRequestBuilder {
    * Strictly validate and map date presets to ensure only valid values
    */
   private static validateDatePreset(preset: string): string {
-    if (!preset) return 'last_28d';
+    if (!preset) return 'maximum'; // Changed default to 'maximum' which is more reliable
 
     // Direct check against valid presets
     if (this.validDatePresets.includes(preset)) {
+      // Special case - last_28d has caused issues with some accounts
+      if (preset === 'last_28d') {
+        console.warn(`[INSIGHTS] Potentially problematic date preset 'last_28d' detected, using 'maximum' instead`);
+        return 'maximum';
+      }
       return preset;
     }
 
     // Explicit mapping of legacy values to valid Meta API values
     const mapping: Record<string, string> = {
-      'last30days': 'last_28d',
-      'last_30d': 'last_28d', 
+      'last30days': 'maximum', // Changed from last_28d to maximum
+      'last_30d': 'maximum',   // Changed from last_28d to maximum 
       'last7days': 'last_7d'
     };
 
@@ -38,9 +43,9 @@ export class InsightsRequestBuilder {
       return mappedValue;
     }
 
-    // Default to last_28d for unrecognized values
-    console.warn(`[INSIGHTS] Unrecognized date preset: ${preset}, using default 'last_28d'`);
-    return 'last_28d';
+    // Default to maximum for unrecognized values
+    console.warn(`[INSIGHTS] Unrecognized date preset: ${preset}, using default 'maximum'`);
+    return 'maximum';
   }
 
   /**
@@ -56,11 +61,11 @@ export class InsightsRequestBuilder {
       // Validate date preset
       const validDatePreset = this.validateDatePreset(options.datePreset);
       params.append('date_preset', validDatePreset);
-      console.log(`[INSIGHTS] Using validated date preset: ${validDatePreset}`);
+      console.log(`[INSIGHTS] Using validated date preset: ${validDatePreset} (original: ${options.datePreset})`);
     } else {
-      // Default to last_28d if no time range specified
-      params.append('date_preset', 'last_28d');
-      console.log('[INSIGHTS] Using default date preset: last_28d');
+      // Default to maximum if no time range specified (changed from last_28d)
+      params.append('date_preset', 'maximum');
+      console.log('[INSIGHTS] Using default date preset: maximum');
     }
     
     // Add fields parameter

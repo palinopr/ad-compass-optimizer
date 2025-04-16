@@ -13,6 +13,12 @@ export const fetchCampaignInsights = async (
   datePreset: string = 'last_28d'
 ): Promise<CampaignExtraStats | null> => {
   try {
+    // Don't use last_28d anymore, use maximum instead to avoid 400 errors
+    if (datePreset === 'last_28d') {
+      console.warn(`[INSIGHTS FETCH] Avoiding problematic date_preset "last_28d", using "maximum" instead`);
+      datePreset = 'maximum';
+    }
+    
     // Strictly validate the date preset using our new validator
     const validDatePreset = validateDatePreset(datePreset);
     
@@ -71,45 +77,16 @@ export const fetchCampaignInsights = async (
           // Mark as permanently failed for this specific date preset
           DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
           
-          if (validDatePreset === 'last_28d' || validDatePreset === 'maximum') {
-            return null;
-          }
-          
-          // Try again with a known good preset, but don't retry if that was already a 400
-          console.log(`[INSIGHTS FETCH] Retrying with date_preset=last_28d for campaign ${campaignId}`);
-          const fallbackSignature = DuplicateRequestChecker.generateRequestSignature(
-            campaignId, 
-            'campaign-insights', 
-            { datePreset: 'last_28d' }
-          );
-          
-          if (DuplicateRequestChecker.isPermanentlyFailed(fallbackSignature)) {
-            console.log(`[INSIGHTS FETCH] Skipped fallback insights request due to permanent failure (400): ${campaignId}`);
-            return null;
-          }
-          
-          return fetchCampaignInsights(campaignId, token, 'last_28d');
+          // Do NOT try again with a known preset - completely abort instead
+          console.log(`[INSIGHTS FETCH] Not retrying - parameter error marked as permanently failed`);
+          return null;
         }
       }
       
       InsightsThrottling.checkErrorForRateLimit(errorData);
       
-      if (validDatePreset !== 'maximum' && validDatePreset !== 'last_28d') {
-        // Don't retry if we've already marked the fallback as permanently failed
-        const fallbackSignature = DuplicateRequestChecker.generateRequestSignature(
-          campaignId, 
-          'campaign-insights', 
-          { datePreset: 'last_28d' }
-        );
-        
-        if (DuplicateRequestChecker.isPermanentlyFailed(fallbackSignature)) {
-          console.log(`[INSIGHTS FETCH] Skipped fallback insights request due to permanent failure (400): ${campaignId}`);
-          return null;
-        }
-        
-        console.log(`[INSIGHTS FETCH] Retrying with date_preset=last_28d for campaign ${campaignId}`);
-        return fetchCampaignInsights(campaignId, token, 'last_28d');
-      }
+      // Don't retry with any other preset - completely abort
+      console.log(`[INSIGHTS FETCH] Not retrying insights fetch after error`);
       return null;
     }
     
@@ -117,23 +94,7 @@ export const fetchCampaignInsights = async (
     
     if (!data || !data.data || data.data.length === 0) {
       console.log(`[INSIGHTS FETCH] No insights data available for campaign ${campaignId}`);
-      
-      if (validDatePreset !== 'maximum' && validDatePreset !== 'last_28d') {
-        // Don't retry if we've already marked the fallback as permanently failed
-        const fallbackSignature = DuplicateRequestChecker.generateRequestSignature(
-          campaignId, 
-          'campaign-insights', 
-          { datePreset: 'last_28d' }
-        );
-        
-        if (DuplicateRequestChecker.isPermanentlyFailed(fallbackSignature)) {
-          console.log(`[INSIGHTS FETCH] Skipped fallback insights request due to permanent failure (400): ${campaignId}`);
-          return null;
-        }
-        
-        console.log(`[INSIGHTS FETCH] Retrying with date_preset=last_28d for campaign ${campaignId}`);
-        return fetchCampaignInsights(campaignId, token, 'last_28d');
-      }
+      // Don't retry - return null
       return null;
     }
     

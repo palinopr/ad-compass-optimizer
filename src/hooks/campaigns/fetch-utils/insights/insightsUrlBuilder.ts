@@ -2,13 +2,19 @@
 export const buildInsightsUrl = (
   campaignId: string,
   token: string,
-  datePreset: string,
+  datePreset: string = 'maximum',
   fields: string = 'actions,cost_per_action_type,website_purchase_roas,impressions,clicks,spend'
 ): string => {
   // Always check that datePreset has a value and is valid
   if (!datePreset) {
-    console.warn('[INSIGHTS URL] Missing date_preset, defaulting to last_28d');
-    datePreset = 'last_28d';
+    console.warn('[INSIGHTS URL] Missing date_preset, defaulting to maximum');
+    datePreset = 'maximum';
+  }
+  
+  // Force replace last_28d with maximum to avoid 400 errors
+  if (datePreset === 'last_28d') {
+    console.warn('[INSIGHTS URL] Replacing problematic date_preset "last_28d" with "maximum"');
+    datePreset = 'maximum';
   }
   
   // Strict list of Meta-accepted date presets (official API values only)
@@ -22,8 +28,8 @@ export const buildInsightsUrl = (
   
   // Strict validation - only accept exact matches from the validPresets array
   if (!validPresets.includes(datePreset)) {
-    console.error(`[INSIGHTS URL] Invalid date_preset detected: "${datePreset}", using last_28d instead`);
-    datePreset = 'last_28d';
+    console.error(`[INSIGHTS URL] Invalid date_preset detected: "${datePreset}", using maximum instead`);
+    datePreset = 'maximum';
   }
   
   console.log(`[INSIGHTS URL] Using validated date_preset: "${datePreset}" for campaign ${campaignId}`);
