@@ -4,9 +4,10 @@ import { metaAuthService } from '@/services/MetaAuthService';
 import { MetaApiService } from '@/services/MetaApiService';
 import { useToast } from '@/hooks/use-toast';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
+import { MetaUserData } from '@/services/api/MetaUserService';
 
 interface ProfileDataState {
-  userData: any | null;
+  userData: MetaUserData | null;
   isLoading: boolean;
   error: string | null;
   hasFallbackData: boolean;
@@ -41,7 +42,7 @@ export function useProfileData() {
         const data = await MetaApiService.fetchUserData(accessToken);
         
         // Check if we received fallback data with an error
-        if (data.error || data.isFallback) {
+        if ((data.error === true) || data.isFallback === true) {
           console.warn('[ProfileData] Using fallback user data due to API error');
           
           // Show a toast notification about the permission issue

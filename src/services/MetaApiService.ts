@@ -3,7 +3,7 @@ import { BaseApiService } from './api/BaseApiService';
 import { MetaAdAccount } from './api/MetaAdAccountService';
 import { RateLimitManager } from './api/rate-limit/RateLimitManager';
 import { Meta } from '@/types/meta';
-import { MetaUserService } from './api/MetaUserService';
+import { MetaUserService, MetaUserData } from './api/MetaUserService';
 
 export class MetaApiService extends BaseApiService {
   // Rate limit management - forwarding from RateLimitManager
@@ -14,8 +14,10 @@ export class MetaApiService extends BaseApiService {
   public static overrideRateLimit = RateLimitManager.overrideRateLimit;
   public static isRateLimitOverridden = RateLimitManager.isRateLimitOverridden;
 
-  // User data fetch - forwarding from MetaUserService
-  public static fetchUserData = MetaUserService.fetchUserData;
+  // User data fetch - forwarding from MetaUserService with correct return type
+  public static fetchUserData(token: string): Promise<MetaUserData> {
+    return MetaUserService.fetchUserData(token);
+  }
 
   public static async testConnection(token: string): Promise<{
     success: boolean;

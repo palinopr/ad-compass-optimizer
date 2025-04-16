@@ -1,11 +1,22 @@
 
 import { BaseApiService } from './BaseApiService';
 
+// Define return type for user data that accounts for both success and fallback cases
+export interface MetaUserData {
+  name: string;
+  email?: string;
+  picture?: string;
+  isFallback?: boolean;
+  error?: boolean;
+  status?: number;
+  message?: string;
+}
+
 export class MetaUserService extends BaseApiService {
   /**
    * Fetch user data using a Meta access token
    */
-  public static async fetchUserData(token: string) {
+  public static async fetchUserData(token: string): Promise<MetaUserData> {
     try {
       console.log('Fetching Meta user data...');
       this.validateToken(token, 'fetchUserData');
@@ -24,7 +35,7 @@ export class MetaUserService extends BaseApiService {
         picture: data.picture?.data.url
       };
     } catch (error) {
-      return this.handleApiError(error, 'fetchUserData');
+      return this.handleUserApiError(error, 'fetchUserData');
     }
   }
   
@@ -65,8 +76,9 @@ export class MetaUserService extends BaseApiService {
   
   /**
    * Handle API errors and return fallback data
+   * Using a different method name to avoid conflict with parent class
    */
-  private static handleApiError(error: unknown, method: string) {
+  protected static handleUserApiError(error: unknown, method: string): MetaUserData {
     console.error(`[${method}] Error:`, error);
     
     return {
