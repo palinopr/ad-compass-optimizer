@@ -72,13 +72,13 @@ export const mapToValidDatePreset = (preset?: string): ValidMetaDatePreset => {
   }
   
   // Strict mapping for legacy values
-  if (preset === 'last30days' || preset === 'last_30days' || preset === 'last_30d') {
+  if (preset === 'last30days' || preset === 'last_30days') {
     console.log(`[DATE PRESET MAPPING] Mapped legacy preset '${preset}' to 'last_30d'`);
     return 'last_30d';
   }
   
   if (preset === 'last_28d' || preset === 'last28days' || preset === 'last28d') {
-    console.log(`[DATE PRESET MAPPING] Blocking problematic preset '${preset}', using 'last_30d'`);
+    console.log(`[DATE PRESET MAPPING] Replacing problematic preset '${preset}' with 'last_30d'`);
     return 'last_30d';
   }
   

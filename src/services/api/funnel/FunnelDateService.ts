@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 import { CampaignQueryBuilder } from '../campaign/fetching/campaignQueryBuilder';
 
@@ -12,7 +11,7 @@ export class FunnelDateService {
     'maximum'
   ];
   
-  static validateDatePreset(preset: string = 'maximum'): string {
+  static validateDatePreset(preset: string = 'last_30d'): string {
     // Direct check against valid presets
     if (this.validDatePresets.includes(preset)) {
       return preset;
@@ -21,8 +20,8 @@ export class FunnelDateService {
     // Explicit mapping for legacy values
     const mapping: Record<string, string> = {
       'last30days': 'last_30d',
-      'last_28d': 'maximum',
-      'last28d': 'maximum',
+      'last_28d': 'last_30d',
+      'last28d': 'last_30d',
       'last7days': 'last_7d'
     };
     
@@ -31,9 +30,9 @@ export class FunnelDateService {
       return mapping[preset];
     }
     
-    // Default to maximum
-    console.warn(`[META FUNNEL] Invalid preset '${preset}', using default 'maximum'`);
-    return 'maximum';
+    // Default to last_30d
+    console.warn(`[META FUNNEL] Invalid preset '${preset}', using default 'last_30d'`);
+    return 'last_30d';
   }
 
   static getInitialBuildVersion(): string {

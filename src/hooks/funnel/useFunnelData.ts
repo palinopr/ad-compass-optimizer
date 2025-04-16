@@ -14,7 +14,7 @@ export const useFunnelData = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [rawApiResponse, setRawApiResponse] = useState<any>(null);
   const [lastRequestDetails, setLastRequestDetails] = useState<any>(null);
-  const [datePreset, setDatePreset] = useState<string>('last_28d');
+  const [datePreset, setDatePreset] = useState<string>('last_30d');
   const [buildVersion, setBuildVersion] = useState<string>('');
 
   // Initialize build version and date preset
@@ -24,10 +24,12 @@ export const useFunnelData = () => {
     
     // Extract date preset from query
     const extractedDatePreset = FunnelDateService.getDatePresetFromQuery();
-    setDatePreset(extractedDatePreset);
+    // Always validate the extracted date preset
+    const validatedPreset = FunnelDateService.validateDatePreset(extractedDatePreset);
+    setDatePreset(validatedPreset);
     
     // Notify user
-    FunnelDateService.notifyUserOfVersion(version, extractedDatePreset);
+    FunnelDateService.notifyUserOfVersion(version, validatedPreset);
     
     // Clear caches
     FunnelStorageService.clearCaches();

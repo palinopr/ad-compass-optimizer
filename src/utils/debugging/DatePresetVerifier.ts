@@ -1,4 +1,3 @@
-
 /**
  * Utility class to verify date presets in various components and APIs
  */
@@ -85,7 +84,6 @@ export class DatePresetVerifier {
       'last_3d', 
       'last_7d', 
       'last_14d',
-      'last_28d', 
       'last_30d', 
       'last_90d',
       'last_week_mon_sun', 

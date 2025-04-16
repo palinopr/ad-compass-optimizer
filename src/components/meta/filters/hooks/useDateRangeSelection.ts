@@ -5,10 +5,10 @@ import { mapToValidDatePreset } from '@/utils/debugging/services/parsers/datePre
 
 export function useDateRangeSelection(
   onChange: (dateRange: DateRange, preset: DatePresetOption) => void,
-  initialPreset: DatePresetOption = 'maximum'
+  initialPreset: DatePresetOption = 'last_30d'
 ) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<DatePresetOption>('maximum');
+  const [selectedPreset, setSelectedPreset] = useState<DatePresetOption>('last_30d');
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date();
     const thirtyDaysAgo = new Date();
@@ -71,7 +71,7 @@ export function useDateRangeSelection(
         newRange = { from: startOfLastMonth, to: endOfLastMonth };
         break;
       default:
-        console.warn(`[DATE SELECTOR] Unhandled preset: ${validatedPreset}, using maximum`);
+        console.warn(`[DATE SELECTOR] Unhandled preset: ${validatedPreset}, using last_30d as fallback`);
         const defaultDaysAgo = new Date();
         defaultDaysAgo.setDate(today.getDate() - 30);
         defaultDaysAgo.setHours(0, 0, 0, 0);

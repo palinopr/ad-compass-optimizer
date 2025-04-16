@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { DateRange, DatePresetOption } from '@/components/meta/filters/types';
 import { MetaCampaign } from '@/services/api/MetaCampaignService';
@@ -13,7 +14,7 @@ export type CampaignFilters = {
 export function useCampaignFilters(campaigns: MetaCampaign[] = []) {
   const [filters, setFilters] = useState<CampaignFilters>({
     dateRange: null,
-    datePreset: 'maximum',  // Changed from 'last_28d' to 'maximum'
+    datePreset: 'last_30d',  // Default to last_30d
     status: null,
     search: '',
   });
