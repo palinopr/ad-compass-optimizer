@@ -26,6 +26,9 @@ export class MetaCampaignService extends BaseApiService {
       
       const campaigns = await CampaignFetchService.fetchCampaigns(token, adAccountId, datePreset);
       
+      // NEW: Log raw campaign data after fetch but before mapping/filtering
+      console.log('[MetaCampaignService] Raw campaigns response:', campaigns);
+      
       // IMPORTANT: Ensure we always return an array, even if empty
       const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
       
@@ -69,6 +72,9 @@ export class MetaCampaignService extends BaseApiService {
       return safeCampaigns;
     } catch (error) {
       console.error('[META CAMPAIGN] Error in fetchCampaigns:', error);
+      
+      // NEW: Log error in the requested format
+      console.error('[MetaCampaignService] Failed to fetch campaigns:', error);
       
       // Store error information for debugging
       try {

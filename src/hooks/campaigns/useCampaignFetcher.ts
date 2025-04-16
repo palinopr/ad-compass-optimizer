@@ -121,6 +121,9 @@ export function useCampaignFetcher() {
         
         const data = await MetaFunnelService.fetchFunnelData(token, adAccountId, 'maximum');
         
+        // NEW: Log raw data response
+        console.log('[MetaCampaignService] Raw campaigns response from funnel service:', data);
+        
         // Validate the response has campaigns property and it's an array
         if (!data) {
           console.error('[CAMPAIGNS DEBUG] Null or undefined response from API');
@@ -158,6 +161,9 @@ export function useCampaignFetcher() {
         return { campaigns, error: null };
       } catch (err: any) {
         console.error('[CAMPAIGNS DEBUG] MetaFunnelService.fetchFunnelData error:', err);
+        
+        // NEW: Log error in requested format
+        console.error('[MetaCampaignService] Failed to fetch campaigns:', err);
         
         // Check for Meta permissions error (code 100, subcode 33)
         if (

@@ -140,6 +140,9 @@ export class CampaignFetchService extends BaseApiService {
       try {
         // Parse JSON from text - if this fails, we'll catch it
         data = JSON.parse(responseText);
+        
+        // NEW: Log the raw response data as requested
+        console.log('[MetaCampaignService] Raw campaigns response:', data);
       } catch (parseError) {
         console.error('[CAMPAIGN FETCH] Failed to parse response as JSON:', parseError);
         throw new Error('Invalid JSON response from Meta API');
@@ -202,6 +205,9 @@ export class CampaignFetchService extends BaseApiService {
       return CampaignProcessor.processCampaigns(allCampaigns);
     } catch (error) {
       console.error('[CAMPAIGN FETCH] Fetch execution error:', error);
+      
+      // NEW: Log the error in the requested format
+      console.error('[MetaCampaignService] Failed to fetch campaigns:', error);
       
       // Store error for debugging
       try {
