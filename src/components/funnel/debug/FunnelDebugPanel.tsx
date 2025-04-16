@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,42 @@ const FunnelDebugPanel = ({
   buildVersion,
   datePreset = 'last_28d'
 }: FunnelDebugPanelProps) => {
+  const [currentPreset, setCurrentPreset] = useState(datePreset);
+  const [presetTimestamp, setPresetTimestamp] = useState<string | null>(null);
+  
+  // Read the actual date_preset from localStorage
+  useEffect(() => {
+    const storedPreset = localStorage.getItem('current_date_preset');
+    if (storedPreset) {
+      setCurrentPreset(storedPreset);
+    }
+    
+    const timestamp = localStorage.getItem('date_preset_timestamp');
+    if (timestamp) {
+      setPresetTimestamp(timestamp);
+    }
+    
+    // Check every 5 seconds for updates
+    const interval = setInterval(() => {
+      const latestPreset = localStorage.getItem('current_date_preset');
+      if (latestPreset && latestPreset !== currentPreset) {
+        setCurrentPreset(latestPreset);
+      }
+      
+      const latestTimestamp = localStorage.getItem('date_preset_timestamp');
+      if (latestTimestamp !== presetTimestamp) {
+        setPresetTimestamp(latestTimestamp);
+      }
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [currentPreset, presetTimestamp]);
+  
+  // Format timestamp for display
+  const formattedTimestamp = presetTimestamp 
+    ? new Date(presetTimestamp).toLocaleTimeString() 
+    : 'Unknown';
+  
   return (
     <Card className="mb-4 bg-slate-50/50 border-dashed">
       <CardHeader className="pb-2">
@@ -37,7 +73,10 @@ const FunnelDebugPanel = ({
             <div className="text-slate-600 pb-2">
               <div><span className="inline-block w-28">Version:</span> {buildVersion}</div>
               <div className="font-semibold text-green-700">
-                <span className="inline-block w-28">Date Preset:</span> {datePreset}
+                <span className="inline-block w-28">Date Preset:</span> {currentPreset}
+                {presetTimestamp && (
+                  <span className="text-xs text-slate-500 ml-2">(as of {formattedTimestamp})</span>
+                )}
               </div>
               <div><span className="inline-block w-28">Last Request:</span> {lastRequestDetails?.timestamp ? new Date(lastRequestDetails.timestamp).toLocaleTimeString() : 'None'}</div>
             </div>
@@ -82,7 +121,7 @@ const FunnelDebugPanel = ({
               <br />
               <span className="text-gray-500">fields=</span>
               <span className="text-emerald-600">
-                id,name,...,insights.<span className="font-bold text-green-800 bg-green-100 px-1">date_preset({datePreset})</span>{'{'}impressions,clicks,spend,...{'}'}
+                id,name,...,insights.<span className="font-bold text-green-800 bg-green-100 px-1">date_preset({currentPreset})</span>{'{'}impressions,clicks,spend,...{'}'}
               </span>
             </div>
           </div>

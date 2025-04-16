@@ -61,6 +61,14 @@ export type ValidMetaDatePreset = 'today' | 'yesterday' | 'this_month' | 'last_m
  */
 export const isValidMetaDatePreset = (preset?: string): boolean => {
   if (!preset) return false;
+  
+  // Reject obviously malformed values
+  if (preset.includes(' ') || preset === 'date_pre' || 
+      preset.length < 5 || preset.includes(',')) {
+    console.error(`[DATE PRESET] Malformed preset detected: "${preset}"`);
+    return false;
+  }
+  
   return validMetaPresets.includes(preset);
 };
 
@@ -70,9 +78,17 @@ export const isValidMetaDatePreset = (preset?: string): boolean => {
 export const mapToValidDatePreset = (preset?: string): string => {
   if (!preset) return 'last_28d'; // Default
   
+  // Reject obviously malformed values
+  if (preset.includes(' ') || preset === 'date_pre' || 
+      preset.length < 5 || preset.includes(',')) {
+    console.error(`[DATE PRESET] Malformed preset detected: "${preset}", using last_28d`);
+    return 'last_28d';
+  }
+  
   // Legacy mapping
   const mapping: Record<string, string> = {
     'last30days': 'last_28d',
+    'last_30days': 'last_28d',
     'last_30d': 'last_28d',
     'last7days': 'last_7d',
     'today': 'today',          // Explicit mapping for clarity

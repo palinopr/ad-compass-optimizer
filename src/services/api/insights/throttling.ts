@@ -1,19 +1,19 @@
-
 import { RateLimitManager } from '../rate-limit/RateLimitManager';
 import { toast } from '@/hooks/use-toast';
 
 export class InsightsThrottling {
   private static readonly THROTTLE_STORAGE_KEY = 'meta_insights_throttle';
   private static lastRequestTimestamps: Map<string, number> = new Map();
+  private static processedRequests: Set<string> = new Set(); // Track already processed requests
 
   public static checkThrottling(accountId: string = 'default'): void {
-    // First enforce the 300ms delay between any insights requests
+    // First enforce the 500ms delay between any insights requests (increased from 300ms)
     const now = Date.now();
     const lastRequestTime = this.lastRequestTimestamps.get(accountId) || 0;
     const timeElapsed = now - lastRequestTime;
     
-    if (lastRequestTime > 0 && timeElapsed < 300) {
-      const delayNeeded = 300 - timeElapsed;
+    if (lastRequestTime > 0 && timeElapsed < 500) {
+      const delayNeeded = 500 - timeElapsed;
       console.log(`[INSIGHTS THROTTLING] Enforcing ${delayNeeded}ms delay between requests for account ${accountId}`);
       throw new Error(`THROTTLE_DELAY:${delayNeeded}`);
     }
@@ -201,12 +201,40 @@ export class InsightsThrottling {
       console.error('[INSIGHTS] Error checking for rate limiting:', e);
     }
   }
-  
+
+  /**
+   * Check if a request has already been processed
+   * @param campaignId The campaign ID
+   * @param datePreset The date preset value
+   * @returns Boolean indicating if this is a duplicate request
+   */
+  public static isDuplicateRequest(campaignId: string, datePreset: string): boolean {
+    const requestKey = `${campaignId}_${datePreset}`;
+    if (this.processedRequests.has(requestKey)) {
+      console.log(`[INSIGHTS] Skipping duplicate request: campaign=${campaignId}, date_preset=${datePreset}`);
+      return true;
+    }
+    
+    // Store in processed requests set
+    this.processedRequests.add(requestKey);
+    
+    // Limit the set size to prevent memory leaks
+    if (this.processedRequests.size > 1000) {
+      // Remove the oldest 200 entries when we hit 1000
+      const entries = Array.from(this.processedRequests);
+      const toRemove = entries.slice(0, 200);
+      toRemove.forEach(key => this.processedRequests.delete(key));
+    }
+    
+    return false;
+  }
+
   /**
    * Reset all throttling state
    */
   public static resetThrottling(): void {
     this.lastRequestTimestamps.clear();
-    console.log('[INSIGHTS THROTTLING] Timestamps reset');
+    this.processedRequests.clear();
+    console.log('[INSIGHTS THROTTLING] Timestamps and processed requests reset');
   }
 }

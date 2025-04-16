@@ -6,7 +6,7 @@
 export class RequestQueueManager {
   private static requestQueue: (() => Promise<any>)[] = [];
   private static isProcessingQueue = false;
-  private static requestInterval = 300; // Default interval exactly as requested
+  private static requestInterval = 500; // Increased from 300ms to 500ms
   private static lastRequestTime = 0;
 
   /**

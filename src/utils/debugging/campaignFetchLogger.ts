@@ -1,4 +1,3 @@
-
 import { CampaignFetchLog } from './types/campaignLogTypes';
 import LogStorage from './services/logStorage';
 import LogEventEmitter from './services/logEventEmitter';
@@ -35,6 +34,14 @@ class CampaignFetchLogger {
     const datePreset = parseDatePreset(requestUrl);
     if (datePreset) {
       console.log(`[CAMPAIGN FETCH] 📅 Using date preset: ${datePreset}`);
+      
+      // Store the current date preset for debugging
+      try {
+        localStorage.setItem('current_date_preset', datePreset);
+        localStorage.setItem('date_preset_timestamp', new Date().toISOString());
+      } catch (e) {
+        // Ignore storage errors
+      }
     } else {
       console.warn('[CAMPAIGN FETCH] ⚠️ No date preset found in request URL');
     }
@@ -64,6 +71,41 @@ class CampaignFetchLogger {
       const datePreset = parseDatePreset(queryParams || '');
       if (datePreset) {
         console.log(`[CAMPAIGN FETCH] 📅 Response for date preset: ${datePreset}`);
+        
+        // Store the response code for this date preset
+        try {
+          const presetResponseLog = JSON.parse(localStorage.getItem('date_preset_responses') || '{}');
+          presetResponseLog[datePreset] = {
+            status: response.status,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem('date_preset_responses', JSON.stringify(presetResponseLog));
+        } catch (e) {
+          // Ignore storage errors
+        }
+        
+        // If we got a 400 error, track it specifically
+        if (response.status === 400) {
+          console.error(`[CAMPAIGN FETCH] ⚠️ Received 400 error with date preset: ${datePreset}`);
+          
+          try {
+            const errorLog = JSON.parse(localStorage.getItem('date_preset_errors') || '[]');
+            errorLog.push({
+              preset: datePreset,
+              timestamp: new Date().toISOString(),
+              response: responseData ? JSON.stringify(responseData).substring(0, 100) : 'No response data'
+            });
+            
+            // Keep only the last 10 errors
+            if (errorLog.length > 10) {
+              errorLog.shift();
+            }
+            
+            localStorage.setItem('date_preset_errors', JSON.stringify(errorLog));
+          } catch (e) {
+            // Ignore storage errors
+          }
+        }
       }
 
       const log = await ResponseParser.parseResponse(response, accountId, queryParams);
