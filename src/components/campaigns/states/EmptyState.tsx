@@ -10,7 +10,8 @@ interface EmptyStateProps {
   description: string;
   adAccountId?: string | null;
   errorDetails?: any;
-  onRefresh?: () => void; // Add refresh callback
+  onRefresh?: () => void;
+  children?: React.ReactNode; // Add support for children
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({ 
@@ -19,7 +20,8 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   description,
   adAccountId,
   errorDetails,
-  onRefresh
+  onRefresh,
+  children
 }) => {
   return (
     <Card className="p-6">
@@ -54,6 +56,9 @@ const EmptyState: React.FC<EmptyStateProps> = ({
             )}
           </div>
         )}
+        
+        {/* Render children if provided */}
+        {children}
         
         {onRefresh && (
           <Button 
