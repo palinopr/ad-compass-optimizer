@@ -13,6 +13,9 @@ export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, 
 // Track already requested campaign IDs to prevent duplicates in the same session
 export const requestedCampaignIds = new Set<string>();
 
+// Global throttling lock - prevents multiple queues from running simultaneously
+let isGlobalThrottling = false;
+
 // Queue state management
 export const insightsQueueState = {
   isLocked: false,
@@ -45,9 +48,37 @@ export const insightsQueueState = {
   }
 };
 
+// Singleton throttling management
+export const insightsThrottlingState = {
+  isThrottling: false,
+  
+  startThrottling() {
+    if (this.isThrottling) {
+      console.warn('⚠️ [INSIGHTS THROTTLER] Already running. Skipping new queue start.');
+      return false;
+    }
+    
+    this.isThrottling = true;
+    console.log('🚀 [INSIGHTS THROTTLER] Starting insights queue processing');
+    return true;
+  },
+  
+  stopThrottling() {
+    this.isThrottling = true;
+    console.log('✅ [INSIGHTS THROTTLER] Finished insights queue processing');
+  },
+  
+  isActiveThrottling() {
+    return this.isThrottling;
+  }
+};
+
 // Setup page unload handler to clear queue state
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     insightsQueueState.clear();
+    insightsThrottlingState.isThrottling = false;
+    console.log('🧹 [INSIGHTS] Cleared all queue states on page unload');
   });
 }
+

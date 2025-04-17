@@ -5,7 +5,7 @@ import { ThrottleStorage } from './storage';
 import { DuplicateRequestChecker } from './duplicateChecker';
 import { ResponseMonitor } from './responseMonitor';
 import { IRateLimitInfo } from './types';
-import { BATCH_CONFIG, insightsQueueState, requestedCampaignIds } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
+import { BATCH_CONFIG, insightsQueueState, requestedCampaignIds, insightsThrottlingState } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
 
 export class InsightsThrottling {
   // Singleton instance for tracking in-flight requests
@@ -22,9 +22,9 @@ export class InsightsThrottling {
   private static fetchLock = new Date().getTime();
 
   static checkThrottling(accountId: string = 'default'): void {
-    // First check if we have a global queue lock
-    if (insightsQueueState.isActiveLock()) {
-      console.warn(`[INSIGHTS] Global queue lock active - refusing new requests`);
+    // First check if we have a global queue lock or throttling active
+    if (insightsQueueState.isActiveLock() || insightsThrottlingState.isActiveThrottling()) {
+      console.warn(`[INSIGHTS] Global throttling active - refusing new requests`);
       throw new Error(`Another insights fetch operation is in progress. Please wait.`);
     }
     
@@ -176,7 +176,10 @@ export class InsightsThrottling {
     this.currentRequestCount = 0;
     this.isFetchingInProgress = false;
     DuplicateRequestChecker.reset();
+    insightsThrottlingState.isThrottling = false;
+    insightsQueueState.isLocked = false;
     console.log(`[INSIGHTS] Throttling state reset`);
     // Don't clear processedRequestIds as it's now shared
   }
 }
+

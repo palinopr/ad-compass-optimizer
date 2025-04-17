@@ -2,7 +2,7 @@
 import { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { fetchCampaignInsights, isCampaignBlocked } from './singleCampaignFetcher';
 import { InsightsRequestThrottler } from '@/services/api/insights/requestThrottling';
-import { requestedCampaignIds } from './batchConfig';
+import { requestedCampaignIds, insightsThrottlingState } from './batchConfig';
 
 export const fetchInsightsForCampaigns = async (
   campaigns: MetaCampaign[], 
@@ -11,6 +11,12 @@ export const fetchInsightsForCampaigns = async (
 ): Promise<MetaCampaign[]> => {
   if (!campaigns || campaigns.length === 0) {
     console.log('[INSIGHTS BATCH] No campaigns to process');
+    return campaigns;
+  }
+
+  // Check if global throttling is active
+  if (insightsThrottlingState.isActiveThrottling()) {
+    console.log('[INSIGHTS BATCH] Skipping batch processing - global throttling is active');
     return campaigns;
   }
 
@@ -58,11 +64,10 @@ export const fetchInsightsForCampaigns = async (
             spend: insightsData.spend || '0',
             cpa: insightsData.cpa,
             roas: insightsData.roas,
-            // Add the required properties that were missing
             cost_per_action_type: [],
             actions: []
           };
-          campaign.insightsStatus = 'ok'; // Changed from 'fetched' to 'ok'
+          campaign.insightsStatus = 'ok';
           return insightsData;
         } else {
           campaign.insightsStatus = 'failed';
@@ -71,7 +76,7 @@ export const fetchInsightsForCampaigns = async (
         }
       } catch (error) {
         console.error(`[INSIGHTS BATCH] Error fetching insights for campaign ${campaign.id}:`, error);
-        campaign.insightsStatus = 'failed'; // Changed from 'error' to 'failed'
+        campaign.insightsStatus = 'failed';
         campaign.insights = null;
         return null;
       }
@@ -87,3 +92,4 @@ export const fetchInsightsForCampaigns = async (
   // Return the original campaigns array with updated insights
   return campaigns;
 };
+

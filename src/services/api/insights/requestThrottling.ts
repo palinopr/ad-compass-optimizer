@@ -4,7 +4,7 @@
  */
 import { RequestQueueManager } from '../queue/RequestQueueManager';
 import { DuplicateRequestChecker } from './throttling/duplicateChecker';
-import { BATCH_CONFIG, delay, insightsQueueState, requestedCampaignIds } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
+import { BATCH_CONFIG, delay, insightsQueueState, requestedCampaignIds, insightsThrottlingState } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
 
 export class InsightsRequestThrottler {
   private static readonly processedRequests = new Set<string>();
@@ -18,6 +18,12 @@ export class InsightsRequestThrottler {
    * @returns Array of results in the same order as the requests
    */
   public static async throttleRequests<T>(requests: (() => Promise<T>)[], idPrefix: string = 'insight'): Promise<T[]> {
+    // Check if global throttling is already in progress
+    if (insightsThrottlingState.isActiveThrottling()) {
+      console.warn(`⚠️ [INSIGHTS] Global throttling already in progress. Skipping new batch of requests.`);
+      return [];
+    }
+    
     // Check if queue is locked from another process
     if (insightsQueueState.isActiveLock()) {
       console.warn(`⚠️ [INSIGHTS] Skipping request - queue is locked by another process`);
@@ -30,6 +36,11 @@ export class InsightsRequestThrottler {
       return [];
     }
 
+    // Set global throttling flag
+    if (!insightsThrottlingState.startThrottling()) {
+      return []; // Another throttling process is already running
+    }
+    
     // Add requests to queue
     this.requestQueue.push(...requests);
     
@@ -39,7 +50,7 @@ export class InsightsRequestThrottler {
       return [];
     }
 
-    console.log(`[INSIGHTS] Starting to process ${this.requestQueue.length} requests with batch size ${BATCH_CONFIG.BATCH_SIZE}`);
+    console.log(`🚀 [INSIGHTS] Starting to process ${this.requestQueue.length} requests with batch size ${BATCH_CONFIG.BATCH_SIZE}`);
     
     // Set global lock
     insightsQueueState.lock();
@@ -50,6 +61,7 @@ export class InsightsRequestThrottler {
     } finally {
       this.isProcessing = false;
       insightsQueueState.unlock();
+      insightsThrottlingState.stopThrottling();
     }
   }
 
@@ -193,5 +205,7 @@ export class InsightsRequestThrottler {
     this.isProcessing = false;
     this.requestQueue = [];
     insightsQueueState.clear();
+    insightsThrottlingState.isThrottling = false;
   }
 }
+

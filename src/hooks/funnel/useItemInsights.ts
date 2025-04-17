@@ -3,19 +3,35 @@ import { useCallback, useRef } from 'react';
 import { useInsightsState } from './hooks/useInsightsState';
 import { useFetchInsights } from './hooks/useFetchInsights';
 import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
-import { insightsQueueState } from '../campaigns/fetch-utils/insights/batchConfig';
+import { insightsQueueState, insightsThrottlingState } from '../campaigns/fetch-utils/insights/batchConfig';
 
 export const useItemInsights = () => {
   const { insights, setInsights, isLoading, setIsLoading, error, setError } = useInsightsState();
   const { fetchInsights } = useFetchInsights();
   const hasFetchedRef = useRef(false);
+  const fetchAttemptedRef = useRef(false);
 
   const fetchItemInsights = useCallback(async (
     itemId: string, 
     itemType: 'campaign' | 'adset',
     datePreset: string = 'maximum'
   ) => {
-    // Early return if global queue is locked
+    // Record that we've attempted a fetch to prevent duplicate attempts
+    if (fetchAttemptedRef.current) {
+      console.log(`⚠️ [INSIGHTS] Fetch already attempted for this ${itemType} component instance, skipping duplicate calls`);
+      return;
+    }
+    
+    // Mark this component instance as having attempted a fetch
+    fetchAttemptedRef.current = true;
+    
+    // Early return if global throttling is active
+    if (insightsThrottlingState.isActiveThrottling()) {
+      console.log(`⚠️ [INSIGHTS] Skipping insights fetch: global throttling active`);
+      return;
+    }
+    
+    // Early return if queue is locked
     if (insightsQueueState.isActiveLock()) {
       console.log(`⚠️ Insights fetch skipped: global queue is locked`);
       return;
@@ -108,3 +124,4 @@ export const useItemInsights = () => {
     fetchInsights: fetchItemInsights
   };
 };
+

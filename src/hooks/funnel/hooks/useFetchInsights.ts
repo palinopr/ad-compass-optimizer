@@ -6,6 +6,7 @@ import { safelyValidateDatePreset } from '../utils/datePresetValidation';
 import { getDateRange } from '../utils/dateUtils';
 import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
 import { InsightOptions } from '@/types/insights';
+import { insightsThrottlingState } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
 
 export const useFetchInsights = () => {
   const fetchInsights = useCallback(async (
@@ -14,6 +15,12 @@ export const useFetchInsights = () => {
     datePreset: string = 'last_30d'
   ) => {
     console.log(`[INSIGHTS HOOK] Request started for ${itemType} ${itemId} with datePreset: ${datePreset}`);
+
+    // Check if global throttling is active
+    if (insightsThrottlingState.isActiveThrottling()) {
+      console.log(`⚠️ [INSIGHTS HOOK] Global throttling active, skipping fetch for ${itemType} ${itemId}`);
+      return null;
+    }
 
     // Validate item ID - strict validation with early return
     if (!itemId || typeof itemId !== 'string' || itemId.trim() === '') {
@@ -125,3 +132,4 @@ export const useFetchInsights = () => {
 
   return { fetchInsights };
 };
+
