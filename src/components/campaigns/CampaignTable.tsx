@@ -1,18 +1,9 @@
 
 import React, { useEffect } from 'react';
 import { CardContent } from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import CampaignTableRow from './CampaignTableRow';
 import type { MetaCampaign } from '@/services/api/types/metaCampaignTypes';
 import { AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { metaPermissionsInvalid } from '@/hooks/campaigns/useCampaigns';
 
 interface CampaignTableProps {
   campaigns: MetaCampaign[];
@@ -23,29 +14,25 @@ interface CampaignTableProps {
 const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'active', campaignsFetchStatus }) => {
   // Log render information to help debug
   useEffect(() => {
-    console.log(`🔍 [CAMPAIGN TABLE] Rendering campaign table with ${campaigns?.length || 0} campaigns`);
+    console.log(`[UI] Rendering raw CampaignTable with ${campaigns?.length || 0} campaigns`);
     
     if (!campaigns || campaigns.length === 0) {
-      console.warn("Campaign data is empty at CampaignTable");
+      console.warn("[UI] CampaignTable received empty campaigns array");
     }
     
     // Add debug log to show all campaigns at render
     if (campaigns && campaigns.length > 0) {
-      console.log("🧾 Campaign list at render:", campaigns.map(c => ({
+      console.log("[UI] Raw campaign data in CampaignTable:", campaigns.map(c => ({
         id: c.id,
         name: c.name,
-        status: c.status,
-        insightsStatus: c.insightsStatus || 'unknown',
-        hasInsights: !!c.insights && Object.keys(c.insights).length > 0
+        status: c.status
       })));
-    } else {
-      console.warn('[CAMPAIGN TABLE] ⚠️ No campaigns to render in table');
     }
   }, [campaigns]);
 
   // Make sure we have valid campaign data
   if (!campaigns) {
-    console.error('[CAMPAIGN TABLE] Campaigns is null or undefined');
+    console.error('[UI] Campaigns is null or undefined in CampaignTable');
     return (
       <CardContent className="p-4">
         <Alert>
@@ -59,9 +46,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
     );
   }
   
-  console.log("[UI DEBUG] Campaigns received in CampaignTable:", campaigns);
-  
-  // NEW: If campaigns is an empty array, show the warning message
+  // If campaigns is an empty array, show the warning message
   if (!campaigns.length) {
     return (
       <CardContent className="p-4">
@@ -73,25 +58,23 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns, status = 'acti
   }
 
   return (
-    <CardContent className="p-0">
-      <div style={{ fontWeight: "bold", marginBottom: "1rem", background: "#fff7cc", padding: "1rem", borderRadius: "6px" }}>
-        ✅ Rendering fallback active — Campaigns loaded: {campaigns.length}
+    <CardContent className="p-4">
+      <div className="bg-yellow-100 p-4 mb-4 rounded-md border border-yellow-300">
+        <h3 className="font-bold text-yellow-800">✅ Raw Campaign Data: {campaigns.length} campaigns</h3>
       </div>
-      {campaigns.map((c, idx) => (
-        <div
-          key={idx}
-          style={{
-            marginBottom: "0.5rem",
-            padding: "1rem",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            background: "#f0f0f0",
-            fontFamily: "monospace",
-          }}
-        >
-          🔍 Render test: <strong>{c?.name || "Unnamed Campaign"}</strong> — ID: <code>{c?.id || "N/A"}</code>
-        </div>
-      ))}
+      
+      <div className="space-y-2">
+        {campaigns.map((campaign, index) => (
+          <div 
+            key={campaign?.id || index} 
+            className="p-3 bg-gray-50 border border-gray-200 rounded-md flex flex-col"
+          >
+            <div className="font-medium">{campaign?.name || 'Unnamed Campaign'}</div>
+            <div className="text-sm font-mono bg-gray-100 p-1 rounded mt-1">ID: {campaign?.id || 'N/A'}</div>
+            {campaign?.status && <div className="text-xs text-gray-500 mt-1">Status: {campaign.status}</div>}
+          </div>
+        ))}
+      </div>
     </CardContent>
   );
 };

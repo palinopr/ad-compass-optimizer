@@ -40,7 +40,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
 }) => {
   // Debug log to track campaign state
   React.useEffect(() => {
-    console.log(`🧾 [CAMPAIGN LIST] Rendering with ${filteredCampaigns?.length || 0} campaigns`, {
+    console.log(`🧾 [CAMPAIGN LIST] Rendering with ${campaigns?.length || 0} campaigns`, {
       isLoading,
       hasError: !!error,
       activeTab,
@@ -51,13 +51,13 @@ const CampaignList: React.FC<CampaignListProps> = ({
       selectedAdAccount: localStorage.getItem('selected_ad_account')
     });
     
-    if (filteredCampaigns && filteredCampaigns.length === 0 && !isLoading && !error) {
+    if (campaigns && campaigns.length === 0 && !isLoading && !error) {
       console.log('[CAMPAIGN LIST] Empty campaigns array but no loading or error state');
       console.warn("Campaign data is empty at CampaignList");
     }
     
-    if (filteredCampaigns && filteredCampaigns.length > 0) {
-      console.log('[CAMPAIGN LIST] First few campaigns:', filteredCampaigns.slice(0, 3).map(c => ({
+    if (campaigns && campaigns.length > 0) {
+      console.log('[CAMPAIGN LIST] First few campaigns:', campaigns.slice(0, 3).map(c => ({
         id: c.id,
         name: c.name,
         status: c.status,
@@ -65,14 +65,10 @@ const CampaignList: React.FC<CampaignListProps> = ({
       })));
     }
     
-    console.log("[CampaignList] Received campaigns:", campaigns);
-    console.log("[CampaignList] Filtered campaigns:", filteredCampaigns);
-  }, [filteredCampaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted, campaigns]);
+    // Added direct console log of raw campaign data
+    console.log("[UI] Rendering raw campaign list:", campaigns);
+  }, [campaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted]);
 
-  // Always log when rendering campaign list
-  console.log("Rendering campaign list with", filteredCampaigns?.length || 0, "campaigns");
-  console.log("UNFILTERED CAMPAIGNS:", campaigns?.length || 0);
-  
   // Show loading state if the app is loading campaigns
   if (isLoading) {
     return <LoadingView />;
@@ -98,45 +94,30 @@ const CampaignList: React.FC<CampaignListProps> = ({
       </div>
     );
   }
-
-  // Add debug information to help understand what's happening
-  console.log('[CAMPAIGN LIST] Before rendering, campaigns state:', {
-    campaignsLength: campaigns?.length || 0, 
-    filteredCampaignsLength: filteredCampaigns?.length || 0,
-    isArray: Array.isArray(filteredCampaigns),
-    fetchCompleted,
-    isLoading,
-    hasError: !!error
-  });
-
-  // MODIFIED: Always use the original campaigns regardless of filters
-  const campaignsToRender = campaigns;
-  console.log('[CAMPAIGN LIST] Bypassing filters, rendering ALL campaigns:', campaignsToRender?.length || 0);
   
-  // When we have campaigns, show the table
+  // IMPORTANT: Always use the raw campaigns directly - no filtering
+  console.log('[UI] Rendering raw campaign list with', campaigns.length, 'campaigns');
+  
   return (
     <Card className="overflow-hidden" key={forceRender}>
-      {/* Debug information banner - make this more prominent */}
-      <div className="bg-blue-100 p-4 border-b border-blue-200 flex flex-col gap-2">
-        <p className="text-md font-medium text-blue-800">
-          Rendering {campaignsToRender.length} campaigns (BYPASS FILTER MODE)
-        </p>
-        <p className="text-sm text-blue-700">
-          Status: {fetchCompleted ? 'Fetch completed' : 'Fetch in progress'}, 
-          Tab: {activeTab}, 
-          Error: {error ? 'Yes' : 'None'}
-        </p>
-        {campaignsToRender.length > 0 && (
-          <p className="text-sm font-medium text-green-700 bg-green-50 p-2 rounded-md">
-            ✅ Have campaigns data: {campaignsToRender.length} campaigns available to render
-          </p>
-        )}
+      {/* Raw campaign rendering banner */}
+      <div className="bg-green-100 p-4 border-b border-green-200">
+        <h3 className="text-lg font-bold text-green-800">✅ Loaded {campaigns.length} Raw Campaigns</h3>
+        <p className="text-sm text-green-700">Displaying unfiltered campaign data</p>
       </div>
-      <CampaignTable 
-        campaigns={campaignsToRender} 
-        status={activeTab || status as 'active' | 'draft' | 'archived'}
-        campaignsFetchStatus={campaignsFetchStatus}
-      />
+      
+      {/* Simple campaign list rendering with divs */}
+      <div className="p-4 space-y-2">
+        {campaigns.map((campaign, index) => (
+          <div 
+            key={campaign?.id || index}
+            className="p-3 bg-gray-100 border border-gray-300 rounded-md"
+          >
+            <div className="font-medium">{campaign?.name || 'Unnamed Campaign'} - <span className="font-mono text-sm">{campaign?.id || 'No ID'}</span></div>
+            <div className="text-xs text-gray-500">Status: {campaign?.status || 'Unknown'}</div>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 };
