@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CampaignHeader from '@/components/campaigns/CampaignHeader';
 import CampaignFilterToolbar from '@/components/campaigns/CampaignFilterToolbar';
 import CampaignCreationTrigger from '@/components/campaigns/CampaignCreationTrigger';
@@ -42,7 +42,7 @@ const Campaigns = () => {
 
   const [isFallbackBannerVisible, setIsFallbackBannerVisible] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     console.log('[CAMPAIGNS PAGE] Rendered with:', { 
       isAuthenticated,
       hasPermissions, 
