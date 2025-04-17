@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CampaignList from '@/components/campaigns/CampaignList';
 import { Info } from 'lucide-react';
@@ -12,6 +12,9 @@ interface CampaignTabsProps {
 }
 
 const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) => {
+  // Force a re-render when fallback happens
+  const [fallbackRender, setFallbackRender] = useState(0);
+  
   // Get campaign data from the hook to pass to each tab
   const {
     campaigns,
@@ -25,6 +28,20 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
     metaPermissionsInvalid
   } = useCampaigns(activeTab);
 
+  // Listen for fallback events to force re-render
+  useEffect(() => {
+    const handleFallbackEvent = () => {
+      console.log('[CAMPAIGN TABS] Date preset fallback detected, forcing re-render');
+      setFallbackRender(prev => prev + 1);
+    };
+    
+    window.addEventListener('date-preset-fallback-triggered', handleFallbackEvent);
+    
+    return () => {
+      window.removeEventListener('date-preset-fallback-triggered', handleFallbackEvent);
+    };
+  }, []);
+
   // Add debug logging for component rendering and data flow
   useEffect(() => {
     console.log('[CAMPAIGN TABS] Rendering with:', { 
@@ -34,7 +51,8 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
       isLoading,
       hasError: !!error,
       fetchCompleted,
-      campaignsFetchStatus
+      campaignsFetchStatus,
+      fallbackRender
     });
     
     if (campaigns && campaigns.length === 0 && !isLoading && !error) {
@@ -46,12 +64,12 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
       const isUsingMaximumFallback = localStorage.getItem('force_maximum_date_preset') === 'true';
       
       toast({
-        title: isUsingMaximumFallback ? "Using maximum date range" : "Campaigns loaded",
-        description: `${campaigns.length} campaigns available${isUsingMaximumFallback ? ' (using maximum date range)' : ' with date preset: last_30d'}`,
+        title: isUsingMaximumFallback ? "Using fallback date range: Maximum" : "Campaigns loaded",
+        description: `${campaigns.length} campaigns available${isUsingMaximumFallback ? ' (no data found for Last 30 Days)' : ' with date preset: last_30d'}`,
         duration: 3000
       });
     }
-  }, [campaigns, filteredCampaigns, isLoading, error, activeTab, fetchCompleted, campaignsFetchStatus]);
+  }, [campaigns, filteredCampaigns, isLoading, error, activeTab, fetchCompleted, campaignsFetchStatus, fallbackRender]);
 
   // Safety check for campaigns array
   const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
@@ -64,7 +82,11 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
     <>
       <div style={{ background: '#f0fff0', padding: '10px', marginBottom: '10px', border: '1px solid green' }}>
         ✅ CampaignTabs Component Loaded - ActiveTab: {activeTab} - Campaigns: {safeCampaigns.length}
-        {isUsingMaximumFallback && <div className="mt-2 text-orange-600 font-semibold">Using maximum date range fallback</div>}
+        {isUsingMaximumFallback && (
+          <div className="mt-2 text-orange-600 font-semibold">
+            Using fallback date range: Maximum (no data found for Last 30 Days)
+          </div>
+        )}
       </div>
       
       <Tabs defaultValue="campaigns" value={activeTab} onValueChange={(value) => {
@@ -81,6 +103,7 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
         
         <TabsContent value="active">
           <CampaignList 
+            key={`active-campaigns-${fallbackRender}`}
             status="active"
             isLoading={isLoading}
             campaigns={safeCampaigns}
@@ -89,7 +112,7 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
             errorDetails={errorDetails}
             activeTab="active"
             refetchCampaigns={refetchCampaigns}
-            forceRender={0}
+            forceRender={fallbackRender}
             isAuthenticated={true}
             fetchCompleted={fetchCompleted}
             campaignsFetchStatus={campaignsFetchStatus}
@@ -99,6 +122,7 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
         
         <TabsContent value="draft">
           <CampaignList 
+            key={`draft-campaigns-${fallbackRender}`}
             status="draft"
             isLoading={isLoading}
             campaigns={safeCampaigns}
@@ -107,7 +131,7 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
             errorDetails={errorDetails}
             activeTab="draft"
             refetchCampaigns={refetchCampaigns}
-            forceRender={0}
+            forceRender={fallbackRender}
             isAuthenticated={true}
             fetchCompleted={fetchCompleted}
             campaignsFetchStatus={campaignsFetchStatus}
@@ -117,6 +141,7 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
         
         <TabsContent value="archived">
           <CampaignList 
+            key={`archived-campaigns-${fallbackRender}`}
             status="archived"
             isLoading={isLoading}
             campaigns={safeCampaigns}
@@ -125,7 +150,7 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
             errorDetails={errorDetails}
             activeTab="archived"
             refetchCampaigns={refetchCampaigns}
-            forceRender={0}
+            forceRender={fallbackRender}
             isAuthenticated={true}
             fetchCompleted={fetchCompleted}
             campaignsFetchStatus={campaignsFetchStatus}

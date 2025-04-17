@@ -28,6 +28,7 @@ export class CampaignQueryBuilder {
       validDatePreset = 'maximum';
       localStorage.setItem('force_maximum_date_preset', 'true');
       localStorage.setItem('date_preset_fallback_reason', 'Invalid normalized preset');
+      console.log('👉 Switched to fallback date preset: maximum');
     }
     
     // Log what date preset we're using
@@ -75,13 +76,14 @@ export class CampaignQueryBuilder {
     console.warn(`[CAMPAIGN QUERY] Unrecognized date preset: ${datePreset}, using "maximum" as failsafe`);
     localStorage.setItem('force_maximum_date_preset', 'true');
     localStorage.setItem('date_preset_fallback_reason', `Unrecognized preset: ${datePreset}`);
+    console.log('👉 Switched to fallback date preset: maximum');
     return 'maximum';
   }
 
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.13-auto-fallback-improved';
+    return '1.0.14-ui-render-fallback-fix';
   }
   
   // Adding timestamp to ensure no cache is used
@@ -121,6 +123,7 @@ export class CampaignQueryBuilder {
       // Trigger fallback to maximum
       localStorage.setItem('force_maximum_date_preset', 'true');
       localStorage.setItem('date_preset_fallback_reason', `Invalid date preset in query: ${foundPreset}`);
+      console.log('👉 Switched to fallback date preset: maximum');
       
       return false;
     }

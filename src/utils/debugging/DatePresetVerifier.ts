@@ -21,11 +21,13 @@ export class DatePresetVerifier {
           if (!isValid) {
             console.warn('⚠️ Invalid date preset detected - triggering automatic fallback to maximum');
             localStorage.setItem('force_maximum_date_preset', 'true');
+            localStorage.setItem('date_preset_fallback_reason', 'Invalid date preset detected by verifier');
+            console.log('👉 Switched to fallback date preset: maximum');
             
             // Dispatch fallback event for campaign components to listen to
             if (typeof window !== 'undefined') {
               const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
-                detail: { reason: 'Invalid date preset detected' }
+                detail: { reason: 'Invalid date preset detected', shouldRefresh: true }
               });
               window.dispatchEvent(fallbackEvent);
             }
@@ -96,11 +98,12 @@ export class DatePresetVerifier {
     localStorage.setItem('force_maximum_date_preset', 'true');
     localStorage.setItem('date_preset_fallback_reason', reason);
     localStorage.setItem('date_preset_fallback_timestamp', Date.now().toString());
+    console.log('👉 Switched to fallback date preset: maximum');
     
     // Dispatch fallback event for campaign components to listen to
     if (typeof window !== 'undefined') {
       const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
-        detail: { reason }
+        detail: { reason, shouldRefresh: true }
       });
       window.dispatchEvent(fallbackEvent);
     }

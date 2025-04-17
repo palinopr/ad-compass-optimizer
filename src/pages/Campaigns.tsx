@@ -35,7 +35,9 @@ const Campaigns = () => {
     fetchCompleted,
     insightsFetchStatus,
     campaignsFetchStatus,
-    metaPermissionsInvalid
+    metaPermissionsInvalid,
+    fallbackForceRender,
+    currentDatePreset
   } = useCampaignsPage();
 
   // Debug log to track render cycle
@@ -48,7 +50,9 @@ const Campaigns = () => {
       isLoading,
       showCreateWizard,
       activeTab,
-      metaPermissionsInvalid
+      metaPermissionsInvalid,
+      fallbackForceRender,
+      currentDatePreset
     });
     
     // Check if campaigns array is valid
@@ -57,7 +61,7 @@ const Campaigns = () => {
     } else {
       console.warn('[CAMPAIGNS PAGE] Campaigns array is undefined or null');
     }
-  }, [campaigns, isAuthenticated, hasPermissions, hasAdAccount, isLoading, showCreateWizard, activeTab, metaPermissionsInvalid]);
+  }, [campaigns, isAuthenticated, hasPermissions, hasAdAccount, isLoading, showCreateWizard, activeTab, metaPermissionsInvalid, fallbackForceRender, currentDatePreset]);
 
   // Check if we're using maximum date preset as fallback
   const isUsingMaximumFallback = localStorage.getItem('force_maximum_date_preset') === 'true';
@@ -71,6 +75,11 @@ const Campaigns = () => {
     <div className="container py-4 space-y-4">
       <div style={{ background: '#e6ffe6', padding: '10px', margin: '10px 0', borderRadius: '5px', border: '1px solid green' }}>
         ✅ Campaigns Page Loaded - {safeCampaigns.length} campaigns available
+        {isUsingMaximumFallback && (
+          <div className="mt-1 text-amber-700 font-medium">
+            Using fallback date range: Maximum (no data found for Last 30 Days)
+          </div>
+        )}
       </div>
       
       {/* Always show campaign header to ensure ad account selector is visible */}
@@ -88,11 +97,10 @@ const Campaigns = () => {
 
       {/* Show fallback notification if active */}
       {isUsingMaximumFallback && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm">
-          <h4 className="font-medium text-yellow-800">Using maximum date range</h4>
-          <p className="text-yellow-700 text-xs mt-1">
-            {fallbackReason ? `Reason: ${fallbackReason}` : 
-             'Using extended date range to find all available campaigns.'}
+        <div className="bg-amber-50 border border-amber-300 rounded-md p-3 text-sm">
+          <h4 className="font-medium text-amber-800">Using fallback date range: Maximum</h4>
+          <p className="text-amber-700 text-sm mt-1">
+            No data found for Last 30 Days. {fallbackReason ? `Reason: ${fallbackReason}` : ''}
           </p>
         </div>
       )}
@@ -111,6 +119,7 @@ const Campaigns = () => {
       ) : (
         <>
           <CampaignsContent
+            key={`campaigns-content-${fallbackForceRender}`}
             isAuthenticated={isAuthenticated}
             hasAdAccount={hasAdAccount}
             activeTab={activeTab}
@@ -175,6 +184,7 @@ const Campaigns = () => {
             // Force maximum date range
             localStorage.setItem('force_maximum_date_preset', 'true');
             localStorage.setItem('date_preset_fallback_reason', 'Manually triggered');
+            console.log('👉 Switched to fallback date preset: maximum');
             // Force a complete refresh
             refetchCampaigns(true);
           }}

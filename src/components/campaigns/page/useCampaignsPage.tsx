@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCampaignsPage as useBaseCampaignsPage } from '@/hooks/campaigns/useCampaignsPage';
 import { useCampaigns } from '@/hooks/campaigns';
 import { metaAuthService } from '@/services/MetaAuthService';
@@ -23,6 +23,10 @@ export const useCampaignsPage = () => {
     resetConnection,
     isAuthSyncing
   } = useBaseCampaignsPage();
+
+  // Add state to track UI resets due to fallback
+  const [fallbackForceRender, setFallbackForceRender] = useState(0);
+  const [currentDatePreset, setCurrentDatePreset] = useState<string>('last_30d');
 
   const { 
     campaigns, 
@@ -62,21 +66,30 @@ export const useCampaignsPage = () => {
       }, 1000);
     }
 
-    // Add listener for date preset fallback event
+    // Add listener for date preset fallback event with improved handling
     const handleDatePresetFallback = (event: Event) => {
-      if (fallbackFetchTriggeredRef.current) {
+      const customEvent = event as CustomEvent;
+      const reason = customEvent.detail?.reason || 'Unknown reason';
+      const shouldRefresh = customEvent.detail?.shouldRefresh || false;
+      
+      console.log(`[CAMPAIGNS] Date preset fallback triggered: ${reason}, shouldRefresh: ${shouldRefresh}`);
+      
+      // Always force UI re-render when fallback happens
+      setFallbackForceRender(prev => prev + 1);
+      
+      // Set current date preset to maximum for display
+      setCurrentDatePreset('maximum');
+      
+      // Avoid duplicate fallback events
+      if (fallbackFetchTriggeredRef.current && !shouldRefresh) {
         console.log('[CAMPAIGNS] Ignoring duplicate fallback event');
         return;
       }
 
-      const customEvent = event as CustomEvent;
-      const reason = customEvent.detail?.reason || 'Unknown reason';
-      console.log(`[CAMPAIGNS] Date preset fallback triggered: ${reason}`);
-      
       fallbackFetchTriggeredRef.current = true;
       toast({
-        title: "Date preset issue detected",
-        description: "Switching to maximum date range automatically",
+        title: "Using fallback date range",
+        description: "Switched to maximum date range automatically. No data found for Last 30 Days.",
         duration: 5000
       });
       
@@ -135,11 +148,20 @@ export const useCampaignsPage = () => {
       
       // Force using maximum date range
       localStorage.setItem('force_maximum_date_preset', 'true');
+      localStorage.setItem('date_preset_fallback_reason', 'No campaigns found with last_30d');
+      
+      // Update current date preset for UI display
+      setCurrentDatePreset('maximum');
+      
+      // Force UI re-render
+      setFallbackForceRender(prev => prev + 1);
+      
+      console.log('👉 Switched to fallback date preset: maximum');
       
       // Show toast notification to inform user
       toast({
-        title: "No data found",
-        description: "Switched to maximum date range to find campaigns",
+        title: "Using fallback date range",
+        description: "Switched to maximum date range. No data found for Last 30 Days.",
         duration: 5000
       });
       
@@ -163,6 +185,12 @@ export const useCampaignsPage = () => {
         localStorage.removeItem('force_maximum_date_preset');
         localStorage.removeItem('fallback_notified');
         localStorage.removeItem('date_preset_fallback_reason');
+        
+        // Reset date preset to default
+        setCurrentDatePreset('last_30d');
+        
+        // Force UI re-render
+        setFallbackForceRender(prev => prev + 1);
         
         setTimeout(() => refetchCampaigns(true), 300);
       }
@@ -199,6 +227,8 @@ export const useCampaignsPage = () => {
     setShowCreateWizard,
     showConnectionDialog,
     setShowConnectionDialog,
+    fallbackForceRender,
+    currentDatePreset,
     
     // Actions
     handleConnectionSuccess,
