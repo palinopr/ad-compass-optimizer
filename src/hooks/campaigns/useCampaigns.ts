@@ -1,4 +1,3 @@
-
 import { useCallback, useState } from 'react';
 import { useRefreshLogic } from './refresh/useRefreshLogic';
 import { useCampaignFetchState } from './useCampaignFetchState';
@@ -33,6 +32,8 @@ export function useCampaigns(status?: string): UseCampaignsResult {
   const [localForceRender, setLocalForceRender] = useState(0);
 
   const { fetchCampaigns, mountedRef } = useRefreshLogic(status);
+  
+  // MODIFIED: Still get filtered campaigns but don't use them for rendering
   const { filteredCampaigns, filters } = useCampaignFilters(campaigns);
 
   const handleFetchCampaigns = useCallback(async (forceRefresh = false) => {
@@ -108,7 +109,7 @@ export function useCampaigns(status?: string): UseCampaignsResult {
         localStorage.removeItem('campaign_fetch_unauthorized');
         localStorage.removeItem('meta_permissions_invalid');
         
-        // CRITICAL FIX: Always set campaigns array regardless of insights status
+        // BYPASS ALL FILTERING: Always set raw campaigns array
         setCampaigns(result.campaigns);
         
         const hasValidCampaigns = result.campaigns.length > 0;
@@ -217,9 +218,15 @@ export function useCampaigns(status?: string): UseCampaignsResult {
     status
   );
 
+  // NEW: Check if filtered campaigns is empty but we have raw campaigns
+  if (filteredCampaigns.length === 0 && campaigns.length > 0) {
+    console.warn('⚠️ Filtered campaign list was empty — falling back to raw campaign data');
+  }
+
   return {
-    campaigns,
-    filteredCampaigns,
+    campaigns,  // Always return raw campaigns
+    // Bypass filtered campaigns and always return raw campaigns
+    filteredCampaigns: campaigns, // MODIFIED: Always return raw campaigns instead of filtered
     isLoading,
     error,
     errorDetails,

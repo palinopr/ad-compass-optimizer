@@ -86,7 +86,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
     );
   }
 
-  // NEW: Display an error message if campaigns array is empty
+  // Display an error message if campaigns array is empty
   if (!campaigns || campaigns.length === 0) {
     return (
       <div style={{ background: 'red', color: 'white', padding: '20px', borderRadius: '5px', margin: '10px 0' }}>

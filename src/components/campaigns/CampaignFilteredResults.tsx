@@ -33,38 +33,44 @@ const CampaignFilteredResults: React.FC<CampaignFilteredResultsProps> = ({
 
   // Handle empty state with no filters
   if (!campaigns || campaigns.length === 0) {
-    // In mock mode, this shouldn't typically happen since we load mock data
+    // NEW: Warning banner for empty campaigns
     return (
       <Card>
-        <div className="p-8 text-center space-y-4">
-          <p className="text-gray-500">
-            {isMockMode 
-              ? "No mock campaigns match the current filter settings."
-              : "No campaigns found in this ad account."}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            {!isMockMode && (
+        <div className="p-4">
+          <div style={{ background: 'orange', padding: '15px', color: 'black', borderRadius: '5px', marginBottom: '15px' }}>
+            ⚠ No campaigns available to display - check fetcher pipeline
+          </div>
+          
+          <div className="p-4 text-center space-y-4">
+            <p className="text-gray-500">
+              {isMockMode 
+                ? "No mock campaigns available."
+                : "No campaigns found in this ad account."}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {!isMockMode && (
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  asChild
+                >
+                  <a 
+                    href="https://business.facebook.com/adsmanager/create"
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Create Campaign in Meta
+                  </a>
+                </Button>
+              )}
               <Button 
                 variant="outline" 
-                className="flex items-center gap-2"
-                asChild
+                onClick={onClearFilters}
               >
-                <a 
-                  href="https://business.facebook.com/adsmanager/create"
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Create Campaign in Meta
-                </a>
+                Clear Filters
               </Button>
-            )}
-            <Button 
-              variant="outline" 
-              onClick={onClearFilters}
-            >
-              Clear Filters
-            </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -74,6 +80,10 @@ const CampaignFilteredResults: React.FC<CampaignFilteredResultsProps> = ({
   // When we have campaigns to show
   return (
     <Card>
+      <div className="bg-green-100 p-4 border-b border-green-200">
+        <h3 className="text-lg font-bold text-green-800">✅ Displaying {campaigns.length} Raw Campaigns</h3>
+        <p className="text-sm text-green-700">Unfiltered campaign data directly from API</p>
+      </div>
       <CampaignTable 
         campaigns={campaigns} 
         status={campaignStatus} 
