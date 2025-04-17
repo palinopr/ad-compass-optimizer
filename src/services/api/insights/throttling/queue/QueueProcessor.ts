@@ -4,36 +4,47 @@ import { QueueItem } from './types/QueueTypes';
 
 export class QueueProcessor {
   private lastRequestTime = 0;
+  private activeRequest = false;
 
   async processQueueItems<T>(
     items: QueueItem<T>[],
     removeItem: () => void,
     onProcessingComplete: () => void
   ): Promise<void> {
-    while (items.length > 0) {
-      await this.enforceRequestDelay();
-      
-      const item = items[0];
-      if (!item) break;
-      
-      this.lastRequestTime = Date.now();
-      console.log(`🔄 [QUEUE] Processing request ${item.id}`);
-      
-      try {
-        const result = await item.request();
-        removeItem();
-        item.resolve(result);
-      } catch (error) {
-        removeItem();
-        console.error(`❌ [QUEUE] Request ${item.id} failed:`, error);
-        item.reject(error);
-      }
-      
-      // Add a small delay between requests for safety
-      await new Promise(resolve => setTimeout(resolve, 250));
+    if (this.activeRequest) {
+      console.warn('⚠️ [QUEUE] Queue processor already active, aborting duplicate process attempt');
+      return;
     }
-
-    onProcessingComplete();
+    
+    this.activeRequest = true;
+    
+    try {
+      while (items.length > 0) {
+        await this.enforceRequestDelay();
+        
+        const item = items[0];
+        if (!item) break;
+        
+        this.lastRequestTime = Date.now();
+        console.log(`🔄 [QUEUE] Processing request ${item.id}`);
+        
+        try {
+          const result = await item.request();
+          removeItem();
+          item.resolve(result);
+        } catch (error) {
+          removeItem();
+          console.error(`❌ [QUEUE] Request ${item.id} failed:`, error);
+          item.reject(error);
+        }
+        
+        // Add a small delay between requests for safety
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+    } finally {
+      this.activeRequest = false;
+      onProcessingComplete();
+    }
   }
 
   private async enforceRequestDelay(): Promise<void> {
@@ -49,5 +60,6 @@ export class QueueProcessor {
 
   reset(): void {
     this.lastRequestTime = 0;
+    this.activeRequest = false;
   }
 }

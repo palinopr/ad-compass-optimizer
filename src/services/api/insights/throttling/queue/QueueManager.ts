@@ -4,13 +4,14 @@ import { QueueProcessor } from './QueueProcessor';
 import { insightsQueueState, insightsThrottlingState } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
 
 export class QueueManager {
-  private static instance: QueueManager;
+  private static instance: QueueManager | null = null;
   private isProcessing = false;
   private processingLock = false;
   private requestQueue: QueueItem[] = [];
   private processor: QueueProcessor;
   private lastRequestTime = 0;
   private processedRequests = new Set<string>();
+  private processingPromise: Promise<void> | null = null;
 
   private constructor() {
     this.processor = new QueueProcessor();
@@ -23,6 +24,8 @@ export class QueueManager {
   static getInstance(): QueueManager {
     if (!QueueManager.instance) {
       QueueManager.instance = new QueueManager();
+      // Freeze the instance to prevent modification
+      Object.freeze(QueueManager.instance);
     }
     return QueueManager.instance;
   }
@@ -65,6 +68,7 @@ export class QueueManager {
   }
 
   private attemptProcessQueue(): void {
+    // Double guard with processingLock to prevent multiple parallel processing attempts
     if (this.processingLock || this.requestQueue.length === 0) {
       return;
     }
@@ -77,6 +81,7 @@ export class QueueManager {
         return;
       }
       
+      // If not currently processing, start processing
       this.processQueue();
     } finally {
       this.processingLock = false;
@@ -84,27 +89,37 @@ export class QueueManager {
   }
 
   private async processQueue(): Promise<void> {
-    if (this.isProcessing) {
+    // Triple guard: check again if already processing
+    if (this.isProcessing || this.processingPromise) {
       console.warn('⚠️ [QUEUE] Attempted to process queue while already processing!');
       return;
     }
 
+    // Set processing flags
     this.isProcessing = true;
     console.log(`🚀 [QUEUE] Starting to process ${this.requestQueue.length} items`);
     insightsQueueState.lock();
 
     try {
-      await this.processor.processQueueItems(
+      // Create a new processing promise
+      this.processingPromise = this.processor.processQueueItems(
         this.requestQueue,
         () => this.requestQueue.shift(),
         () => {
+          // Reset processing state when complete
           this.isProcessing = false;
+          this.processingPromise = null;
           insightsQueueState.unlock();
+          console.log('✅ [QUEUE] Processing complete');
         }
       );
+      
+      // Wait for queue processing to complete
+      await this.processingPromise;
     } catch (error) {
       console.error('❌ [QUEUE] Fatal error processing queue:', error);
       this.isProcessing = false;
+      this.processingPromise = null;
       insightsQueueState.unlock();
     }
   }
@@ -122,6 +137,7 @@ export class QueueManager {
   }
 
   reset(): void {
+    // Reject all pending items
     for (const item of this.requestQueue) {
       item.reject(new Error('Queue was reset'));
     }
@@ -129,6 +145,7 @@ export class QueueManager {
     this.requestQueue = [];
     this.isProcessing = false;
     this.processingLock = false;
+    this.processingPromise = null;
     this.processor.reset();
     this.processedRequests.clear();
     console.log('🧹 [QUEUE] Queue cleared');
