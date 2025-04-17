@@ -33,7 +33,7 @@ export class DuplicateRequestChecker {
   }
 
   static isPermanentlyFailed(requestSignature: string): boolean {
-    if (DatePresetValidator.hasProblematicDatePreset(requestSignature)) {
+    if (DatePresetValidator.isProblematicDatePreset(requestSignature)) {
       console.log(`[INSIGHTS] Auto-blocking request with problematic date preset signature: ${requestSignature}`);
       this.markAsPermanentlyFailed(requestSignature);
       DuplicateStorage.storeSignatureBlock(requestSignature);
