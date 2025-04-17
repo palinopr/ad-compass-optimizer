@@ -194,7 +194,8 @@ export const fetchInsightsForCampaigns = async (
   const totalBatches = Math.ceil(campaignsWithInsights.length / BATCH_LIMIT);
   console.log(`[INSIGHTS FETCH] Will process ${campaignsWithInsights.length} campaigns in ${totalBatches} batches of ${BATCH_LIMIT}`);
   
-  // Process campaigns in batches
+  // IMPROVED: Process campaigns in batches using proper for loops with explicit awaits
+  // instead of forEach or map which don't properly await
   for (let i = 0; i < campaignsWithInsights.length; i += BATCH_LIMIT) {
     const batch = campaignsWithInsights.slice(i, i + BATCH_LIMIT);
     const batchNumber = Math.floor(i / BATCH_LIMIT) + 1;
@@ -210,6 +211,7 @@ export const fetchInsightsForCampaigns = async (
       
       try {
         console.log(`✅ Fetching insights for campaign ${campaign.id} (batch ${batchNumber}/${totalBatches})...`);
+        // CRITICAL FIX: Use await to ensure sequential processing
         const extraStats = await fetchCampaignInsights(campaign.id, token, datePreset);
         
         if (extraStats) {
@@ -246,14 +248,14 @@ export const fetchInsightsForCampaigns = async (
         }
       }
       
-      // Add delay between individual requests within a batch
+      // Add delay between individual requests within a batch - ALWAYS AWAIT THIS!
       if (j < batch.length - 1) {
         console.log(`⏳ Waiting ${MIN_REQUEST_INTERVAL}ms between requests...`);
         await delay(MIN_REQUEST_INTERVAL);
       }
     }
     
-    // Add delay between batches unless this is the last batch
+    // Add delay between batches unless this is the last batch - ALWAYS AWAIT THIS!
     if (i + BATCH_LIMIT < campaignsWithInsights.length) {
       console.log(`⏲️ Waiting ${BATCH_INTERVAL}ms before next batch...`);
       await delay(BATCH_INTERVAL);

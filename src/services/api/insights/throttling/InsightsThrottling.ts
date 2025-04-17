@@ -7,7 +7,25 @@ import { ResponseMonitor } from './responseMonitor';
 import { IRateLimitInfo } from './types';
 
 export class InsightsThrottling {
+  // Singleton instance for tracking in-flight requests
+  private static currentRequestCount = 0;
+  private static readonly MAX_CONCURRENT_REQUESTS = 2;
+  private static readonly processedRequestIds = new Set<string>();
+
   static checkThrottling(accountId: string = 'default'): void {
+    // First check if we have too many concurrent requests
+    if (this.currentRequestCount >= this.MAX_CONCURRENT_REQUESTS) {
+      console.warn(`[INSIGHTS] Too many concurrent requests (${this.currentRequestCount}/${this.MAX_CONCURRENT_REQUESTS})`);
+      
+      toast({
+        title: "Request Throttled",
+        description: `Too many concurrent requests (${this.currentRequestCount}/${this.MAX_CONCURRENT_REQUESTS})`,
+        variant: "destructive",
+      });
+      
+      throw new Error(`Too many concurrent requests (${this.currentRequestCount}/${this.MAX_CONCURRENT_REQUESTS})`);
+    }
+
     const throttleData = ThrottleStorage.getThrottleData(accountId);
     
     if (throttleData) {
@@ -31,6 +49,14 @@ export class InsightsThrottling {
       const rateLimitInfo = RateLimitManager.getRateLimitInfo();
       throw new Error(`Rate limit active. Try again in ${Math.ceil(remainingTime! / 60)} minutes.`);
     }
+    
+    // Increment the request count
+    this.currentRequestCount++;
+  }
+
+  static markRequestCompleted(): void {
+    // Decrement the request count when a request completes
+    this.currentRequestCount = Math.max(0, this.currentRequestCount - 1);
   }
 
   static markThrottled(accountId: string = 'default', durationSeconds: number = 60): void {
@@ -44,10 +70,17 @@ export class InsightsThrottling {
   }
 
   static monitorResponseHeaders(response: Response): void {
+    // Always mark the request as completed after processing
+    this.markRequestCompleted();
+    
+    // Then delegate to the response monitor
     ResponseMonitor.monitorHeaders(response);
   }
 
   static checkErrorForRateLimit(error: any): void {
+    // Always mark the request as completed on error
+    this.markRequestCompleted();
+    
     const errorMessage = error?.message || '';
     const errorResponse = error?.response;
     const errorBody = errorResponse?.data || error?.error || {};
@@ -80,10 +113,27 @@ export class InsightsThrottling {
   }
 
   static isDuplicateRequest(campaignId: string, datePreset: string): boolean {
-    return DuplicateRequestChecker.isDuplicate(campaignId, datePreset);
+    // Check our in-memory set first
+    const requestId = `${campaignId}-${datePreset}`;
+    if (this.processedRequestIds.has(requestId)) {
+      return true;
+    }
+    
+    // Then check the DuplicateRequestChecker
+    const isDuplicate = DuplicateRequestChecker.isDuplicate(campaignId, datePreset);
+    
+    // If not a duplicate, add to our set
+    if (!isDuplicate) {
+      this.processedRequestIds.add(requestId);
+    }
+    
+    return isDuplicate;
   }
 
   static resetThrottling(): void {
+    // Reset all throttling state
+    this.currentRequestCount = 0;
+    this.processedRequestIds.clear();
     DuplicateRequestChecker.reset();
   }
 }

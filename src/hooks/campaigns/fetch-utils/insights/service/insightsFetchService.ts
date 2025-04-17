@@ -36,6 +36,7 @@ export const fetchCampaignInsightData = async (
   // NEW: Log the final URL with a checkmark
   console.log(`✅ Final insights URL: ${url.replace(token, 'REDACTED_TOKEN')}`);
   
+  // IMPROVED: Use proper async/await pattern for fetch to ensure sequential execution
   const response = await fetch(url, {
     method: 'GET',
     headers: INSIGHTS_HEADERS

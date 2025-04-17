@@ -36,6 +36,7 @@ export class InsightsRequestThrottler {
     // Calculate total batches for logging
     const totalBatches = Math.ceil(requests.length / this.BATCH_SIZE);
     
+    // IMPROVED: Strict sequential processing using for loops instead of map/forEach
     for (let i = 0; i < requests.length; i += this.BATCH_SIZE) {
       const batch = requests.slice(i, i + this.BATCH_SIZE);
       const batchNumber = Math.floor(i / this.BATCH_SIZE) + 1;
@@ -67,14 +68,13 @@ export class InsightsRequestThrottler {
             await new Promise(resolve => setTimeout(resolve, currentDelay));
           }
           
-          // Generate a unique request ID that includes the request function hash
           console.log(`✅ Executing request ${requestId} (batch ${batchNumber}/${totalBatches})...`);
           
           // Create a wrapper function to capture the request signature before execution
           const wrappedRequest = () => {
             const requestSignature = `${requestId}-execution`;
             
-            // Check if this request previously failed with 400 (IMPROVED CHECK)
+            // Check if this request previously failed with 400
             if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
               console.log(`[INSIGHTS] Skipped insights request due to permanent failure (400): ${requestId}`);
               
@@ -125,6 +125,7 @@ export class InsightsRequestThrottler {
             });
           };
           
+          // CRITICAL FIX: Make sure to await the result to maintain strict sequential execution
           const result = await RequestQueueManager.addToQueue(wrappedRequest, requestId);
           consecutiveErrors = 0;
           results.push(result);
