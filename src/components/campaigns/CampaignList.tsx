@@ -5,7 +5,7 @@ import CampaignTable from './CampaignTable';
 import { UseCampaignsResult } from '@/hooks/campaigns/types';
 import { LoadingView } from './states/LoadingView';
 import ErrorView from './states/ErrorView';
-import { metaPermissionsInvalid } from '@/hooks/campaigns/useCampaigns';
+import { metaPermissionsInvalid } from '@/hooks/campaigns/utils/metaPermissionsUtils';
 import NoCampaignsFoundPanel from './diagnostic-components/NoCampaignsFoundPanel';
 
 interface CampaignListProps {
