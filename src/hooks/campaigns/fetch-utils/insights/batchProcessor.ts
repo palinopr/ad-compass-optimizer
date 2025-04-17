@@ -51,8 +51,18 @@ export const fetchInsightsForCampaigns = async (
       try {
         const insightsData = await fetchCampaignInsights(campaign.id, token, datePreset);
         if (insightsData) {
-          campaign.insights = insightsData;
-          campaign.insightsStatus = 'fetched';
+          // Create a proper insights object with the required properties
+          campaign.insights = {
+            impressions: insightsData.impressions || '0',
+            clicks: insightsData.clicks || '0',
+            spend: insightsData.spend || '0',
+            cpa: insightsData.cpa,
+            roas: insightsData.roas,
+            // Add the required properties that were missing
+            cost_per_action_type: [],
+            actions: []
+          };
+          campaign.insightsStatus = 'ok'; // Changed from 'fetched' to 'ok'
           return insightsData;
         } else {
           campaign.insightsStatus = 'failed';
@@ -61,7 +71,7 @@ export const fetchInsightsForCampaigns = async (
         }
       } catch (error) {
         console.error(`[INSIGHTS BATCH] Error fetching insights for campaign ${campaign.id}:`, error);
-        campaign.insightsStatus = 'error';
+        campaign.insightsStatus = 'failed'; // Changed from 'error' to 'failed'
         campaign.insights = null;
         return null;
       }
