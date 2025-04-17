@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import CampaignHeader from '@/components/campaigns/CampaignHeader';
 import CampaignFilterToolbar from '@/components/campaigns/CampaignFilterToolbar';
 import CampaignCreationTrigger from '@/components/campaigns/CampaignCreationTrigger';
@@ -9,6 +8,7 @@ import CampaignsContent from '@/components/campaigns/page/CampaignsContent';
 import { useCampaignsPage } from '@/components/campaigns/page/useCampaignsPage';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 const Campaigns = () => {
   const {
@@ -40,7 +40,8 @@ const Campaigns = () => {
     currentDatePreset
   } = useCampaignsPage();
 
-  // Debug log to track render cycle
+  const [isFallbackBannerVisible, setIsFallbackBannerVisible] = useState(true);
+
   React.useEffect(() => {
     console.log('[CAMPAIGNS PAGE] Rendered with:', { 
       isAuthenticated,
@@ -55,7 +56,6 @@ const Campaigns = () => {
       currentDatePreset
     });
     
-    // Check if campaigns array is valid
     if (campaigns) {
       console.log(`[CAMPAIGNS PAGE] Has ${campaigns.length} campaigns`);
     } else {
@@ -63,13 +63,18 @@ const Campaigns = () => {
     }
   }, [campaigns, isAuthenticated, hasPermissions, hasAdAccount, isLoading, showCreateWizard, activeTab, metaPermissionsInvalid, fallbackForceRender, currentDatePreset]);
 
-  // Check if we're using maximum date preset as fallback
   const isUsingMaximumFallback = localStorage.getItem('force_maximum_date_preset') === 'true';
   const fallbackReason = localStorage.getItem('date_preset_fallback_reason') || '';
 
-  // Safety check for campaign data - always use raw campaigns
   const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
+
+  useEffect(() => {
+    if (isUsingMaximumFallback) {
+      const timer = setTimeout(() => setIsFallbackBannerVisible(false), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [isUsingMaximumFallback]);
 
   return (
     <div className="container py-4 space-y-4">
@@ -82,7 +87,6 @@ const Campaigns = () => {
         )}
       </div>
       
-      {/* Always show campaign header to ensure ad account selector is visible */}
       <CampaignHeader
         onCreateCampaign={() => setShowCreateWizard(true)}
         disabled={!isAuthenticated || !hasAdAccount || !hasPermissions}
@@ -95,13 +99,20 @@ const Campaigns = () => {
         isAuthSyncing={isAuthSyncing}
       />
 
-      {/* Show fallback notification if active */}
-      {isUsingMaximumFallback && (
-        <div className="bg-amber-50 border border-amber-300 rounded-md p-3 text-sm">
-          <h4 className="font-medium text-amber-800">Using fallback date range: Maximum</h4>
-          <p className="text-amber-700 text-sm mt-1">
-            No data found for Last 30 Days. {fallbackReason ? `Reason: ${fallbackReason}` : ''}
-          </p>
+      {isUsingMaximumFallback && isFallbackBannerVisible && (
+        <div className="relative bg-amber-50 border border-amber-300 rounded-md p-3 text-sm flex items-center justify-between">
+          <div>
+            <h4 className="font-medium text-amber-800">Using fallback date range: Maximum</h4>
+            <p className="text-amber-700 text-sm mt-1">
+              No data found for Last 30 Days. {fallbackReason ? `Reason: ${fallbackReason}` : ''}
+            </p>
+          </div>
+          <button 
+            onClick={() => setIsFallbackBannerVisible(false)}
+            className="text-amber-600 hover:text-amber-800 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
       )}
 
@@ -163,15 +174,12 @@ const Campaigns = () => {
         requestedPermissions={['ads_management', 'ads_read', 'business_management']}
       />
       
-      {/* Manual refresh button for emergencies */}
       <div className="mt-8 text-center">
         <button 
           onClick={() => {
-            // Clear any stored flags that might be affecting behavior
             localStorage.removeItem('force_maximum_date_preset');
             localStorage.removeItem('fallback_notified');
             localStorage.removeItem('date_preset_fallback_reason');
-            // Force a complete refresh with default settings
             refetchCampaigns(true);
           }}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mr-2"
@@ -181,11 +189,9 @@ const Campaigns = () => {
         
         <button 
           onClick={() => {
-            // Force maximum date range
             localStorage.setItem('force_maximum_date_preset', 'true');
             localStorage.setItem('date_preset_fallback_reason', 'Manually triggered');
             console.log('👉 Switched to fallback date preset: maximum');
-            // Force a complete refresh
             refetchCampaigns(true);
           }}
           className="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600"
