@@ -40,7 +40,7 @@ const Campaigns = () => {
 
   // Debug log to track render cycle
   React.useEffect(() => {
-    console.log('[CAMPAIGNS] Page rendered with:', { 
+    console.log('[CAMPAIGNS PAGE] Rendered with:', { 
       isAuthenticated,
       hasPermissions, 
       hasAdAccount,
@@ -53,46 +53,21 @@ const Campaigns = () => {
     
     // Check if campaigns array is valid
     if (campaigns) {
-      console.log(`[CAMPAIGNS] Has ${campaigns.length} campaigns`);
-      
-      if (campaigns.length > 0) {
-        // Log first campaign for debugging
-        console.log('[CAMPAIGNS] First campaign:', {
-          id: campaigns[0]?.id,
-          name: campaigns[0]?.name,
-          hasInsights: !!campaigns[0]?.insights,
-          insightsKeys: campaigns[0]?.insights ? Object.keys(campaigns[0].insights) : [],
-          insightsStatus: campaigns[0]?.insightsStatus
-        });
-      }
+      console.log(`[CAMPAIGNS PAGE] Has ${campaigns.length} campaigns`);
     } else {
-      console.warn('[CAMPAIGNS] Campaigns array is undefined or null');
+      console.warn('[CAMPAIGNS PAGE] Campaigns array is undefined or null');
     }
   }, [campaigns, isAuthenticated, hasPermissions, hasAdAccount, isLoading, showCreateWizard, activeTab, metaPermissionsInvalid]);
 
   // Safety check for campaign data - always use raw campaigns
   const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
-  
-  // NEW: Debug banner at top of page
-  const renderDebugBanner = () => {
-    if (!campaigns || campaigns.length === 0) {
-      return (
-        <div style={{ background: 'red', color: 'white', padding: '10px', margin: '10px 0', borderRadius: '5px' }}>
-          ⚠️ No campaigns data available
-        </div>
-      );
-    }
-    
-    return (
-      <div style={{ background: '#e6ffe6', padding: '10px', margin: '10px 0', borderRadius: '5px', border: '1px solid green' }}>
-        ✅ Raw campaign data: {campaigns.length} campaigns
-      </div>
-    );
-  };
+  const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
 
   return (
     <div className="container py-4 space-y-4">
-      {renderDebugBanner()}
+      <div style={{ background: '#e6ffe6', padding: '10px', margin: '10px 0', borderRadius: '5px', border: '1px solid green' }}>
+        ✅ Campaigns Page Loaded - {safeCampaigns.length} campaigns available
+      </div>
       
       <CampaignHeader
         onCreateCampaign={() => setShowCreateWizard(true)}
@@ -126,7 +101,7 @@ const Campaigns = () => {
             setActiveTab={setActiveTab}
             showCreateWizard={showCreateWizard}
             campaigns={safeCampaigns}
-            filteredCampaigns={safeCampaigns} /* MODIFIED: Always use raw campaigns */
+            filteredCampaigns={safeFilteredCampaigns}
             isLoading={isLoading}
             campaignsError={campaignsError}
             selectedAdAccount={selectedAdAccount}
@@ -144,13 +119,14 @@ const Campaigns = () => {
             error={campaignsError}
             errorDetails={null}
             activeTab={activeTab}
-            filteredCampaigns={safeCampaigns} /* MODIFIED: Always use raw campaigns */
+            filteredCampaigns={safeFilteredCampaigns}
             refetchCampaigns={() => refetchCampaigns(true)}
             forceRender={0}
             isAuthenticated={isAuthenticated}
             fetchCompleted={fetchCompleted}
             campaignsFetchStatus={campaignsFetchStatus}
             metaPermissionsInvalid={metaPermissionsInvalid}
+            status={activeTab}
           />
           
           {showCreateWizard && (

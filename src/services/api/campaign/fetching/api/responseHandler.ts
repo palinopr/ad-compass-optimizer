@@ -70,15 +70,9 @@ export class ResponseHandler {
       return data.data;
     } catch (error) {
       console.error('[CAMPAIGN RESPONSE] Error processing response:', error);
-      
       // Store error for debugging
-      ErrorStorage.storeRawErrorResponse({
-        errorMessage: error.message,
-        errorStack: error.stack,
-        timestamp: new Date().toISOString()
-      });
-      
-      // Return empty array instead of throwing
+      ErrorStorage.storeRawErrorResponse(error);
+      // Return empty array to prevent UI breaks
       return [];
     }
   }
