@@ -5,12 +5,21 @@ import { ThrottleStorage } from './storage';
 import { DuplicateRequestChecker } from './duplicateChecker';
 import { ResponseMonitor } from './responseMonitor';
 import { IRateLimitInfo } from './types';
+import { requestedCampaignIds } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
 
 export class InsightsThrottling {
   // Singleton instance for tracking in-flight requests
   private static currentRequestCount = 0;
   private static readonly MAX_CONCURRENT_REQUESTS = 2;
-  private static readonly processedRequestIds = new Set<string>();
+  
+  // Use the shared Set from batchConfig to track processed requests across the app
+  private static get processedRequestIds() {
+    return requestedCampaignIds;
+  }
+
+  // Prevent fetches if another is already in progress
+  private static isFetchingInProgress = false;
+  private static fetchLock = new Date().getTime();
 
   static checkThrottling(accountId: string = 'default'): void {
     // First check if we have too many concurrent requests
@@ -25,6 +34,22 @@ export class InsightsThrottling {
       
       throw new Error(`Too many concurrent requests (${this.currentRequestCount}/${this.MAX_CONCURRENT_REQUESTS})`);
     }
+
+    // Check if another fetch is already in progress (with 3s grace period)
+    if (this.isFetchingInProgress) {
+      const now = new Date().getTime();
+      if (now - this.fetchLock < 3000) { // 3s lock
+        console.warn(`[INSIGHTS] Another fetch is already in progress. Prevent concurrent fetch.`);
+        throw new Error(`Another insights fetch is already in progress. Please wait.`);
+      } else {
+        // Lock expired, reset it
+        this.isFetchingInProgress = false;
+      }
+    }
+
+    // Set fetching in progress and update lock time
+    this.isFetchingInProgress = true;
+    this.fetchLock = new Date().getTime();
 
     const throttleData = ThrottleStorage.getThrottleData(accountId);
     
@@ -57,6 +82,11 @@ export class InsightsThrottling {
   static markRequestCompleted(): void {
     // Decrement the request count when a request completes
     this.currentRequestCount = Math.max(0, this.currentRequestCount - 1);
+    
+    // If no more requests, release the fetch lock
+    if (this.currentRequestCount === 0) {
+      this.isFetchingInProgress = false;
+    }
   }
 
   static markThrottled(accountId: string = 'default', durationSeconds: number = 60): void {
@@ -113,9 +143,8 @@ export class InsightsThrottling {
   }
 
   static isDuplicateRequest(campaignId: string, datePreset: string): boolean {
-    // Check our in-memory set first
-    const requestId = `${campaignId}-${datePreset}`;
-    if (this.processedRequestIds.has(requestId)) {
+    // Check our in-memory set first (shared with batchConfig)
+    if (this.processedRequestIds.has(campaignId)) {
       return true;
     }
     
@@ -124,7 +153,7 @@ export class InsightsThrottling {
     
     // If not a duplicate, add to our set
     if (!isDuplicate) {
-      this.processedRequestIds.add(requestId);
+      this.processedRequestIds.add(campaignId);
     }
     
     return isDuplicate;
@@ -133,7 +162,8 @@ export class InsightsThrottling {
   static resetThrottling(): void {
     // Reset all throttling state
     this.currentRequestCount = 0;
-    this.processedRequestIds.clear();
+    this.isFetchingInProgress = false;
     DuplicateRequestChecker.reset();
+    // Don't clear processedRequestIds as it's now shared
   }
 }

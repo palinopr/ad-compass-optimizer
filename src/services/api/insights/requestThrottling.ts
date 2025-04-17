@@ -4,15 +4,14 @@
  */
 import { RequestQueueManager } from '../queue/RequestQueueManager';
 import { DuplicateRequestChecker } from './throttling/duplicateChecker';
+import { BATCH_CONFIG, delay } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
 
 export class InsightsRequestThrottler {
-  private static queue: Promise<any>[] = [];
-  private static processing = false;
-  private static readonly BATCH_SIZE = 2; // Reduced batch size to 2 per spec
-  private static readonly BATCH_INTERVAL = 3500; // 3.5s between batches
-  private static readonly REQUEST_DELAY = 750; // 750ms between requests
-  private static readonly SKIPPED_400_KEY = 'insights_skipped_400_requests';
   private static readonly processedRequests = new Set<string>();
+  private static isProcessing = false;
+  private static requestQueue: (() => Promise<any>)[] = [];
+  private static readonly SKIPPED_400_KEY = 'insights_skipped_400_requests';
+  private static readonly MAX_QUEUE_SIZE = 100;
 
   /**
    * Process an array of request functions with controlled rate limiting
@@ -20,32 +19,49 @@ export class InsightsRequestThrottler {
    * @returns Array of results in the same order as the requests
    */
   public static async throttleRequests<T>(requests: (() => Promise<T>)[], idPrefix: string = 'insight'): Promise<T[]> {
-    const results: T[] = [];
-    console.log(`[INSIGHTS] Throttling ${requests.length} requests with batch size ${this.BATCH_SIZE}`);
-    
-    // NEW: Abort if too many requests in queue
-    const MAX_QUEUE_SIZE = 100;
-    if (requests.length > MAX_QUEUE_SIZE) {
+    // Early abort if too many requests or already processing
+    if (requests.length > this.MAX_QUEUE_SIZE) {
       console.warn(`⚠️ Skipping insights fetch: too many campaigns in queue (${requests.length})`);
       return [];
     }
+
+    // Add requests to queue
+    this.requestQueue.push(...requests);
     
-    // Track consecutive errors to implement exponential backoff
-    let consecutiveErrors = 0;
+    // If already processing, just return (the current processor will handle these requests)
+    if (this.isProcessing) {
+      console.log(`[INSIGHTS] Already processing queue. Current queue size: ${this.requestQueue.length}`);
+      return [];
+    }
+
+    console.log(`[INSIGHTS] Starting to process ${this.requestQueue.length} requests with batch size ${BATCH_CONFIG.BATCH_SIZE}`);
+    
+    try {
+      this.isProcessing = true;
+      return await this.processQueue(idPrefix);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  /**
+   * Process the request queue sequentially with proper throttling
+   */
+  private static async processQueue<T>(idPrefix: string): Promise<T[]> {
+    const results: T[] = [];
+    const queue = [...this.requestQueue]; // Copy the queue
+    this.requestQueue = []; // Clear the queue
     
     // Calculate total batches for logging
-    const totalBatches = Math.ceil(requests.length / this.BATCH_SIZE);
+    const totalBatches = Math.ceil(queue.length / BATCH_CONFIG.BATCH_SIZE);
+    let consecutiveErrors = 0;
     
-    // IMPROVED: Strict sequential processing using for loops instead of map/forEach
-    for (let i = 0; i < requests.length; i += this.BATCH_SIZE) {
-      const batch = requests.slice(i, i + this.BATCH_SIZE);
-      const batchNumber = Math.floor(i / this.BATCH_SIZE) + 1;
-      console.log(`[INSIGHTS] Processing batch ${batchNumber}/${totalBatches} with ${batch.length} requests`);
+    // Strict sequential processing using for loops
+    for (let i = 0; i < queue.length; i += BATCH_CONFIG.BATCH_SIZE) {
+      const batch = queue.slice(i, i + BATCH_CONFIG.BATCH_SIZE);
+      const batchNumber = Math.floor(i / BATCH_CONFIG.BATCH_SIZE) + 1;
       
-      // Define delay based on consecutive errors but with minimum from config
-      const currentDelay = consecutiveErrors > 0 
-        ? Math.max(this.REQUEST_DELAY, this.REQUEST_DELAY * Math.pow(2, consecutiveErrors))
-        : this.REQUEST_DELAY;
+      console.log(`🔄 Starting batch ${batchNumber}/${totalBatches} with ${batch.length} requests`);
       
       // Process each request in the batch sequentially with explicit delay
       for (let j = 0; j < batch.length; j++) {
@@ -62,71 +78,25 @@ export class InsightsRequestThrottler {
         this.processedRequests.add(requestId);
         
         try {
-          // Wait for explicit delay before each request (except first in batch)
+          // Wait for explicit delay between requests (except first in batch)
           if (j > 0) {
-            console.log(`⏳ Waiting ${currentDelay}ms between requests...`);
-            await new Promise(resolve => setTimeout(resolve, currentDelay));
+            console.log(`⏳ Waiting ${BATCH_CONFIG.MIN_REQUEST_INTERVAL}ms between requests...`);
+            await delay(BATCH_CONFIG.MIN_REQUEST_INTERVAL);
           }
           
           console.log(`✅ Executing request ${requestId} (batch ${batchNumber}/${totalBatches})...`);
           
-          // Create a wrapper function to capture the request signature before execution
-          const wrappedRequest = () => {
-            const requestSignature = `${requestId}-execution`;
-            
-            // Check if this request previously failed with 400
-            if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-              console.log(`[INSIGHTS] Skipped insights request due to permanent failure (400): ${requestId}`);
-              
-              // Track this skipped request for debugging
-              try {
-                const skippedRequests = JSON.parse(localStorage.getItem(this.SKIPPED_400_KEY) || '[]');
-                skippedRequests.push({
-                  timestamp: new Date().toISOString(),
-                  requestId,
-                  signature: requestSignature,
-                  location: 'throttleRequests-wrapper'
-                });
-                localStorage.setItem(this.SKIPPED_400_KEY, JSON.stringify(skippedRequests.slice(-30)));
-              } catch (e) {
-                // Ignore storage errors
-              }
-              
-              return Promise.reject({
-                message: 'Request skipped due to previous 400 error',
-                status: 400,
-                skipped: true
-              });
-            }
-            
-            // Execute the actual request
-            return req().catch(error => {
-              // If it's a 400 error, mark this request signature as permanently failed
-              if (error.status === 400 || (error.response && error.response.status === 400)) {
-                console.error(`[INSIGHTS] Request failed with 400, marking as permanently failed: ${requestSignature}`);
-                DuplicateRequestChecker.markAsPermanentlyFailed(requestSignature);
-                
-                // Store additional info about this 400 error
-                try {
-                  const failures = JSON.parse(localStorage.getItem('throttler_400_failures') || '[]');
-                  failures.push({
-                    timestamp: new Date().toISOString(),
-                    requestId,
-                    signature: requestSignature,
-                    error: error.message || 'Unknown 400 error',
-                    location: 'throttleRequests-catch'
-                  });
-                  localStorage.setItem('throttler_400_failures', JSON.stringify(failures.slice(-30)));
-                } catch (e) {
-                  // Ignore storage errors
-                }
-              }
-              throw error;
-            });
-          };
+          // Check if this request previously failed with 400
+          const requestSignature = `${requestId}-execution`;
+          if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
+            console.log(`[INSIGHTS] Skipped insights request due to permanent failure (400): ${requestId}`);
+            this.logSkippedRequest(requestId, requestSignature);
+            results.push(null as unknown as T);
+            continue;
+          }
           
-          // CRITICAL FIX: Make sure to await the result to maintain strict sequential execution
-          const result = await RequestQueueManager.addToQueue(wrappedRequest, requestId);
+          // Execute the request using the queue manager for additional safety
+          const result = await RequestQueueManager.addToQueue(() => req(), requestId);
           consecutiveErrors = 0;
           results.push(result);
         } catch (error: any) {
@@ -137,32 +107,75 @@ export class InsightsRequestThrottler {
             console.log('[INSIGHTS] Logging non-skipped error:', error);
           }
           
-          // If it's a 400 error, don't increment consecutive errors
-          if (error.status !== 400 && (!error.response || error.response.status !== 400)) {
-            consecutiveErrors++;
+          // If it's a 400 error, mark this request signature as permanently failed
+          if (error.status === 400 || (error.response && error.response.status === 400)) {
+            const failSignature = `${requestId}-execution`;
+            console.error(`[INSIGHTS] Request failed with 400, marking as permanently failed: ${failSignature}`);
+            DuplicateRequestChecker.markAsPermanentlyFailed(failSignature);
+            this.logFailure(requestId, failSignature, error);
           } else {
-            console.log('[INSIGHTS] Skipped insights request due to permanent failure (400)');
+            consecutiveErrors++;
           }
           
           // Push null for failed requests to maintain array positions
-          results.push(null as T);
+          results.push(null as unknown as T);
           
           // If error is rate limit (code 4), break completely to avoid further calls
           if (error.code === 4 || (error.error && error.error.code === 4)) {
-            console.warn("🚫 Skipping fetch - hit Meta rate limit (#4)");
+            console.warn("🚫 Skipping remaining fetch operations - hit Meta rate limit (#4)");
             break;
           }
         }
       }
       
       // Wait between batches unless this is the last batch
-      if (i + this.BATCH_SIZE < requests.length) {
-        console.log(`⏲️ Waiting ${this.BATCH_INTERVAL}ms before next batch...`);
-        await new Promise(resolve => setTimeout(resolve, this.BATCH_INTERVAL));
+      if (i + BATCH_CONFIG.BATCH_SIZE < queue.length) {
+        console.log(`⏲️ Waiting ${BATCH_CONFIG.BATCH_INTERVAL}ms before next batch...`);
+        await delay(BATCH_CONFIG.BATCH_INTERVAL);
       }
     }
     
-    console.log(`[INSIGHTS] Completed ${results.filter(r => r !== null).length}/${requests.length} requests successfully`);
+    console.log(`[INSIGHTS] Completed ${results.filter(r => r !== null).length}/${queue.length} requests successfully`);
     return results;
+  }
+  
+  private static logSkippedRequest(requestId: string, signature: string): void {
+    try {
+      const skippedRequests = JSON.parse(localStorage.getItem(this.SKIPPED_400_KEY) || '[]');
+      skippedRequests.push({
+        timestamp: new Date().toISOString(),
+        requestId,
+        signature,
+        location: 'throttleRequests-wrapper'
+      });
+      localStorage.setItem(this.SKIPPED_400_KEY, JSON.stringify(skippedRequests.slice(-30)));
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }
+  
+  private static logFailure(requestId: string, signature: string, error: any): void {
+    try {
+      const failures = JSON.parse(localStorage.getItem('throttler_400_failures') || '[]');
+      failures.push({
+        timestamp: new Date().toISOString(),
+        requestId,
+        signature,
+        error: error.message || 'Unknown 400 error',
+        location: 'throttleRequests-catch'
+      });
+      localStorage.setItem('throttler_400_failures', JSON.stringify(failures.slice(-30)));
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }
+  
+  /**
+   * Reset the throttler state (for testing or recovery)
+   */
+  public static reset(): void {
+    this.processedRequests.clear();
+    this.isProcessing = false;
+    this.requestQueue = [];
   }
 }
