@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import CampaignHeader from '@/components/campaigns/CampaignHeader';
 import CampaignFilterToolbar from '@/components/campaigns/CampaignFilterToolbar';
@@ -8,8 +7,8 @@ import CampaignsAuthentication from '@/components/campaigns/page/CampaignsAuthen
 import CampaignsContent from '@/components/campaigns/page/CampaignsContent';
 import { useCampaignsPage } from '@/components/campaigns/page/useCampaignsPage';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
-import { Button } from '@/components/ui/button';
 import FallbackBanner from '@/components/campaigns/FallbackBanner';
+import CampaignControls from '@/components/campaigns/CampaignControls';
 
 const Campaigns = () => {
   const {
@@ -67,6 +66,20 @@ const Campaigns = () => {
 
   const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
+
+  const handleResetDefault = () => {
+    localStorage.removeItem('force_maximum_date_preset');
+    localStorage.removeItem('fallback_notified');
+    localStorage.removeItem('date_preset_fallback_reason');
+    refetchCampaigns(true);
+  };
+
+  const handleForceMaximum = () => {
+    localStorage.setItem('force_maximum_date_preset', 'true');
+    localStorage.setItem('date_preset_fallback_reason', 'Manually triggered');
+    console.log('👉 Switched to fallback date preset: maximum');
+    refetchCampaigns(true);
+  };
 
   return (
     <div className="container py-4 space-y-4">
@@ -154,31 +167,10 @@ const Campaigns = () => {
         requestedPermissions={['ads_management', 'ads_read', 'business_management']}
       />
       
-      <div className="mt-8 text-center">
-        <button 
-          onClick={() => {
-            localStorage.removeItem('force_maximum_date_preset');
-            localStorage.removeItem('fallback_notified');
-            localStorage.removeItem('date_preset_fallback_reason');
-            refetchCampaigns(true);
-          }}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mr-2"
-        >
-          Reset & Refresh (Default Range)
-        </button>
-        
-        <button 
-          onClick={() => {
-            localStorage.setItem('force_maximum_date_preset', 'true');
-            localStorage.setItem('date_preset_fallback_reason', 'Manually triggered');
-            console.log('👉 Switched to fallback date preset: maximum');
-            refetchCampaigns(true);
-          }}
-          className="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600"
-        >
-          Force Maximum Range
-        </button>
-      </div>
+      <CampaignControls 
+        onResetDefault={handleResetDefault}
+        onForceMaximum={handleForceMaximum}
+      />
     </div>
   );
 };
