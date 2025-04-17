@@ -1,10 +1,10 @@
-
 /**
  * Specialized throttler for insights API requests
  */
 import { RequestQueueManager } from '../queue/RequestQueueManager';
 import { DuplicateRequestChecker } from './throttling/duplicateChecker';
 import { BATCH_CONFIG, delay, insightsQueueState, requestedCampaignIds, insightsThrottlingState } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
+import { toast } from '@/hooks/use-toast';
 
 export class InsightsRequestThrottler {
   private static readonly processedRequests = new Set<string>();
@@ -208,4 +208,3 @@ export class InsightsRequestThrottler {
     insightsThrottlingState.isThrottling = false;
   }
 }
-
