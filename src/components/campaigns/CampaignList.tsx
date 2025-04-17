@@ -86,32 +86,43 @@ const CampaignList: React.FC<CampaignListProps> = ({
     );
   }
 
-  // NEW: Fallback rendering to ensure visibility of all campaigns
+  // First, check for empty campaign array to show user-friendly message
+  if (!campaigns || campaigns.length === 0) {
+    return (
+      <Card className="p-4">
+        <div className="bg-orange-100 border-2 border-orange-300 p-4 rounded-md text-center">
+          <h2 className="text-xl font-bold text-orange-800">No Campaigns Found</h2>
+          <p className="text-orange-700 mt-2">
+            No campaign data is available to display at this time.
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  // This is the main fallback rendering to ensure visibility of all campaigns
   return (
-    <Card className="overflow-hidden" key={forceRender}>
+    <Card className="overflow-hidden">
       {/* Campaign count header */}
       <div className="bg-green-100 p-4 border-b border-green-200">
-        <h2 className="text-lg font-bold text-green-800">Total campaigns: {campaigns.length}</h2>
+        <h2 className="text-xl font-bold text-green-800">Total campaigns: {campaigns.length}</h2>
         <p className="text-sm text-green-700">Raw campaign data debug view</p>
       </div>
 
       {/* Simple fallback rendering of all campaigns */}
-      <div className="p-4 space-y-2">
-        {campaigns.map((c, i) => (
+      <div className="p-4">
+        {campaigns.map((campaign, index) => (
           <div 
-            key={c?.id || i}
-            className="p-3 bg-gray-100 border border-gray-300 rounded-md"
-            style={{ padding: '12px', border: '1px solid #ccc', marginBottom: '8px' }}
+            key={campaign?.id || index}
+            className="p-3 bg-gray-100 border border-gray-300 rounded-md my-2"
           >
-            <strong>{c?.name || 'Unnamed Campaign'}</strong><br />
-            ID: {c?.id || 'N/A'}<br />
-            Status: {c?.status || 'Unknown'}
+            {campaign?.name || 'Unnamed Campaign'} — {campaign?.id || 'No ID'} — {campaign?.status || 'Unknown Status'}
           </div>
         ))}
       </div>
 
-      {/* Show count at the bottom as well */}
-      <div className="bg-gray-100 p-3 text-center text-sm border-t border-gray-200">
+      {/* Display count at bottom for clarity */}
+      <div className="bg-gray-100 p-3 text-center border-t border-gray-300">
         Displayed {campaigns.length} total campaigns
       </div>
     </Card>
