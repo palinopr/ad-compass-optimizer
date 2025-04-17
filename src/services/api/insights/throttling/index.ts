@@ -1,4 +1,3 @@
-
 /**
  * Re-export all throttling related components
  */
@@ -7,3 +6,5 @@ export { ThrottleStorage } from './storage';
 export { DuplicateRequestChecker } from './duplicateChecker';
 export { ResponseMonitor } from './responseMonitor';
 export type { IThrottleInfo, IUsageData, IRateLimitInfo } from './types';
+export { DatePresetValidator } from './validation/DatePresetValidator';
+export { RequestTracker } from './tracking/RequestTracker';
