@@ -1,3 +1,4 @@
+
 // App.tsx - Updated implementation with version tracking for the last_28d fix (v1.0.2)
 
 import React, { useEffect, useState } from 'react';
