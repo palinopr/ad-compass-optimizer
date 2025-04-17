@@ -1,21 +1,35 @@
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useInsightsState } from './hooks/useInsightsState';
 import { useFetchInsights } from './hooks/useFetchInsights';
 import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
+import { insightsQueueState } from '../campaigns/fetch-utils/insights/batchConfig';
 
 export const useItemInsights = () => {
   const { insights, setInsights, isLoading, setIsLoading, error, setError } = useInsightsState();
   const { fetchInsights } = useFetchInsights();
+  const hasFetchedRef = useRef(false);
 
   const fetchItemInsights = useCallback(async (
     itemId: string, 
     itemType: 'campaign' | 'adset',
     datePreset: string = 'maximum'
   ) => {
+    // Early return if global queue is locked
+    if (insightsQueueState.isActiveLock()) {
+      console.log(`⚠️ Insights fetch skipped: global queue is locked`);
+      return;
+    }
+    
     // Early return if already loading
     if (isLoading) {
       console.log(`⚠️ Insights fetch already in progress for ${itemType}, skipping`);
+      return;
+    }
+    
+    // Check if we've already fetched in this component lifecycle
+    if (hasFetchedRef.current && itemType === 'campaign') {
+      console.log(`⚠️ Insights already fetched for this ${itemType} component instance, skipping duplicate fetch`);
       return;
     }
     
@@ -45,7 +59,12 @@ export const useItemInsights = () => {
     }
 
     try {
+      console.log(`🟢 [FETCH START] ${itemType} ID: ${itemId}`);
       const data = await fetchInsights(itemId, itemType, datePreset);
+      console.log(`✅ [FETCH SUCCESS] ${itemType} ID: ${itemId}`);
+      
+      // Mark as fetched for this component lifecycle
+      hasFetchedRef.current = true;
       
       // Early return on null data
       if (!data) {
@@ -63,7 +82,7 @@ export const useItemInsights = () => {
 
       setInsights(data.campaigns[0].insights);
     } catch (err: any) {
-      console.error('Error fetching insights:', err);
+      console.error(`❌ [FETCH FAIL] ${itemType} ID: ${itemId}:`, err.message);
       setError(err.message || 'Failed to fetch insights');
 
       // If it's a 400 error, mark it as permanently failed

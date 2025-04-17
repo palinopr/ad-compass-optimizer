@@ -4,14 +4,13 @@
  */
 import { RequestQueueManager } from '../queue/RequestQueueManager';
 import { DuplicateRequestChecker } from './throttling/duplicateChecker';
-import { BATCH_CONFIG, delay } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
+import { BATCH_CONFIG, delay, insightsQueueState, requestedCampaignIds } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
 
 export class InsightsRequestThrottler {
   private static readonly processedRequests = new Set<string>();
   private static isProcessing = false;
   private static requestQueue: (() => Promise<any>)[] = [];
   private static readonly SKIPPED_400_KEY = 'insights_skipped_400_requests';
-  private static readonly MAX_QUEUE_SIZE = 100;
 
   /**
    * Process an array of request functions with controlled rate limiting
@@ -19,8 +18,14 @@ export class InsightsRequestThrottler {
    * @returns Array of results in the same order as the requests
    */
   public static async throttleRequests<T>(requests: (() => Promise<T>)[], idPrefix: string = 'insight'): Promise<T[]> {
-    // Early abort if too many requests or already processing
-    if (requests.length > this.MAX_QUEUE_SIZE) {
+    // Check if queue is locked from another process
+    if (insightsQueueState.isActiveLock()) {
+      console.warn(`⚠️ [INSIGHTS] Skipping request - queue is locked by another process`);
+      return [];
+    }
+    
+    // Early abort if too many requests
+    if (requests.length > BATCH_CONFIG.MAX_QUEUE_SIZE) {
       console.warn(`⚠️ Skipping insights fetch: too many campaigns in queue (${requests.length})`);
       return [];
     }
@@ -36,11 +41,15 @@ export class InsightsRequestThrottler {
 
     console.log(`[INSIGHTS] Starting to process ${this.requestQueue.length} requests with batch size ${BATCH_CONFIG.BATCH_SIZE}`);
     
+    // Set global lock
+    insightsQueueState.lock();
+    
     try {
       this.isProcessing = true;
       return await this.processQueue(idPrefix);
     } finally {
       this.isProcessing = false;
+      insightsQueueState.unlock();
     }
   }
 
@@ -125,6 +134,12 @@ export class InsightsRequestThrottler {
             console.warn("🚫 Skipping remaining fetch operations - hit Meta rate limit (#4)");
             break;
           }
+          
+          // Back off if we encounter consecutive errors
+          if (consecutiveErrors >= 2) {
+            console.warn(`⚠️ Multiple consecutive errors (${consecutiveErrors}), adding extra delay...`);
+            await delay(1500); // Extra delay for error recovery
+          }
         }
       }
       
@@ -177,5 +192,6 @@ export class InsightsRequestThrottler {
     this.processedRequests.clear();
     this.isProcessing = false;
     this.requestQueue = [];
+    insightsQueueState.clear();
   }
 }

@@ -5,7 +5,7 @@ import { ThrottleStorage } from './storage';
 import { DuplicateRequestChecker } from './duplicateChecker';
 import { ResponseMonitor } from './responseMonitor';
 import { IRateLimitInfo } from './types';
-import { requestedCampaignIds } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
+import { BATCH_CONFIG, insightsQueueState, requestedCampaignIds } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
 
 export class InsightsThrottling {
   // Singleton instance for tracking in-flight requests
@@ -22,7 +22,13 @@ export class InsightsThrottling {
   private static fetchLock = new Date().getTime();
 
   static checkThrottling(accountId: string = 'default'): void {
-    // First check if we have too many concurrent requests
+    // First check if we have a global queue lock
+    if (insightsQueueState.isActiveLock()) {
+      console.warn(`[INSIGHTS] Global queue lock active - refusing new requests`);
+      throw new Error(`Another insights fetch operation is in progress. Please wait.`);
+    }
+    
+    // Check if too many concurrent requests
     if (this.currentRequestCount >= this.MAX_CONCURRENT_REQUESTS) {
       console.warn(`[INSIGHTS] Too many concurrent requests (${this.currentRequestCount}/${this.MAX_CONCURRENT_REQUESTS})`);
       
@@ -77,15 +83,18 @@ export class InsightsThrottling {
     
     // Increment the request count
     this.currentRequestCount++;
+    console.log(`[INSIGHTS] Starting request #${this.currentRequestCount}`);
   }
 
   static markRequestCompleted(): void {
     // Decrement the request count when a request completes
     this.currentRequestCount = Math.max(0, this.currentRequestCount - 1);
+    console.log(`[INSIGHTS] Request completed. ${this.currentRequestCount} active requests remaining.`);
     
     // If no more requests, release the fetch lock
     if (this.currentRequestCount === 0) {
       this.isFetchingInProgress = false;
+      console.log(`[INSIGHTS] All requests completed. Releasing fetch lock.`);
     }
   }
 
@@ -139,12 +148,14 @@ export class InsightsThrottling {
       });
       
       this.markThrottled('default', 30);
+      console.warn(`[INSIGHTS] Rate limit detected. Throttling for 30 seconds.`);
     }
   }
 
   static isDuplicateRequest(campaignId: string, datePreset: string): boolean {
     // Check our in-memory set first (shared with batchConfig)
     if (this.processedRequestIds.has(campaignId)) {
+      console.log(`[INSIGHTS] Skipping duplicate request for campaign ${campaignId}`);
       return true;
     }
     
@@ -154,6 +165,7 @@ export class InsightsThrottling {
     // If not a duplicate, add to our set
     if (!isDuplicate) {
       this.processedRequestIds.add(campaignId);
+      console.log(`[INSIGHTS] Added campaign ${campaignId} to processed IDs`);
     }
     
     return isDuplicate;
@@ -164,6 +176,7 @@ export class InsightsThrottling {
     this.currentRequestCount = 0;
     this.isFetchingInProgress = false;
     DuplicateRequestChecker.reset();
+    console.log(`[INSIGHTS] Throttling state reset`);
     // Don't clear processedRequestIds as it's now shared
   }
 }

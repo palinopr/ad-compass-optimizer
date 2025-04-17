@@ -5,13 +5,19 @@ import { InsightsThrottling } from '@/services/api/insights/throttling/InsightsT
 import { processInsightsData } from '../insightsProcessor';
 import { validateDatePreset } from '../datePresetValidator';
 import { CampaignExtraStats } from '@/services/api/types/metaCampaignTypes';
-import { delay, requestedCampaignIds } from '../batchConfig';
+import { delay, insightsQueueState, requestedCampaignIds } from '../batchConfig';
 
 export const fetchCampaignInsightData = async (
   campaignId: string,
   token: string,
   datePreset: string = 'last_30d'
 ): Promise<CampaignExtraStats | null> => {
+  // Check if global queue is locked
+  if (insightsQueueState.isActiveLock()) {
+    console.log(`[INSIGHTS FETCH] Skipping fetch for campaign ${campaignId}: global queue is locked`);
+    return null;
+  }
+  
   // First check if we've already fetched this campaign in this session
   if (requestedCampaignIds.has(campaignId)) {
     console.log(`[INSIGHTS FETCH] Skipping duplicate fetch for campaign ${campaignId}`);
