@@ -18,13 +18,18 @@ export class MetaCampaignService extends BaseApiService {
         return [];
       }
       
-      console.log(`[META CAMPAIGN] Fetching campaigns for account ${adAccountId} with date preset ${datePreset || 'last_30d'}`);
+      // Check if we should force maximum date preset due to prior empty results
+      const shouldUseMaximum = localStorage.getItem('force_maximum_date_preset') === 'true';
+      const effectivePreset = shouldUseMaximum ? 'maximum' : 'last_30d';
+      
+      console.log(`[META CAMPAIGN] Fetching campaigns for account ${adAccountId} with date preset ${effectivePreset} (original: ${datePreset || 'last_30d'})`);
       
       // Log full request details for debugging
       console.log('[META CAMPAIGN] Full request details:', {
         tokenLength: token ? token.length : 0,
         adAccountId: adAccountId,
-        datePreset: datePreset || 'last_30d',
+        datePreset: effectivePreset,
+        forcingMaximum: shouldUseMaximum,
         timestamp: new Date().toISOString()
       });
       
@@ -32,21 +37,22 @@ export class MetaCampaignService extends BaseApiService {
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_fetch_account', adAccountId);
       
-      // NEW: Ensure datePreset is specifically set to last_30d
-      const forcedDatePreset = 'last_30d';
-      if (datePreset !== forcedDatePreset) {
-        console.log(`[META CAMPAIGN] Overriding provided date_preset '${datePreset}' with forced value '${forcedDatePreset}'`);
+      // ALWAYS use last_30d or maximum (if forced) instead of any provided preset
+      const campaigns = await CampaignFetchService.fetchCampaigns(token, adAccountId, effectivePreset);
+      
+      // If we got campaigns with maximum preset, remove the flag for future requests
+      if (shouldUseMaximum && campaigns.length > 0) {
+        localStorage.removeItem('force_maximum_date_preset');
+        console.log('[META CAMPAIGN] Successfully retrieved campaigns with maximum date preset, clearing force flag');
       }
       
-      const campaigns = await CampaignFetchService.fetchCampaigns(token, adAccountId, forcedDatePreset);
-      
-      // NEW: Log raw campaign data before any processing
+      // Log raw campaign data before any processing
       console.log('[MetaCampaignService] PIPELINE RAW INPUT - Raw campaigns response:', campaigns);
       
       // IMPORTANT: Ensure we always return an array, even if empty
       const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
       
-      // NEW: No filtering or transformation - pass ALL campaigns through
+      // No filtering or transformation - pass ALL campaigns through
       console.log('[MetaCampaignService] BYPASSING FILTERS - Using all campaigns');
       
       // Log success information
@@ -60,7 +66,7 @@ export class MetaCampaignService extends BaseApiService {
         }
       });
       
-      // NEW: Log the final output before returning
+      // Log the final output before returning
       console.log('[MetaCampaignService] PIPELINE OUTPUT - Returning campaigns:', {
         count: safeCampaigns.length,
         hasEmptyObjects: safeCampaigns.some(c => Object.keys(c).length === 0),
@@ -71,7 +77,7 @@ export class MetaCampaignService extends BaseApiService {
     } catch (error) {
       console.error('[META CAMPAIGN] Error in fetchCampaigns:', error);
       
-      // NEW: Log error in the requested format
+      // Log error in the requested format
       console.error('[MetaCampaignService] Failed to fetch campaigns:', error);
       
       // Store error information for debugging

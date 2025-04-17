@@ -13,8 +13,15 @@ export class CampaignQueryBuilder {
   ];
 
   static buildCampaignQuery(datePreset = 'last_30d'): string {
+    // Check if we should force maximum date preset
+    const shouldUseMaximum = localStorage.getItem('force_maximum_date_preset') === 'true';
+    const effectiveDatePreset = shouldUseMaximum ? 'maximum' : datePreset;
+    
     // Map legacy presets to Meta API compatible presets
-    let validDatePreset = this.normalizePreset(datePreset);
+    let validDatePreset = this.normalizePreset(effectiveDatePreset);
+    
+    // Log what date preset we're using
+    console.log(`[CAMPAIGN QUERY] Using effective date preset: ${validDatePreset} (original: ${datePreset}, forcing maximum: ${shouldUseMaximum})`);
     
     // Use this specific set of fields to ensure we get required data
     // IMPORTANT: These exact fields are required to prevent empty objects
@@ -27,7 +34,6 @@ export class CampaignQueryBuilder {
     const query = `${basicFields}&insights.date_preset(${validDatePreset}).fields(${insightFields})`;
     
     // Log the query for debugging
-    console.log(`[CAMPAIGN QUERY] Built query with date preset: ${validDatePreset}`);
     console.log(`[CAMPAIGN QUERY] Full query fields: ${query}`);
     
     return query;
@@ -63,7 +69,7 @@ export class CampaignQueryBuilder {
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.10-last-30d-preset-validation';
+    return '1.0.11-last-30d-forced-preset';
   }
   
   // Adding timestamp to ensure no cache is used

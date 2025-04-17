@@ -1,6 +1,5 @@
 
 import React from 'react';
-import CampaignList from '@/components/campaigns/CampaignList';
 import CampaignHeader from '@/components/campaigns/CampaignHeader';
 import CampaignFilterToolbar from '@/components/campaigns/CampaignFilterToolbar';
 import CampaignCreationTrigger from '@/components/campaigns/CampaignCreationTrigger';
@@ -9,6 +8,7 @@ import CampaignsAuthentication from '@/components/campaigns/page/CampaignsAuthen
 import CampaignsContent from '@/components/campaigns/page/CampaignsContent';
 import { useCampaignsPage } from '@/components/campaigns/page/useCampaignsPage';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
+import { Button } from '@/components/ui/card';
 
 const Campaigns = () => {
   const {
@@ -69,6 +69,7 @@ const Campaigns = () => {
         ✅ Campaigns Page Loaded - {safeCampaigns.length} campaigns available
       </div>
       
+      {/* Always show campaign header to ensure ad account selector is visible */}
       <CampaignHeader
         onCreateCampaign={() => setShowCreateWizard(true)}
         disabled={!isAuthenticated || !hasAdAccount || !hasPermissions}
@@ -111,22 +112,7 @@ const Campaigns = () => {
           
           <CampaignFilterToolbar 
             showCreateWizard={showCreateWizard}
-          />
-          
-          <CampaignList
-            isLoading={isLoading}
-            campaigns={safeCampaigns}
-            error={campaignsError}
-            errorDetails={null}
-            activeTab={activeTab}
-            filteredCampaigns={safeFilteredCampaigns}
-            refetchCampaigns={() => refetchCampaigns(true)}
-            forceRender={0}
-            isAuthenticated={isAuthenticated}
-            fetchCompleted={fetchCompleted}
-            campaignsFetchStatus={campaignsFetchStatus}
-            metaPermissionsInvalid={metaPermissionsInvalid}
-            status={activeTab}
+            onRefresh={() => refetchCampaigns(true)}
           />
           
           {showCreateWizard && (
@@ -152,6 +138,21 @@ const Campaigns = () => {
         onError={handleConnectionError}
         requestedPermissions={['ads_management', 'ads_read', 'business_management']}
       />
+      
+      {/* Manual refresh button for emergencies */}
+      <div className="mt-8 text-center">
+        <button 
+          onClick={() => {
+            // Clear any stored flags that might be affecting behavior
+            localStorage.removeItem('force_maximum_date_preset');
+            // Force a complete refresh with default settings
+            refetchCampaigns(true);
+          }}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Force Refresh Campaigns
+        </button>
+      </div>
     </div>
   );
 };

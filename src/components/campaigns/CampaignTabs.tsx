@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CampaignList from '@/components/campaigns/CampaignList';
 import { Info } from 'lucide-react';
 import { useCampaigns } from '@/hooks/campaigns';
+import { toast } from '@/hooks/use-toast';
 
 interface CampaignTabsProps {
   activeTab: 'active' | 'draft' | 'archived';
@@ -39,7 +40,39 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
     if (campaigns && campaigns.length === 0 && !isLoading && !error) {
       console.log('[CAMPAIGN TABS] Empty campaigns array but no loading or error state');
     }
+
+    // Show toast notification when campaigns are loaded
+    if (campaigns && campaigns.length > 0 && !isLoading) {
+      toast({
+        title: "Campaigns loaded",
+        description: `${campaigns.length} campaigns available with date preset: last_30d`,
+        duration: 3000
+      });
+    }
   }, [campaigns, filteredCampaigns, isLoading, error, activeTab, fetchCompleted, campaignsFetchStatus]);
+
+  // If we have no campaigns and fetch completed, try refreshing with maximum date range
+  useEffect(() => {
+    if (fetchCompleted && campaigns && campaigns.length === 0 && !isLoading && !error) {
+      console.log('[CAMPAIGN TABS] No campaigns found with current date preset, trying maximum range');
+      
+      // Set a small delay to avoid immediate refetch
+      const timeoutId = setTimeout(() => {
+        // Force using maximum date range
+        localStorage.setItem('force_maximum_date_preset', 'true');
+        
+        toast({
+          title: "Trying alternative date range",
+          description: "No campaigns found with default settings, trying maximum date range",
+          duration: 3000
+        });
+        
+        refetchCampaigns(true);
+      }, 1500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [fetchCompleted, campaigns, isLoading, error, refetchCampaigns]);
 
   // Safety check for campaigns array
   const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];

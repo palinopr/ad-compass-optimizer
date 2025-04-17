@@ -7,6 +7,7 @@ import { LoadingView } from './states/LoadingView';
 import ErrorView from './states/ErrorView';
 import { metaPermissionsInvalid } from '@/hooks/campaigns/utils/metaPermissionsUtils';
 import NoCampaignsFoundPanel from './diagnostic-components/NoCampaignsFoundPanel';
+import EmptyState from './states/EmptyState';
 
 interface CampaignListProps {
   isLoading: boolean;
@@ -69,10 +70,12 @@ const CampaignList: React.FC<CampaignListProps> = ({
     console.log("[UI] Rendering raw campaign list:", campaigns);
   }, [campaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted]);
 
-  // THIS IS NEW: Log every render to check if component is mounting
-  console.log("[RENDER] CampaignList component rendering");
-  console.log("[RENDER] Total campaigns:", campaigns?.length || 0);
+  // Check if we're using maximum date preset as a fallback
+  const isUsingMaximumFallback = localStorage.getItem('force_maximum_date_preset') === 'true';
   
+  // Get selected ad account for display
+  const selectedAdAccount = localStorage.getItem('selected_ad_account') || 'unknown';
+
   // Show loading state if the app is loading campaigns
   if (isLoading) {
     return (
@@ -109,14 +112,17 @@ const CampaignList: React.FC<CampaignListProps> = ({
         <div style={{ background: 'yellow', padding: '10px', marginBottom: '10px' }}>
           ✅ CampaignList Loaded - Empty State
         </div>
-        <Card className="p-4">
-          <div className="bg-orange-100 border-2 border-orange-300 p-4 rounded-md text-center">
-            <h2 className="text-xl font-bold text-orange-800">No Campaigns Found</h2>
-            <p className="text-orange-700 mt-2">
-              No campaign data is available to display at this time.
-            </p>
-          </div>
-        </Card>
+        <EmptyState 
+          icon="📅" 
+          title={isUsingMaximumFallback 
+            ? "No Campaigns Found (Maximum Date Range)" 
+            : "No Campaigns Found For This Date Range"}
+          description={isUsingMaximumFallback 
+            ? `We couldn't find any campaigns in this ad account (${selectedAdAccount}) even with maximum date range.` 
+            : `No campaigns found for the current date range. We've tried using the "last_30d" preset.`}
+          adAccountId={selectedAdAccount}
+          onRefresh={refetchCampaigns}
+        />
       </>
     );
   }
@@ -132,25 +138,18 @@ const CampaignList: React.FC<CampaignListProps> = ({
         {/* Campaign count header */}
         <div className="bg-green-100 p-4 border-b border-green-200">
           <h2 className="text-xl font-bold text-green-800">Total campaigns: {campaigns.length}</h2>
-          <p className="text-sm text-green-700">Raw campaign data debug view</p>
+          <p className="text-sm text-green-700">
+            {isUsingMaximumFallback 
+              ? "Using maximum date range (fallback mode)" 
+              : "Using default 30-day date range"}
+          </p>
         </div>
 
-        {/* Simple fallback rendering of all campaigns */}
-        <div className="p-4">
-          {campaigns.map((campaign, index) => (
-            <div 
-              key={campaign?.id || index}
-              className="p-3 bg-gray-100 border border-gray-300 rounded-md my-2"
-            >
-              {campaign?.name || 'Unnamed Campaign'} — {campaign?.id || 'No ID'} — {campaign?.status || 'Unknown Status'}
-            </div>
-          ))}
-        </div>
-
-        {/* Display count at bottom for clarity */}
-        <div className="bg-gray-100 p-3 text-center border-t border-gray-300">
-          Displayed {campaigns.length} total campaigns
-        </div>
+        {/* Campaign table */}
+        <CampaignTable 
+          campaigns={campaigns}
+          status={activeTab as 'active' | 'draft' | 'archived'}
+        />
       </Card>
     </>
   );
