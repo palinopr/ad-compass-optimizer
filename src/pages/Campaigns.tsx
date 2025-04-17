@@ -8,7 +8,7 @@ import CampaignsAuthentication from '@/components/campaigns/page/CampaignsAuthen
 import CampaignsContent from '@/components/campaigns/page/CampaignsContent';
 import { useCampaignsPage } from '@/components/campaigns/page/useCampaignsPage';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
-import { Button } from '@/components/ui/card';
+import { Button } from '@/components/ui/button'; // Changed from card to button
 
 const Campaigns = () => {
   const {
