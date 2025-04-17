@@ -1,7 +1,6 @@
 
 import { THROTTLING_CONFIG } from '../config/ThrottlingConfig';
 import { QueueItem } from './types/QueueTypes';
-import { insightsQueueState } from '@/hooks/campaigns/fetch-utils/insights/batchConfig';
 
 export class QueueProcessor {
   private lastRequestTime = 0;
@@ -18,7 +17,7 @@ export class QueueProcessor {
       if (!item) break;
       
       this.lastRequestTime = Date.now();
-      console.log(`🔄 [STRICT QUEUE] Processing request ${item.id}`);
+      console.log(`🔄 [QUEUE] Processing request ${item.id}`);
       
       try {
         const result = await item.request();
@@ -26,10 +25,11 @@ export class QueueProcessor {
         item.resolve(result);
       } catch (error) {
         removeItem();
-        console.error(`❌ [STRICT QUEUE] Request ${item.id} failed:`, error);
+        console.error(`❌ [QUEUE] Request ${item.id} failed:`, error);
         item.reject(error);
       }
       
+      // Add a small delay between requests for safety
       await new Promise(resolve => setTimeout(resolve, 250));
     }
 
@@ -42,7 +42,7 @@ export class QueueProcessor {
     
     if (this.lastRequestTime > 0 && timeSinceLastRequest < THROTTLING_CONFIG.MIN_REQUEST_INTERVAL) {
       const waitTime = THROTTLING_CONFIG.MIN_REQUEST_INTERVAL - timeSinceLastRequest;
-      console.log(`⏳ [STRICT QUEUE] Waiting ${waitTime}ms before next request`);
+      console.log(`⏳ [QUEUE] Waiting ${waitTime}ms before next request`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }

@@ -9,6 +9,8 @@ export class QueueManager {
   private processingLock = false;
   private requestQueue: QueueItem[] = [];
   private processor: QueueProcessor;
+  private lastRequestTime = 0;
+  private processedRequests = new Set<string>();
 
   private constructor() {
     this.processor = new QueueProcessor();
@@ -29,17 +31,23 @@ export class QueueManager {
     request: () => Promise<T>,
     requestId: string
   ): Promise<T> {
+    // Check for duplicates using Set for O(1) lookup
+    if (this.processedRequests.has(requestId)) {
+      console.log(`🔄 [QUEUE] Skipping duplicate request ${requestId}`);
+      return Promise.reject(new Error('Duplicate request'));
+    }
+
     if (insightsThrottlingState.isActiveThrottling()) {
-      console.warn('⛔ [STRICT QUEUE] Global throttling active - rejecting new request', requestId);
+      console.warn('⛔ [QUEUE] Global throttling active - rejecting request');
       return Promise.reject(new Error('Global throttling active'));
     }
 
     if (insightsQueueState.isActiveLock()) {
-      console.warn('⛔ [STRICT QUEUE] Queue is locked - rejecting new request', requestId);
+      console.warn('⛔ [QUEUE] Queue is locked - rejecting request');
       return Promise.reject(new Error('Queue is locked'));
     }
 
-    console.log(`📝 [STRICT QUEUE] Enqueueing request: ${requestId}`);
+    console.log(`📝 [QUEUE] Enqueueing request: ${requestId}`);
     
     return new Promise<T>((resolve, reject) => {
       const queueItem: QueueItem<T> = {
@@ -51,6 +59,7 @@ export class QueueManager {
       };
 
       this.requestQueue.push(queueItem);
+      this.processedRequests.add(requestId);
       this.attemptProcessQueue();
     });
   }
@@ -64,7 +73,7 @@ export class QueueManager {
     
     try {
       if (this.isProcessing) {
-        console.log(`⏱️ [STRICT QUEUE] Queue is already being processed (${this.requestQueue.length} items waiting)`);
+        console.log(`⏱️ [QUEUE] Already processing (${this.requestQueue.length} items waiting)`);
         return;
       }
       
@@ -76,12 +85,12 @@ export class QueueManager {
 
   private async processQueue(): Promise<void> {
     if (this.isProcessing) {
-      console.warn('⚠️ [STRICT QUEUE] Attempted to process queue while already processing!');
+      console.warn('⚠️ [QUEUE] Attempted to process queue while already processing!');
       return;
     }
 
     this.isProcessing = true;
-    console.log(`🚀 [STRICT QUEUE] Starting to process queue with ${this.requestQueue.length} items`);
+    console.log(`🚀 [QUEUE] Starting to process ${this.requestQueue.length} items`);
     insightsQueueState.lock();
 
     try {
@@ -94,7 +103,7 @@ export class QueueManager {
         }
       );
     } catch (error) {
-      console.error('❌ [STRICT QUEUE] Fatal error processing queue:', error);
+      console.error('❌ [QUEUE] Fatal error processing queue:', error);
       this.isProcessing = false;
       insightsQueueState.unlock();
     }
@@ -121,7 +130,10 @@ export class QueueManager {
     this.isProcessing = false;
     this.processingLock = false;
     this.processor.reset();
-    console.log('🧹 [STRICT QUEUE] Queue cleared');
+    this.processedRequests.clear();
+    console.log('🧹 [QUEUE] Queue cleared');
   }
 }
 
+// Export the singleton instance
+export const strictSequentialQueue = QueueManager.getInstance();
