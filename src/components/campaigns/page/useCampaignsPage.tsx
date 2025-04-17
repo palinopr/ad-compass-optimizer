@@ -3,11 +3,12 @@ import { useState, useRef } from 'react';
 import { useMetaConnection } from '@/components/meta/SharedMetaConnectionProvider';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { toast } from '@/hooks/use-toast';
-import { triggerCampaignRefresh } from '../fetch-utils/eventHandlers';
+import { triggerCampaignRefresh } from '@/hooks/campaigns/fetch-utils/eventHandlers';
 import { useTokenValidation } from '@/hooks/campaigns/fetch-hooks/useTokenValidation';
 import { useLoadingSafety } from '@/hooks/campaigns/fetch-hooks/useLoadingSafety';
 import { useFetchState } from '@/hooks/campaigns/fetch-hooks/useFetchState';
 import { useInitialFetch } from '@/hooks/campaigns/fetch-hooks/useInitialFetch';
+import { useCampaigns } from '@/hooks/campaigns/useCampaigns';
 
 export function useCampaignsPage() {
   const [activeTab, setActiveTab] = useState<'active' | 'draft' | 'archived'>('active');
@@ -24,6 +25,23 @@ export function useCampaignsPage() {
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
   const directIsAuthenticated = !!token && token.length > 50;
   const hasAdAccount = !!selectedAdAccount && selectedAdAccount.length > 0;
+
+  // Use the useCampaigns hook to get campaign data
+  const {
+    campaigns,
+    filteredCampaigns,
+    isLoading,
+    error: campaignsError,
+    refetchCampaigns,
+    fetchCompleted,
+    insightsFetchStatus,
+    campaignsFetchStatus,
+    metaPermissionsInvalid,
+    forceRender: fallbackForceRender,
+  } = useCampaigns(activeTab);
+
+  // Get the current date preset from localStorage or default to 'last_30d'
+  const currentDatePreset = localStorage.getItem('last_campaign_fetch_date_preset') || 'last_30d';
 
   const handleConnectionSuccess = () => {
     setIsAuthSyncing(true);
@@ -87,6 +105,19 @@ export function useCampaignsPage() {
     handleConnectionError,
     refreshConnection,
     resetConnection,
-    isAuthSyncing
+    isAuthSyncing,
+    // Add the missing properties from useCampaigns hook
+    campaigns,
+    filteredCampaigns,
+    campaignsError,
+    isLoading,
+    selectedAdAccount,
+    refetchCampaigns,
+    fetchCompleted,
+    insightsFetchStatus,
+    campaignsFetchStatus,
+    metaPermissionsInvalid,
+    fallbackForceRender,
+    currentDatePreset
   };
 }
