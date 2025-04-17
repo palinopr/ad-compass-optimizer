@@ -13,6 +13,18 @@ const queueCampaignInsightsFetch = (
   token: string,
   datePreset: string
 ): Promise<CampaignExtraStats | null> => {
+  // Skip invalid campaigns early
+  if (!campaign.id || !campaign.status) {
+    console.log(`⚠️ Skipping insights fetch: Campaign missing ID or status`);
+    return Promise.resolve(null);
+  }
+  
+  // Skip non-active campaigns
+  if (campaign.status !== "ACTIVE") {
+    console.log(`⚠️ Skipping insights fetch for campaign ${campaign.id}: Status is ${campaign.status}, not ACTIVE`);
+    return Promise.resolve(null);
+  }
+
   // ENHANCED STRICT PRE-CHECK: Triple verification to prevent any API calls for blocked campaigns
   
   // First check in-memory status
@@ -58,7 +70,7 @@ export const fetchInsightsForCampaigns = async (
 ): Promise<MetaCampaign[]> => {
   // Important: Always return the campaigns array even if insights fetch fails
   if (!campaigns || !Array.isArray(campaigns) || campaigns.length === 0) {
-    console.log(`[INSIGHTS FETCH] No campaigns to process, returning empty array`);
+    console.log(`✅ No campaigns available, skipping insights fetch`);
     return campaigns || [];
   }
   
@@ -66,6 +78,9 @@ export const fetchInsightsForCampaigns = async (
     console.error('[INSIGHTS FETCH] Missing token, cannot fetch insights');
     return campaigns;
   }
+  
+  // Log total campaign count for monitoring
+  console.log(`🔍 Attempting to fetch insights for ${campaigns.length} campaigns`);
   
   const { MIN_REQUEST_INTERVAL, BATCH_SIZE, BATCH_INTERVAL } = BATCH_CONFIG;
   
@@ -78,7 +93,8 @@ export const fetchInsightsForCampaigns = async (
     // Ignore storage errors
   }
   
-  RequestQueueManager.setRequestInterval(500);
+  // Set stricter request interval for throttling
+  RequestQueueManager.setRequestInterval(750); // Increased from 500ms
   
   const processedCampaignIds = new Map<string, boolean>();
   let successCount = 0;
@@ -87,6 +103,18 @@ export const fetchInsightsForCampaigns = async (
   
   // ENHANCED PRE-FILTER: Triple verification to filter out all blocked campaigns
   const filteredCampaigns = campaigns.filter(campaign => {
+    // Skip campaigns missing required fields
+    if (!campaign.id || !campaign.status) {
+      console.log(`⚠️ Skipping insights fetch: Campaign missing ID or status`);
+      return false;
+    }
+    
+    // Skip non-active campaigns
+    if (campaign.status !== "ACTIVE") {
+      console.log(`⚠️ Skipping insights fetch for campaign ${campaign.id}: Status is ${campaign.status}, not ACTIVE`);
+      return false;
+    }
+  
     // Skip already blocked campaigns via insightsStatus
     if (campaign.insightsStatus === 'blocked') {
       console.log(`🚫 Skipped ${campaign.id} – insights blocked after 400`);
@@ -119,26 +147,31 @@ export const fetchInsightsForCampaigns = async (
     return true;
   });
   
-  console.log(`[INSIGHTS FETCH] After filtering blocked campaigns: ${filteredCampaigns.length}/${campaigns.length} will be processed`);
+  console.log(`[INSIGHTS FETCH] After filtering: ${filteredCampaigns.length}/${campaigns.length} campaigns qualify for insights fetch`);
+  
+  // If no campaigns after filtering, return early
+  if (filteredCampaigns.length === 0) {
+    console.log('[INSIGHTS FETCH] No qualifying campaigns to fetch insights for, returning original array');
+    return campaigns;
+  }
   
   const campaignsWithInsights = [...filteredCampaigns];
   campaignsWithInsights.forEach(campaign => {
     campaignMap.set(campaign.id, campaign);
   });
   
-  // If there are no campaigns to process after filtering, return the original array
-  if (campaignsWithInsights.length === 0) {
-    console.log('[INSIGHTS FETCH] No non-blocked campaigns to process, returning original array');
-    return campaigns;
-  }
+  // Set a stricter batch size limit for better throttling
+  const BATCH_LIMIT = Math.min(BATCH_CONFIG.BATCH_SIZE, 10); // Use at most 10 campaigns per batch
   
   // Process campaigns in batches
-  for (let i = 0; i < campaignsWithInsights.length; i += BATCH_CONFIG.BATCH_SIZE) {
-    const batch = campaignsWithInsights.slice(i, i + BATCH_CONFIG.BATCH_SIZE);
+  for (let i = 0; i < campaignsWithInsights.length; i += BATCH_LIMIT) {
+    const batch = campaignsWithInsights.slice(i, i + BATCH_LIMIT);
     
-    console.log(`[INSIGHTS FETCH] Processing batch ${Math.floor(i/BATCH_CONFIG.BATCH_SIZE) + 1} with ${batch.length} campaigns`);
+    console.log(`[INSIGHTS FETCH] Processing batch ${Math.floor(i/BATCH_LIMIT) + 1} with ${batch.length} campaigns (max: ${BATCH_LIMIT})`);
     
     // Process each campaign in the current batch
+    const batchPromises = [];
+    
     for (let j = 0; j < batch.length; j++) {
       const campaign = batch[j];
       
@@ -154,55 +187,60 @@ export const fetchInsightsForCampaigns = async (
         continue;
       }
       
-      try {
-        processedCampaignIds.set(campaign.id, true);
-        
-        const extraStats = await queueCampaignInsightsFetch(campaign, token, datePreset);
-        
-        if (extraStats) {
-          const campaignToUpdate = campaignMap.get(campaign.id);
-          if (campaignToUpdate) {
-            campaignToUpdate.extraStats = extraStats;
-            
-            if (campaignToUpdate.insights) {
-              campaignToUpdate.insights.cpa = campaignToUpdate.insights.cpa || extraStats.cpa;
-              campaignToUpdate.insights.roas = campaignToUpdate.insights.roas || extraStats.roas;
-              campaignToUpdate.insights.spend = campaignToUpdate.insights.spend || extraStats.spend;
+      // Track that we've processed this campaign ID
+      processedCampaignIds.set(campaign.id, true);
+      
+      // Create a promise that will fetch insights for this campaign
+      const promise = (async () => {
+        try {
+          const extraStats = await queueCampaignInsightsFetch(campaign, token, datePreset);
+          
+          if (extraStats) {
+            const campaignToUpdate = campaignMap.get(campaign.id);
+            if (campaignToUpdate) {
+              campaignToUpdate.extraStats = extraStats;
+              
+              if (campaignToUpdate.insights) {
+                campaignToUpdate.insights.cpa = campaignToUpdate.insights.cpa || extraStats.cpa;
+                campaignToUpdate.insights.roas = campaignToUpdate.insights.roas || extraStats.roas;
+                campaignToUpdate.insights.spend = campaignToUpdate.insights.spend || extraStats.spend;
+              }
+              
+              if (!campaignToUpdate.results && extraStats.results !== '-') {
+                campaignToUpdate.results = extraStats.results;
+              }
+              
+              successCount++;
+              console.log(`[INSIGHTS FETCH] Updated campaign ${campaign.id} with extra stats`);
             }
+          }
+        } catch (error: any) {
+          console.error(`[INSIGHTS FETCH] Error in processing for campaign ${campaign.id}:`, error);
+          
+          // ENHANCED IMMEDIATE BLOCKING: Mark campaign as blocked immediately if 400 error
+          if (error.status === 400 || (error.response && error.response.status === 400)) {
+            console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaign.id}`);
             
-            if (!campaignToUpdate.results && extraStats.results !== '-') {
-              campaignToUpdate.results = extraStats.results;
-            }
+            // Update in-memory state
+            campaign.insightsStatus = 'blocked';
+            campaign.insights = null;
             
-            successCount++;
-            console.log(`[INSIGHTS FETCH] Updated campaign ${campaign.id} with extra stats`);
+            // Update localStorage and add to all blocking mechanisms
+            markCampaignAsBlocked(campaign.id);
+            
+            // Logging for visibility
+            console.log(`[INSIGHTS FETCH] Campaign ${campaign.id} is now BLOCKED from future insights fetches`);
           }
         }
-        
-        if (j < batch.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.MIN_REQUEST_INTERVAL));
-        }
-      } catch (error: any) {
-        console.error(`[INSIGHTS FETCH] Error in processing for campaign ${campaign.id}:`, error);
-        
-        // ENHANCED IMMEDIATE BLOCKING: Mark campaign as blocked immediately if 400 error
-        if (error.status === 400 || (error.response && error.response.status === 400)) {
-          console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaign.id}`);
-          
-          // Update in-memory state
-          campaign.insightsStatus = 'blocked';
-          campaign.insights = null;
-          
-          // Update localStorage and add to all blocking mechanisms
-          markCampaignAsBlocked(campaign.id);
-          
-          // Logging for visibility
-          console.log(`[INSIGHTS FETCH] Campaign ${campaign.id} is now BLOCKED from future insights fetches`);
-        }
-      }
+      })();
+      
+      batchPromises.push(promise);
     }
     
-    if (i + BATCH_CONFIG.BATCH_SIZE < campaignsWithInsights.length) {
+    // Wait for all batch promises to complete before moving to the next batch
+    await Promise.all(batchPromises);
+    
+    if (i + BATCH_LIMIT < campaignsWithInsights.length) {
       console.log(`[INSIGHTS FETCH] Waiting ${BATCH_CONFIG.BATCH_INTERVAL}ms before next batch`);
       await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_INTERVAL));
     }

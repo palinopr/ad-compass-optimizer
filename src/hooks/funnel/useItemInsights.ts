@@ -13,10 +13,16 @@ export const useItemInsights = () => {
     itemType: 'campaign' | 'adset',
     datePreset: string = 'maximum'
   ) => {
+    // Early return if already loading
+    if (isLoading) {
+      console.log(`⚠️ Insights fetch already in progress for ${itemType}, skipping`);
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
 
-    // Validate campaign ID
+    // Validate item ID - strict validation and early return
     if (!itemId || typeof itemId !== 'string' || itemId.trim() === '') {
       console.warn(`⚠️ Skipping insights fetch for ${itemType}: Invalid ID`);
       setError('Invalid item ID');
@@ -41,8 +47,17 @@ export const useItemInsights = () => {
     try {
       const data = await fetchInsights(itemId, itemType, datePreset);
       
-      if (!data || !data.campaigns || data.campaigns.length === 0) {
+      // Early return on null data
+      if (!data) {
+        console.log(`⚠️ No data returned from insights fetch for ${itemType} ${itemId}`);
         setError('No insights data available');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!data.campaigns || data.campaigns.length === 0) {
+        setError('No insights data available');
+        setIsLoading(false);
         return;
       }
 
@@ -65,7 +80,7 @@ export const useItemInsights = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchInsights, setError, setInsights, setIsLoading]);
+  }, [fetchInsights, setError, setInsights, setIsLoading, isLoading]);
 
   return {
     insights,

@@ -24,10 +24,16 @@ export function useInsightsFetching() {
     id: string, 
     options: InsightFilterOptions = {}
   ) => {
+    // Early return if already loading
+    if (isLoading) {
+      console.log(`⚠️ Insights fetch already in progress, skipping duplicate request`);
+      return null;
+    }
+    
     setIsLoading(true);
     setError(null);
     
-    // Validate campaign ID
+    // Validate campaign ID with early return
     if (!id || typeof id !== 'string' || id.trim() === '') {
       console.warn(`⚠️ Skipping insights fetch: Invalid ID`);
       setIsLoading(false);
@@ -71,6 +77,10 @@ export function useInsightsFetching() {
         console.warn('[INSIGHTS FETCHING] Both datePreset and timeRange specified, removing timeRange');
         validatedOptions.timeRange = undefined;
       }
+    } else {
+      // If no date preset provided, use safe default
+      console.log('[INSIGHTS FETCHING] No date preset provided, using last_30d as default');
+      validatedOptions.datePreset = 'last_30d';
     }
     
     try {
@@ -103,6 +113,8 @@ export function useInsightsFetching() {
         return null;
       }
       
+      console.log(`🔍 Attempting to fetch insights for ${id} with options:`, JSON.stringify(validatedOptions));
+      
       const result = await fetchFunction(token, id, validatedOptions);
       setInsights(result);
       
@@ -126,7 +138,7 @@ export function useInsightsFetching() {
     } finally {
       setIsLoading(false);
     }
-  }, [updateRateLimitStatus, rateLimitStatus, setError, handleError, failedCampaigns]);
+  }, [updateRateLimitStatus, rateLimitStatus, setError, handleError, failedCampaigns, isLoading]);
   
   return {
     insights,

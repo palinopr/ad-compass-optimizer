@@ -15,7 +15,7 @@ export const useFetchInsights = () => {
   ) => {
     console.log(`[INSIGHTS HOOK] Request started for ${itemType} ${itemId} with datePreset: ${datePreset}`);
 
-    // Validate campaign ID
+    // Validate item ID - strict validation with early return
     if (!itemId || typeof itemId !== 'string' || itemId.trim() === '') {
       console.warn(`⚠️ Skipping insights fetch: Invalid ${itemType} ID`);
       return null;
@@ -36,9 +36,11 @@ export const useFetchInsights = () => {
     try {
       const token = metaAuthService.getAccessToken();
       if (!token) {
+        console.warn(`⚠️ Skipping insights fetch for ${itemType} ${itemId}: No access token available`);
         throw new Error('No access token available');
       }
 
+      // Ensure we have a valid date preset to avoid API errors
       // Force date_preset to last_30d regardless of input
       const forcedDatePreset = 'last_30d';
       if (datePreset !== forcedDatePreset) {
@@ -85,12 +87,21 @@ export const useFetchInsights = () => {
 
       const response = await MetaFunnelService.fetchFunnelData(token, itemId, validDatePreset);
       
+      // Validate response before processing
+      if (!response) {
+        console.warn(`⚠️ Null response from fetchFunnelData for ${itemType} ${itemId}`);
+        return null;
+      }
+      
       // Check for empty response data
-      if (response && response.campaigns && response.campaigns.length > 0) {
-        const emptyCampaigns = response.campaigns.filter(c => !c || Object.keys(c).length === 0).length;
-        if (emptyCampaigns > 0) {
-          console.warn(`[INSIGHTS HOOK] Warning: ${emptyCampaigns}/${response.campaigns.length} campaigns are empty objects`);
-        }
+      if (!response.campaigns || response.campaigns.length === 0) {
+        console.warn(`⚠️ No campaigns data in response for ${itemType} ${itemId}`);
+        return null;
+      }
+      
+      const emptyCampaigns = response.campaigns.filter(c => !c || Object.keys(c).length === 0).length;
+      if (emptyCampaigns > 0) {
+        console.warn(`[INSIGHTS HOOK] Warning: ${emptyCampaigns}/${response.campaigns.length} campaigns are empty objects`);
       }
       
       return response;

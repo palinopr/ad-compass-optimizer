@@ -27,13 +27,13 @@ export const fetchCampaignInsights = async (
   token: string,
   datePreset: string = 'maximum'
 ): Promise<CampaignExtraStats | null> => {
-  // Validate campaign ID
+  // Strict validation of campaign ID with early return
   if (!campaignId || typeof campaignId !== 'string' || campaignId.trim() === '') {
     console.warn(`⚠️ Skipping insights fetch: Invalid campaign ID`);
     return null;
   }
   
-  // Check if this is a duplicate fetch attempt
+  // Check if this is a duplicate fetch attempt with early return
   if (failedFetchAttempts.has(campaignId)) {
     console.log(`⚠️ Skipping insights fetch for campaign ${campaignId}: Previously failed`);
     return null;
@@ -63,6 +63,9 @@ export const fetchCampaignInsights = async (
       console.log(`⚠️ Skipping insights fetch for campaign ${campaignId}: ${reason || 'validation failed'}`);
       return null;
     }
+    
+    // Log that we're proceeding with the fetch
+    console.log(`🔍 Proceeding with insights fetch for campaign ${campaignId} with datePreset=${datePreset}`);
 
     return await fetchCampaignInsightData(campaignId, token, datePreset);
   } catch (error: any) {
