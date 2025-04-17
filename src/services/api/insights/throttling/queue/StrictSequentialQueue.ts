@@ -9,6 +9,8 @@ import { insightsQueueState, insightsThrottlingState } from '@/hooks/campaigns/f
 interface QueueItem<T = any> {
   id: string;
   request: () => Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+  reject: (reason?: any) => void;
   startTime?: number;
 }
 
@@ -19,11 +21,20 @@ export class StrictSequentialQueue {
   private requestQueue: QueueItem[] = [];
   private processingCount = 0;
   private lastRequestTime = 0;
+  private processingLock = false;
 
   private constructor() {
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeunload', () => this.reset());
     }
+    
+    // For debugging
+    if (typeof window !== 'undefined') {
+      // @ts-ignore - Just for debugging
+      window.strictSequentialQueue = this;
+    }
+    
+    console.log('🔒 [STRICT QUEUE] Singleton instance created');
   }
 
   public static getInstance(): StrictSequentialQueue {
@@ -39,108 +50,171 @@ export class StrictSequentialQueue {
   ): Promise<T> {
     // Global throttling check
     if (insightsThrottlingState.isActiveThrottling()) {
-      throw new Error('Global throttling active');
+      console.warn('⛔ [STRICT QUEUE] Global throttling active - rejecting new request', requestId);
+      return Promise.reject(new Error('Global throttling active'));
     }
 
     // Queue lock check
     if (insightsQueueState.isActiveLock()) {
-      throw new Error('Queue is locked');
+      console.warn('⛔ [STRICT QUEUE] Queue is locked - rejecting new request', requestId);
+      return Promise.reject(new Error('Queue is locked'));
     }
 
-    console.log(`🔄 [QUEUE] Adding request ${requestId} to queue`);
-
+    console.log(`📝 [STRICT QUEUE] Enqueueing request: ${requestId} (queue size: ${this.requestQueue.length})`);
+    
     return new Promise<T>((resolve, reject) => {
+      // Create queue item with this specific request's resolve/reject
       const queueItem: QueueItem<T> = {
         id: requestId,
-        request: async () => {
-          try {
-            this.processingCount++;
-            console.log(`⏳ [QUEUE] Processing request ${requestId}`);
-            const result = await request();
-            return result;
-          } catch (error) {
-            console.error(`❌ [QUEUE] Error processing ${requestId}:`, error);
-            throw error;
-          } finally {
-            this.processingCount--;
-          }
-        },
+        request,
+        resolve,
+        reject,
         startTime: Date.now()
       };
 
-      // Add to queue and process
+      // Add to queue
       this.requestQueue.push(queueItem);
-      this.processQueue()
-        .then(results => {
-          const result = results.find(r => r.id === requestId);
-          if (result?.error) {
-            reject(result.error);
-          } else {
-            resolve(result?.data as T);
-          }
-        })
-        .catch(reject);
+      
+      // Start processing the queue if it's not already being processed
+      this.attemptProcessQueue();
     });
   }
 
-  private async processQueue(): Promise<Array<{ id: string; data?: any; error?: any }>> {
+  /**
+   * Try to process the queue if not already processing
+   * This is protected by multiple locks to ensure only one thread runs at a time
+   */
+  private attemptProcessQueue(): void {
+    // If already trying to start processing or queue is empty, don't start again
+    if (this.processingLock || this.requestQueue.length === 0) {
+      return;
+    }
+    
+    // Set processing lock to prevent multiple calls to processQueue
+    this.processingLock = true;
+    
+    try {
+      // If already processing, just log and return
+      if (this.isProcessing) {
+        console.log(`⏱️ [STRICT QUEUE] Queue is already being processed (${this.requestQueue.length} items waiting)`);
+        return;
+      }
+      
+      // Start processing the queue
+      this.processQueue();
+    } finally {
+      // Release the lock
+      this.processingLock = false;
+    }
+  }
+
+  /**
+   * Process the queue sequentially with enforced delays
+   * CRITICAL: This never runs in parallel due to guard conditions
+   */
+  private async processQueue(): Promise<void> {
+    // Double-check not already processing
     if (this.isProcessing) {
-      console.log('⏸️ Queue already processing, waiting...');
-      return [];
+      console.warn('⚠️ [STRICT QUEUE] Attempted to process queue while already processing!');
+      return;
     }
 
     this.isProcessing = true;
+    const queueStartTime = Date.now();
+    
+    console.log(`🚀 [STRICT QUEUE] Starting to process queue with ${this.requestQueue.length} items`);
     insightsQueueState.lock();
-    const results: Array<{ id: string; data?: any; error?: any }> = [];
 
     try {
+      // Process all queue items sequentially
       while (this.requestQueue.length > 0) {
-        const item = this.requestQueue.shift();
-        if (!item) continue;
-
-        // Enforce minimum delay between requests
+        // Enforce minimum time between requests
         const now = Date.now();
         const timeSinceLastRequest = now - this.lastRequestTime;
+        
         if (this.lastRequestTime > 0 && timeSinceLastRequest < THROTTLING_CONFIG.MIN_REQUEST_INTERVAL) {
           const waitTime = THROTTLING_CONFIG.MIN_REQUEST_INTERVAL - timeSinceLastRequest;
-          console.log(`⏳ Waiting ${waitTime}ms before next request`);
+          console.log(`⏳ [STRICT QUEUE] Waiting ${waitTime}ms before next request`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
 
+        // Get next request (but don't remove from queue yet)
+        const item = this.requestQueue[0];
+        if (!item) break;
+        
+        this.lastRequestTime = Date.now();
+        console.log(`🔄 [STRICT QUEUE] Processing request ${item.id}`);
+        
+        this.processingCount++;
         try {
-          console.log(`🚀 [QUEUE] Executing request ${item.id}`);
+          // Execute the request
           const result = await item.request();
-          results.push({ id: item.id, data: result });
-          this.lastRequestTime = Date.now();
+          // Only remove from queue after successful completion
+          this.requestQueue.shift();
+          // Resolve the original promise
+          item.resolve(result);
         } catch (error) {
-          console.error(`❌ [QUEUE] Request ${item.id} failed:`, error);
-          results.push({ id: item.id, error });
+          // On error, remove from queue but reject the promise
+          this.requestQueue.shift();
+          console.error(`❌ [STRICT QUEUE] Request ${item.id} failed:`, error);
+          item.reject(error);
+        } finally {
+          this.processingCount--;
         }
-
-        // Additional delay after each request
-        await new Promise(resolve => setTimeout(resolve, THROTTLING_CONFIG.MIN_REQUEST_INTERVAL));
+        
+        // Additional enforced delay after processing
+        await new Promise(resolve => setTimeout(resolve, 250));
       }
+
+      const totalProcessingTime = Date.now() - queueStartTime;
+      console.log(`✅ [STRICT QUEUE] Queue processing complete in ${totalProcessingTime}ms`);
+    } catch (error) {
+      console.error('❌ [STRICT QUEUE] Fatal error processing queue:', error);
     } finally {
       this.isProcessing = false;
-      this.activeRequest = null;
+      this.lastRequestTime = 0;
       insightsQueueState.unlock();
+      
+      // Log processing duration
+      const duration = Date.now() - queueStartTime;
+      console.log(`⏱️ [STRICT QUEUE] Queue processing took ${duration}ms`);
     }
-
-    return results;
   }
 
+  /**
+   * Check if the queue is currently processing
+   */
   public isActive(): boolean {
-    return this.isProcessing || this.processingCount > 0;
+    return this.isProcessing || this.processingCount > 0 || this.requestQueue.length > 0;
   }
 
+  /**
+   * Get current queue stats
+   */
+  public getStats() {
+    return {
+      queueSize: this.requestQueue.length,
+      isProcessing: this.isProcessing,
+      activeRequests: this.processingCount,
+    };
+  }
+
+  /**
+   * Clear the queue and reset state
+   */
   public reset(): void {
+    // Reject any pending requests
+    for (const item of this.requestQueue) {
+      item.reject(new Error('Queue was reset'));
+    }
+    
     this.requestQueue = [];
     this.isProcessing = false;
+    this.processingLock = false;
+    this.lastRequestTime = 0;
     this.activeRequest = null;
     this.processingCount = 0;
-    this.lastRequestTime = 0;
-    insightsQueueState.clear();
-    console.log('🧹 Queue reset complete');
+    console.log('🧹 [STRICT QUEUE] Queue cleared');
   }
 }
 
