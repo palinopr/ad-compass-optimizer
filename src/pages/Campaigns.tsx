@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import CampaignHeader from '@/components/campaigns/CampaignHeader';
 import CampaignFilterToolbar from '@/components/campaigns/CampaignFilterToolbar';
@@ -8,7 +9,7 @@ import CampaignsContent from '@/components/campaigns/page/CampaignsContent';
 import { useCampaignsPage } from '@/components/campaigns/page/useCampaignsPage';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import FallbackBanner from '@/components/campaigns/FallbackBanner';
 
 const Campaigns = () => {
   const {
@@ -40,8 +41,6 @@ const Campaigns = () => {
     currentDatePreset
   } = useCampaignsPage();
 
-  const [isFallbackBannerVisible, setIsFallbackBannerVisible] = useState(true);
-
   useEffect(() => {
     console.log('[CAMPAIGNS PAGE] Rendered with:', { 
       isAuthenticated,
@@ -69,13 +68,6 @@ const Campaigns = () => {
   const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
 
-  useEffect(() => {
-    if (isUsingMaximumFallback) {
-      const timer = setTimeout(() => setIsFallbackBannerVisible(false), 8000);
-      return () => clearTimeout(timer);
-    }
-  }, [isUsingMaximumFallback]);
-
   return (
     <div className="container py-4 space-y-4">
       <div style={{ background: '#e6ffe6', padding: '10px', margin: '10px 0', borderRadius: '5px', border: '1px solid green' }}>
@@ -99,22 +91,10 @@ const Campaigns = () => {
         isAuthSyncing={isAuthSyncing}
       />
 
-      {isUsingMaximumFallback && isFallbackBannerVisible && (
-        <div className="relative bg-amber-50 border border-amber-300 rounded-md p-3 text-sm flex items-center justify-between">
-          <div>
-            <h4 className="font-medium text-amber-800">Using fallback date range: Maximum</h4>
-            <p className="text-amber-700 text-sm mt-1">
-              No data found for Last 30 Days. {fallbackReason ? `Reason: ${fallbackReason}` : ''}
-            </p>
-          </div>
-          <button 
-            onClick={() => setIsFallbackBannerVisible(false)}
-            className="text-amber-600 hover:text-amber-800 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      )}
+      <FallbackBanner 
+        isUsingMaximumFallback={isUsingMaximumFallback}
+        fallbackReason={fallbackReason}
+      />
 
       {!isAuthenticated || !hasAdAccount || !hasPermissions ? (
         <CampaignsAuthentication 
