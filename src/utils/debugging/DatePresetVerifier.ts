@@ -1,3 +1,4 @@
+
 /**
  * Utility class to verify date presets in various components and APIs
  */
@@ -14,10 +15,25 @@ export class DatePresetVerifier {
         const { CampaignQueryBuilder } = this.safeImport('../services/api/campaign/fetching/campaignQueryBuilder');
         if (CampaignQueryBuilder) {
           const query = CampaignQueryBuilder.buildCampaignQuery();
-          this.checkPreset(query);
+          const isValid = this.checkPreset(query);
+          
+          // If preset is invalid, trigger fallback
+          if (!isValid) {
+            console.warn('⚠️ Invalid date preset detected - triggering automatic fallback to maximum');
+            localStorage.setItem('force_maximum_date_preset', 'true');
+            
+            // Dispatch fallback event for campaign components to listen to
+            if (typeof window !== 'undefined') {
+              const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
+                detail: { reason: 'Invalid date preset detected' }
+              });
+              window.dispatchEvent(fallbackEvent);
+            }
+          }
         }
       } catch (err) {
         console.error('Error checking CampaignQueryBuilder:', err);
+        this.triggerFallback('Error in CampaignQueryBuilder');
       }
       
       // Check MetaFunnelBatchService
@@ -29,6 +45,7 @@ export class DatePresetVerifier {
         }
       } catch (err) {
         console.error('Error checking MetaFunnelBatchService:', err);
+        this.triggerFallback('Error in MetaFunnelBatchService');
       }
       
       // Check InsightsRequestBuilder
@@ -39,22 +56,53 @@ export class DatePresetVerifier {
           const mockOptions = {};
           const mockToken = 'test-token';
           const params = InsightsRequestBuilder.buildQueryParams(mockToken, mockOptions);
-          this.checkPreset(params.toString());
+          const isValid = this.checkPreset(params.toString());
+          
+          // If preset is invalid, trigger fallback
+          if (!isValid) {
+            this.triggerFallback('Invalid preset in InsightsRequestBuilder');
+          }
         }
       } catch (err) {
         console.error('Error checking InsightsRequestBuilder:', err);
+        this.triggerFallback('Error in InsightsRequestBuilder');
       }
       
       // Check the last used date preset in localStorage
       try {
         const lastDatePreset = localStorage.getItem('last_campaign_request_date_preset');
         console.log('Last used date preset:', lastDatePreset || 'NOT FOUND');
-        this.checkPreset(lastDatePreset || '');
+        const isValid = this.checkPreset(lastDatePreset || '');
+        
+        // If preset is invalid, trigger fallback
+        if (!isValid && lastDatePreset) {
+          this.triggerFallback(`Invalid stored preset: ${lastDatePreset}`);
+        }
       } catch (err) {
         console.error('Error checking localStorage date preset:', err);
+        this.triggerFallback('Error checking stored date preset');
       }
     } catch (e) {
       console.error('Error in date preset verification:', e);
+      this.triggerFallback('General date preset verification error');
+    }
+  }
+  
+  /**
+   * Trigger automatic fallback to maximum date preset
+   */
+  static triggerFallback(reason: string): void {
+    console.warn(`⚠️ [DATE PRESET FALLBACK] Triggering automatic fallback to maximum: ${reason}`);
+    localStorage.setItem('force_maximum_date_preset', 'true');
+    localStorage.setItem('date_preset_fallback_reason', reason);
+    localStorage.setItem('date_preset_fallback_timestamp', Date.now().toString());
+    
+    // Dispatch fallback event for campaign components to listen to
+    if (typeof window !== 'undefined') {
+      const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
+        detail: { reason }
+      });
+      window.dispatchEvent(fallbackEvent);
     }
   }
   
@@ -92,7 +140,8 @@ export class DatePresetVerifier {
       'last_year',
       'this_week_mon_today', 
       'this_week_sun_today', 
-      'this_year'
+      'this_year',
+      'maximum' // Add maximum as a valid preset
     ];
     
     const isValid = validPresets.includes(preset);

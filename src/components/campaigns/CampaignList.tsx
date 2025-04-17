@@ -74,6 +74,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
 
   // Check if we're using maximum date preset as a fallback
   const isUsingMaximumFallback = localStorage.getItem('force_maximum_date_preset') === 'true';
+  const fallbackReason = localStorage.getItem('date_preset_fallback_reason') || 'No campaigns found with default range';
   
   // Get selected ad account for display
   const selectedAdAccount = localStorage.getItem('selected_ad_account') || 'unknown';
@@ -135,6 +136,9 @@ const CampaignList: React.FC<CampaignListProps> = ({
                 <li>There may be permission issues</li>
                 <li>The Meta API may be experiencing issues</li>
               </ul>
+              <p className="text-xs text-amber-600 mt-2">
+                Fallback reason: {fallbackReason}
+              </p>
               <Button 
                 variant="outline" 
                 className="mt-3 bg-amber-100 hover:bg-amber-200 border-amber-300"
@@ -176,7 +180,7 @@ const CampaignList: React.FC<CampaignListProps> = ({
           </p>
           {isUsingMaximumFallback && (
             <p className="text-xs text-amber-600 mt-1">
-              Note: Showing all campaigns across all time periods due to limited data in recent timeframes.
+              Using extended date range: {fallbackReason}
             </p>
           )}
         </div>

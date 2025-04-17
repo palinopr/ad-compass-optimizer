@@ -39,6 +39,7 @@ export const useCampaignsPage = () => {
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
   const initialFetchTriggeredRef = useRef(false);
   const maxRangeFetchTriggeredRef = useRef(false);
+  const fallbackFetchTriggeredRef = useRef(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -60,7 +61,38 @@ export const useCampaignsPage = () => {
         }
       }, 1000);
     }
-  }, []);
+
+    // Add listener for date preset fallback event
+    const handleDatePresetFallback = (event: Event) => {
+      if (fallbackFetchTriggeredRef.current) {
+        console.log('[CAMPAIGNS] Ignoring duplicate fallback event');
+        return;
+      }
+
+      const customEvent = event as CustomEvent;
+      const reason = customEvent.detail?.reason || 'Unknown reason';
+      console.log(`[CAMPAIGNS] Date preset fallback triggered: ${reason}`);
+      
+      fallbackFetchTriggeredRef.current = true;
+      toast({
+        title: "Date preset issue detected",
+        description: "Switching to maximum date range automatically",
+        duration: 5000
+      });
+      
+      // Wait a moment before triggering refetch
+      setTimeout(() => {
+        console.log('[CAMPAIGNS] Executing fallback fetch with maximum date range');
+        refetchCampaigns(true);
+      }, 500);
+    };
+
+    window.addEventListener('date-preset-fallback-triggered', handleDatePresetFallback);
+    
+    return () => {
+      window.removeEventListener('date-preset-fallback-triggered', handleDatePresetFallback);
+    };
+  }, [refetchCampaigns]);
 
   useEffect(() => {
     if (isAuthenticated && hasAdAccount && selectedAdAccount && hasPermissions && !initialFetchTriggeredRef.current) {
@@ -93,7 +125,7 @@ export const useCampaignsPage = () => {
     }
   }, [isAuthenticated, hasAdAccount, selectedAdAccount, hasPermissions, refetchCampaigns]);
 
-  // New effect to handle automatic fallback to maximum date range
+  // Effect to handle automatic fallback to maximum date range
   useEffect(() => {
     if (fetchCompleted && campaigns && campaigns.length === 0 && !isLoading && !maxRangeFetchTriggeredRef.current) {
       console.log('[CAMPAIGNS] No campaigns found with last_30d, switching to maximum date range');
@@ -125,6 +157,13 @@ export const useCampaignsPage = () => {
         console.log('[CAMPAIGNS] Ad account changed, triggering campaign refresh');
         initialFetchTriggeredRef.current = false;
         maxRangeFetchTriggeredRef.current = false;
+        fallbackFetchTriggeredRef.current = false;
+        
+        // Clear fallback flags when account changes
+        localStorage.removeItem('force_maximum_date_preset');
+        localStorage.removeItem('fallback_notified');
+        localStorage.removeItem('date_preset_fallback_reason');
+        
         setTimeout(() => refetchCampaigns(true), 300);
       }
     };

@@ -8,7 +8,7 @@ import CampaignsAuthentication from '@/components/campaigns/page/CampaignsAuthen
 import CampaignsContent from '@/components/campaigns/page/CampaignsContent';
 import { useCampaignsPage } from '@/components/campaigns/page/useCampaignsPage';
 import MetaConnectionDialog from '@/components/meta/MetaConnectionDialog';
-import { Button } from '@/components/ui/button'; // Changed from card to button
+import { Button } from '@/components/ui/button';
 
 const Campaigns = () => {
   const {
@@ -59,6 +59,10 @@ const Campaigns = () => {
     }
   }, [campaigns, isAuthenticated, hasPermissions, hasAdAccount, isLoading, showCreateWizard, activeTab, metaPermissionsInvalid]);
 
+  // Check if we're using maximum date preset as fallback
+  const isUsingMaximumFallback = localStorage.getItem('force_maximum_date_preset') === 'true';
+  const fallbackReason = localStorage.getItem('date_preset_fallback_reason') || '';
+
   // Safety check for campaign data - always use raw campaigns
   const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
@@ -81,6 +85,17 @@ const Campaigns = () => {
         refreshConnection={refreshConnection}
         isAuthSyncing={isAuthSyncing}
       />
+
+      {/* Show fallback notification if active */}
+      {isUsingMaximumFallback && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm">
+          <h4 className="font-medium text-yellow-800">Using maximum date range</h4>
+          <p className="text-yellow-700 text-xs mt-1">
+            {fallbackReason ? `Reason: ${fallbackReason}` : 
+             'Using extended date range to find all available campaigns.'}
+          </p>
+        </div>
+      )}
 
       {!isAuthenticated || !hasAdAccount || !hasPermissions ? (
         <CampaignsAuthentication 
@@ -145,12 +160,27 @@ const Campaigns = () => {
           onClick={() => {
             // Clear any stored flags that might be affecting behavior
             localStorage.removeItem('force_maximum_date_preset');
+            localStorage.removeItem('fallback_notified');
+            localStorage.removeItem('date_preset_fallback_reason');
             // Force a complete refresh with default settings
             refetchCampaigns(true);
           }}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mr-2"
         >
-          Force Refresh Campaigns
+          Reset & Refresh (Default Range)
+        </button>
+        
+        <button 
+          onClick={() => {
+            // Force maximum date range
+            localStorage.setItem('force_maximum_date_preset', 'true');
+            localStorage.setItem('date_preset_fallback_reason', 'Manually triggered');
+            // Force a complete refresh
+            refetchCampaigns(true);
+          }}
+          className="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600"
+        >
+          Force Maximum Range
         </button>
       </div>
     </div>

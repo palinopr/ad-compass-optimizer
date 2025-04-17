@@ -1,6 +1,8 @@
+
 import { BaseApiService } from './BaseApiService';
 import { CampaignFetchService } from './campaign/fetching/campaignFetchService';
 import { MetaCampaign } from './types/metaCampaignTypes';
+import { toast } from '@/hooks/use-toast';
 
 export type { MetaCampaign };
 
@@ -17,9 +19,25 @@ export class MetaCampaignService extends BaseApiService {
         return [];
       }
       
-      // Check if we should force maximum date preset due to prior empty results
+      // Check if we should force maximum date preset due to prior empty results or fallback
       const shouldUseMaximum = localStorage.getItem('force_maximum_date_preset') === 'true';
       const effectivePreset = shouldUseMaximum ? 'maximum' : datePreset || 'last_30d';
+      
+      // Log information about fallback if active
+      if (shouldUseMaximum) {
+        const fallbackReason = localStorage.getItem('date_preset_fallback_reason') || 'Unknown reason';
+        console.log(`[META CAMPAIGN] Using maximum date preset due to fallback. Reason: ${fallbackReason}`);
+        
+        // Notify user about fallback via toast (only once)
+        if (!localStorage.getItem('fallback_notified')) {
+          toast({
+            title: "Using extended date range",
+            description: "Fallback triggered: using maximum date range to find all campaigns.",
+            duration: 5000
+          });
+          localStorage.setItem('fallback_notified', 'true');
+        }
+      }
       
       console.log(`[META CAMPAIGN] Fetching campaigns for account ${adAccountId} with date preset ${effectivePreset} (original: ${datePreset || 'last_30d'})`);
       
@@ -73,9 +91,36 @@ export class MetaCampaignService extends BaseApiService {
         allHaveIds: safeCampaigns.every(c => !!c.id)
       });
       
+      // Reset fallback notification flag when successful
+      if (safeCampaigns.length > 0) {
+        localStorage.removeItem('fallback_notified');
+      }
+      
       return safeCampaigns;
     } catch (error) {
       console.error('[META CAMPAIGN] Error in fetchCampaigns:', error);
+      
+      // Check if error is related to date preset
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isDatePresetError = 
+        errorMessage.includes('preset') || 
+        errorMessage.includes('date_preset') || 
+        errorMessage.includes('parameter');
+      
+      // If it's a date preset error, trigger fallback to maximum
+      if (isDatePresetError) {
+        console.warn('[META CAMPAIGN] Detected date preset error, triggering fallback to maximum');
+        localStorage.setItem('force_maximum_date_preset', 'true');
+        localStorage.setItem('date_preset_fallback_reason', `API error: ${errorMessage}`);
+        
+        // Retry with maximum date preset
+        try {
+          console.log('[META CAMPAIGN] Retrying with maximum date preset');
+          return await this.fetchCampaigns(token, adAccountId, 'maximum');
+        } catch (retryError) {
+          console.error('[META CAMPAIGN] Retry with maximum date preset also failed:', retryError);
+        }
+      }
       
       // Log error in the requested format
       console.error('[MetaCampaignService] Failed to fetch campaigns:', error);

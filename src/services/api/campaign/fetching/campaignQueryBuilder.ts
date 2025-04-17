@@ -13,7 +13,7 @@ export class CampaignQueryBuilder {
   ];
 
   static buildCampaignQuery(datePreset = 'last_30d'): string {
-    // Check if we should force maximum date preset
+    // Check if we should force maximum date preset or if there was a fallback
     const shouldUseMaximum = localStorage.getItem('force_maximum_date_preset') === 'true';
     
     // If forced to maximum, use maximum regardless of input
@@ -21,6 +21,14 @@ export class CampaignQueryBuilder {
     
     // Map legacy presets to Meta API compatible presets
     let validDatePreset = this.normalizePreset(effectiveDatePreset);
+
+    // If normalized preset is invalid, fallback to maximum
+    if (!this.validDatePresets.includes(validDatePreset)) {
+      console.warn(`[CAMPAIGN QUERY] Invalid date preset "${validDatePreset}" after normalization, falling back to "maximum"`);
+      validDatePreset = 'maximum';
+      localStorage.setItem('force_maximum_date_preset', 'true');
+      localStorage.setItem('date_preset_fallback_reason', 'Invalid normalized preset');
+    }
     
     // Log what date preset we're using
     console.log(`[CAMPAIGN QUERY] Using effective date preset: ${validDatePreset} (original: ${datePreset}, forcing maximum: ${shouldUseMaximum})`);
@@ -63,15 +71,17 @@ export class CampaignQueryBuilder {
       return legacyMapping[datePreset];
     }
 
-    // Fall back to last_30d for unrecognized presets
-    console.warn(`[CAMPAIGN QUERY] Unrecognized date preset: ${datePreset}, using default 'last_30d'`);
-    return 'last_30d';
+    // Fall back to maximum for unrecognized presets for greater reliability
+    console.warn(`[CAMPAIGN QUERY] Unrecognized date preset: ${datePreset}, using "maximum" as failsafe`);
+    localStorage.setItem('force_maximum_date_preset', 'true');
+    localStorage.setItem('date_preset_fallback_reason', `Unrecognized preset: ${datePreset}`);
+    return 'maximum';
   }
 
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.12-maximum-fallback-improved';
+    return '1.0.13-auto-fallback-improved';
   }
   
   // Adding timestamp to ensure no cache is used
@@ -107,6 +117,11 @@ export class CampaignQueryBuilder {
     
     if (!this.validDatePresets.includes(foundPreset)) {
       console.error(`[CAMPAIGN QUERY] Invalid date preset found: ${foundPreset}`);
+      
+      // Trigger fallback to maximum
+      localStorage.setItem('force_maximum_date_preset', 'true');
+      localStorage.setItem('date_preset_fallback_reason', `Invalid date preset in query: ${foundPreset}`);
+      
       return false;
     }
     
