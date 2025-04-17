@@ -69,63 +69,90 @@ const CampaignList: React.FC<CampaignListProps> = ({
     console.log("[UI] Rendering raw campaign list:", campaigns);
   }, [campaigns, isLoading, error, activeTab, status, campaignsFetchStatus, fetchCompleted]);
 
+  // THIS IS NEW: Log every render to check if component is mounting
+  console.log("[RENDER] CampaignList component rendering");
+  console.log("[RENDER] Total campaigns:", campaigns?.length || 0);
+  
   // Show loading state if the app is loading campaigns
   if (isLoading) {
-    return <LoadingView />;
+    return (
+      <>
+        <div style={{ background: 'yellow', padding: '10px', marginBottom: '10px' }}>
+          ✅ CampaignList Loaded - Loading State
+        </div>
+        <LoadingView />
+      </>
+    );
   }
 
   // Show error state if there was an error (except for unauthorized or permissions issues, which are handled in CampaignTable)
   if (error && campaignsFetchStatus !== 'unauthorized' && !metaPermissionsInvalid) {
     return (
-      <ErrorView
-        error={error}
-        errorDetails={errorDetails}
-        effectiveIsAuthenticated={isAuthenticated}
-        onRetry={refetchCampaigns}
-      />
+      <>
+        <div style={{ background: 'yellow', padding: '10px', marginBottom: '10px' }}>
+          ✅ CampaignList Loaded - Error State
+        </div>
+        <ErrorView
+          error={error}
+          errorDetails={errorDetails}
+          effectiveIsAuthenticated={isAuthenticated}
+          onRetry={refetchCampaigns}
+        />
+      </>
     );
   }
 
   // First, check for empty campaign array to show user-friendly message
   if (!campaigns || campaigns.length === 0) {
     return (
-      <Card className="p-4">
-        <div className="bg-orange-100 border-2 border-orange-300 p-4 rounded-md text-center">
-          <h2 className="text-xl font-bold text-orange-800">No Campaigns Found</h2>
-          <p className="text-orange-700 mt-2">
-            No campaign data is available to display at this time.
-          </p>
+      <>
+        <div style={{ background: 'yellow', padding: '10px', marginBottom: '10px' }}>
+          ✅ CampaignList Loaded - Empty State
         </div>
-      </Card>
+        <Card className="p-4">
+          <div className="bg-orange-100 border-2 border-orange-300 p-4 rounded-md text-center">
+            <h2 className="text-xl font-bold text-orange-800">No Campaigns Found</h2>
+            <p className="text-orange-700 mt-2">
+              No campaign data is available to display at this time.
+            </p>
+          </div>
+        </Card>
+      </>
     );
   }
 
   // This is the main fallback rendering to ensure visibility of all campaigns
   return (
-    <Card className="overflow-hidden">
-      {/* Campaign count header */}
-      <div className="bg-green-100 p-4 border-b border-green-200">
-        <h2 className="text-xl font-bold text-green-800">Total campaigns: {campaigns.length}</h2>
-        <p className="text-sm text-green-700">Raw campaign data debug view</p>
+    <>
+      <div style={{ background: 'yellow', padding: '10px', marginBottom: '10px' }}>
+        ✅ CampaignList Loaded - Showing {campaigns.length} Campaigns
       </div>
+      
+      <Card className="overflow-hidden">
+        {/* Campaign count header */}
+        <div className="bg-green-100 p-4 border-b border-green-200">
+          <h2 className="text-xl font-bold text-green-800">Total campaigns: {campaigns.length}</h2>
+          <p className="text-sm text-green-700">Raw campaign data debug view</p>
+        </div>
 
-      {/* Simple fallback rendering of all campaigns */}
-      <div className="p-4">
-        {campaigns.map((campaign, index) => (
-          <div 
-            key={campaign?.id || index}
-            className="p-3 bg-gray-100 border border-gray-300 rounded-md my-2"
-          >
-            {campaign?.name || 'Unnamed Campaign'} — {campaign?.id || 'No ID'} — {campaign?.status || 'Unknown Status'}
-          </div>
-        ))}
-      </div>
+        {/* Simple fallback rendering of all campaigns */}
+        <div className="p-4">
+          {campaigns.map((campaign, index) => (
+            <div 
+              key={campaign?.id || index}
+              className="p-3 bg-gray-100 border border-gray-300 rounded-md my-2"
+            >
+              {campaign?.name || 'Unnamed Campaign'} — {campaign?.id || 'No ID'} — {campaign?.status || 'Unknown Status'}
+            </div>
+          ))}
+        </div>
 
-      {/* Display count at bottom for clarity */}
-      <div className="bg-gray-100 p-3 text-center border-t border-gray-300">
-        Displayed {campaigns.length} total campaigns
-      </div>
-    </Card>
+        {/* Display count at bottom for clarity */}
+        <div className="bg-gray-100 p-3 text-center border-t border-gray-300">
+          Displayed {campaigns.length} total campaigns
+        </div>
+      </Card>
+    </>
   );
 };
 

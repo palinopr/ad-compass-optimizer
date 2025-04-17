@@ -55,38 +55,49 @@ export const isMockMode = (): boolean => {
 function App() {
   const [isMockModeActive, setIsMockModeActive] = useState(false);
   const [buildInfo, setBuildInfo] = useState('');
+  const [appLoaded, setAppLoaded] = useState(false);
 
   // Log app version on startup
   useEffect(() => {
-    // Force cache clearing
-    if (typeof localStorage !== 'undefined') {
-      try {
-        // Clear any cache that might be storing old campaign query configuration
-        localStorage.removeItem('meta_api_cache');
-        localStorage.removeItem('campaign_query_cache');
-        localStorage.removeItem('last_campaign_fetch');
-      } catch (e) {
-        console.error("Error clearing cache:", e);
+    console.log("✅ [APP] Component mounted");
+    
+    try {
+      // Force cache clearing
+      if (typeof localStorage !== 'undefined') {
+        try {
+          // Clear any cache that might be storing old campaign query configuration
+          localStorage.removeItem('meta_api_cache');
+          localStorage.removeItem('campaign_query_cache');
+          localStorage.removeItem('last_campaign_fetch');
+        } catch (e) {
+          console.error("Error clearing cache:", e);
+        }
       }
+      
+      console.log(`[APP] Version ${APP_VERSION} (Last updated: ${LAST_UPDATED})`);
+      console.log(`[APP] Includes 28-day window fix: ${INCLUDES_28D_FIX ? 'Yes' : 'No'}`);
+      console.log(`[APP] Rebuild timestamp: ${REBUILD_TIMESTAMP}`);
+      
+      // Get build info from query builder to confirm correct version is used
+      const queryBuilderVersion = CampaignQueryBuilder.getVersion();
+      const datePreset = CampaignQueryBuilder.buildCampaignQuery().match(/date_preset\(([^)]+)\)/)?.[1] || 'unknown';
+      setBuildInfo(`${queryBuilderVersion} (${datePreset})`);
+      
+      console.log(`[APP] Using CampaignQueryBuilder version: ${queryBuilderVersion}`);
+      console.log(`[APP] Date preset being used: ${datePreset}`);
+      
+      toast({
+        title: "Application Rebuilt",
+        description: `Using last_28d date preset (${queryBuilderVersion})`,
+        duration: 5000
+      });
+      
+      // Mark app as successfully loaded
+      setAppLoaded(true);
+    } catch (error) {
+      console.error("[APP] Error during initialization:", error);
+      setAppLoaded(true); // Still mark as loaded to show UI
     }
-    
-    console.log(`[APP] Version ${APP_VERSION} (Last updated: ${LAST_UPDATED})`);
-    console.log(`[APP] Includes 28-day window fix: ${INCLUDES_28D_FIX ? 'Yes' : 'No'}`);
-    console.log(`[APP] Rebuild timestamp: ${REBUILD_TIMESTAMP}`);
-    
-    // Get build info from query builder to confirm correct version is used
-    const queryBuilderVersion = CampaignQueryBuilder.getVersion();
-    const datePreset = CampaignQueryBuilder.buildCampaignQuery().match(/date_preset\(([^)]+)\)/)?.[1] || 'unknown';
-    setBuildInfo(`${queryBuilderVersion} (${datePreset})`);
-    
-    console.log(`[APP] Using CampaignQueryBuilder version: ${queryBuilderVersion}`);
-    console.log(`[APP] Date preset being used: ${datePreset}`);
-    
-    toast({
-      title: "Application Rebuilt",
-      description: `Using last_28d date preset (${queryBuilderVersion})`,
-      duration: 5000
-    });
   }, []);
 
   // Only run in browser environment
@@ -145,8 +156,22 @@ function App() {
     }
   }, []);
 
+  // Fallback UI in case of issues
+  if (!appLoaded) {
+    return (
+      <div style={{ padding: "20px", background: "#f0f0f0", margin: "20px" }}>
+        <h2>🔄 App Loading...</h2>
+        <p>Please wait while the application initializes.</p>
+      </div>
+    );
+  }
+
   return (
     <SharedMetaConnectionProvider>
+      <div style={{ background: '#e6ffe6', padding: '8px', margin: '0', textAlign: 'center' }}>
+        ✅ App Loaded Successfully - DOM Rendering Test
+      </div>
+      
       <BrowserRouter>
         {isMockModeActive && (
           <div className="bg-yellow-400 text-black text-center py-1 text-sm font-medium">
