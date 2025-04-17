@@ -15,6 +15,8 @@ export class CampaignQueryBuilder {
   static buildCampaignQuery(datePreset = 'last_30d'): string {
     // Check if we should force maximum date preset
     const shouldUseMaximum = localStorage.getItem('force_maximum_date_preset') === 'true';
+    
+    // If forced to maximum, use maximum regardless of input
     const effectiveDatePreset = shouldUseMaximum ? 'maximum' : datePreset;
     
     // Map legacy presets to Meta API compatible presets
@@ -69,7 +71,7 @@ export class CampaignQueryBuilder {
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.11-last-30d-forced-preset';
+    return '1.0.12-maximum-fallback-improved';
   }
   
   // Adding timestamp to ensure no cache is used

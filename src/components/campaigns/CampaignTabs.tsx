@@ -43,45 +43,28 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({ activeTab, setActiveTab }) 
 
     // Show toast notification when campaigns are loaded
     if (campaigns && campaigns.length > 0 && !isLoading) {
+      const isUsingMaximumFallback = localStorage.getItem('force_maximum_date_preset') === 'true';
+      
       toast({
-        title: "Campaigns loaded",
-        description: `${campaigns.length} campaigns available with date preset: last_30d`,
+        title: isUsingMaximumFallback ? "Using maximum date range" : "Campaigns loaded",
+        description: `${campaigns.length} campaigns available${isUsingMaximumFallback ? ' (using maximum date range)' : ' with date preset: last_30d'}`,
         duration: 3000
       });
     }
   }, [campaigns, filteredCampaigns, isLoading, error, activeTab, fetchCompleted, campaignsFetchStatus]);
 
-  // If we have no campaigns and fetch completed, try refreshing with maximum date range
-  useEffect(() => {
-    if (fetchCompleted && campaigns && campaigns.length === 0 && !isLoading && !error) {
-      console.log('[CAMPAIGN TABS] No campaigns found with current date preset, trying maximum range');
-      
-      // Set a small delay to avoid immediate refetch
-      const timeoutId = setTimeout(() => {
-        // Force using maximum date range
-        localStorage.setItem('force_maximum_date_preset', 'true');
-        
-        toast({
-          title: "Trying alternative date range",
-          description: "No campaigns found with default settings, trying maximum date range",
-          duration: 3000
-        });
-        
-        refetchCampaigns(true);
-      }, 1500);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [fetchCompleted, campaigns, isLoading, error, refetchCampaigns]);
-
   // Safety check for campaigns array
   const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
   const safeFilteredCampaigns = Array.isArray(filteredCampaigns) ? filteredCampaigns : [];
+  
+  // Check if we're using maximum date preset as a fallback
+  const isUsingMaximumFallback = localStorage.getItem('force_maximum_date_preset') === 'true';
 
   return (
     <>
       <div style={{ background: '#f0fff0', padding: '10px', marginBottom: '10px', border: '1px solid green' }}>
         ✅ CampaignTabs Component Loaded - ActiveTab: {activeTab} - Campaigns: {safeCampaigns.length}
+        {isUsingMaximumFallback && <div className="mt-2 text-orange-600 font-semibold">Using maximum date range fallback</div>}
       </div>
       
       <Tabs defaultValue="campaigns" value={activeTab} onValueChange={(value) => {

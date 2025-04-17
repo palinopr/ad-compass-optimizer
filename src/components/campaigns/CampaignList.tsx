@@ -8,6 +8,8 @@ import ErrorView from './states/ErrorView';
 import { metaPermissionsInvalid } from '@/hooks/campaigns/utils/metaPermissionsUtils';
 import NoCampaignsFoundPanel from './diagnostic-components/NoCampaignsFoundPanel';
 import EmptyState from './states/EmptyState';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 interface CampaignListProps {
   isLoading: boolean;
@@ -122,7 +124,34 @@ const CampaignList: React.FC<CampaignListProps> = ({
             : `No campaigns found for the current date range. We've tried using the "last_30d" preset.`}
           adAccountId={selectedAdAccount}
           onRefresh={refetchCampaigns}
-        />
+        >
+          {isUsingMaximumFallback ? (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-amber-700">
+                No data was found even after trying the maximum date range. This could mean:
+              </p>
+              <ul className="list-disc pl-5 mt-2 text-amber-700">
+                <li>This ad account has no campaign data</li>
+                <li>There may be permission issues</li>
+                <li>The Meta API may be experiencing issues</li>
+              </ul>
+              <Button 
+                variant="outline" 
+                className="mt-3 bg-amber-100 hover:bg-amber-200 border-amber-300"
+                onClick={refetchCampaigns}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-blue-700">
+                We'll automatically try fetching with maximum date range next.
+              </p>
+            </div>
+          )}
+        </EmptyState>
       </>
     );
   }
@@ -136,13 +165,20 @@ const CampaignList: React.FC<CampaignListProps> = ({
       
       <Card className="overflow-hidden">
         {/* Campaign count header */}
-        <div className="bg-green-100 p-4 border-b border-green-200">
-          <h2 className="text-xl font-bold text-green-800">Total campaigns: {campaigns.length}</h2>
-          <p className="text-sm text-green-700">
+        <div className={`p-4 border-b ${isUsingMaximumFallback ? 'bg-amber-100 border-amber-200' : 'bg-green-100 border-green-200'}`}>
+          <h2 className={`text-xl font-bold ${isUsingMaximumFallback ? 'text-amber-800' : 'text-green-800'}`}>
+            Total campaigns: {campaigns.length}
+          </h2>
+          <p className={`text-sm ${isUsingMaximumFallback ? 'text-amber-700' : 'text-green-700'}`}>
             {isUsingMaximumFallback 
-              ? "Using maximum date range (fallback mode)" 
+              ? "Using maximum date range (campaigns from all time)" 
               : "Using default 30-day date range"}
           </p>
+          {isUsingMaximumFallback && (
+            <p className="text-xs text-amber-600 mt-1">
+              Note: Showing all campaigns across all time periods due to limited data in recent timeframes.
+            </p>
+          )}
         </div>
 
         {/* Campaign table */}

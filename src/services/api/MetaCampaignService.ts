@@ -1,4 +1,3 @@
-
 import { BaseApiService } from './BaseApiService';
 import { CampaignFetchService } from './campaign/fetching/campaignFetchService';
 import { MetaCampaign } from './types/metaCampaignTypes';
@@ -20,7 +19,7 @@ export class MetaCampaignService extends BaseApiService {
       
       // Check if we should force maximum date preset due to prior empty results
       const shouldUseMaximum = localStorage.getItem('force_maximum_date_preset') === 'true';
-      const effectivePreset = shouldUseMaximum ? 'maximum' : 'last_30d';
+      const effectivePreset = shouldUseMaximum ? 'maximum' : datePreset || 'last_30d';
       
       console.log(`[META CAMPAIGN] Fetching campaigns for account ${adAccountId} with date preset ${effectivePreset} (original: ${datePreset || 'last_30d'})`);
       
@@ -36,14 +35,15 @@ export class MetaCampaignService extends BaseApiService {
       // Store timestamp of fetch attempt
       localStorage.setItem('last_campaign_fetch_attempt', new Date().toISOString());
       localStorage.setItem('last_fetch_account', adAccountId);
+      localStorage.setItem('last_fetch_date_preset', effectivePreset);
       
-      // ALWAYS use last_30d or maximum (if forced) instead of any provided preset
+      // Use the effective date preset (maximum if forced, otherwise the provided preset or last_30d)
       const campaigns = await CampaignFetchService.fetchCampaigns(token, adAccountId, effectivePreset);
       
-      // If we got campaigns with maximum preset, remove the flag for future requests
+      // If we got campaigns with maximum preset, keep the flag for UI notification purposes
+      // but only clear it from storage if we specifically want to reset it
       if (shouldUseMaximum && campaigns.length > 0) {
-        localStorage.removeItem('force_maximum_date_preset');
-        console.log('[META CAMPAIGN] Successfully retrieved campaigns with maximum date preset, clearing force flag');
+        console.log('[META CAMPAIGN] Successfully retrieved campaigns with maximum date preset');
       }
       
       // Log raw campaign data before any processing
@@ -88,16 +88,6 @@ export class MetaCampaignService extends BaseApiService {
         }));
       } catch (e) {
         console.error('[META CAMPAIGN] Error storing fetch error details:', e);
-      }
-      
-      // If there's an error and datePreset is not already "last_30d", try with "last_30d" preset
-      if (datePreset !== "last_30d") {
-        console.log(`[META CAMPAIGN] Error with ${datePreset}, trying fallback to "last_30d"`);
-        try {
-          return await CampaignFetchService.fetchCampaigns(token, adAccountId, "last_30d");
-        } catch (fallbackError) {
-          console.error('[META CAMPAIGN] Fallback also failed:', fallbackError);
-        }
       }
       
       // Always return empty array instead of throwing to prevent UI breaks

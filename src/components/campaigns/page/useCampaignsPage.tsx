@@ -4,6 +4,7 @@ import { useCampaignsPage as useBaseCampaignsPage } from '@/hooks/campaigns/useC
 import { useCampaigns } from '@/hooks/campaigns';
 import { metaAuthService } from '@/services/MetaAuthService';
 import { DatePresetVerifier } from '@/utils/debugging/DatePresetVerifier';
+import { toast } from '@/hooks/use-toast';
 
 export const useCampaignsPage = () => {
   const {
@@ -37,6 +38,7 @@ export const useCampaignsPage = () => {
   
   const selectedAdAccount = localStorage.getItem('selected_ad_account');
   const initialFetchTriggeredRef = useRef(false);
+  const maxRangeFetchTriggeredRef = useRef(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -91,12 +93,38 @@ export const useCampaignsPage = () => {
     }
   }, [isAuthenticated, hasAdAccount, selectedAdAccount, hasPermissions, refetchCampaigns]);
 
+  // New effect to handle automatic fallback to maximum date range
+  useEffect(() => {
+    if (fetchCompleted && campaigns && campaigns.length === 0 && !isLoading && !maxRangeFetchTriggeredRef.current) {
+      console.log('[CAMPAIGNS] No campaigns found with last_30d, switching to maximum date range');
+      
+      // Set flag to prevent infinite retry loops
+      maxRangeFetchTriggeredRef.current = true;
+      
+      // Force using maximum date range
+      localStorage.setItem('force_maximum_date_preset', 'true');
+      
+      // Show toast notification to inform user
+      toast({
+        title: "No data found",
+        description: "Switched to maximum date range to find campaigns",
+        duration: 5000
+      });
+      
+      // Trigger refetch with maximum date preset
+      setTimeout(() => {
+        refetchCampaigns(true);
+      }, 500);
+    }
+  }, [fetchCompleted, campaigns, isLoading, refetchCampaigns]);
+
   useEffect(() => {
     const handleAccountChange = (event: Event) => {
       const customEvent = event as CustomEvent;
       if (customEvent.detail?.accountId) {
         console.log('[CAMPAIGNS] Ad account changed, triggering campaign refresh');
         initialFetchTriggeredRef.current = false;
+        maxRangeFetchTriggeredRef.current = false;
         setTimeout(() => refetchCampaigns(true), 300);
       }
     };
@@ -123,7 +151,7 @@ export const useCampaignsPage = () => {
     fetchCompleted,
     insightsFetchStatus,
     campaignsFetchStatus,
-    metaPermissionsInvalid, // Expose the new flag
+    metaPermissionsInvalid,
     
     // UI state
     activeTab,
@@ -141,4 +169,3 @@ export const useCampaignsPage = () => {
     refetchCampaigns
   };
 };
-
