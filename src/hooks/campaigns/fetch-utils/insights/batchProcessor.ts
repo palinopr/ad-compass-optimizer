@@ -5,6 +5,12 @@ import { toast } from '@/hooks/use-toast';
 import { fetchCampaignInsights, isCampaignBlocked, markCampaignAsBlocked } from './singleCampaignFetcher';
 import { BATCH_CONFIG } from './batchConfig';
 
+// Create a storage for processed campaign IDs to avoid duplicates within the same session
+const processedCampaignIds = new Set<string>();
+
+// Helper function to create a delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
  * Queue a campaign insights fetch with extra blocking checks
  */
@@ -55,6 +61,15 @@ const queueCampaignInsightsFetch = (
   } catch (e) {
     // Ignore storage errors
   }
+
+  // Check if we've already processed this campaign ID in this session
+  if (processedCampaignIds.has(campaign.id)) {
+    console.log(`🔄 Skipping duplicate fetch for campaign ${campaign.id} in this session`);
+    return Promise.resolve(null);
+  }
+
+  // Add to processed IDs set
+  processedCampaignIds.add(campaign.id);
   
   // If not blocked by any of the checks, queue the request normally
   return RequestQueueManager.addToQueue(() => {
@@ -96,7 +111,6 @@ export const fetchInsightsForCampaigns = async (
   // Set stricter request interval for throttling
   RequestQueueManager.setRequestInterval(750); // Increased from 500ms
   
-  const processedCampaignIds = new Map<string, boolean>();
   let successCount = 0;
   
   const campaignMap = new Map<string, MetaCampaign>();
@@ -144,6 +158,12 @@ export const fetchInsightsForCampaigns = async (
       // Ignore storage errors
     }
     
+    // Check if we've already processed this campaign
+    if (processedCampaignIds.has(campaign.id)) {
+      console.log(`🔄 Skipping duplicate fetch for campaign ${campaign.id} in this session`);
+      return false;
+    }
+    
     return true;
   });
   
@@ -155,94 +175,88 @@ export const fetchInsightsForCampaigns = async (
     return campaigns;
   }
   
+  // NEW: Abort if too many campaigns in queue
+  const MAX_QUEUE_SIZE = 100;
+  if (filteredCampaigns.length > MAX_QUEUE_SIZE) {
+    console.warn(`⚠️ Skipping insights fetch: too many campaigns in queue (${filteredCampaigns.length})`);
+    return campaigns;
+  }
+  
   const campaignsWithInsights = [...filteredCampaigns];
   campaignsWithInsights.forEach(campaign => {
     campaignMap.set(campaign.id, campaign);
   });
   
-  // Set a stricter batch size limit for better throttling
-  const BATCH_LIMIT = Math.min(BATCH_CONFIG.BATCH_SIZE, 10); // Use at most 10 campaigns per batch
+  // Use the strict batch size from config
+  const BATCH_LIMIT = BATCH_SIZE; // Use config value (2 campaigns per batch)
+  
+  // Calculate total number of batches for logging
+  const totalBatches = Math.ceil(campaignsWithInsights.length / BATCH_LIMIT);
+  console.log(`[INSIGHTS FETCH] Will process ${campaignsWithInsights.length} campaigns in ${totalBatches} batches of ${BATCH_LIMIT}`);
   
   // Process campaigns in batches
   for (let i = 0; i < campaignsWithInsights.length; i += BATCH_LIMIT) {
     const batch = campaignsWithInsights.slice(i, i + BATCH_LIMIT);
+    const batchNumber = Math.floor(i / BATCH_LIMIT) + 1;
     
-    console.log(`[INSIGHTS FETCH] Processing batch ${Math.floor(i/BATCH_LIMIT) + 1} with ${batch.length} campaigns (max: ${BATCH_LIMIT})`);
+    console.log(`[INSIGHTS FETCH] Processing batch ${batchNumber}/${totalBatches} with ${batch.length} campaigns`);
     
-    // Process each campaign in the current batch
-    const batchPromises = [];
-    
+    // Process each campaign in the current batch sequentially with delay
     for (let j = 0; j < batch.length; j++) {
       const campaign = batch[j];
       
-      if (processedCampaignIds.has(campaign.id)) {
-        console.log(`[INSIGHTS FETCH] Skipping duplicate campaign ID: ${campaign.id}`);
-        continue;
-      }
+      // Add to processed IDs set to prevent duplicates
+      processedCampaignIds.add(campaign.id);
       
-      // FINAL RECHECK: Don't process already blocked campaigns (in case status changed during processing)
-      if (campaign.insightsStatus === 'blocked' || isCampaignBlocked(campaign.id)) {
-        console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaign.id} – insights blocked after 400`);
-        processedCampaignIds.set(campaign.id, true);
-        continue;
-      }
-      
-      // Track that we've processed this campaign ID
-      processedCampaignIds.set(campaign.id, true);
-      
-      // Create a promise that will fetch insights for this campaign
-      const promise = (async () => {
-        try {
-          const extraStats = await queueCampaignInsightsFetch(campaign, token, datePreset);
-          
-          if (extraStats) {
-            const campaignToUpdate = campaignMap.get(campaign.id);
-            if (campaignToUpdate) {
-              campaignToUpdate.extraStats = extraStats;
-              
-              if (campaignToUpdate.insights) {
-                campaignToUpdate.insights.cpa = campaignToUpdate.insights.cpa || extraStats.cpa;
-                campaignToUpdate.insights.roas = campaignToUpdate.insights.roas || extraStats.roas;
-                campaignToUpdate.insights.spend = campaignToUpdate.insights.spend || extraStats.spend;
-              }
-              
-              if (!campaignToUpdate.results && extraStats.results !== '-') {
-                campaignToUpdate.results = extraStats.results;
-              }
-              
-              successCount++;
-              console.log(`[INSIGHTS FETCH] Updated campaign ${campaign.id} with extra stats`);
+      try {
+        console.log(`✅ Fetching insights for campaign ${campaign.id} (batch ${batchNumber}/${totalBatches})...`);
+        const extraStats = await fetchCampaignInsights(campaign.id, token, datePreset);
+        
+        if (extraStats) {
+          const campaignToUpdate = campaignMap.get(campaign.id);
+          if (campaignToUpdate) {
+            campaignToUpdate.extraStats = extraStats;
+            
+            if (campaignToUpdate.insights) {
+              campaignToUpdate.insights.cpa = campaignToUpdate.insights.cpa || extraStats.cpa;
+              campaignToUpdate.insights.roas = campaignToUpdate.insights.roas || extraStats.roas;
+              campaignToUpdate.insights.spend = campaignToUpdate.insights.spend || extraStats.spend;
             }
-          }
-        } catch (error: any) {
-          console.error(`[INSIGHTS FETCH] Error in processing for campaign ${campaign.id}:`, error);
-          
-          // ENHANCED IMMEDIATE BLOCKING: Mark campaign as blocked immediately if 400 error
-          if (error.status === 400 || (error.response && error.response.status === 400)) {
-            console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaign.id}`);
             
-            // Update in-memory state
-            campaign.insightsStatus = 'blocked';
-            campaign.insights = null;
+            if (!campaignToUpdate.results && extraStats.results !== '-') {
+              campaignToUpdate.results = extraStats.results;
+            }
             
-            // Update localStorage and add to all blocking mechanisms
-            markCampaignAsBlocked(campaign.id);
-            
-            // Logging for visibility
-            console.log(`[INSIGHTS FETCH] Campaign ${campaign.id} is now BLOCKED from future insights fetches`);
+            successCount++;
           }
         }
-      })();
+      } catch (error: any) {
+        console.error(`[INSIGHTS FETCH] Error in processing for campaign ${campaign.id}:`, error);
+        
+        // ENHANCED IMMEDIATE BLOCKING: Mark campaign as blocked immediately if 400 error
+        if (error.status === 400 || (error.response && error.response.status === 400)) {
+          console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaign.id}`);
+          
+          // Update in-memory state
+          campaign.insightsStatus = 'blocked';
+          campaign.insights = null;
+          
+          // Update localStorage and add to all blocking mechanisms
+          markCampaignAsBlocked(campaign.id);
+        }
+      }
       
-      batchPromises.push(promise);
+      // Add delay between individual requests within a batch
+      if (j < batch.length - 1) {
+        console.log(`⏳ Waiting ${MIN_REQUEST_INTERVAL}ms between requests...`);
+        await delay(MIN_REQUEST_INTERVAL);
+      }
     }
     
-    // Wait for all batch promises to complete before moving to the next batch
-    await Promise.all(batchPromises);
-    
+    // Add delay between batches unless this is the last batch
     if (i + BATCH_LIMIT < campaignsWithInsights.length) {
-      console.log(`[INSIGHTS FETCH] Waiting ${BATCH_CONFIG.BATCH_INTERVAL}ms before next batch`);
-      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_INTERVAL));
+      console.log(`⏲️ Waiting ${BATCH_INTERVAL}ms before next batch...`);
+      await delay(BATCH_INTERVAL);
     }
   }
   

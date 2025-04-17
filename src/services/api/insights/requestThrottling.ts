@@ -8,10 +8,11 @@ import { DuplicateRequestChecker } from './throttling/duplicateChecker';
 export class InsightsRequestThrottler {
   private static queue: Promise<any>[] = [];
   private static processing = false;
-  private static readonly BATCH_SIZE = 3;
-  private static readonly BATCH_INTERVAL = 2000;
-  private static readonly REQUEST_DELAY = 300;
+  private static readonly BATCH_SIZE = 2; // Reduced batch size to 2 per spec
+  private static readonly BATCH_INTERVAL = 3500; // 3.5s between batches
+  private static readonly REQUEST_DELAY = 750; // 750ms between requests
   private static readonly SKIPPED_400_KEY = 'insights_skipped_400_requests';
+  private static readonly processedRequests = new Set<string>();
 
   /**
    * Process an array of request functions with controlled rate limiting
@@ -22,32 +23,52 @@ export class InsightsRequestThrottler {
     const results: T[] = [];
     console.log(`[INSIGHTS] Throttling ${requests.length} requests with batch size ${this.BATCH_SIZE}`);
     
+    // NEW: Abort if too many requests in queue
+    const MAX_QUEUE_SIZE = 100;
+    if (requests.length > MAX_QUEUE_SIZE) {
+      console.warn(`⚠️ Skipping insights fetch: too many campaigns in queue (${requests.length})`);
+      return [];
+    }
+    
     // Track consecutive errors to implement exponential backoff
     let consecutiveErrors = 0;
     
-    // Filter out requests that are known to fail with 400
-    const filteredRequests = requests.filter((_, index) => {
-      // We can't actually filter by signature here, but we'll count how many we skip
-      // The actual filtering happens in the wrapped request function
-      return true;
-    });
+    // Calculate total batches for logging
+    const totalBatches = Math.ceil(requests.length / this.BATCH_SIZE);
     
-    for (let i = 0; i < filteredRequests.length; i += this.BATCH_SIZE) {
-      const batch = filteredRequests.slice(i, i + this.BATCH_SIZE);
-      console.log(`[INSIGHTS] Processing batch ${Math.floor(i/this.BATCH_SIZE) + 1} with ${batch.length} requests`);
+    for (let i = 0; i < requests.length; i += this.BATCH_SIZE) {
+      const batch = requests.slice(i, i + this.BATCH_SIZE);
+      const batchNumber = Math.floor(i / this.BATCH_SIZE) + 1;
+      console.log(`[INSIGHTS] Processing batch ${batchNumber}/${totalBatches} with ${batch.length} requests`);
       
+      // Define delay based on consecutive errors but with minimum from config
       const currentDelay = consecutiveErrors > 0 
-        ? Math.min(this.REQUEST_DELAY * Math.pow(2, consecutiveErrors), 3000) 
+        ? Math.max(this.REQUEST_DELAY, this.REQUEST_DELAY * Math.pow(2, consecutiveErrors))
         : this.REQUEST_DELAY;
       
-      const batchPromises = batch.map(async (req, index) => {
+      // Process each request in the batch sequentially with explicit delay
+      for (let j = 0; j < batch.length; j++) {
+        const req = batch[j];
+        const requestId = `${idPrefix}-${Date.now()}-${j}-${Math.random().toString(36).slice(2, 7)}`;
+        
+        // Skip if we've already processed this request ID
+        if (this.processedRequests.has(requestId)) {
+          console.log(`🔄 Skipping duplicate request ${requestId} in this session`);
+          continue;
+        }
+        
+        // Add to processed requests set
+        this.processedRequests.add(requestId);
+        
         try {
-          if (index > 0) {
+          // Wait for explicit delay before each request (except first in batch)
+          if (j > 0) {
+            console.log(`⏳ Waiting ${currentDelay}ms between requests...`);
             await new Promise(resolve => setTimeout(resolve, currentDelay));
           }
           
           // Generate a unique request ID that includes the request function hash
-          const requestId = `${idPrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          console.log(`✅ Executing request ${requestId} (batch ${batchNumber}/${totalBatches})...`);
           
           // Create a wrapper function to capture the request signature before execution
           const wrappedRequest = () => {
@@ -106,7 +127,7 @@ export class InsightsRequestThrottler {
           
           const result = await RequestQueueManager.addToQueue(wrappedRequest, requestId);
           consecutiveErrors = 0;
-          return result;
+          results.push(result);
         } catch (error: any) {
           console.error('[INSIGHTS] Request failed:', error);
           
@@ -122,25 +143,21 @@ export class InsightsRequestThrottler {
             console.log('[INSIGHTS] Skipped insights request due to permanent failure (400)');
           }
           
-          return null;
+          // Push null for failed requests to maintain array positions
+          results.push(null as T);
+          
+          // If error is rate limit (code 4), break completely to avoid further calls
+          if (error.code === 4 || (error.error && error.error.code === 4)) {
+            console.warn("🚫 Skipping fetch - hit Meta rate limit (#4)");
+            break;
+          }
         }
-      });
+      }
       
-      const batchResults = await Promise.allSettled(batchPromises);
-      
-      batchResults.forEach((result) => {
-        if (result.status === 'fulfilled') {
-          results.push(result.value);
-        }
-      });
-      
-      if (i + this.BATCH_SIZE < filteredRequests.length) {
-        const batchWaitTime = consecutiveErrors > 0
-          ? Math.min(this.BATCH_INTERVAL * Math.pow(1.5, consecutiveErrors), 10000)
-          : this.BATCH_INTERVAL;
-        
-        console.log(`[INSIGHTS] Waiting ${batchWaitTime}ms before next batch (consecutive errors: ${consecutiveErrors})`);
-        await new Promise(resolve => setTimeout(resolve, batchWaitTime));
+      // Wait between batches unless this is the last batch
+      if (i + this.BATCH_SIZE < requests.length) {
+        console.log(`⏲️ Waiting ${this.BATCH_INTERVAL}ms before next batch...`);
+        await new Promise(resolve => setTimeout(resolve, this.BATCH_INTERVAL));
       }
     }
     
