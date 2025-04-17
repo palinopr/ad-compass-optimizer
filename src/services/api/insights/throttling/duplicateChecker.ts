@@ -1,16 +1,14 @@
 
-import { RequestSignatureGenerator } from './signature/RequestSignatureGenerator';
-import { DuplicateStorage } from './storage/DuplicateStorage';
+import { RequestSignatureService } from './services/RequestSignatureService';
+import { PermanentFailureService } from './services/PermanentFailureService';
 import { RequestTracker } from './tracking/RequestTracker';
-import { DatePresetValidator } from './validation/DatePresetValidator';
+import { DuplicateStorage } from './storage/DuplicateStorage';
 
 export class DuplicateRequestChecker {
   static isDuplicate(campaignId: string, datePreset: string): boolean {
     console.log(`[INSIGHTS] Checking for duplicate request: campaign=${campaignId}, datePreset=${datePreset}`);
     
-    if (DatePresetValidator.isProblematicDatePreset(datePreset)) {
-      console.log(`[INSIGHTS] Automatically blocking request with problematic date preset "${datePreset}" for campaign=${campaignId}`);
-      DuplicateStorage.storeBlocked28d(campaignId, datePreset);
+    if (!RequestSignatureService.validateRequest(campaignId, datePreset)) {
       return true;
     }
   
@@ -33,20 +31,11 @@ export class DuplicateRequestChecker {
   }
 
   static isPermanentlyFailed(requestSignature: string): boolean {
-    if (DatePresetValidator.isProblematicDatePreset(requestSignature)) {
-      console.log(`[INSIGHTS] Auto-blocking request with problematic date preset signature: ${requestSignature}`);
-      this.markAsPermanentlyFailed(requestSignature);
-      DuplicateStorage.storeSignatureBlock(requestSignature);
-      return true;
-    }
-    
-    return RequestTracker.isPermanentlyFailed(requestSignature);
+    return PermanentFailureService.check(requestSignature);
   }
 
   static markAsPermanentlyFailed(requestSignature: string): void {
-    console.log(`[INSIGHTS] ✅ Permanently blocking request: ${requestSignature}`);
-    RequestTracker.markPermanentlyFailed(requestSignature);
-    DuplicateStorage.storePermanentFailure(requestSignature);
+    PermanentFailureService.markFailed(requestSignature);
   }
 
   static reset(): void {
@@ -60,6 +49,6 @@ export class DuplicateRequestChecker {
     endpoint: string, 
     options: Record<string, any> = {}
   ): string {
-    return RequestSignatureGenerator.generate(objectId, endpoint, options);
+    return RequestSignatureService.generate(objectId, endpoint, options);
   }
 }
