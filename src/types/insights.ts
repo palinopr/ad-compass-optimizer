@@ -16,4 +16,6 @@ export interface InsightFilterOptions {
   timeRange?: InsightTimeRange;
   fields?: string[];
   timeIncrement?: number;
+  // Add campaignStatus property to fix type errors
+  campaignStatus?: 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED' | string;
 }

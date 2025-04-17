@@ -27,6 +27,8 @@ export interface InsightFilterOptions {
   breakdowns?: string[];
   limit?: number;
   useUnifiedAttribution?: boolean;
+  // Add campaignStatus property to fix type errors
+  campaignStatus?: 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED' | string;
 }
 
 /**
