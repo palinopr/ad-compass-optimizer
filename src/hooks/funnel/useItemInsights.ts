@@ -3,7 +3,7 @@ import { useInsightsState } from './hooks/useInsightsState';
 import { useFetchInsights } from './hooks/useFetchInsights';
 import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
 import { insightsQueueState, insightsThrottlingState } from '../campaigns/fetch-utils/insights/batchConfig';
-import { RequestThrottlingService } from '@/services/api/insights/throttling/requestThrottlingService';
+import { RequestThrottlingService } from '@/services/api/insights/throttling/services/RequestThrottlingService';
 
 export const useItemInsights = () => {
   const { insights, setInsights, isLoading, setIsLoading, error, setError } = useInsightsState();
