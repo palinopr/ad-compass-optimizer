@@ -15,9 +15,14 @@ export class ResponseHeaderMonitor {
         if (usage.call_count > 95 || usage.total_cputime > 95 || usage.total_time > 95) {
           console.warn('[INSIGHTS] High API usage detected:', usage);
           
+          // Convert retry-after to a number, defaulting to 300 if not a valid number
+          const retryAfter = response.headers.get('retry-after') || '300';
+          const parsedRetryAfter = parseInt(retryAfter, 10);
+          
           // Apply rate limiting with appropriate retry-after
-          const retryAfter = response.headers.get('retry-after') || 300;
-          RateLimitManager.setRateLimit(parseInt(retryAfter, 10));
+          RateLimitManager.setRateLimit(
+            isNaN(parsedRetryAfter) ? 300 : parsedRetryAfter
+          );
         }
       }
       
