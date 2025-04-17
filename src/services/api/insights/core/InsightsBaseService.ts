@@ -10,6 +10,9 @@ import { DuplicateRequestChecker } from '../throttling/duplicateChecker';
 import { CampaignBlockingService } from './CampaignBlockingService';
 import { InsightsResponseProcessor } from './InsightsResponseProcessor';
 
+// Track failed request attempts to avoid retries
+const failedRequests = new Set<string>();
+
 export class InsightsBaseService extends BaseApiService {
   /**
    * Fetches insights for a specific ad object (account, campaign, adset, or ad)
@@ -23,8 +26,21 @@ export class InsightsBaseService extends BaseApiService {
       console.log(`Fetching insights for object ${objectId}...`);
       this.validateToken(token, 'fetchInsights');
       
+      // Validate object ID
+      if (!objectId || typeof objectId !== 'string' || objectId.trim() === '') {
+        console.warn(`⚠️ Skipping insights fetch: Invalid object ID`);
+        throw new Error('Invalid object ID');
+      }
+      
+      // Check if this is a duplicate fetch attempt
+      if (failedRequests.has(objectId)) {
+        console.log(`⚠️ Skipping insights fetch for object ${objectId}: Previously failed`);
+        throw CampaignBlockingService.createBlockedError(objectId);
+      }
+      
       // Check if this campaign is blocked
       if (CampaignBlockingService.isCampaignBlocked(objectId)) {
+        console.log(`⚠️ Skipping insights fetch for object ${objectId}: 400 error or missing data.`);
         throw CampaignBlockingService.createBlockedError(objectId);
       }
       
@@ -33,7 +49,7 @@ export class InsightsBaseService extends BaseApiService {
       
       // Check if this exact request previously failed with 400
       if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-        console.log(`[INSIGHTS] 🚫 Skipped ${objectId} – insights blocked after 400`);
+        console.log(`⚠️ Skipping insights fetch for object ${objectId}: 400 error or missing data.`);
         
         // Add to the blocked campaigns list for consistency
         CampaignBlockingService.blockCampaign(objectId);
@@ -44,12 +60,18 @@ export class InsightsBaseService extends BaseApiService {
       // Check for object-specific permanent failure signatures
       const objectFailSignature = `object-${objectId}-failed`;
       if (DuplicateRequestChecker.isPermanentlyFailed(objectFailSignature)) {
-        console.log(`[INSIGHTS] 🚫 Skipped ${objectId} – insights blocked after 400`);
+        console.log(`⚠️ Skipping insights fetch for object ${objectId}: 400 error or missing data.`);
         
         // Add to the blocked campaigns list for consistency
         CampaignBlockingService.blockCampaign(objectId);
         
         throw CampaignBlockingService.createBlockedError(objectId);
+      }
+      
+      // Check campaign status if provided
+      if (options.campaignStatus && options.campaignStatus !== 'ACTIVE') {
+        console.log(`⚠️ Skipping insights fetch for object ${objectId}: Not active (status: ${options.campaignStatus})`);
+        throw new Error(`Campaign is not ACTIVE: ${options.campaignStatus}`);
       }
       
       // CRITICAL: Ensure a date_preset is always set
@@ -101,6 +123,9 @@ export class InsightsBaseService extends BaseApiService {
       InsightsThrottling.monitorResponseHeaders(response);
       
       if (response.status === 400) {
+        // Add to failed requests set
+        failedRequests.add(objectId);
+        console.log(`⚠️ Skipping insights fetch for object ${objectId}: 400 error or missing data.`);
         return await InsightsResponseProcessor.handleErrorResponse(response, objectId, requestSignature);
       }
       
@@ -114,6 +139,8 @@ export class InsightsBaseService extends BaseApiService {
       
       return insights;
     } catch (error) {
+      // Add to failed requests set on error
+      failedRequests.add(objectId);
       return InsightsResponseProcessor.handleFetchError(error, objectId, options);
     }
   }

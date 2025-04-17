@@ -16,6 +16,9 @@ export function useInsightsFetching() {
   const { error, setError, handleError, resetErrorState } = useErrorHandling();
   const BLOCKED_CAMPAIGNS_KEY = 'permanently_blocked_campaigns';
   
+  // Track failed campaign IDs to avoid repeated fetches
+  const [failedCampaigns] = useState<Set<string>>(new Set());
+  
   const handleInsightsFetch = useCallback(async (
     fetchFunction: (token: string, id: string, options: InsightFilterOptions) => Promise<InsightsResponse>,
     id: string, 
@@ -24,9 +27,30 @@ export function useInsightsFetching() {
     setIsLoading(true);
     setError(null);
     
+    // Validate campaign ID
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      console.warn(`⚠️ Skipping insights fetch: Invalid ID`);
+      setIsLoading(false);
+      return null;
+    }
+    
+    // Check for campaign status if it's provided in options
+    if (options.campaignStatus && options.campaignStatus !== 'ACTIVE') {
+      console.log(`⚠️ Skipping insights fetch for campaign ${id}: Not active (status: ${options.campaignStatus})`);
+      setIsLoading(false);
+      return null;
+    }
+    
+    // Check if this campaign has already failed
+    if (failedCampaigns.has(id)) {
+      console.log(`⚠️ Skipping insights fetch for campaign ${id}: Previously failed`);
+      setIsLoading(false);
+      return null;
+    }
+    
     // FIRST CHECK: Verify if this campaign ID is blocked due to 400 errors
     if (CampaignBlockingService.isCampaignBlocked(id)) {
-      console.log(`🚫 Skipped ${id} – insights blocked after 400`);
+      console.log(`⚠️ Skipping insights fetch for campaign ${id}: 400 error or missing data.`);
       setIsLoading(false);
       return null;
     }
@@ -88,9 +112,12 @@ export function useInsightsFetching() {
     } catch (err: any) {
       updateRateLimitStatus();
       
+      // Add to failed campaigns set to avoid retries
+      failedCampaigns.add(id);
+      
       // Special handling for 400 errors - mark campaign as blocked
       if (err.status === 400 || (err.response && err.response.status === 400)) {
-        console.log(`[INSIGHTS FETCHING] ✅ Permanently blocking campaign due to 400 error: ${id}`);
+        console.log(`⚠️ Skipping insights fetch for campaign ${id}: 400 error or missing data.`);
         CampaignBlockingService.blockCampaign(id);
       }
       
@@ -99,7 +126,7 @@ export function useInsightsFetching() {
     } finally {
       setIsLoading(false);
     }
-  }, [updateRateLimitStatus, rateLimitStatus, setError, handleError]);
+  }, [updateRateLimitStatus, rateLimitStatus, setError, handleError, failedCampaigns]);
   
   return {
     insights,

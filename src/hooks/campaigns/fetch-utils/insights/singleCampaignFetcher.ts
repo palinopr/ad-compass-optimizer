@@ -19,14 +19,29 @@ const isCampaignBlocked = (campaignId: string): boolean => {
   return CampaignBlockingService.isCampaignBlocked(campaignId);
 };
 
+// Track failed fetches to avoid retries
+const failedFetchAttempts = new Set<string>();
+
 export const fetchCampaignInsights = async (
   campaignId: string, 
   token: string,
   datePreset: string = 'maximum'
 ): Promise<CampaignExtraStats | null> => {
+  // Validate campaign ID
+  if (!campaignId || typeof campaignId !== 'string' || campaignId.trim() === '') {
+    console.warn(`⚠️ Skipping insights fetch: Invalid campaign ID`);
+    return null;
+  }
+  
+  // Check if this is a duplicate fetch attempt
+  if (failedFetchAttempts.has(campaignId)) {
+    console.log(`⚠️ Skipping insights fetch for campaign ${campaignId}: Previously failed`);
+    return null;
+  }
+  
   // ENHANCED TRIPLE-CHECK GUARD: Check all possible sources of blocking information
   if (isCampaignBlocked(campaignId)) {
-    console.log(`🚫 Skipped ${campaignId} – insights blocked after 400`);
+    console.log(`⚠️ Skipping insights fetch for campaign ${campaignId}: 400 error or missing data.`);
     return null;
   }
   
@@ -34,7 +49,7 @@ export const fetchCampaignInsights = async (
   try {
     const blockedCampaigns = JSON.parse(localStorage.getItem(BLOCKED_CAMPAIGNS_KEY) || '[]');
     if (blockedCampaigns.includes(campaignId)) {
-      console.log(`🚫 Skipped ${campaignId} – insights blocked after 400 (direct localStorage check)`);
+      console.log(`⚠️ Skipping insights fetch for campaign ${campaignId}: 400 error or missing data.`);
       return null;
     }
   } catch (e) {
@@ -45,7 +60,7 @@ export const fetchCampaignInsights = async (
     // STRICT VALIDATION: First check if campaign is allowed to fetch insights
     const { isValid, reason } = validateCampaignForInsights(campaignId);
     if (!isValid) {
-      console.log(`[INSIGHTS FETCH] 🚫 Skipped ${campaignId} – ${reason || 'validation failed'}`);
+      console.log(`⚠️ Skipping insights fetch for campaign ${campaignId}: ${reason || 'validation failed'}`);
       return null;
     }
 
@@ -53,9 +68,12 @@ export const fetchCampaignInsights = async (
   } catch (error: any) {
     console.error(`[INSIGHTS FETCH] Error fetching insights for campaign ${campaignId}:`, error);
     
+    // Add to failed attempts set to avoid retries
+    failedFetchAttempts.add(campaignId);
+    
     // ENHANCED ERROR HANDLING: Mark as blocked for all 400 errors
     if (error.status === 400 || (error.response && error.response.status === 400)) {
-      console.log(`[INSIGHTS FETCH] ✅ Permanently blocking campaign due to 400 error: ${campaignId}`);
+      console.log(`⚠️ Skipping insights fetch for campaign ${campaignId}: 400 error or missing data.`);
       markCampaignAsBlocked(campaignId);
       
       // Also handle with the error handler for consistency

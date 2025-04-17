@@ -16,6 +16,28 @@ export const useItemInsights = () => {
     setIsLoading(true);
     setError(null);
 
+    // Validate campaign ID
+    if (!itemId || typeof itemId !== 'string' || itemId.trim() === '') {
+      console.warn(`⚠️ Skipping insights fetch for ${itemType}: Invalid ID`);
+      setError('Invalid item ID');
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if this item has already failed
+    const requestSignature = DuplicateRequestChecker.generateRequestSignature(
+      itemId,
+      `insights-${itemType}`,
+      { datePreset }
+    );
+    
+    if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
+      console.log(`⚠️ Skipping insights fetch for ${itemType} ${itemId}: 400 error or missing data.`);
+      setError('This item cannot be fetched due to previous API errors');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const data = await fetchInsights(itemId, itemType, datePreset);
       
@@ -38,7 +60,7 @@ export const useItemInsights = () => {
         );
         
         DuplicateRequestChecker.markAsPermanentlyFailed(errorSignature);
-        console.log(`[INSIGHTS HOOK] Marked failed request due to catch block: ${errorSignature}`);
+        console.log(`⚠️ Skipping insights fetch for ${itemType} ${itemId}: 400 error or missing data.`);
       }
     } finally {
       setIsLoading(false);

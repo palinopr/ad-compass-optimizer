@@ -15,6 +15,24 @@ export const useFetchInsights = () => {
   ) => {
     console.log(`[INSIGHTS HOOK] Request started for ${itemType} ${itemId} with datePreset: ${datePreset}`);
 
+    // Validate campaign ID
+    if (!itemId || typeof itemId !== 'string' || itemId.trim() === '') {
+      console.warn(`⚠️ Skipping insights fetch: Invalid ${itemType} ID`);
+      return null;
+    }
+
+    // Check if this exact request previously failed with 400 - EARLY CHECK
+    const requestSignature = DuplicateRequestChecker.generateRequestSignature(
+      itemId, 
+      `insights-${itemType}`, 
+      { datePreset }
+    );
+    
+    if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
+      console.log(`⚠️ Skipping insights fetch for ${itemType} ${itemId}: 400 error or missing data.`);
+      return null;
+    }
+
     try {
       const token = metaAuthService.getAccessToken();
       if (!token) {
@@ -33,19 +51,6 @@ export const useFetchInsights = () => {
       // Log the validated date preset
       console.log(`[INSIGHTS HOOK] Using validated datePreset: ${validDatePreset} for ${itemType} ${itemId}`);
       
-      // Generate a unique request signature for this particular insights request
-      const requestSignature = DuplicateRequestChecker.generateRequestSignature(
-        itemId, 
-        `insights-${itemType}`, 
-        { datePreset: validDatePreset }
-      );
-      
-      // Check if this exact request previously failed with 400 - EARLY CHECK
-      if (DuplicateRequestChecker.isPermanentlyFailed(requestSignature)) {
-        console.log(`[INSIGHTS HOOK] Skipped insights request due to permanent failure (400): ${itemId} with ${validDatePreset}`);
-        throw new Error('This insights request previously failed due to a bad request (400)');
-      }
-
       const commonFields = [
         'spend',
         'ctr',
@@ -99,7 +104,7 @@ export const useFetchInsights = () => {
           { datePreset }
         );
         DuplicateRequestChecker.markAsPermanentlyFailed(failureSignature);
-        console.log(`[INSIGHTS HOOK] Marked request as permanently failed due to 400: ${itemId}`);
+        console.log(`⚠️ Skipping insights fetch for ${itemType} ${itemId}: 400 error or missing data.`);
       }
       
       console.error('Error fetching insights:', err);
