@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { SharedMetaConnectionProvider } from '@/components/meta/SharedMetaConnectionProvider';
 import { Toaster } from '@/components/ui/toaster';
 import AppRoutes from '@/components/app/AppRoutes';
+import { QueueVisualizer } from '@/components/queue/QueueVisualizer';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <AppRoutes />
       </BrowserRouter>
       
+      <QueueVisualizer />
       <Toaster />
     </SharedMetaConnectionProvider>
   );
