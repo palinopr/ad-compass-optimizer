@@ -29,10 +29,30 @@ export class CampaignQueryBuilder {
       localStorage.setItem('force_maximum_date_preset', 'true');
       localStorage.setItem('date_preset_fallback_reason', 'Invalid normalized preset');
       console.log('👉 Switched to fallback date preset: maximum');
+      
+      // Dispatch fallback event for components to listen to
+      if (typeof window !== 'undefined') {
+        try {
+          const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
+            detail: { reason: 'Invalid normalized preset', shouldRefresh: true }
+          });
+          window.dispatchEvent(fallbackEvent);
+        } catch (e) {
+          console.error('[CAMPAIGN QUERY] Error dispatching fallback event:', e);
+        }
+      }
     }
     
     // Log what date preset we're using
     console.log(`[CAMPAIGN QUERY] Using effective date preset: ${validDatePreset} (original: ${datePreset}, forcing maximum: ${shouldUseMaximum})`);
+    
+    // Store the actually used preset for debugging
+    try {
+      localStorage.setItem('last_campaign_request_date_preset', validDatePreset);
+      localStorage.setItem('last_campaign_request_timestamp', new Date().toISOString());
+    } catch (e) {
+      console.error('[CAMPAIGN QUERY] Error storing date preset info:', e);
+    }
     
     // Use this specific set of fields to ensure we get required data
     // IMPORTANT: These exact fields are required to prevent empty objects
@@ -77,13 +97,26 @@ export class CampaignQueryBuilder {
     localStorage.setItem('force_maximum_date_preset', 'true');
     localStorage.setItem('date_preset_fallback_reason', `Unrecognized preset: ${datePreset}`);
     console.log('👉 Switched to fallback date preset: maximum');
+    
+    // Dispatch fallback event
+    if (typeof window !== 'undefined') {
+      try {
+        const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
+          detail: { reason: `Unrecognized preset: ${datePreset}`, shouldRefresh: true }
+        });
+        window.dispatchEvent(fallbackEvent);
+      } catch (e) {
+        console.error('[CAMPAIGN QUERY] Error dispatching fallback event:', e);
+      }
+    }
+    
     return 'maximum';
   }
 
   // Adding version tracking to help identify when this code is deployed
   static getVersion(): string {
     // Increment version to force cache invalidation
-    return '1.0.14-ui-render-fallback-fix';
+    return '1.0.15-ui-render-fallback-fix-v2';
   }
   
   // Adding timestamp to ensure no cache is used
@@ -112,6 +145,24 @@ export class CampaignQueryBuilder {
     const match = query.match(/date_preset\(([^)]+)\)/);
     if (!match) {
       console.error('[CAMPAIGN QUERY] No date preset found in query!');
+      
+      // Trigger fallback to maximum
+      localStorage.setItem('force_maximum_date_preset', 'true');
+      localStorage.setItem('date_preset_fallback_reason', 'No date preset found in query');
+      console.log('👉 Switched to fallback date preset: maximum');
+      
+      // Dispatch fallback event
+      if (typeof window !== 'undefined') {
+        try {
+          const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
+            detail: { reason: 'No date preset found in query', shouldRefresh: true }
+          });
+          window.dispatchEvent(fallbackEvent);
+        } catch (e) {
+          console.error('[CAMPAIGN QUERY] Error dispatching fallback event:', e);
+        }
+      }
+      
       return false;
     }
     
@@ -124,6 +175,18 @@ export class CampaignQueryBuilder {
       localStorage.setItem('force_maximum_date_preset', 'true');
       localStorage.setItem('date_preset_fallback_reason', `Invalid date preset in query: ${foundPreset}`);
       console.log('👉 Switched to fallback date preset: maximum');
+      
+      // Dispatch fallback event
+      if (typeof window !== 'undefined') {
+        try {
+          const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
+            detail: { reason: `Invalid date preset in query: ${foundPreset}`, shouldRefresh: true }
+          });
+          window.dispatchEvent(fallbackEvent);
+        } catch (e) {
+          console.error('[CAMPAIGN QUERY] Error dispatching fallback event:', e);
+        }
+      }
       
       return false;
     }

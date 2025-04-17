@@ -24,7 +24,15 @@ export function useDateRangeSelection(
       return;
     }
     
+    // Safety check: ensure preset is a string before proceeding
+    if (typeof preset !== 'string') {
+      console.error(`[DATE SELECTOR] Invalid preset type: ${typeof preset}`);
+      preset = 'maximum' as DatePresetOption;
+    }
+    
+    // Validate the preset
     const validatedPreset = mapToValidDatePreset(preset);
+    console.log(`[DATE SELECTOR] Mapped preset "${preset}" to validated preset "${validatedPreset}"`);
     
     const today = new Date();
     today.setHours(23, 59, 59, 999);
@@ -81,7 +89,17 @@ export function useDateRangeSelection(
 
     setSelectedPreset(validatedPreset);
     setDateRange(newRange);
-    onChange(newRange, validatedPreset);
+    
+    // Safely call onChange with type checking
+    if (typeof onChange === 'function') {
+      try {
+        onChange(newRange, validatedPreset);
+      } catch (error) {
+        console.error('[DATE SELECTOR] Error in onChange callback:', error);
+      }
+    } else {
+      console.warn('[DATE SELECTOR] onChange is not a function:', typeof onChange);
+    }
     
     const isClosingCalendarNeeded = 
       (selectedPreset === 'custom') && (preset !== 'custom' as DatePresetOption);
@@ -98,7 +116,15 @@ export function useDateRangeSelection(
       
       const updatedRange = { from: range.from, to: endDate };
       setDateRange(updatedRange);
-      onChange(updatedRange, 'custom');
+      
+      // Safely call onChange
+      if (typeof onChange === 'function') {
+        try {
+          onChange(updatedRange, 'custom');
+        } catch (error) {
+          console.error('[DATE SELECTOR] Error in onChange callback:', error);
+        }
+      }
     } else {
       setDateRange(range);
     }

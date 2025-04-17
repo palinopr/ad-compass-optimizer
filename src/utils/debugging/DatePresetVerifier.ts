@@ -25,12 +25,7 @@ export class DatePresetVerifier {
             console.log('👉 Switched to fallback date preset: maximum');
             
             // Dispatch fallback event for campaign components to listen to
-            if (typeof window !== 'undefined') {
-              const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
-                detail: { reason: 'Invalid date preset detected', shouldRefresh: true }
-              });
-              window.dispatchEvent(fallbackEvent);
-            }
+            this.dispatchFallbackEvent('Invalid date preset detected by verifier', true);
           }
         }
       } catch (err) {
@@ -74,6 +69,14 @@ export class DatePresetVerifier {
       try {
         const lastDatePreset = localStorage.getItem('last_campaign_request_date_preset');
         console.log('Last used date preset:', lastDatePreset || 'NOT FOUND');
+        
+        if (!lastDatePreset) {
+          // If no preset found, this could indicate an issue - set fallback
+          console.warn('No last used date preset found in localStorage - triggering fallback');
+          this.triggerFallback('No date preset found in localStorage');
+          return;
+        }
+        
         const isValid = this.checkPreset(lastDatePreset || '');
         
         // If preset is invalid, trigger fallback
@@ -91,6 +94,23 @@ export class DatePresetVerifier {
   }
   
   /**
+   * Dispatch fallback event for components to listen to
+   */
+  static dispatchFallbackEvent(reason: string, shouldRefresh: boolean = true): void {
+    if (typeof window !== 'undefined') {
+      try {
+        const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
+          detail: { reason, shouldRefresh }
+        });
+        window.dispatchEvent(fallbackEvent);
+        console.log(`[DATE PRESET] Dispatched fallback event: ${reason}`);
+      } catch (e) {
+        console.error('[DATE PRESET] Error dispatching fallback event:', e);
+      }
+    }
+  }
+  
+  /**
    * Trigger automatic fallback to maximum date preset
    */
   static triggerFallback(reason: string): void {
@@ -100,19 +120,19 @@ export class DatePresetVerifier {
     localStorage.setItem('date_preset_fallback_timestamp', Date.now().toString());
     console.log('👉 Switched to fallback date preset: maximum');
     
-    // Dispatch fallback event for campaign components to listen to
-    if (typeof window !== 'undefined') {
-      const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
-        detail: { reason, shouldRefresh: true }
-      });
-      window.dispatchEvent(fallbackEvent);
-    }
+    // Dispatch fallback event
+    this.dispatchFallbackEvent(reason, true);
   }
   
   /**
    * Check a string for valid date preset
    */
   static checkPreset(text: string): boolean {
+    if (!text) {
+      console.error('❌ Empty text provided for date preset check');
+      return false;
+    }
+    
     // Look for date preset patterns in the text
     const metaDatePresetRegex = /date_preset(?:\=|\()([a-z0-9_]+)(?:\)|(?:\&|\s|$))/i;
     const match = text.match(metaDatePresetRegex);
@@ -192,3 +212,15 @@ setTimeout(() => {
     console.error('Error running date preset verification:', e);
   }
 }, 2000);
+
+// Register to run verification again when campaigns are about to refresh
+if (typeof window !== 'undefined') {
+  window.addEventListener('campaign-refresh-starting', () => {
+    console.log('[DATE PRESET] Campaign refresh detected, running date preset verification');
+    try {
+      DatePresetVerifier.verifyAllDatePresets();
+    } catch (e) {
+      console.error('Error running date preset verification before refresh:', e);
+    }
+  });
+}

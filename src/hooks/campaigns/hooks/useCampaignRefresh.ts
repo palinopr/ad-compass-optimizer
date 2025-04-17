@@ -18,6 +18,14 @@ export function useCampaignRefresh(
   const handleFetchCampaigns = useCallback(async (forceRefresh = false) => {
     console.log(`📊 [CAMPAIGN FETCH] handleFetchCampaigns called, forceRefresh: ${forceRefresh}`);
     
+    // Notify listeners that a campaign refresh is starting (for date preset verification)
+    try {
+      const refreshStartEvent = new CustomEvent('campaign-refresh-starting');
+      window.dispatchEvent(refreshStartEvent);
+    } catch (e) {
+      console.error('[CAMPAIGN FETCH] Error dispatching refresh start event:', e);
+    }
+    
     setIsLoading(true);
     setError(null);
     setErrorDetails(null);
@@ -31,97 +39,170 @@ export function useCampaignRefresh(
     // Clear the existing status flags
     localStorage.removeItem('has_valid_campaign_insights');
     
+    // Check if we're using maximum as fallback
+    const isUsingMaximumFallback = localStorage.getItem('force_maximum_date_preset') === 'true';
+    const fallbackReason = localStorage.getItem('date_preset_fallback_reason') || 'Unknown reason';
+    
+    if (isUsingMaximumFallback) {
+      console.log(`[CAMPAIGN FETCH] Using maximum date preset as fallback. Reason: ${fallbackReason}`);
+    }
+    
     const result = await fetchCampaigns(forceRefresh);
     
-    if (mountedRef.current) {
-      if (result?.error) {
-        setError(result.error);
-        setErrorDetails(result.errorDetails);
-        setInsightsFetchStatus('failed');
+    if (!mountedRef.current) {
+      console.log('[CAMPAIGN FETCH] Component unmounted during fetch, aborting state updates');
+      return;
+    }
+    
+    if (result?.error) {
+      console.error('[CAMPAIGN FETCH] Error fetching campaigns:', result.error);
+      setError(result.error);
+      setErrorDetails(result.errorDetails);
+      setInsightsFetchStatus('failed');
+      
+      // Check if error is related to invalid date preset
+      const errorStr = String(result.error);
+      if (
+        errorStr.includes('date_preset') || 
+        errorStr.includes('preset') || 
+        errorStr.includes('parameter')
+      ) {
+        console.warn('[CAMPAIGN FETCH] Possible date preset error, triggering fallback');
         
-        handleCampaignFetchError(result.error, result.errorDetails, setCampaignsFetchStatus);
+        // Set fallback flag
+        localStorage.setItem('force_maximum_date_preset', 'true');
+        localStorage.setItem('date_preset_fallback_reason', `API error: ${errorStr}`);
+        console.log('👉 Switched to fallback date preset: maximum');
         
-        setIsLoading(false);
-        setFetchCompleted(true);
-      } else if (result && 'campaigns' in result && Array.isArray(result.campaigns)) {
-        console.log(`✅ [CAMPAIGN FETCH] API returned ${result.campaigns.length} campaigns`);
-        
-        // Always store campaigns first, regardless of insights status
-        localStorage.setItem('last_campaign_fetch_success', 'true');
-        localStorage.setItem('last_campaign_count', result.campaigns.length.toString());
-        setCampaignsFetchStatus('success');
-        localStorage.removeItem('campaign_fetch_unauthorized');
-        localStorage.removeItem('meta_permissions_invalid');
-        
-        // BYPASS ALL FILTERING: Always set raw campaigns array
-        setCampaigns(result.campaigns);
-        
-        const hasValidCampaigns = result.campaigns.length > 0;
-        const hasValidInsightsData = result.campaigns.some(campaign => 
-          campaign.insights && Object.keys(campaign.insights).length > 0
-        );
-        
-        console.log(`[CAMPAIGN FETCH] Campaign validation: hasValidCampaigns=${hasValidCampaigns}, hasValidInsightsData=${hasValidInsightsData}`);
-        
-        if (hasValidCampaigns) {
-          localStorage.setItem('has_campaigns_data', 'true');
-          
-          if (hasValidInsightsData) {
-            console.log('[CAMPAIGN FETCH] Valid insights data found in response');
-            localStorage.setItem('has_valid_campaign_insights', 'true');
-            setInsightsFetchStatus('success');
-          } else {
-            console.log('[CAMPAIGN FETCH] No insights data in campaign response, will try to fetch separately');
-            // Try to get insights but don't block campaign rendering
-            try {
-              const insightsResult = await updateCampaigns(result.campaigns);
-              if (insightsResult && insightsResult.success) {
-                console.log('[CAMPAIGN FETCH] Insights fetch completed successfully');
-                setInsightsFetchStatus('success');
-                localStorage.setItem('has_valid_campaign_insights', 'true');
-              } else if (insightsResult && insightsResult.partial) {
-                console.log('[CAMPAIGN FETCH] Insights fetch partially completed');
-                setInsightsFetchStatus('partial');
-                localStorage.setItem('has_valid_campaign_insights', 'true');
-              } else {
-                console.log('[CAMPAIGN FETCH] Insights fetch failed');
-                setInsightsFetchStatus('failed');
-              }
-            } catch (error: any) {
-              console.error('[CAMPAIGN FETCH] Error during insights fetch:', error);
-              
-              // Check for specific Meta permissions error in insights fetch
-              if (error?.code === 100 && error?.error_subcode === 33) {
-                console.log('⚠️ Meta permission error in insights fetch – insights blocked due to missing access');
-                resetMetaPermissionsInvalid();
-                localStorage.setItem('meta_permissions_invalid', 'true');
-              }
-              
-              setInsightsFetchStatus('failed');
-            }
-          }
-        } else {
-          console.log('[CAMPAIGN FETCH] API returned empty campaigns array');
-          localStorage.setItem('has_campaigns_data', 'false');
-          localStorage.setItem('empty_campaigns_response', 'true');
-          setInsightsFetchStatus(null);
+        // Dispatch event for UI components
+        try {
+          const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
+            detail: { reason: `API error: ${errorStr}`, shouldRefresh: true }
+          });
+          window.dispatchEvent(fallbackEvent);
+        } catch (e) {
+          console.error('[CAMPAIGN FETCH] Error dispatching fallback event:', e);
         }
         
-        // CRITICAL FIX: Always complete fetch and remove loading state
-        setFetchCompleted(true);
-        setIsLoading(false);
-        setLocalForceRender(prev => prev + 1);
-      } else {
-        console.warn('[CAMPAIGN FETCH] Fetch returned no campaigns and no error');
-        localStorage.setItem('has_campaigns_data', 'false');
-        setInsightsFetchStatus('failed');
-        setCampaignsFetchStatus('error');
+        // Don't set error state yet, let the fallback mechanism retry
+        setTimeout(() => {
+          if (mountedRef.current) {
+            console.log('[CAMPAIGN FETCH] Retrying with maximum date preset...');
+            fetchCampaigns(true);
+          }
+        }, 300);
         
-        // CRITICAL FIX: Ensure we have an empty array to render
-        setCampaigns([]);
-        setFetchCompleted(true);
-        setIsLoading(false);
+        return;
       }
+      
+      handleCampaignFetchError(result.error, result.errorDetails, setCampaignsFetchStatus);
+      
+      setIsLoading(false);
+      setFetchCompleted(true);
+    } else if (result && 'campaigns' in result && Array.isArray(result.campaigns)) {
+      console.log(`✅ [CAMPAIGN FETCH] API returned ${result.campaigns.length} campaigns`);
+      
+      // Always store campaigns first, regardless of insights status
+      localStorage.setItem('last_campaign_fetch_success', 'true');
+      localStorage.setItem('last_campaign_count', result.campaigns.length.toString());
+      setCampaignsFetchStatus('success');
+      localStorage.removeItem('campaign_fetch_unauthorized');
+      localStorage.removeItem('meta_permissions_invalid');
+      
+      // BYPASS ALL FILTERING: Always set raw campaigns array
+      setCampaigns(result.campaigns);
+      
+      const hasValidCampaigns = result.campaigns.length > 0;
+      const hasValidInsightsData = result.campaigns.some(campaign => 
+        campaign.insights && Object.keys(campaign.insights).length > 0
+      );
+      
+      console.log(`[CAMPAIGN FETCH] Campaign validation: hasValidCampaigns=${hasValidCampaigns}, hasValidInsightsData=${hasValidInsightsData}`);
+      
+      if (hasValidCampaigns) {
+        localStorage.setItem('has_campaigns_data', 'true');
+        
+        if (hasValidInsightsData) {
+          console.log('[CAMPAIGN FETCH] Valid insights data found in response');
+          localStorage.setItem('has_valid_campaign_insights', 'true');
+          setInsightsFetchStatus('success');
+        } else {
+          console.log('[CAMPAIGN FETCH] No insights data in campaign response, will try to fetch separately');
+          // Try to get insights but don't block campaign rendering
+          try {
+            const insightsResult = await updateCampaigns(result.campaigns);
+            if (insightsResult && insightsResult.success) {
+              console.log('[CAMPAIGN FETCH] Insights fetch completed successfully');
+              setInsightsFetchStatus('success');
+              localStorage.setItem('has_valid_campaign_insights', 'true');
+            } else if (insightsResult && insightsResult.partial) {
+              console.log('[CAMPAIGN FETCH] Insights fetch partially completed');
+              setInsightsFetchStatus('partial');
+              localStorage.setItem('has_valid_campaign_insights', 'true');
+            } else {
+              console.log('[CAMPAIGN FETCH] Insights fetch failed');
+              setInsightsFetchStatus('failed');
+            }
+          } catch (error: any) {
+            console.error('[CAMPAIGN FETCH] Error during insights fetch:', error);
+            
+            // Check for specific Meta permissions error in insights fetch
+            if (error?.code === 100 && error?.error_subcode === 33) {
+              console.log('⚠️ Meta permission error in insights fetch – insights blocked due to missing access');
+              resetMetaPermissionsInvalid();
+              localStorage.setItem('meta_permissions_invalid', 'true');
+            }
+            
+            setInsightsFetchStatus('failed');
+          }
+        }
+      } else {
+        console.log('[CAMPAIGN FETCH] API returned empty campaigns array');
+        localStorage.setItem('has_campaigns_data', 'false');
+        localStorage.setItem('empty_campaigns_response', 'true');
+        setInsightsFetchStatus(null);
+        
+        // If using standard date preset and got empty results, try maximum
+        if (!isUsingMaximumFallback) {
+          console.log('[CAMPAIGN FETCH] No campaigns found with standard preset, triggering fallback to maximum');
+          localStorage.setItem('force_maximum_date_preset', 'true');
+          localStorage.setItem('date_preset_fallback_reason', 'No campaigns found with standard preset');
+          console.log('👉 Switched to fallback date preset: maximum');
+          
+          // Dispatch fallback event
+          try {
+            const fallbackEvent = new CustomEvent('date-preset-fallback-triggered', {
+              detail: { reason: 'No campaigns found with standard preset', shouldRefresh: true }
+            });
+            window.dispatchEvent(fallbackEvent);
+          } catch (e) {
+            console.error('[CAMPAIGN FETCH] Error dispatching fallback event:', e);
+          }
+          
+          // Retry with maximum preset
+          setTimeout(() => {
+            if (mountedRef.current) {
+              console.log('[CAMPAIGN FETCH] Retrying with maximum date preset...');
+              fetchCampaigns(true);
+            }
+          }, 300);
+        }
+      }
+      
+      // CRITICAL FIX: Always complete fetch and remove loading state
+      setFetchCompleted(true);
+      setIsLoading(false);
+      setLocalForceRender(prev => prev + 1);
+    } else {
+      console.warn('[CAMPAIGN FETCH] Fetch returned no campaigns and no error');
+      localStorage.setItem('has_campaigns_data', 'false');
+      setInsightsFetchStatus('failed');
+      setCampaignsFetchStatus('error');
+      
+      // CRITICAL FIX: Ensure we have an empty array to render
+      setCampaigns([]);
+      setFetchCompleted(true);
+      setIsLoading(false);
     }
   }, [fetchCampaigns, mountedRef, setIsLoading, setError, setErrorDetails, updateCampaigns, setCampaigns, 
       setFetchCompleted, setInsightsFetchStatus, setCampaignsFetchStatus, setLocalForceRender]);
