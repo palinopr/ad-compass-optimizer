@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowDown, Check, Clock, Loader2, List, Ban, AlertCircle } from 'lucide-react';
+import { ArrowDown, Check, Clock, Loader2, List } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { QueueStats } from '@/services/api/insights/throttling/queue/types/QueueTypes';
-import { strictSequentialQueue } from '@/services/api/insights/throttling/queue/QueueManager';
+import { strictSequentialQueue } from '@/services/api/insights/throttling/queue/StrictSequentialQueue';
 
 export function QueueVisualizer() {
   const [stats, setStats] = useState<QueueStats>({

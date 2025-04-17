@@ -2,9 +2,9 @@
 export interface QueueItem<T = any> {
   id: string;
   request: () => Promise<T>;
-  resolve: (value: T | PromiseLike<T>) => void;
-  reject: (reason?: any) => void;
-  startTime?: number;
+  resolve: (value: T) => void;
+  reject: (error: any) => void;
+  startTime: number;
 }
 
 export interface QueueStats {
