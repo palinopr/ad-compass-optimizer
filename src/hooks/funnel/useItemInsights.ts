@@ -1,9 +1,9 @@
-
 import { useCallback, useRef } from 'react';
 import { useInsightsState } from './hooks/useInsightsState';
 import { useFetchInsights } from './hooks/useFetchInsights';
 import { DuplicateRequestChecker } from '@/services/api/insights/throttling/duplicateChecker';
 import { insightsQueueState, insightsThrottlingState } from '../campaigns/fetch-utils/insights/batchConfig';
+import { RequestThrottlingService } from '@/services/api/insights/throttling/requestThrottlingService';
 
 export const useItemInsights = () => {
   const { insights, setInsights, isLoading, setIsLoading, error, setError } = useInsightsState();
@@ -33,7 +33,7 @@ export const useItemInsights = () => {
     
     // Early return if queue is locked
     if (insightsQueueState.isActiveLock()) {
-      console.log(`⚠️ Insights fetch skipped: global queue is locked`);
+      console.log(`⚠️ [INSIGHTS] Skipping insights fetch: global queue is locked`);
       return;
     }
     
@@ -76,7 +76,10 @@ export const useItemInsights = () => {
 
     try {
       console.log(`🟢 [FETCH START] ${itemType} ID: ${itemId}`);
-      const data = await fetchInsights(itemId, itemType, datePreset);
+      const data = await RequestThrottlingService.throttleRequest(
+        () => fetchInsights(itemId, itemType, datePreset),
+        `${itemType}-${itemId}`
+      );
       console.log(`✅ [FETCH SUCCESS] ${itemType} ID: ${itemId}`);
       
       // Mark as fetched for this component lifecycle
@@ -97,7 +100,7 @@ export const useItemInsights = () => {
       }
 
       setInsights(data.campaigns[0].insights);
-    } catch (err: any) {
+    } catch (err) {
       console.error(`❌ [FETCH FAIL] ${itemType} ID: ${itemId}:`, err.message);
       setError(err.message || 'Failed to fetch insights');
 
@@ -124,4 +127,3 @@ export const useItemInsights = () => {
     fetchInsights: fetchItemInsights
   };
 };
-
