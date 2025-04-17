@@ -126,7 +126,7 @@ const Campaigns = () => {
             setActiveTab={setActiveTab}
             showCreateWizard={showCreateWizard}
             campaigns={safeCampaigns}
-            filteredCampaigns={safeCampaigns} {/* MODIFIED: Always use raw campaigns */}
+            filteredCampaigns={safeCampaigns} /* MODIFIED: Always use raw campaigns */
             isLoading={isLoading}
             campaignsError={campaignsError}
             selectedAdAccount={selectedAdAccount}
@@ -144,7 +144,7 @@ const Campaigns = () => {
             error={campaignsError}
             errorDetails={null}
             activeTab={activeTab}
-            filteredCampaigns={safeCampaigns} {/* MODIFIED: Always use raw campaigns */}
+            filteredCampaigns={safeCampaigns} /* MODIFIED: Always use raw campaigns */
             refetchCampaigns={() => refetchCampaigns(true)}
             forceRender={0}
             isAuthenticated={isAuthenticated}
