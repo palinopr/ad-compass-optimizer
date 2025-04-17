@@ -11,9 +11,9 @@ export class ResponseHeaderMonitor {
       if (usageHeader) {
         const usage = JSON.parse(usageHeader);
         
-        // Check for high usage levels
+        // Enhanced monitoring with different threshold levels
         if (usage.call_count > 95 || usage.total_cputime > 95 || usage.total_time > 95) {
-          console.warn('[INSIGHTS] High API usage detected:', usage);
+          console.warn('[INSIGHTS] Critical API usage detected:', usage);
           
           // Convert retry-after to a number, defaulting to 300 if not a valid number
           const retryAfter = response.headers.get('retry-after') || '300';
@@ -23,9 +23,22 @@ export class ResponseHeaderMonitor {
           RateLimitManager.setRateLimit(
             isNaN(parsedRetryAfter) ? 300 : parsedRetryAfter
           );
+        } 
+        // Add medium threshold for proactive throttling
+        else if (usage.call_count > 80 || usage.total_cputime > 80 || usage.total_time > 80) {
+          console.warn('[INSIGHTS] High API usage detected:', usage);
+          // Apply moderate rate limiting (2 minutes)
+          RateLimitManager.setRateLimit(120);
+        }
+        // Add low threshold for early warning
+        else if (usage.call_count > 60 || usage.total_cputime > 60 || usage.total_time > 60) {
+          console.log('[INSIGHTS] Moderate API usage detected:', usage);
+          // Apply light rate limiting (30 seconds)
+          RateLimitManager.setRateLimit(30);
         }
       }
       
+      // Enhanced rate limit header monitoring with lower threshold
       const rateLimitHeader = response.headers.get('x-rate-limit-remaining');
       if (rateLimitHeader && parseInt(rateLimitHeader, 10) < 10) {
         console.warn('[INSIGHTS] Rate limit threshold approaching');
